@@ -5,18 +5,33 @@ Multiple ways to get data, but consistent language within the tool. i.e. may sea
 
 ## Examples
 
+We approach the shell as a way of understanding what cloud resources exist that we can see, and a set of tools for interacting with them.
+
+### Navigation
+
+Basic shell interaction is around navigating through a hierarchy and understanding what's there. For that we inherit some classic shell commands: `ls`, `cd`, `tree`, `pwd`.
+
+The hierarchy created first distinguishes between the cloud environments containing resources, then several ways of grouping those resources. It shows all configured APIs, where we ideally pickup confguration from the location their own CLIs use (config files, environment variables).
+
 ```fish
-> ls /					            # Shows configured API types
+> ls /
 gcp/
 aws/
 platform9/
 kubernetes/
 > cd aws/
-> ls					            # Multiple ways of accessing the same resources
+> ls
 groups/
 regions/
 resources/
-> tree groups/			            # Specific to AWS. Likely role or project oriented.
+```
+
+We equate resources appearing in multiple groupings as hardlinks in a filesystem; there are several ways to get to the same resource. Specific APIs may have different ways of grouping resources, such as groups and tags in AWS or namespace in Kubernetes.
+
+```fish
+> pwd
+/aws
+> tree groups/
 groups
 ├── developer
 │   ├── ec2
@@ -34,7 +49,12 @@ groups
     │   └── michael-lambda-17
     └── s3
         └── michael-bucket1
-> cd resources/
+```
+
+Cloud vendors have many (many) types of resources. We only show the ones you actually use.
+
+```fish
+> cd /aws/resources/
 > ls					            # Only show types of things where you have resources
 ec2
 lambda
@@ -43,15 +63,34 @@ s3
 > ls -l                             # Show some details about ownership and categorization
 Name                Creator         Groups              Created         Tags
 vm-106.puppet.com   michael.smith   developer,dujour    Dec 29 10:41    prod,web
-> find / -type compute,storage      # Shows the shortest path to each resource
-aws/resources/ec2/vm-106.puppet.com
-aws/resources/ec2/vm-107.puppet.com
-aws/resources/s3/michael-bucket1
+```
+
+We aim to initially support a small set of cloud environments, such as AWS and Kubernetes, and enable a community of folks to expand that to additional environments.
+
+```fish
 > ls /kubernetes/
 docker-for-desktop/
 gke_shared-k8s_us-west1-a_shared-k8s-dev/
 gke_shared-k8s_us-west1-a_shared-k8s-prod/
 gke_shared-k8s_us-west1-a_shared-k8s-stage/
+```
+
+### Understanding
+
+Higher level operations in a shell might involve searching for types of things and finding out some information about them.
+
+We aim to create or adopt a taxonomy around resources across cloud environments to enable searching for things that are alike. Note that we only show the shortest path to each resource.
+
+```fish
+> find / -type compute,storage
+aws/resources/ec2/vm-106.puppet.com
+aws/resources/ec2/vm-107.puppet.com
+aws/resources/s3/michael-bucket1
+```
+
+Once we've found some resources, we'd like to see what they're doing. The default output for a VM is its standard log (/var/log/syslog, /var/log/messages, Windows Event Viewer, or Mac System Log), but we should be able to access other logs on the system as well.
+
+```fish
 > tail -f /aws/resources/ec2/vm-106.puppet.com /aws/resources/ec2/vm-107.puppet.com:/var/log/nginx/access.log /aws/resources/lambda/michael-lambda-17 /aws/resources/s3/michael-bucket1 /kubernetes/gke_shared-k8s_us-west1-a_shared-k8s-dev/dujour-dev/pods/r0raxmg1fg276o05wmmqancki8w-dujour-84c7b497cc-fd7m4
 ==> /aws/resources/ec2/vm-107.puppet.com:/var/log/syslog <==
 Jan  2 23:53:50 pe-master systemd[1]: Starting User Manager for UID 1000...
@@ -78,6 +117,8 @@ Jan  2 23:53:50 pe-master systemd[1]: Started Session 25386 of user ubuntu.
 2018-12-06 19:23:58,635 INFO  [o.q.i.StdSchedulerFactory] Using default implementation for ThreadExecutor
 
 ```
+
+## Additional Topics
 
 ### Ways of slicing things
 - Namespace-oriented? Are namespaces universal? Resource group (AWS), project (GCP), namespace (K8s). Azure has namespaces within resource groups.
