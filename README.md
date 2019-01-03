@@ -88,7 +88,7 @@ aws/resources/ec2/vm-107.puppet.com
 aws/resources/s3/michael-bucket1
 ```
 
-Once we've found some resources, we'd like to see what they're doing. The default output for a VM is its standard log (/var/log/syslog, /var/log/messages, Windows Event Viewer, or Mac System Log), but we should be able to access other logs on the system as well.
+Once we've found some resources, we'd like to see what they're doing. The default output for a VM is its standard log (stdout for containers or lamdas, /var/log/syslog, /var/log/messages, Windows Event Viewer, Mac System Log, access logs for storage when enabled), but we should be able to access other logs on the system as well.
 
 ```fish
 > tail -f /aws/resources/ec2/vm-106.puppet.com /aws/resources/ec2/vm-107.puppet.com:/var/log/nginx/access.log /aws/resources/lambda/michael-lambda-17 /aws/resources/s3/michael-bucket1 /kubernetes/gke_shared-k8s_us-west1-a_shared-k8s-dev/dujour-dev/pods/r0raxmg1fg276o05wmmqancki8w-dujour-84c7b497cc-fd7m4
