@@ -5,7 +5,7 @@ Multiple ways to get data, but consistent language within the tool. i.e. may sea
 
 ## Examples
 
-```
+```fish
 > ls /					            # Shows configured API types
 gcp/
 aws/
@@ -48,7 +48,10 @@ aws/resources/ec2/vm-106.puppet.com
 aws/resources/ec2/vm-107.puppet.com
 aws/resources/s3/michael-bucket1
 > ls /kubernetes/
-namespaces/
+docker-for-desktop/
+gke_shared-k8s_us-west1-a_shared-k8s-dev/
+gke_shared-k8s_us-west1-a_shared-k8s-prod/
+gke_shared-k8s_us-west1-a_shared-k8s-stage/
 > tail -f /aws/resources/ec2/vm-106.puppet.com /aws/resources/ec2/vm-107.puppet.com:/var/log/nginx/access.log /aws/resources/lambda/michael-lambda-17 /aws/resources/s3/michael-bucket1 /kubernetes/gke_shared-k8s_us-west1-a_shared-k8s-dev/dujour-dev/pods/r0raxmg1fg276o05wmmqancki8w-dujour-84c7b497cc-fd7m4
 ==> /aws/resources/ec2/vm-107.puppet.com:/var/log/syslog <==
 Jan  2 23:53:50 pe-master systemd[1]: Starting User Manager for UID 1000...
@@ -83,6 +86,8 @@ Jan  2 23:53:50 pe-master systemd[1]: Started Session 25386 of user ubuntu.
 - Cloud API.
 - Multiple hierarchical views? Hardlinks? Symlinks and cycles?
 - What are the types? Compute, storage/volume, database/db. Need a consistent taxonomy, lots of different naming patterns across APIs.
+
+How should we access details about a particular resource? Metrics?
 
 ### Real-world Examples
 - Dujour deployment: pod, deployment, chart, pubsub, dataflow, bigquery
