@@ -5,7 +5,8 @@ This is an attempt to construct a taxonomy for cloud resources. We start by defi
 ## Protocols
 - metadata: everything has metadata
 - traversal (ls, find, tree): this object has children that can be enumerated
-- content (cat, tail/streaming, edit): this object has content we can view and modify
+- content (cat, tail/streaming): this object has content we can view
+- editable (edit): this object has content we can modify
 - exec (bolt): we can invoke commands on this object
 
 ## Types
@@ -48,11 +49,11 @@ Examples: user, K8s namespace, cloud service (such as K8s cluster, aws), region,
 
 #### File
 
-Protocols: metadata, content
+Protocols: metadata, content, editable
 
 #### Directory
 
-Protocols: metadata, content, traversal
+Protocols: metadata, traversal
 
 #### Symbolic Link
 
