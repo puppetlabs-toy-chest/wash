@@ -10,7 +10,9 @@ This is an attempt to construct a taxonomy for cloud resources. We start by defi
 
 ## Types
 
-### Compute
+### Cloud Resources
+
+#### Compute
 
 Systems that provide compute capacity.
 
@@ -18,15 +20,15 @@ Protocols: metadata, content (logs), exec. Could arguably have filesystem traver
 
 Examples: AWS EC2, AWS Lambda, K8s Pod, network device (with shell access)
 
-### Volume
+#### Volume
 
-A place to store hierarchical data.
+A place to store hierarchical data. Volumes only contain filesystem resources.
 
-Protocols: metadata, traversal, content (access logs, optional)
+Protocols: metadata, content (access logs, optional), traversal
 
 Examples: AWS EBS, K8s Volume
 
-### Service
+#### Service
 
 An appliance that provides a service.
 
@@ -34,11 +36,25 @@ Protocols: metadata (configuration), content (logs, optional)
 
 Examples: AWS ELB, K8s Ingress, network device (with no shell access)
 
-### Grouping
+#### Grouping
 
-Organizational tools for grouping resources.
+Organizational tools for grouping resources. Groupings only contain cloud resources.
 
 Protocols: metadata, traversal
 
 Examples: user, K8s namespace, cloud service (such as K8s cluster, aws), region, K8s deployment, AWS group or tag
+
+### Filesystem Resources
+
+#### File
+
+Protocols: metadata, content
+
+#### Directory
+
+Protocols: metadata, content, traversal
+
+#### Symbolic Link
+
+Protocols: metadata
 
