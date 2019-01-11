@@ -1,4 +1,6 @@
-# Examples of interacting with the wide-area shell (wash)
+# wash (Wide Area SHell)
+
+A cloud-native shell for bringing remote infrastructure to your terminal.
 
 ## Principals
 - Multiple ways to get data, but consistent language within the tool. i.e. may search for a database by saying type is 'db' or 'database', but the tool will always refer to them by 'database'.
@@ -269,4 +271,3 @@ We can also look at the history of our actions on a particular resource.
 - GKE: the k8s infra itself
 - GCP: build servers for Pipelines
 - Pipelines SaaS: AWS VMs
-
