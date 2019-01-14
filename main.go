@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -11,6 +10,7 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/docker"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -49,8 +49,10 @@ func mount(mountpoint string) error {
 	}
 	defer c.Close()
 
-	filesys := &FS{
-		docker: dockercli,
+	filesys := &plugin.FS{
+		Clients: map[string]plugin.Interface{
+			"docker": dockercli,
+		},
 	}
 	if err := fs.Serve(c, filesys); err != nil {
 		return err
@@ -63,107 +65,4 @@ func mount(mountpoint string) error {
 	}
 
 	return nil
-}
-
-// FS contains the core filesystem data.
-type FS struct {
-	docker *docker.Client
-}
-
-var _ fs.FS = (*FS)(nil)
-
-// Root presents the root of the filesystem.
-func (f *FS) Root() (fs.Node, error) {
-	n := &Dir{
-		client: f,
-		name:   "/",
-	}
-	return n, nil
-}
-
-// Dir represents a directory within the system, with the client
-// necessary to represent it and the full path to the directory.
-type Dir struct {
-	client interface{}
-	name   string
-}
-
-var _ fs.Node = (*Dir)(nil)
-
-// Attr returns the attributes of a directory.
-func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Mode = os.ModeDir | 0550
-	return nil
-}
-
-var _ = fs.NodeRequestLookuper(&Dir{})
-
-// Lookup searches a directory for children.
-func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	switch v := d.client.(type) {
-	case *FS:
-		if req.Name == "docker" {
-			return &Dir{
-				client: v.docker,
-				name:   d.name + req.Name,
-			}, nil
-		}
-	case *docker.Client:
-		containers, err := v.List()
-		if err != nil {
-			return nil, err
-		}
-		for _, container := range containers {
-			if container.ID == req.Name {
-				return &File{meta: container}, nil
-			}
-		}
-	}
-	return nil, fuse.ENOENT
-}
-
-var _ = fs.HandleReadDirAller(&Dir{})
-
-// ReadDirAll lists all children of the directory.
-func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	var res []fuse.Dirent
-	switch v := d.client.(type) {
-	case *FS:
-		var de fuse.Dirent
-		de.Name = "docker"
-		de.Type = fuse.DT_Dir
-		res = append(res, de)
-	case *docker.Client:
-		containers, err := v.List()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, container := range containers {
-			var de fuse.Dirent
-			de.Name = container.ID
-			res = append(res, de)
-		}
-	}
-	return res, nil
-}
-
-// File contains metadata about the file.
-type File struct {
-	meta interface{}
-}
-
-var _ fs.Node = (*File)(nil)
-
-// Attr returns the attributes of a file.
-func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Mode = 0440
-	return nil
-}
-
-var _ = fs.NodeOpener(&File{})
-
-// Open a file for reading. Not yet supported.
-func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	return nil, fuse.ENOTSUP
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // Client is a docker client.
@@ -21,7 +22,29 @@ func Create() (*Client, error) {
 	return &Client{cli}, nil
 }
 
-// List returns a list of running container objects.
-func (cli *Client) List() ([]types.Container, error) {
-	return cli.ContainerList(context.Background(), types.ContainerListOptions{})
+// Find container by ID.
+func (cli *Client) Find(name string) (plugin.Node, error) {
+	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, container := range containers {
+		if container.ID == name {
+			return &plugin.File{Meta: container}, nil
+		}
+	}
+	return nil, plugin.ENOENT
+}
+
+// List all running containers as files.
+func (cli *Client) List() ([]plugin.Entry, error) {
+	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	keys := make([]plugin.Entry, len(containers))
+	for i, container := range containers {
+		keys[i] = plugin.Entry{Name: container.ID}
+	}
+	return keys, nil
 }
