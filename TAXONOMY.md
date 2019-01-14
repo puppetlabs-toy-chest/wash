@@ -4,7 +4,8 @@ This is an attempt to construct a taxonomy for cloud resources. We start by defi
 
 ## Protocols
 - metadata: everything has metadata
-- traversal (ls, find, tree): this object has children that can be enumerated
+- group traversal (ls, find, tree): this object has Cloud Resources that can be enumerated
+- file traversal (ls, find, tree): this object has Filesystem Resources that can be enumerated
 - content (cat, tail/streaming): this object has content we can view
 - editable (edit): this object has content we can modify
 - exec (bolt): we can invoke commands on this object
@@ -23,9 +24,9 @@ Examples: AWS EC2, AWS Lambda, K8s Pod, network device (with shell access)
 
 #### Volume
 
-A place to store hierarchical data. Volumes only contain filesystem resources.
+A place to store hierarchical data.
 
-Protocols: metadata, content (access logs, optional), traversal
+Protocols: metadata, content (access logs, optional), file traversal
 
 Examples: AWS EBS, K8s Volume
 
@@ -39,9 +40,9 @@ Examples: AWS ELB, K8s Ingress, network device (with no shell access)
 
 #### Grouping
 
-Organizational tools for grouping resources. Groupings only contain cloud resources.
+Organizational tools for grouping resources.
 
-Protocols: metadata, traversal
+Protocols: metadata, group traversal
 
 Examples: user, K8s namespace, cloud service (such as K8s cluster, aws), region, K8s deployment, AWS group or tag
 
@@ -53,7 +54,7 @@ Protocols: metadata, content, editable
 
 #### Directory
 
-Protocols: metadata, traversal
+Protocols: metadata, file traversal
 
 #### Symbolic Link
 
