@@ -1,6 +1,8 @@
 package plugin
 
 import (
+	"context"
+
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 )
@@ -20,8 +22,8 @@ type Entry struct {
 
 // GroupTraversal that plugins are expected to model.
 type GroupTraversal interface {
-	Find(name string) (*Entry, error)
-	List() ([]Entry, error)
+	Find(ctx context.Context, name string) (*Entry, error)
+	List(ctx context.Context) ([]Entry, error)
 }
 
 // FS contains the core filesystem data.

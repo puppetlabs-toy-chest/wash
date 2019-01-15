@@ -24,8 +24,8 @@ func Create() (*Client, error) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(name string) (*plugin.Entry, error) {
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error) {
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +40,8 @@ func (cli *Client) Find(name string) (*plugin.Entry, error) {
 }
 
 // List all running containers as files.
-func (cli *Client) List() ([]plugin.Entry, error) {
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
+func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
+	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ func (f *FS) Root() (fs.Node, error) {
 }
 
 // Find the named item or return nil.
-func (f *FS) Find(name string) (*Entry, error) {
+func (f *FS) Find(_ context.Context, name string) (*Entry, error) {
 	if client, ok := f.Clients[name]; ok {
 		log.Printf("Found client %v: %v", name, client)
 		return &Entry{
@@ -33,7 +33,7 @@ func (f *FS) Find(name string) (*Entry, error) {
 }
 
 // List all clients as directories.
-func (f *FS) List() ([]Entry, error) {
+func (f *FS) List(context.Context) ([]Entry, error) {
 	log.Printf("Listing %v clients in /", len(f.Clients))
 	keys := make([]Entry, 0, len(f.Clients))
 	for k, v := range f.Clients {
@@ -50,7 +50,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	entry, err := d.client.Find(req.Name)
+	entry, err := d.client.Find(ctx, req.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 // ReadDirAll lists all children of the directory.
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	entries, err := d.client.List()
+	entries, err := d.client.List(ctx)
 	if err != nil {
 		return nil, err
 	}
