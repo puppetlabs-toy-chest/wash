@@ -2,6 +2,43 @@
 
 A cloud-native shell for bringing remote infrastructure to your terminal.
 
+## Usage
+
+This prototype is built as a FUSE filesystem. It currently only supports viewing running containers in Docker (found from the local socket or via DOCKER environment variables).
+
+Mount the filesystem with
+```
+go run main.go mnt
+```
+
+In another shell navigate it at `mnt`.
+
+Operations that work:
+- `ls`
+- `ls docker`
+- `cat docker/*`
+- `tail docker/*` (`-f` doesn't work, probably related to FUSE not working with inotify)
+- `stat docker/*` (kind of, information's not very useful)
+
+### Container
+
+You can also use it as a container.
+
+Build the container with
+```
+docker build . -t wash
+```
+
+Run with
+```
+docker run --rm --name wash --device /dev/fuse --cap-add SYS_ADMIN -v /var/run/docker.sock:/var/run/docker.sock wash
+```
+
+Then start a shell and explore with
+```
+docker exec -it wash sh
+```
+
 ## Principals
 - Multiple ways to get data, but consistent language within the tool. i.e. may search for a database by saying type is 'db' or 'database', but the tool will always refer to them by 'database'.
 - Rich shell experience.
