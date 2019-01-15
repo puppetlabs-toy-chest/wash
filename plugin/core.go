@@ -10,19 +10,19 @@ import (
 
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
-	n := &Dir{
+	return &Dir{
 		client: f,
 		name:   "/",
-	}
-	return n, nil
+	}, nil
 }
 
 // Find the named item or return nil.
-func (f *FS) Find(name string) (Node, error) {
+func (f *FS) Find(name string) (*Entry, error) {
 	if client, ok := f.Clients[name]; ok {
-		return &Dir{
-			client: client,
-			name:   name,
+		return &Entry{
+			Client: client,
+			Name:   name,
+			Isdir:  true,
 		}, nil
 	}
 	return nil, ENOENT
@@ -31,8 +31,8 @@ func (f *FS) Find(name string) (Node, error) {
 // List all clients as directories.
 func (f *FS) List() ([]Entry, error) {
 	keys := make([]Entry, 0, len(f.Clients))
-	for k := range f.Clients {
-		keys = append(keys, Entry{Name: k, Isdir: true})
+	for k, v := range f.Clients {
+		keys = append(keys, Entry{Client: v, Name: k, Isdir: true})
 	}
 	return keys, nil
 }
@@ -45,7 +45,14 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	return d.client.Find(req.Name)
+	entry, err := d.client.Find(req.Name)
+	if err != nil {
+		return nil, err
+	}
+	if entry.Isdir {
+		return &Dir{client: entry.Client, name: entry.Name}, nil
+	}
+	return &File{client: entry.Client, name: entry.Name}, nil
 }
 
 // ReadDirAll lists all children of the directory.

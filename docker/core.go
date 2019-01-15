@@ -23,14 +23,14 @@ func Create() (*Client, error) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(name string) (plugin.Node, error) {
+func (cli *Client) Find(name string) (*plugin.Entry, error) {
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		return nil, err
 	}
 	for _, container := range containers {
 		if container.ID == name {
-			return &plugin.File{Meta: container}, nil
+			return &plugin.Entry{Client: cli, Name: container.ID}, nil
 		}
 	}
 	return nil, plugin.ENOENT
@@ -44,7 +44,7 @@ func (cli *Client) List() ([]plugin.Entry, error) {
 	}
 	keys := make([]plugin.Entry, len(containers))
 	for i, container := range containers {
-		keys[i] = plugin.Entry{Name: container.ID}
+		keys[i] = plugin.Entry{Client: cli, Name: container.ID}
 	}
 	return keys, nil
 }

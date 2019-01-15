@@ -13,13 +13,14 @@ const ENOENT = fuse.ENOENT
 
 // Entry in a filesystem
 type Entry struct {
-	Name  string
-	Isdir bool
+	Client Interface
+	Name   string
+	Isdir  bool
 }
 
 // Interface that plugins are expected to model.
 type Interface interface {
-	Find(name string) (Node, error)
+	Find(name string) (*Entry, error)
 	List() ([]Entry, error)
 }
 
@@ -43,7 +44,8 @@ var _ = fs.HandleReadDirAller(&Dir{})
 
 // File contains metadata about the file.
 type File struct {
-	Meta interface{}
+	client Interface
+	name   string
 }
 
 var _ fs.Node = (*File)(nil)
