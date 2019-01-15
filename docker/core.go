@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"io"
 	"log"
 
 	"github.com/docker/docker/api/types"
@@ -51,4 +52,10 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 		keys[i] = plugin.Entry{Client: cli, Name: container.ID}
 	}
 	return keys, nil
+}
+
+// Read gets logs from a container.
+func (cli *Client) Read(ctx context.Context, name string) (io.ReadCloser, error) {
+	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
+	return cli.ContainerLogs(ctx, name, opts)
 }

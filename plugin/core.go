@@ -2,8 +2,11 @@ package plugin
 
 import (
 	"context"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
+	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -55,9 +58,9 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, err
 	}
 	if entry.Isdir {
-		return &Dir{client: entry.Client, name: entry.Name}, nil
+		return &Dir{client: entry.Client.(GroupTraversal), name: entry.Name}, nil
 	}
-	return &File{client: entry.Client, name: entry.Name}, nil
+	return &File{client: entry.Client.(FileProtocol), name: entry.Name}, nil
 }
 
 // ReadDirAll lists all children of the directory.
@@ -82,10 +85,51 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = 0440
+
+	// Read the content to figure out how large it is.
+	r, err := f.client.Read(ctx, f.name)
+	if err != nil {
+		return err
+	}
+	buf, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	a.Size = uint64(len(buf))
+
+	// This is a hack to suggest the logs may update every second.
+	a.Mtime = time.Now()
+	a.Valid = 1 * time.Second
 	return nil
 }
 
 // Open a file for reading. Not yet supported.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	return nil, fuse.ENOTSUP
+	// Initiate content request and return a channel providing the results.
+	log.Println("Reading content of", f.name)
+	r, err := f.client.Read(context.Background(), f.name)
+	if err != nil {
+		return nil, err
+	}
+
+	resp.Flags |= fuse.OpenNonSeekable
+	return &FileHandle{r: r}, nil
+}
+
+// Release closes the open file.
+func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
+	return fh.r.Close()
+}
+
+// Read fills a buffer with the requested amount of data from the file.
+func (fh *FileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	log.Printf("Reading %v bytes from reader", req.Size)
+	buf := make([]byte, req.Size)
+	n, err := io.ReadFull(fh.r, buf)
+	if err == io.ErrUnexpectedEOF || err == io.EOF {
+		err = nil
+	}
+	log.Printf("Read %v bytes from reader: %v", n, err)
+	resp.Data = buf[:n]
+	return err
 }
