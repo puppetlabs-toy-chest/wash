@@ -14,6 +14,7 @@ import (
 )
 
 var progName = filepath.Base(os.Args[0])
+var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "Usage: %s MOUNTPOINT\n", progName)
@@ -39,6 +40,12 @@ func mount(mountpoint string) error {
 	dockercli, err := docker.Create()
 	if err != nil {
 		return err
+	}
+
+	if *debug {
+		fuse.Debug = func(msg interface{}) {
+			log.Println(msg)
+		}
 	}
 
 	log.Println("Mounting at", mountpoint)
