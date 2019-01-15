@@ -21,9 +21,6 @@ func usage() {
 }
 
 func main() {
-	log.SetFlags(0)
-	log.SetPrefix(progName + ": ")
-
 	flag.Usage = usage
 	flag.Parse()
 
@@ -38,17 +35,20 @@ func main() {
 }
 
 func mount(mountpoint string) error {
+	log.Println("Loading docker integration")
 	dockercli, err := docker.Create()
 	if err != nil {
 		return err
 	}
 
+	log.Println("Mounting at", mountpoint)
 	c, err := fuse.Mount(mountpoint)
 	if err != nil {
 		return err
 	}
 	defer c.Close()
 
+	log.Println("Serving filesystem with docker")
 	filesys := &plugin.FS{
 		Clients: map[string]plugin.Interface{
 			"docker": dockercli,
@@ -63,6 +63,7 @@ func mount(mountpoint string) error {
 	if err := c.MountError; err != nil {
 		return err
 	}
+	log.Println("Done")
 
 	return nil
 }

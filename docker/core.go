@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -30,9 +31,11 @@ func (cli *Client) Find(name string) (*plugin.Entry, error) {
 	}
 	for _, container := range containers {
 		if container.ID == name {
+			log.Printf("Found container %v, %v", name, container)
 			return &plugin.Entry{Client: cli, Name: container.ID}, nil
 		}
 	}
+	log.Printf("Container %v not found", name)
 	return nil, plugin.ENOENT
 }
 
@@ -42,6 +45,7 @@ func (cli *Client) List() ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Listing %v containers in /docker", len(containers))
 	keys := make([]plugin.Entry, len(containers))
 	for i, container := range containers {
 		keys[i] = plugin.Entry{Client: cli, Name: container.ID}

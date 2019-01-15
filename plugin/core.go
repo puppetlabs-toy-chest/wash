@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"bazil.org/fuse"
@@ -10,6 +11,7 @@ import (
 
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
+	log.Println("Entering root of filesystem")
 	return &Dir{
 		client: f,
 		name:   "/",
@@ -19,17 +21,20 @@ func (f *FS) Root() (fs.Node, error) {
 // Find the named item or return nil.
 func (f *FS) Find(name string) (*Entry, error) {
 	if client, ok := f.Clients[name]; ok {
+		log.Printf("Found client %v: %v", name, client)
 		return &Entry{
 			Client: client,
 			Name:   name,
 			Isdir:  true,
 		}, nil
 	}
+	log.Printf("Client %v not found", name)
 	return nil, ENOENT
 }
 
 // List all clients as directories.
 func (f *FS) List() ([]Entry, error) {
+	log.Printf("Listing %v clients in /", len(f.Clients))
 	keys := make([]Entry, 0, len(f.Clients))
 	for k, v := range f.Clients {
 		keys = append(keys, Entry{Client: v, Name: k, Isdir: true})
