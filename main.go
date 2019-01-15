@@ -50,7 +50,7 @@ func mount(mountpoint string) error {
 
 	log.Println("Serving filesystem with docker")
 	filesys := &plugin.FS{
-		Clients: map[string]plugin.Interface{
+		Clients: map[string]plugin.GroupTraversal{
 			"docker": dockercli,
 		},
 	}

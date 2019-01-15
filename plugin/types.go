@@ -13,20 +13,20 @@ const ENOENT = fuse.ENOENT
 
 // Entry in a filesystem
 type Entry struct {
-	Client Interface
+	Client GroupTraversal
 	Name   string
 	Isdir  bool
 }
 
-// Interface that plugins are expected to model.
-type Interface interface {
+// GroupTraversal that plugins are expected to model.
+type GroupTraversal interface {
 	Find(name string) (*Entry, error)
 	List() ([]Entry, error)
 }
 
 // FS contains the core filesystem data.
 type FS struct {
-	Clients map[string]Interface
+	Clients map[string]GroupTraversal
 }
 
 var _ fs.FS = (*FS)(nil)
@@ -34,7 +34,7 @@ var _ fs.FS = (*FS)(nil)
 // Dir represents a directory within the system, with the client
 // necessary to represent it and the full path to the directory.
 type Dir struct {
-	client Interface
+	client GroupTraversal
 	name   string
 }
 
@@ -44,7 +44,7 @@ var _ = fs.HandleReadDirAller(&Dir{})
 
 // File contains metadata about the file.
 type File struct {
-	client Interface
+	client GroupTraversal
 	name   string
 }
 
