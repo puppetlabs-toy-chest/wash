@@ -67,7 +67,8 @@ var _ = fs.NodeOpener(&File{})
 
 // FileHandle contains an IO object that can be read.
 type FileHandle struct {
-	r io.ReadCloser
+	client FileProtocol
+	name   string
 }
 
 var _ fs.Handle = (*FileHandle)(nil)

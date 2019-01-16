@@ -17,7 +17,7 @@ Operations that work:
 - `ls`
 - `ls docker`
 - `cat docker/*`
-- `tail docker/*` (`-f` doesn't work, probably related to FUSE not working with inotify)
+- `tail docker/*`
 - `stat docker/*` (kind of, information's not very useful)
 
 ### Container

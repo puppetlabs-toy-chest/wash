@@ -47,7 +47,13 @@ func (f *FS) List(context.Context) ([]Entry, error) {
 
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
+	log.Printf("Checking attr of dir %v", d.name)
 	a.Mode = os.ModeDir | 0550
+
+	// This is a hack to suggest content may update every second.
+	// TODO: need to base it off an actual request to check whether there's new data.
+	a.Mtime = time.Now()
+	a.Valid = 1 * time.Second
 	return nil
 }
 
@@ -84,6 +90,7 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
+	log.Printf("Checking attr of file %v", f.name)
 	a.Mode = 0440
 
 	// Read the content to figure out how large it is.
@@ -91,6 +98,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	buf, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
@@ -98,6 +106,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Size = uint64(len(buf))
 
 	// This is a hack to suggest the logs may update every second.
+	// TODO: need to base it off an actual request to check whether there's new data.
 	a.Mtime = time.Now()
 	a.Valid = 1 * time.Second
 	return nil
@@ -107,29 +116,41 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
 	log.Println("Reading content of", f.name)
-	r, err := f.client.Read(context.Background(), f.name)
+	r, err := f.client.Read(ctx, f.name)
 	if err != nil {
 		return nil, err
 	}
-
-	resp.Flags |= fuse.OpenNonSeekable
-	return &FileHandle{r: r}, nil
+	r.Close()
+	return &FileHandle{client: f.client, name: f.name}, nil
 }
 
 // Release closes the open file.
 func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	return fh.r.Close()
+	return nil
 }
 
 // Read fills a buffer with the requested amount of data from the file.
 func (fh *FileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	log.Printf("Reading %v bytes from reader", req.Size)
-	buf := make([]byte, req.Size)
-	n, err := io.ReadFull(fh.r, buf)
+	log.Printf("Reading %v bytes starting at %v", req.Size, req.Offset)
+	r, err := fh.client.Read(ctx, fh.name)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	// Skip the offset
+	buf := make([]byte, req.Offset)
+	_, err = io.ReadFull(r, buf)
+	if err != nil {
+		return err
+	}
+
+	buf = make([]byte, req.Size)
+	n, err := io.ReadFull(r, buf)
 	if err == io.ErrUnexpectedEOF || err == io.EOF {
 		err = nil
 	}
-	log.Printf("Read %v bytes from reader: %v", n, err)
+	log.Printf("Read %v bytes: %v", n, err)
 	resp.Data = buf[:n]
 	return err
 }
