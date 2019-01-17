@@ -60,10 +60,12 @@ func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
 	return &Attributes{Mtime: latest}, nil
 }
 
+const validFor = 100 * time.Millisecond
+
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = os.ModeDir | 0550
-	a.Valid = 1 * time.Second
+	a.Valid = validFor
 
 	attr, err := d.client.Attr(ctx, d.name)
 	a.Mtime = attr.Mtime
@@ -106,7 +108,7 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = 0440
-	a.Valid = 1 * time.Second
+	a.Valid = validFor
 
 	attr, err := f.client.Attr(ctx, f.name)
 	a.Mtime = attr.Mtime

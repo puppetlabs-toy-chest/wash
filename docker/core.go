@@ -18,9 +18,10 @@ import (
 type Client struct {
 	*client.Client
 	*bigcache.BigCache
-	debug bool
-	mux   sync.Mutex
-	reqs  map[string]*buffer
+	debug   bool
+	mux     sync.Mutex
+	reqs    map[string]*buffer
+	updated time.Time
 }
 
 // Create a new docker client.
@@ -38,7 +39,7 @@ func Create(debug bool) (*Client, error) {
 	}
 
 	reqs := make(map[string]*buffer)
-	return &Client{cli, cache, debug, sync.Mutex{}, reqs}, nil
+	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now()}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -67,6 +68,7 @@ func (cli *Client) cachedContainerList(ctx context.Context) ([]types.Container, 
 			return nil, err
 		}
 		cli.Set("ContainerList", data.Bytes())
+		cli.updated = time.Now()
 	}
 	return containers, err
 }
@@ -119,7 +121,16 @@ func (cli *Client) readLog(name string) (*buffer, error) {
 func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
 	cli.log("Reading attributes of %v in /docker", name)
 	if name == "docker" {
-		return &plugin.Attributes{Mtime: time.Now()}, nil
+		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
+		log.Printf("Getting attr of /docker")
+		latest := cli.updated
+		for _, v := range cli.reqs {
+			if updated := v.lastUpdate(); updated.After(latest) {
+				latest = updated
+			}
+		}
+		log.Printf("Mtime: %v", latest)
+		return &plugin.Attributes{Mtime: latest}, nil
 	}
 
 	// TODO: register xattrs.
@@ -138,9 +149,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 		cli.reqs[name] = buf
 	}
 
-	lastUpdate := buf.lastUpdate()
-	size := uint64(buf.len())
-	return &plugin.Attributes{Mtime: lastUpdate, Size: size}, nil
+	return &plugin.Attributes{Mtime: buf.lastUpdate(), Size: uint64(buf.len())}, nil
 }
 
 // Open gets logs from a container.
@@ -157,6 +166,11 @@ func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, e
 
 		cli.reqs[name] = buf
 	}
+	go func() {
+		buf.stream()
+	}()
+	// Wait for some output to buffer
+	time.Sleep(500 * time.Millisecond)
 
 	return buf, nil
 }
