@@ -37,7 +37,7 @@ func main() {
 
 func mount(mountpoint string) error {
 	log.Println("Loading docker integration")
-	dockercli, err := docker.Create()
+	dockercli, err := docker.Create(*debug)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func mount(mountpoint string) error {
 
 	log.Println("Serving filesystem with docker")
 	filesys := &plugin.FS{
-		Clients: map[string]plugin.GroupTraversal{
+		Clients: map[string]plugin.DirProtocol{
 			"docker": dockercli,
 		},
 	}

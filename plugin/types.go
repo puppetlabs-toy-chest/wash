@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"io"
+	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -29,20 +30,31 @@ type GroupTraversal interface {
 
 // Content protocol.
 type Content interface {
-	Read(ctx context.Context, name string) (io.ReadCloser, error)
+	Open(ctx context.Context, name string) (io.ReaderAt, error)
+}
+
+// Metadata covers protocols supported by all resources.
+type Metadata interface {
+	Attr(ctx context.Context, name string) (*Attributes, error)
 }
 
 // FS contains the core filesystem data.
 type FS struct {
-	Clients map[string]GroupTraversal
+	Clients map[string]DirProtocol
 }
 
 var _ fs.FS = (*FS)(nil)
 
+// DirProtocol is protocols expected of a Directory resource.
+type DirProtocol interface {
+	GroupTraversal
+	Metadata
+}
+
 // Dir represents a directory within the system, with the client
 // necessary to represent it and the full path to the directory.
 type Dir struct {
-	client GroupTraversal
+	client DirProtocol
 	name   string
 }
 
@@ -54,6 +66,7 @@ var _ = fs.HandleReadDirAller(&Dir{})
 type FileProtocol interface {
 	GroupTraversal
 	Content
+	Metadata
 }
 
 // File contains metadata about the file.
@@ -67,10 +80,15 @@ var _ = fs.NodeOpener(&File{})
 
 // FileHandle contains an IO object that can be read.
 type FileHandle struct {
-	client FileProtocol
-	name   string
+	r io.ReaderAt
 }
 
 var _ fs.Handle = (*FileHandle)(nil)
 var _ = fs.HandleReleaser(&FileHandle{})
 var _ = fs.HandleReader(&FileHandle{})
+
+// Attributes of resources.
+type Attributes struct {
+	Mtime time.Time
+	Size  uint64
+}

@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -37,7 +36,7 @@ func (f *FS) Find(_ context.Context, name string) (*Entry, error) {
 
 // List all clients as directories.
 func (f *FS) List(context.Context) ([]Entry, error) {
-	log.Printf("Listing %v clients in /", len(f.Clients))
+	log.Printf("Listed %v clients in /", len(f.Clients))
 	keys := make([]Entry, 0, len(f.Clients))
 	for k, v := range f.Clients {
 		keys = append(keys, Entry{Client: v, Name: k, Isdir: true})
@@ -45,16 +44,32 @@ func (f *FS) List(context.Context) ([]Entry, error) {
 	return keys, nil
 }
 
+// Attr returns basic (zero) attributes for the root directory.
+func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
+	// Only ever called with "/". Return latest Mtime of all clients.
+	var latest time.Time
+	for k, v := range f.Clients {
+		attr, err := v.Attr(ctx, k)
+		if err != nil {
+			return nil, err
+		}
+		if attr.Mtime.After(latest) {
+			latest = attr.Mtime
+		}
+	}
+	return &Attributes{Mtime: latest}, nil
+}
+
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	log.Printf("Checking attr of dir %v", d.name)
 	a.Mode = os.ModeDir | 0550
-
-	// This is a hack to suggest content may update every second.
-	// TODO: need to base it off an actual request to check whether there's new data.
-	a.Mtime = time.Now()
 	a.Valid = 1 * time.Second
-	return nil
+
+	attr, err := d.client.Attr(ctx, d.name)
+	a.Mtime = attr.Mtime
+	a.Size = attr.Size
+	log.Printf("Attr of dir %v: %v, %v", d.name, a.Mtime, a.Size)
+	return err
 }
 
 // Lookup searches a directory for children.
@@ -64,7 +79,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, err
 	}
 	if entry.Isdir {
-		return &Dir{client: entry.Client.(GroupTraversal), name: entry.Name}, nil
+		return &Dir{client: entry.Client.(DirProtocol), name: entry.Name}, nil
 	}
 	return &File{client: entry.Client.(FileProtocol), name: entry.Name}, nil
 }
@@ -90,38 +105,25 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	log.Printf("Checking attr of file %v", f.name)
 	a.Mode = 0440
-
-	// Read the content to figure out how large it is.
-	r, err := f.client.Read(ctx, f.name)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	buf, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-	a.Size = uint64(len(buf))
-
-	// This is a hack to suggest the logs may update every second.
-	// TODO: need to base it off an actual request to check whether there's new data.
-	a.Mtime = time.Now()
 	a.Valid = 1 * time.Second
-	return nil
+
+	attr, err := f.client.Attr(ctx, f.name)
+	a.Mtime = attr.Mtime
+	a.Size = attr.Size
+	log.Printf("Attr of file %v: %v, %v", f.name, a.Mtime, a.Size)
+	return err
 }
 
 // Open a file for reading. Not yet supported.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	log.Println("Reading content of", f.name)
-	r, err := f.client.Read(ctx, f.name)
+	r, err := f.client.Open(ctx, f.name)
 	if err != nil {
 		return nil, err
 	}
-	r.Close()
-	return &FileHandle{client: f.client, name: f.name}, nil
+	log.Printf("Opened %v", f.name)
+	return &FileHandle{r: r}, nil
 }
 
 // Release closes the open file.
@@ -131,26 +133,12 @@ func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) err
 
 // Read fills a buffer with the requested amount of data from the file.
 func (fh *FileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	log.Printf("Reading %v bytes starting at %v", req.Size, req.Offset)
-	r, err := fh.client.Read(ctx, fh.name)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	// Skip the offset
-	buf := make([]byte, req.Offset)
-	_, err = io.ReadFull(r, buf)
-	if err != nil {
-		return err
-	}
-
-	buf = make([]byte, req.Size)
-	n, err := io.ReadFull(r, buf)
-	if err == io.ErrUnexpectedEOF || err == io.EOF {
+	buf := make([]byte, req.Size)
+	n, err := fh.r.ReadAt(buf, req.Offset)
+	if err == io.EOF {
 		err = nil
 	}
-	log.Printf("Read %v bytes: %v", n, err)
+	log.Printf("Read %v/%v bytes starting at %v: %v", n, req.Size, req.Offset, err)
 	resp.Data = buf[:n]
 	return err
 }
