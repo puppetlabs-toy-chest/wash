@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"io/ioutil"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -18,15 +18,9 @@ import (
 type Client struct {
 	*client.Client
 	*bigcache.BigCache
-	reqs  map[string]*RequestRecord
 	debug bool
-}
-
-// RequestRecord holds arbitrary data and the last time it was updated.
-type RequestRecord struct {
-	lastUpdate time.Time
-	data       []byte
-	reader     *bytes.Reader
+	mux   sync.Mutex
+	reqs  map[string]*buffer
 }
 
 // Create a new docker client.
@@ -43,8 +37,8 @@ func Create(debug bool) (*Client, error) {
 		return nil, err
 	}
 
-	reqs := make(map[string]*RequestRecord)
-	return &Client{cli, cache, reqs, debug}, nil
+	reqs := make(map[string]*buffer)
+	return &Client{cli, cache, debug, sync.Mutex{}, reqs}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -107,23 +101,18 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-func (cli *Client) readLog(ctx context.Context, name string, since time.Time) ([]byte, error) {
+func (cli *Client) readLog(name string) (*buffer, error) {
 	// TODO: investigate log format. Prepending unprintable data, not same format as `docker logs`.
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Since:      since.Format(time.RFC3339Nano),
+		Follow:     true,
 	}
-	r, err := cli.ContainerLogs(ctx, name, opts)
+	r, err := cli.ContainerLogs(context.Background(), name, opts)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
-	buf, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	return buf, nil
+	return newBuffer(name, r), nil
 }
 
 // Attr returns attributes of the named resource.
@@ -133,45 +122,41 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 		return &plugin.Attributes{Mtime: time.Now()}, nil
 	}
 
+	// TODO: register xattrs.
+
 	// Read the content to figure out how large it is.
-	req, ok := cli.reqs[name]
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+	buf, ok := cli.reqs[name]
 	if !ok {
-		req = &RequestRecord{}
-		cli.reqs[name] = req
+		var err error
+		buf, err = cli.readLog(name)
+		if err != nil {
+			return nil, err
+		}
+
+		cli.reqs[name] = buf
 	}
 
-	buf, err := cli.readLog(ctx, name, req.lastUpdate)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.lastUpdate.IsZero() {
-		req.data = buf
-		req.lastUpdate = time.Now()
-	} else if len(buf) > 0 {
-		req.data = append(req.data, buf...)
-		req.lastUpdate = time.Now()
-	}
-
-	// Reset the buffer so any open FileHandles will get the updated data.
-	if req.reader != nil {
-		req.reader.Reset(req.data)
-	}
-	return &plugin.Attributes{Mtime: req.lastUpdate, Size: uint64(len(req.data))}, nil
+	lastUpdate := buf.lastUpdate()
+	size := uint64(buf.len())
+	return &plugin.Attributes{Mtime: lastUpdate, Size: size}, nil
 }
 
 // Open gets logs from a container.
 func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, error) {
-	req, ok := cli.reqs[name]
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+	buf, ok := cli.reqs[name]
 	if !ok {
-		buf, err := cli.readLog(ctx, name, time.Time{})
+		var err error
+		buf, err = cli.readLog(name)
 		if err != nil {
 			return nil, err
 		}
-		req = &RequestRecord{data: buf, lastUpdate: time.Now()}
-		cli.reqs[name] = req
+
+		cli.reqs[name] = buf
 	}
 
-	req.reader = bytes.NewReader(req.data)
-	return req.reader, nil
+	return buf, nil
 }
