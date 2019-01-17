@@ -161,7 +161,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 }
 
 // Open gets logs from a container.
-func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileHandle, error) {
+func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, error) {
 	req, ok := cli.reqs[name]
 	if !ok {
 		buf, err := cli.readLog(ctx, name, time.Time{})

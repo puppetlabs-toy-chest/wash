@@ -30,7 +30,7 @@ type GroupTraversal interface {
 
 // Content protocol.
 type Content interface {
-	Open(ctx context.Context, name string) (IFileHandle, error)
+	Open(ctx context.Context, name string) (IFileBuffer, error)
 }
 
 // Metadata covers protocols supported by all resources.
@@ -78,14 +78,14 @@ type File struct {
 var _ fs.Node = (*File)(nil)
 var _ = fs.NodeOpener(&File{})
 
-// IFileHandle represents a file that can be ReadAt and Reset.
-type IFileHandle interface {
+// IFileBuffer represents a file that can be ReadAt and Reset.
+type IFileBuffer interface {
 	io.ReaderAt
 }
 
 // FileHandle contains an IO object that can be read.
 type FileHandle struct {
-	r IFileHandle
+	r IFileBuffer
 }
 
 var _ fs.Handle = (*FileHandle)(nil)
