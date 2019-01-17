@@ -111,7 +111,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := f.client.Attr(ctx, f.name)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
-	log.Printf("Attr of file %v: %v, %v", f.name, a.Mtime, a.Size)
+	log.Printf("Attr of file %v: %v, %s", f.name, a.Size, a.Mtime)
 	return err
 }
 

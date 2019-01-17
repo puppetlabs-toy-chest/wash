@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"io"
 	"io/ioutil"
 	"log"
 	"time"
@@ -152,7 +151,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 }
 
 // Open gets logs from a container.
-func (cli *Client) Open(ctx context.Context, name string) (io.ReaderAt, error) {
+func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileHandle, error) {
 	// TODO: store logs in reqs, only query new data. Since we know logs always add,
 	// we don't need to worry about invalidating old data.
 	// TODO: need an additional callback for attributes that updates from ContainerLogOptions
