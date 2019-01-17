@@ -74,14 +74,6 @@ func (cli *Client) cachedContainerList(ctx context.Context) ([]types.Container, 
 		}
 		cli.Set("ContainerList", data.Bytes())
 	}
-
-	// Add an entry to cli.reqs to reflect the last time the directory listing was refreshed.
-	req, ok := cli.reqs["_docker"]
-	if !ok {
-		req = &RequestRecord{}
-		cli.reqs["_docker"] = req
-	}
-	req.lastUpdate = time.Now()
 	return containers, err
 }
 
@@ -115,8 +107,13 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-func (cli *Client) readLog(ctx context.Context, name string) ([]byte, error) {
-	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
+func (cli *Client) readLog(ctx context.Context, name string, since time.Time) ([]byte, error) {
+	// TODO: investigate log format. Prepending unprintable data, not same format as `docker logs`.
+	opts := types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Since:      since.Format(time.RFC3339Nano),
+	}
 	r, err := cli.ContainerLogs(ctx, name, opts)
 	if err != nil {
 		return nil, err
@@ -133,50 +130,45 @@ func (cli *Client) readLog(ctx context.Context, name string) ([]byte, error) {
 func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
 	cli.log("Reading attributes of %v in /docker", name)
 	if name == "docker" {
-		// Return attributes for the client, i.e. when was the last update.
-		var latest time.Time
-		for _, v := range cli.reqs {
-			if v.lastUpdate.After(latest) {
-				latest = v.lastUpdate
-			}
-		}
-		return &plugin.Attributes{Mtime: latest}, nil
+		return &plugin.Attributes{Mtime: time.Now()}, nil
 	}
 
 	// Read the content to figure out how large it is.
-	buf, err := cli.readLog(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-
 	req, ok := cli.reqs[name]
 	if !ok {
 		req = &RequestRecord{}
 		cli.reqs[name] = req
 	}
-	req.data = buf
-	req.lastUpdate = time.Now()
-	if req.reader != nil {
-		// Reset the buffer so any open FileHandles will get the updated data.
-		req.reader.Reset(buf)
+
+	buf, err := cli.readLog(ctx, name, req.lastUpdate)
+	if err != nil {
+		return nil, err
 	}
 
+	if req.lastUpdate.IsZero() {
+		req.data = buf
+		req.lastUpdate = time.Now()
+	} else if len(buf) > 0 {
+		req.data = append(req.data, buf...)
+		req.lastUpdate = time.Now()
+	}
+
+	// Reset the buffer so any open FileHandles will get the updated data.
+	if req.reader != nil {
+		req.reader.Reset(req.data)
+	}
 	return &plugin.Attributes{Mtime: req.lastUpdate, Size: uint64(len(req.data))}, nil
 }
 
 // Open gets logs from a container.
 func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileHandle, error) {
-	// TODO: store logs in reqs, only query new data. Since we know logs always add,
-	// we don't need to worry about invalidating old data.
-	// TODO: need an additional callback for attributes that updates from ContainerLogOptions
-	// and reports whether there were any changes.
 	req, ok := cli.reqs[name]
 	if !ok {
-		buf, err := cli.readLog(ctx, name)
+		buf, err := cli.readLog(ctx, name, time.Time{})
 		if err != nil {
 			return nil, err
 		}
-		req = &RequestRecord{data: buf}
+		req = &RequestRecord{data: buf, lastUpdate: time.Now()}
 		cli.reqs[name] = req
 	}
 

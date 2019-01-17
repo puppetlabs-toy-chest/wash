@@ -115,7 +115,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	return err
 }
 
-// Open a file for reading. Not yet supported.
+// Open a file for reading.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
 	r, err := f.client.Open(ctx, f.name)
