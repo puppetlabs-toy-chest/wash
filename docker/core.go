@@ -13,6 +13,7 @@ import (
 	"github.com/allegro/bigcache"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -22,7 +23,7 @@ type Client struct {
 	*bigcache.BigCache
 	debug   bool
 	mux     sync.Mutex
-	reqs    map[string]*buffer
+	reqs    map[string]*datastore.StreamBuffer
 	updated time.Time
 }
 
@@ -40,7 +41,7 @@ func Create(debug bool) (*Client, error) {
 		return nil, err
 	}
 
-	reqs := make(map[string]*buffer)
+	reqs := make(map[string]*datastore.StreamBuffer)
 	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now()}, nil
 }
 
@@ -160,7 +161,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 		log.Printf("Getting attr of /docker")
 		latest := cli.updated
 		for _, v := range cli.reqs {
-			if updated := v.lastUpdate(); updated.After(latest) {
+			if updated := v.LastUpdate(); updated.After(latest) {
 				latest = updated
 			}
 		}
@@ -172,7 +173,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
 	if buf, ok := cli.reqs[name]; ok {
-		return &plugin.Attributes{Mtime: buf.lastUpdate(), Size: uint64(buf.len())}, nil
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size())}, nil
 	}
 
 	return &plugin.Attributes{Mtime: cli.updated}, nil
@@ -212,15 +213,18 @@ func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, e
 
 	buf, ok := cli.reqs[name]
 	if !ok {
-		buf = newBuffer(name)
+		buf = datastore.NewBuffer(name)
 		cli.reqs[name] = buf
 	}
 
+	buffered := make(chan bool)
 	go func() {
-		buf.stream(cli.readLog, c.Config.Tty)
+		buf.Stream(cli.readLog, buffered, c.Config.Tty)
 	}()
-	// Wait for some output to buffer
-	time.Sleep(500 * time.Millisecond)
+	// Wait for some output to buffer.
+	<-buffered
+	// Wait a short time for reading the stream.
+	time.Sleep(100 * time.Millisecond)
 
 	return buf, nil
 }

@@ -1,4 +1,5 @@
-package docker
+// Package datastore provides primitives useful for locally caching data related to remote resources.
+package datastore
 
 import (
 	"bytes"
@@ -8,8 +9,10 @@ import (
 	"time"
 )
 
-// Implements a streaming buffer. Implements io.ReaderAt.
-type buffer struct {
+// StreamBuffer implements a streaming buffer that can be closed and re-opened.
+// Includes locking on all operations so that they can safely be performed while data
+// is being streamed to its internal buffer. Implements interfaces io.ReaderAt and io.Closer.
+type StreamBuffer struct {
 	mux       sync.Mutex
 	name      string
 	data      []byte
@@ -23,36 +26,42 @@ type buffer struct {
 const minRead = 512
 const slowLimit = 64 * 1024 * 1024
 
-func newBuffer(name string) *buffer {
-	b := buffer{name: name, data: make([]byte, 0, minRead), update: time.Now()}
+// NewBuffer instantiates a new streaming buffer for the named resource.
+func NewBuffer(name string) *StreamBuffer {
+	b := StreamBuffer{name: name, data: make([]byte, 0, minRead), update: time.Now()}
 	b.reader = bytes.NewReader(b.data)
 	return &b
 }
 
-func (b *buffer) incr() int {
+func (b *StreamBuffer) incr() int {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	b.streaming++
 	return b.streaming
 }
 
-func (b *buffer) decr() int {
+func (b *StreamBuffer) decr() int {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	b.streaming--
 	return b.streaming
 }
 
-// Reads from the specified reader. Stores all data in an internal buffer.
+// Stream reads from a reader instantiated with the specified callback. Stores all data in an
+// internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
-func (b *buffer) stream(cb func(string) (io.ReadCloser, error), _ bool) {
+func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool, _ bool) {
 	if count := b.incr(); count > 1 {
 		// Only initiate streaming if this is the first request.
+		confirm <- true
+		close(confirm)
 		return
 	}
 
 	var err error
 	b.input, err = cb(b.name)
+	confirm <- true
+	close(confirm)
 	if err != nil {
 		log.Printf("Buffer setup failed: %v", err)
 		b.decr()
@@ -111,26 +120,31 @@ func (b *buffer) stream(cb func(string) (io.ReadCloser, error), _ bool) {
 }
 
 // ReadAt implements the ReaderAt interface. Prevents buffer updates during read.
-func (b *buffer) ReadAt(p []byte, off int64) (int, error) {
+func (b *StreamBuffer) ReadAt(p []byte, off int64) (int, error) {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	return b.reader.ReadAt(p, off)
 }
 
-func (b *buffer) Close() error {
+// Close implements the Closer interface. Includes reference counting of
+// times a stream was requested and only closes the input when that reaches 0.
+func (b *StreamBuffer) Close() error {
 	if count := b.decr(); count == 0 {
 		return b.input.Close()
 	}
 	return nil
 }
 
-func (b *buffer) len() int {
+// Size returns the size of buffered data. If the stream has been closed, reports
+// the last known size.
+func (b *StreamBuffer) Size() int {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	return b.size
 }
 
-func (b *buffer) lastUpdate() time.Time {
+// LastUpdate reports the last time there was an update from the stream.
+func (b *StreamBuffer) LastUpdate() time.Time {
 	b.mux.Lock()
 	defer b.mux.Unlock()
 	return b.update
