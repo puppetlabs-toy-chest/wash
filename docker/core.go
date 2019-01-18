@@ -73,6 +73,30 @@ func (cli *Client) cachedContainerList(ctx context.Context) ([]types.Container, 
 	return containers, err
 }
 
+func (cli *Client) cachedContainerInspect(ctx context.Context, name string) (*types.ContainerJSON, error) {
+	entry, err := cli.Get(name)
+	var container types.ContainerJSON
+	if err == nil {
+		cli.log("Cache hit in /docker/%v", name)
+		dec := gob.NewDecoder(bytes.NewReader(entry))
+		err = dec.Decode(&container)
+	} else {
+		cli.log("Cache miss in /docker/%v", name)
+		container, err = cli.ContainerInspect(ctx, name)
+		if err != nil {
+			return nil, err
+		}
+
+		var data bytes.Buffer
+		enc := gob.NewEncoder(&data)
+		if err := enc.Encode(&container); err != nil {
+			return nil, err
+		}
+		cli.Set(name, data.Bytes())
+	}
+	return &container, err
+}
+
 // Find container by ID.
 func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error) {
 	containers, err := cli.cachedContainerList(ctx)
@@ -103,7 +127,7 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-func (cli *Client) readLog(name string) (*buffer, error) {
+func (cli *Client) readLog(ctx context.Context, name string) (*buffer, error) {
 	// TODO: investigate log format. Prepending unprintable data, not same format as `docker logs`.
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
@@ -114,7 +138,12 @@ func (cli *Client) readLog(name string) (*buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newBuffer(name, r), nil
+
+	c, err := cli.cachedContainerInspect(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return newBuffer(name, r, c.Config.Tty), nil
 }
 
 // Attr returns attributes of the named resource.
@@ -141,7 +170,7 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 	buf, ok := cli.reqs[name]
 	if !ok {
 		var err error
-		buf, err = cli.readLog(name)
+		buf, err = cli.readLog(ctx, name)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +188,7 @@ func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, e
 	buf, ok := cli.reqs[name]
 	if !ok {
 		var err error
-		buf, err = cli.readLog(name)
+		buf, err = cli.readLog(ctx, name)
 		if err != nil {
 			return nil, err
 		}

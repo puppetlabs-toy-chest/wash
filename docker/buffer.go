@@ -17,13 +17,14 @@ type buffer struct {
 	reader    *bytes.Reader
 	update    time.Time
 	streaming int
+	tty       bool
 }
 
 const minRead = 512
 const slowLimit = 64 * 1024 * 1024
 
-func newBuffer(name string, r io.ReadCloser) *buffer {
-	b := buffer{name: name, data: make([]byte, 0, minRead), input: r, update: time.Now()}
+func newBuffer(name string, r io.ReadCloser, tty bool) *buffer {
+	b := buffer{name: name, data: make([]byte, 0, minRead), input: r, update: time.Now(), tty: tty}
 	b.reader = bytes.NewReader(b.data)
 	return &b
 }
@@ -51,9 +52,10 @@ func (b *buffer) stream() {
 	}
 
 	for {
-		// Grow the buffer as needed. Start out doubling, but slow down when storing tens of megabytes.
+		// TODO: reimplement stdcopy with control over the buffer
+		// Grow the buffer as needed. Start out quadrupling, but slow down when storing tens of megabytes.
 		if spare := cap(b.data) - len(b.data); spare < minRead {
-			growBy := cap(b.data)
+			growBy := 3 * cap(b.data)
 			if growBy > slowLimit {
 				growBy = slowLimit
 			}
