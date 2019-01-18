@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"io"
 	"log"
 	"sync"
 	"time"
@@ -127,23 +128,13 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-func (cli *Client) readLog(ctx context.Context, name string) (*buffer, error) {
-	// TODO: investigate log format. Prepending unprintable data, not same format as `docker logs`.
+func (cli *Client) readLog(name string) (io.ReadCloser, error) {
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
 	}
-	r, err := cli.ContainerLogs(context.Background(), name, opts)
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := cli.cachedContainerInspect(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-	return newBuffer(name, r, c.Config.Tty), nil
+	return cli.ContainerLogs(context.Background(), name, opts)
 }
 
 // Attr returns attributes of the named resource.
@@ -167,36 +158,31 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
-	buf, ok := cli.reqs[name]
-	if !ok {
-		var err error
-		buf, err = cli.readLog(ctx, name)
-		if err != nil {
-			return nil, err
-		}
-
-		cli.reqs[name] = buf
+	if buf, ok := cli.reqs[name]; ok {
+		return &plugin.Attributes{Mtime: buf.lastUpdate(), Size: uint64(buf.len())}, nil
 	}
 
-	return &plugin.Attributes{Mtime: buf.lastUpdate(), Size: uint64(buf.len())}, nil
+	return &plugin.Attributes{Mtime: cli.updated}, nil
 }
 
 // Open gets logs from a container.
 func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, error) {
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
+
+	c, err := cli.cachedContainerInspect(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
 	buf, ok := cli.reqs[name]
 	if !ok {
-		var err error
-		buf, err = cli.readLog(ctx, name)
-		if err != nil {
-			return nil, err
-		}
-
+		buf = newBuffer(name)
 		cli.reqs[name] = buf
 	}
+
 	go func() {
-		buf.stream()
+		buf.stream(cli.readLog, c.Config.Tty)
 	}()
 	// Wait for some output to buffer
 	time.Sleep(500 * time.Millisecond)

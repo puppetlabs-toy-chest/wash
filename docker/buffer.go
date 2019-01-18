@@ -17,14 +17,13 @@ type buffer struct {
 	reader    *bytes.Reader
 	update    time.Time
 	streaming int
-	tty       bool
 }
 
 const minRead = 512
 const slowLimit = 64 * 1024 * 1024
 
-func newBuffer(name string, r io.ReadCloser, tty bool) *buffer {
-	b := buffer{name: name, data: make([]byte, 0, minRead), input: r, update: time.Now(), tty: tty}
+func newBuffer(name string) *buffer {
+	b := buffer{name: name, data: make([]byte, 0, minRead), update: time.Now()}
 	b.reader = bytes.NewReader(b.data)
 	return &b
 }
@@ -45,9 +44,17 @@ func (b *buffer) decr() int {
 
 // Reads from the specified reader. Stores all data in an internal buffer.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
-func (b *buffer) stream() {
+func (b *buffer) stream(cb func(string) (io.ReadCloser, error), _ bool) {
 	if count := b.incr(); count > 1 {
 		// Only initiate streaming if this is the first request.
+		return
+	}
+
+	var err error
+	b.input, err = cb(b.name)
+	if err != nil {
+		log.Printf("Buffer setup failed: %v", err)
+		b.decr()
 		return
 	}
 
@@ -89,7 +96,7 @@ func (b *buffer) stream() {
 			b.input.Close()
 			break
 		} else if err != nil {
-			log.Printf("Read failed, perhaps connection or file was closed")
+			log.Printf("Read failed, perhaps connection or file was closed: %v", err)
 			// If the connection was closed explicitly, clear data.
 			b.mux.Lock()
 			b.data = b.data[:0]
@@ -107,10 +114,12 @@ func (b *buffer) ReadAt(p []byte, off int64) (int, error) {
 	return b.reader.ReadAt(p, off)
 }
 
-func (b *buffer) Close() {
+func (b *buffer) Close() error {
+	log.Printf("Closing buffer")
 	if count := b.decr(); count == 0 {
-		b.input.Close()
+		return b.input.Close()
 	}
+	return nil
 }
 
 func (b *buffer) len() int64 {
