@@ -80,23 +80,37 @@ func (cli *Client) cachedContainerInspect(ctx context.Context, name string) (*ty
 	var container types.ContainerJSON
 	if err == nil {
 		cli.log("Cache hit in /docker/%v", name)
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&container)
+		rdr := bytes.NewReader(entry)
+		err = json.NewDecoder(rdr).Decode(&container)
 	} else {
 		cli.log("Cache miss in /docker/%v", name)
-		container, err = cli.ContainerInspect(ctx, name)
+		var raw []byte
+		container, raw, err = cli.ContainerInspectWithRaw(ctx, name, true)
 		if err != nil {
 			return nil, err
 		}
 
-		var data bytes.Buffer
-		enc := gob.NewEncoder(&data)
-		if err := enc.Encode(&container); err != nil {
+		cli.Set(name, raw)
+	}
+
+	return &container, err
+}
+
+func (cli *Client) cachedContainerInspectRaw(ctx context.Context, name string) ([]byte, error) {
+	entry, err := cli.Get(name)
+	if err == nil {
+		cli.log("Cache hit in /docker/%v", name)
+		return entry, nil
+	} else {
+		cli.log("Cache miss in /docker/%v", name)
+		_, raw, err := cli.ContainerInspectWithRaw(ctx, name, true)
+		if err != nil {
 			return nil, err
 		}
-		cli.Set(name, data.Bytes())
+
+		cli.Set(name, raw)
+		return raw, nil
 	}
-	return &container, err
 }
 
 // Find container by ID.
@@ -166,17 +180,15 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 
 // Xattr returns a map of extended attributes.
 func (cli *Client) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
-	c, err := cli.cachedContainerInspect(ctx, name)
+	raw, err := cli.cachedContainerInspectRaw(ctx, name)
 	if err != nil {
 		return nil, err
 	}
 
 	var data map[string]interface{}
-	inrec, err := json.Marshal(c)
-	if err != nil {
+	if err := json.Unmarshal(raw, &data); err != nil {
 		return nil, err
 	}
-	json.Unmarshal(inrec, &data)
 
 	d := make(map[string][]byte)
 	for k, v := range data {
