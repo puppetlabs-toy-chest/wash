@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"encoding/json"
 	"io"
 	"log"
 	"sync"
@@ -153,8 +154,6 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 		return &plugin.Attributes{Mtime: latest}, nil
 	}
 
-	// TODO: register xattrs.
-
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
@@ -163,6 +162,30 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 	}
 
 	return &plugin.Attributes{Mtime: cli.updated}, nil
+}
+
+// Xattr returns a map of extended attributes.
+func (cli *Client) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
+	c, err := cli.cachedContainerInspect(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	inrec, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(inrec, &data)
+
+	d := make(map[string][]byte)
+	for k, v := range data {
+		d[k], err = json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
 }
 
 // Open gets logs from a container.

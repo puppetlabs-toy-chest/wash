@@ -36,6 +36,7 @@ type Content interface {
 // Metadata covers protocols supported by all resources.
 type Metadata interface {
 	Attr(ctx context.Context, name string) (*Attributes, error)
+	Xattr(ctx context.Context, name string) (map[string][]byte, error)
 }
 
 // FS contains the core filesystem data.
@@ -77,6 +78,8 @@ type File struct {
 
 var _ fs.Node = (*File)(nil)
 var _ = fs.NodeOpener(&File{})
+var _ = fs.NodeGetxattrer(&File{})
+var _ = fs.NodeListxattrer(&File{})
 
 // IFileBuffer represents a file that can be ReadAt and Reset.
 type IFileBuffer interface {

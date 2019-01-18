@@ -60,6 +60,12 @@ func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
 	return &Attributes{Mtime: latest}, nil
 }
 
+// Xattr returns an empty map.
+func (f *FS) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
+	data := make(map[string][]byte)
+	return data, nil
+}
+
 const validFor = 100 * time.Millisecond
 
 // Attr returns the attributes of a directory.
@@ -115,6 +121,30 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Size = attr.Size
 	log.Printf("Attr of file %v: %v, %s", f.name, a.Size, a.Mtime)
 	return err
+}
+
+// Listxattr lists extended attributes for the resource.
+func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	xattrs, err := f.client.Xattr(ctx, f.name)
+	if err != nil {
+		return err
+	}
+
+	for k := range xattrs {
+		resp.Append(k)
+	}
+	return nil
+}
+
+// Getxattr gets extended attributes for the resource.
+func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	xattrs, err := f.client.Xattr(ctx, f.name)
+	if err != nil {
+		return err
+	}
+
+	resp.Xattr = xattrs[req.Name]
+	return nil
 }
 
 // Open a file for reading.
