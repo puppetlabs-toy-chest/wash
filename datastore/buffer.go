@@ -3,6 +3,7 @@ package datastore
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
 	"log"
 	"sync"
@@ -23,8 +24,12 @@ type StreamBuffer struct {
 	streaming int
 }
 
-const minRead = 512
-const slowLimit = 64 * 1024 * 1024
+const (
+	minRead       = 4096
+	slowLimit     = 64 * 1024 * 1024
+	headerLen     = 8
+	headerSizeIdx = 4
+)
 
 // NewBuffer instantiates a new streaming buffer for the named resource.
 func NewBuffer(name string) *StreamBuffer {
@@ -50,7 +55,7 @@ func (b *StreamBuffer) decr() int {
 // Stream reads from a reader instantiated with the specified callback. Stores all data in an
 // internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
-func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool, _ bool) {
+func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool, tty bool) {
 	if count := b.incr(); count > 1 {
 		// Only initiate streaming if this is the first request.
 		confirm <- true
@@ -68,15 +73,17 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 		return
 	}
 
+	// Track writeIndex. For TTY containers, this will always match len(b.data).
+	// For non-TTY, it will be larger than len(b.data) when a partial frame is buffered.
+	writeIndex := 0
 	for {
-		// TODO: reimplement stdcopy with control over the buffer
 		// Grow the buffer as needed. Start out quadrupling, but slow down when storing tens of megabytes.
-		if spare := cap(b.data) - len(b.data); spare < minRead {
+		if spare := cap(b.data) - writeIndex; spare < minRead {
 			growBy := 3 * cap(b.data)
 			if growBy > slowLimit {
 				growBy = slowLimit
 			}
-			ndata := make([]byte, len(b.data), cap(b.data)+growBy)
+			ndata := make([]byte, writeIndex, cap(b.data)+growBy)
 			copy(ndata, b.data)
 			b.data = ndata
 
@@ -87,19 +94,53 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 		}
 
 		// Read data. This may block while waiting for new input.
-		i, c := len(b.data), cap(b.data)
-		log.Printf("Reading %v [%v/%v]", b.name, i, c)
-		m, err := b.input.Read(b.data[i:c])
-		if m < 0 {
+		capacity := cap(b.data)
+		log.Printf("Reading %v [%v/%v]", b.name, writeIndex, capacity)
+		bytesRead, err := b.input.Read(b.data[writeIndex:capacity])
+		if bytesRead < 0 {
 			panic("buffer: readFrom returned negative count from Read")
 		}
-		log.Printf("Read %v [%v/%v]", b.name, i+m, c)
+		writeIndex += bytesRead
+		log.Printf("Read %v [%v/%v]", b.name, writeIndex, capacity)
+
+		newLen := writeIndex
+		if !tty {
+			// Do extra processing to strip out multiplex prefix. Format is of the form
+			//   [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4}[]byte{OUTPUT}
+			// readIndex represents how far we've processed the buffered input.
+			// writeIndex is the end of the buffered input.
+			// newLen represents the end of processed input, which will trail readIndex as we append new processed input.
+			readIndex := len(b.data)
+			for newLen = len(b.data); writeIndex-readIndex >= headerLen; {
+				// Get the remaining unprocessed buffer.
+				buf := b.data[readIndex:writeIndex]
+
+				// Read the next frame.
+				frameSize := int(binary.BigEndian.Uint32(buf[headerSizeIdx : headerSizeIdx+4]))
+
+				// Stop if the frame is larger than the remaining unprocessed buffer.
+				if headerLen+frameSize > len(buf) {
+					break
+				}
+
+				// Append frame to processed input and increment newLen.
+				// This space can later be used for coloring output based on stream.
+				copy(b.data[newLen:capacity], buf[headerLen:headerLen+frameSize])
+				readIndex += headerLen + frameSize
+				newLen += frameSize
+			}
+
+			// Append any remaining input to the processed input.
+			buf := b.data[readIndex:writeIndex]
+			copy(b.data[newLen:capacity], buf)
+			writeIndex = newLen + len(buf)
+		}
 
 		// Update reader with new slice.
 		b.mux.Lock()
-		b.data = b.data[:i+m]
+		b.data = b.data[:newLen]
 		b.reader.Reset(b.data)
-		b.size = i + m
+		b.size = newLen
 		b.update = time.Now()
 		b.mux.Unlock()
 
