@@ -17,6 +17,7 @@ var progName = filepath.Base(os.Args[0])
 var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
 
 func usage() {
+	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE", progName)
 	fmt.Fprintf(os.Stderr, "Usage: %s MOUNTPOINT\n", progName)
 	flag.PrintDefaults()
 }

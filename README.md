@@ -8,7 +8,7 @@ This prototype is built as a FUSE filesystem. It currently only supports viewing
 
 Mount the filesystem with
 ```
-go run main.go mnt
+go run wash.go mnt
 ```
 
 In another shell navigate it at `mnt`.
