@@ -52,6 +52,41 @@ func (b *StreamBuffer) decr() int {
 	return b.streaming
 }
 
+// Removes multiplex headers. Returns the new buffer length after compressing input,
+// and the new writeIndex that also includes unprocessed data.
+func processMultiplexedStreams(data []byte, writeIndex int) (int, int) {
+	// Do extra processing to strip out multiplex prefix. Format is of the form
+	//   [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4}[]byte{OUTPUT}
+	// readIndex represents how far we've processed the buffered input.
+	// writeIndex is the end of the buffered input.
+	// newLen represents the end of processed input, which will trail readIndex as we append new processed input.
+	newLen, readIndex, capacity := len(data), len(data), cap(data)
+	for writeIndex-readIndex >= headerLen {
+		// Get the remaining unprocessed buffer.
+		buf := data[readIndex:writeIndex]
+
+		// Read the next frame.
+		frameSize := int(binary.BigEndian.Uint32(buf[headerSizeIdx : headerSizeIdx+4]))
+
+		// Stop if the frame is larger than the remaining unprocessed buffer.
+		if headerLen+frameSize > len(buf) {
+			break
+		}
+
+		// Append frame to processed input and increment newLen.
+		// This space can later be used for coloring output based on stream.
+		copy(data[newLen:capacity], buf[headerLen:headerLen+frameSize])
+		readIndex += headerLen + frameSize
+		newLen += frameSize
+	}
+
+	// Append any remaining input to the processed input.
+	buf := data[readIndex:writeIndex]
+	copy(data[newLen:capacity], buf)
+	writeIndex = newLen + len(buf)
+	return newLen, writeIndex
+}
+
 // Stream reads from a reader instantiated with the specified callback. Stores all data in an
 // internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
@@ -105,35 +140,7 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 
 		newLen := writeIndex
 		if !tty {
-			// Do extra processing to strip out multiplex prefix. Format is of the form
-			//   [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4}[]byte{OUTPUT}
-			// readIndex represents how far we've processed the buffered input.
-			// writeIndex is the end of the buffered input.
-			// newLen represents the end of processed input, which will trail readIndex as we append new processed input.
-			readIndex := len(b.data)
-			for newLen = len(b.data); writeIndex-readIndex >= headerLen; {
-				// Get the remaining unprocessed buffer.
-				buf := b.data[readIndex:writeIndex]
-
-				// Read the next frame.
-				frameSize := int(binary.BigEndian.Uint32(buf[headerSizeIdx : headerSizeIdx+4]))
-
-				// Stop if the frame is larger than the remaining unprocessed buffer.
-				if headerLen+frameSize > len(buf) {
-					break
-				}
-
-				// Append frame to processed input and increment newLen.
-				// This space can later be used for coloring output based on stream.
-				copy(b.data[newLen:capacity], buf[headerLen:headerLen+frameSize])
-				readIndex += headerLen + frameSize
-				newLen += frameSize
-			}
-
-			// Append any remaining input to the processed input.
-			buf := b.data[readIndex:writeIndex]
-			copy(b.data[newLen:capacity], buf)
-			writeIndex = newLen + len(buf)
+			newLen, writeIndex = processMultiplexedStreams(b.data, writeIndex)
 		}
 
 		// Update reader with new slice.
