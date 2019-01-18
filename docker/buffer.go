@@ -118,7 +118,6 @@ func (b *buffer) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (b *buffer) Close() error {
-	log.Printf("Closing buffer")
 	if count := b.decr(); count == 0 {
 		return b.input.Close()
 	}

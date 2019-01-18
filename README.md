@@ -19,7 +19,7 @@ Operations that work:
 - `cat docker/*`
 - `tail docker/*`
 - `stat docker/*` (kind of, information's not very useful)
-- `xattr` and a new command `go run cmd/meta/meta.go`
+- `xattr` and a new command `meta`
 
 ### Container
 
