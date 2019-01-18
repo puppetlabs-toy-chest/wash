@@ -16,6 +16,7 @@ type buffer struct {
 	input     io.ReadCloser
 	reader    *bytes.Reader
 	update    time.Time
+	size      int
 	streaming int
 }
 
@@ -89,6 +90,7 @@ func (b *buffer) stream(cb func(string) (io.ReadCloser, error), _ bool) {
 		b.mux.Lock()
 		b.data = b.data[:i+m]
 		b.reader.Reset(b.data)
+		b.size = i + m
 		b.update = time.Now()
 		b.mux.Unlock()
 
@@ -101,6 +103,7 @@ func (b *buffer) stream(cb func(string) (io.ReadCloser, error), _ bool) {
 			b.mux.Lock()
 			b.data = b.data[:0]
 			b.reader.Reset(b.data)
+			// Don't reset size on close.
 			b.mux.Unlock()
 			break
 		}
@@ -122,10 +125,10 @@ func (b *buffer) Close() error {
 	return nil
 }
 
-func (b *buffer) len() int64 {
+func (b *buffer) len() int {
 	b.mux.Lock()
 	defer b.mux.Unlock()
-	return b.reader.Size()
+	return b.size
 }
 
 func (b *buffer) lastUpdate() time.Time {
