@@ -158,7 +158,6 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 	cli.log("Reading attributes of %v in /docker", name)
 	if name == "docker" {
 		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
-		log.Printf("Getting attr of /docker")
 		latest := cli.updated
 		for _, v := range cli.reqs {
 			if updated := v.LastUpdate(); updated.After(latest) {

@@ -67,7 +67,10 @@ type FileProtocol interface {
 type Node = fs.Node
 
 // ENOENT states the entity does not exist
-const ENOENT = fuse.ENOENT
+const (
+	ENOENT  = fuse.ENOENT
+	ENOTSUP = fuse.ENOTSUP
+)
 
 // FS contains the core filesystem data.
 type FS struct {

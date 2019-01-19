@@ -10,6 +10,7 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/docker"
+	"github.com/puppetlabs/wash/kubernetes"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -38,7 +39,14 @@ func main() {
 
 func mount(mountpoint string) error {
 	log.Println("Loading docker integration")
+	// TODO: initialize in parallel, add multiple context/configs
 	dockercli, err := docker.Create(*debug)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Loading kubernetes integration")
+	kubecli, err := kubernetes.Create(*debug)
 	if err != nil {
 		return err
 	}
@@ -56,10 +64,11 @@ func mount(mountpoint string) error {
 	}
 	defer c.Close()
 
-	log.Println("Serving filesystem with docker")
+	log.Println("Serving filesystem")
 	filesys := &plugin.FS{
 		Clients: map[string]plugin.DirProtocol{
-			"docker": dockercli,
+			"docker":     dockercli,
+			"kubernetes": kubecli,
 		},
 	}
 	if err := fs.Serve(c, filesys); err != nil {
