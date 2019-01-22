@@ -27,6 +27,8 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	log.SetFlags(log.Ldate | log.Lmicroseconds)
+
 	if flag.NArg() != 1 {
 		usage()
 		os.Exit(2)
