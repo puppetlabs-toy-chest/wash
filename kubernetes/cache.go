@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +26,7 @@ func (cli *Client) updateCachedPods(ctx context.Context) error {
 	var data bytes.Buffer
 
 	podNames := make([]string, len(podList.Items))
+	namespaces := make(map[string][]string)
 	for i, pod := range podList.Items {
 		enc := gob.NewEncoder(&data)
 		if err := enc.Encode(pod); err != nil {
@@ -32,7 +34,22 @@ func (cli *Client) updateCachedPods(ctx context.Context) error {
 		}
 		cli.cache.Set(podPrefix+string(pod.UID), data.Bytes())
 		data.Reset()
+
 		podNames[i] = string(pod.UID)
+		namespaces[pod.Namespace] = append(namespaces[pod.Namespace], string(pod.UID))
+	}
+
+	namespaceNames := make([]string, 0, len(namespaces))
+	for key, value := range namespaces {
+		sort.Strings(value)
+		enc := gob.NewEncoder(&data)
+		if err := enc.Encode(value); err != nil {
+			return err
+		}
+		cli.cache.Set(nsPrefix+key, data.Bytes())
+		data.Reset()
+
+		namespaceNames = append(namespaceNames, key)
 	}
 
 	enc := gob.NewEncoder(&data)
@@ -40,6 +57,14 @@ func (cli *Client) updateCachedPods(ctx context.Context) error {
 		return err
 	}
 	cli.cache.Set(podCacheName, data.Bytes())
+	data.Reset()
+
+	enc = gob.NewEncoder(&data)
+	if err := enc.Encode(&namespaceNames); err != nil {
+		return err
+	}
+	cli.cache.Set(nsCacheName, data.Bytes())
+	data.Reset()
 
 	return nil
 }
@@ -89,39 +114,11 @@ func (cli *Client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 	return &pod, err
 }
 
-func (cli *Client) updateCachedNamespaces(ctx context.Context) error {
-	namespaces, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	var data bytes.Buffer
-
-	namespaceNames := make([]string, len(namespaces.Items))
-	for i, namespace := range namespaces.Items {
-		enc := gob.NewEncoder(&data)
-		if err := enc.Encode(namespace); err != nil {
-			return err
-		}
-		cli.cache.Set(nsPrefix+namespace.Name, data.Bytes())
-		data.Reset()
-		namespaceNames[i] = namespace.Name
-	}
-
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&namespaceNames); err != nil {
-		return err
-	}
-	cli.cache.Set(nsCacheName, data.Bytes())
-
-	return nil
-}
-
 func (cli *Client) cachedNamespaceList(ctx context.Context) ([]string, error) {
 	entry, err := cli.cache.Get(nsCacheName)
 	if err != nil {
 		cli.log("Cache miss in /kubernetes")
-		if err := cli.updateCachedNamespaces(ctx); err != nil {
+		if err := cli.updateCachedPods(ctx); err != nil {
 			return nil, err
 		}
 		if entry, err = cli.cache.Get(nsCacheName); err != nil {
@@ -137,13 +134,13 @@ func (cli *Client) cachedNamespaceList(ctx context.Context) ([]string, error) {
 	return namespaces, err
 }
 
-func (cli *Client) cachedNamespaceFind(ctx context.Context, name string) (*corev1.Namespace, error) {
+func (cli *Client) cachedNamespaceFind(ctx context.Context, name string) ([]string, error) {
 	entry, err := cli.cache.Get(nsPrefix + name)
 	if err != nil {
 		// If name wasn't found, check whether Namespaces was loaded and if not load it.
 		if _, cerr := cli.cache.Get(nsCacheName); cerr != nil {
 			cli.log("Cache miss in /kubernetes/%v", name)
-			if err = cli.updateCachedNamespaces(ctx); err != nil {
+			if err = cli.updateCachedPods(ctx); err != nil {
 				return nil, err
 			}
 			if entry, err = cli.cache.Get(nsPrefix + name); err != nil {
@@ -156,8 +153,8 @@ func (cli *Client) cachedNamespaceFind(ctx context.Context, name string) (*corev
 		cli.log("Cache hit in /kubernetes/%v", name)
 	}
 
-	var namespace corev1.Namespace
+	var namespacePods []string
 	dec := gob.NewDecoder(bytes.NewReader(entry))
-	err = dec.Decode(&namespace)
-	return &namespace, err
+	err = dec.Decode(&namespacePods)
+	return namespacePods, err
 }

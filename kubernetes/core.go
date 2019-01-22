@@ -81,17 +81,28 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 	case "kubernetes":
 		idx := sort.SearchStrings(cli.groups, name)
 		if cli.groups[idx] == name {
+			cli.log("Found group %v", name)
 			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
 		}
 	case "pods":
 		if pod, err := cli.cachedPodFind(ctx, name); err == nil {
 			cli.log("Found pod %v, %v", name, pod)
-			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+			return &plugin.File{Client: cli, Parent: parent, Name: name}, nil
 		}
 	case "namespaces":
 		if namespace, err := cli.cachedNamespaceFind(ctx, name); err == nil {
 			cli.log("Found namespace %v, %v", name, namespace)
 			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+		}
+	}
+
+	if parent.Parent.Name == "namespaces" {
+		if pods, err := cli.cachedNamespaceFind(ctx, parent.Name); err == nil {
+			idx := sort.SearchStrings(pods, name)
+			if pods[idx] == name {
+				cli.log("Found pod %v in namespace %v", name, parent.Name)
+				return &plugin.File{Client: cli, Parent: parent, Name: name}, nil
+			}
 		}
 	}
 	return nil, plugin.ENOENT
@@ -101,6 +112,7 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
 	switch parent.Name {
 	case "kubernetes":
+		cli.log("Listing %v groups in /kubernetes", len(cli.groups))
 		entries := make([]plugin.Node, len(cli.groups))
 		for i, v := range cli.groups {
 			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
@@ -111,7 +123,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node,
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v pods in /kubernetes", len(pods))
+		cli.log("Listing %v pods in /kubernetes/pods", len(pods))
 		entries := make([]plugin.Node, len(pods))
 		for i, v := range pods {
 			entries[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
@@ -122,10 +134,23 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node,
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v namespaces in /kubernetes", len(namespaces))
+		cli.log("Listing %v namespaces in /kubernetes/namespaces", len(namespaces))
 		entries := make([]plugin.Node, len(namespaces))
 		for i, v := range namespaces {
 			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+		}
+		return entries, nil
+	}
+
+	if parent.Parent.Name == "namespaces" {
+		pods, err := cli.cachedNamespaceFind(ctx, parent.Name)
+		if err != nil {
+			return nil, err
+		}
+		cli.log("Listing %v pods in /kubernetes/namespaces/%v", len(pods), parent.Name)
+		entries := make([]plugin.Node, len(pods))
+		for i, v := range pods {
+			entries[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
 		}
 		return entries, nil
 	}
