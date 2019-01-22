@@ -11,13 +11,6 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
-// Entry in a filesystem
-type Entry struct {
-	Client interface{}
-	Name   string
-	Isdir  bool
-}
-
 // IFileBuffer represents a file that can be ReadAt and Close.
 type IFileBuffer interface {
 	io.ReaderAt
@@ -32,8 +25,8 @@ type Attributes struct {
 
 // GroupTraversal that plugins are expected to model.
 type GroupTraversal interface {
-	Find(ctx context.Context, name string) (*Entry, error)
-	List(ctx context.Context) ([]Entry, error)
+	Find(ctx context.Context, parent *Dir, name string) (Node, error)
+	List(ctx context.Context, parent *Dir) ([]Node, error)
 }
 
 // Content protocol.
@@ -83,8 +76,9 @@ var _ fs.FS = (*FS)(nil)
 // Dir represents a directory within the system, with the client
 // necessary to represent it and the full path to the directory.
 type Dir struct {
-	client DirProtocol
-	name   string
+	Client DirProtocol
+	Parent *Dir
+	Name   string
 }
 
 var _ fs.Node = (*Dir)(nil)
@@ -93,8 +87,9 @@ var _ = fs.HandleReadDirAller(&Dir{})
 
 // File contains metadata about the file.
 type File struct {
-	client FileProtocol
-	name   string
+	Client FileProtocol
+	Parent *Dir
+	Name   string
 }
 
 var _ fs.Node = (*File)(nil)

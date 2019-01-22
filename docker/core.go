@@ -50,7 +50,7 @@ func (cli *Client) log(format string, v ...interface{}) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error) {
+func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Node, error) {
 	containers, err := cli.cachedContainerList(ctx)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error)
 	for _, container := range containers {
 		if container.ID == name {
 			cli.log("Found container %v, %v", name, container)
-			return &plugin.Entry{Client: cli, Name: container.ID}, nil
+			return &plugin.File{Client: cli, Parent: parent, Name: container.ID}, nil
 		}
 	}
 	cli.log("Container %v not found", name)
@@ -66,15 +66,15 @@ func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error)
 }
 
 // List all running containers as files.
-func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
+func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
 	containers, err := cli.cachedContainerList(ctx)
 	if err != nil {
 		return nil, err
 	}
 	cli.log("Listing %v containers in /docker", len(containers))
-	keys := make([]plugin.Entry, len(containers))
+	keys := make([]plugin.Node, len(containers))
 	for i, container := range containers {
-		keys[i] = plugin.Entry{Client: cli, Name: container.ID}
+		keys[i] = &plugin.File{Client: cli, Parent: parent, Name: container.ID}
 	}
 	return keys, nil
 }

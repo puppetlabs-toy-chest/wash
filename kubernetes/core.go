@@ -6,6 +6,7 @@ import (
 	"log"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -23,6 +24,7 @@ type Client struct {
 	cache   *bigcache.BigCache
 	debug   bool
 	updated time.Time
+	groups  []string
 }
 
 // Create a new kubernetes client.
@@ -60,7 +62,10 @@ func Create(debug bool) (*Client, error) {
 		return nil, err
 	}
 
-	return &Client{clientset, cache, debug, time.Now()}, nil
+	groups := []string{"deployments", "namespaces", "pods"}
+	sort.Strings(groups)
+
+	return &Client{clientset, cache, debug, time.Now(), groups}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -70,28 +75,48 @@ func (cli *Client) log(format string, v ...interface{}) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error) {
-	if pod, err := cli.cachedPodFind(ctx, name); err == nil {
-		cli.log("Found pod %v, %v", name, pod)
-		return &plugin.Entry{Client: cli, Name: name}, nil
-	} else {
-		cli.log("Pod %v not found: %v", name, err)
-		return nil, plugin.ENOENT
+func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Node, error) {
+	switch parent.Name {
+	case "kubernetes":
+		idx := sort.SearchStrings(cli.groups, name)
+		if cli.groups[idx] == name {
+			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+		}
+	case "pods":
+		if pod, err := cli.cachedPodFind(ctx, name); err == nil {
+			cli.log("Found pod %v, %v", name, pod)
+			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+		}
 	}
+	return nil, plugin.ENOENT
+}
+
+func (cli *Client) makeEntries(vs []string, parent *plugin.Dir, dir bool) []plugin.Node {
+	vsm := make([]plugin.Node, len(vs))
+	for i, v := range vs {
+		if dir {
+			vsm[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+		} else {
+			vsm[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
+		}
+	}
+	return vsm
 }
 
 // List all running pods as files.
-func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
-	pods, err := cli.cachedPodList(ctx)
-	if err != nil {
-		return nil, err
+func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
+	switch parent.Name {
+	case "kubernetes":
+		return cli.makeEntries(cli.groups, parent, true), nil
+	case "pods":
+		pods, err := cli.cachedPodList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		cli.log("Listing %v pods in /kubernetes", len(pods))
+		return cli.makeEntries(pods, parent, false), nil
 	}
-	cli.log("Listing %v pods in /kubernetes", len(pods))
-	keys := make([]plugin.Entry, 0, len(pods))
-	for _, pod := range pods {
-		keys = append(keys, plugin.Entry{Client: cli, Name: pod})
-	}
-	return keys, nil
+	return []plugin.Node{}, nil
 }
 
 // Attr returns attributes of the named resource.

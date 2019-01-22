@@ -15,31 +15,27 @@ import (
 func (f *FS) Root() (fs.Node, error) {
 	log.Println("Entering root of filesystem")
 	return &Dir{
-		client: f,
-		name:   "/",
+		Client: f,
+		Name:   "/",
 	}, nil
 }
 
 // Find the named item or return nil.
-func (f *FS) Find(_ context.Context, name string) (*Entry, error) {
+func (f *FS) Find(_ context.Context, parent *Dir, name string) (Node, error) {
 	if client, ok := f.Clients[name]; ok {
 		log.Printf("Found client %v: %v", name, client)
-		return &Entry{
-			Client: client,
-			Name:   name,
-			Isdir:  true,
-		}, nil
+		return &Dir{client, parent, name}, nil
 	}
 	log.Printf("Client %v not found", name)
 	return nil, ENOENT
 }
 
 // List all clients as directories.
-func (f *FS) List(context.Context) ([]Entry, error) {
+func (f *FS) List(_ context.Context, parent *Dir) ([]Node, error) {
 	log.Printf("Listed %v clients in /", len(f.Clients))
-	keys := make([]Entry, 0, len(f.Clients))
+	keys := make([]Node, 0, len(f.Clients))
 	for k, v := range f.Clients {
-		keys = append(keys, Entry{Client: v, Name: k, Isdir: true})
+		keys = append(keys, &Dir{v, parent, k})
 	}
 	return keys, nil
 }
@@ -70,29 +66,22 @@ func (f *FS) Xattr(ctx context.Context, name string) (map[string][]byte, error) 
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = os.ModeDir | 0550
 
-	attr, err := d.client.Attr(ctx, d.name)
+	attr, err := d.Client.Attr(ctx, d.Name)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
 	a.Valid = attr.Valid
-	log.Printf("Attr of dir %v: %v, %v", d.name, a.Mtime, a.Size)
+	log.Printf("Attr of dir %v: %v, %v", d.Name, a.Mtime, a.Size)
 	return err
 }
 
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	entry, err := d.client.Find(ctx, req.Name)
-	if err != nil {
-		return nil, err
-	}
-	if entry.Isdir {
-		return &Dir{client: entry.Client.(DirProtocol), name: entry.Name}, nil
-	}
-	return &File{client: entry.Client.(FileProtocol), name: entry.Name}, nil
+	return d.Client.Find(ctx, d, req.Name)
 }
 
 // ReadDirAll lists all children of the directory.
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	entries, err := d.client.List(ctx)
+	entries, err := d.Client.List(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +89,12 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
 		var de fuse.Dirent
-		de.Name = entry.Name
-		if entry.Isdir {
+		switch v := entry.(type) {
+		case *Dir:
+			de.Name = v.Name
 			de.Type = fuse.DT_Dir
+		case *File:
+			de.Name = v.Name
 		}
 		res[i] = de
 	}
@@ -113,17 +105,17 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = 0440
 
-	attr, err := f.client.Attr(ctx, f.name)
+	attr, err := f.Client.Attr(ctx, f.Name)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
 	a.Valid = attr.Valid
-	log.Printf("Attr of file %v: %v, %s", f.name, a.Size, a.Mtime)
+	log.Printf("Attr of file %v: %v, %s", f.Name, a.Size, a.Mtime)
 	return err
 }
 
 // Listxattr lists extended attributes for the resource.
 func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	xattrs, err := f.client.Xattr(ctx, f.name)
+	xattrs, err := f.Client.Xattr(ctx, f.Name)
 	if err != nil {
 		return err
 	}
@@ -136,7 +128,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 
 // Getxattr gets extended attributes for the resource.
 func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	xattrs, err := f.client.Xattr(ctx, f.name)
+	xattrs, err := f.Client.Xattr(ctx, f.Name)
 	if err != nil {
 		return err
 	}
@@ -148,11 +140,11 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 // Open a file for reading.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	r, err := f.client.Open(ctx, f.name)
+	r, err := f.Client.Open(ctx, f.Name)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Opened %v", f.name)
+	log.Printf("Opened %v", f.Name)
 	return &FileHandle{r: r}, nil
 }
 
