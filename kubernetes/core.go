@@ -63,7 +63,7 @@ func Create(debug bool) (*Client, error) {
 		return nil, err
 	}
 
-	groups := []string{"deployments", "namespaces", "pods"}
+	groups := []string{"namespaces", "pods"}
 	sort.Strings(groups)
 
 	return &Client{clientset, cache, debug, time.Now(), "kubernetes", groups}, nil
@@ -88,34 +88,46 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 			cli.log("Found pod %v, %v", name, pod)
 			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
 		}
-	}
-	return nil, plugin.ENOENT
-}
-
-func (cli *Client) makeEntries(vs []string, parent *plugin.Dir, dir bool) []plugin.Node {
-	vsm := make([]plugin.Node, len(vs))
-	for i, v := range vs {
-		if dir {
-			vsm[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
-		} else {
-			vsm[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
+	case "namespaces":
+		if namespace, err := cli.cachedNamespaceFind(ctx, name); err == nil {
+			cli.log("Found namespace %v, %v", name, namespace)
+			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
 		}
 	}
-	return vsm
+	return nil, plugin.ENOENT
 }
 
 // List all running pods as files.
 func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
 	switch parent.Name {
 	case "kubernetes":
-		return cli.makeEntries(cli.groups, parent, true), nil
+		entries := make([]plugin.Node, len(cli.groups))
+		for i, v := range cli.groups {
+			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+		}
+		return entries, nil
 	case "pods":
 		pods, err := cli.cachedPodList(ctx)
 		if err != nil {
 			return nil, err
 		}
 		cli.log("Listing %v pods in /kubernetes", len(pods))
-		return cli.makeEntries(pods, parent, false), nil
+		entries := make([]plugin.Node, len(pods))
+		for i, v := range pods {
+			entries[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
+		}
+		return entries, nil
+	case "namespaces":
+		namespaces, err := cli.cachedNamespaceList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		cli.log("Listing %v namespaces in /kubernetes", len(namespaces))
+		entries := make([]plugin.Node, len(namespaces))
+		for i, v := range namespaces {
+			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+		}
+		return entries, nil
 	}
 	return []plugin.Node{}, nil
 }
