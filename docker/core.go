@@ -1,9 +1,7 @@
 package docker
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
 	"io"
 	"log"
@@ -51,69 +49,6 @@ func (cli *Client) log(format string, v ...interface{}) {
 	}
 }
 
-func (cli *Client) cachedContainerList(ctx context.Context) ([]types.Container, error) {
-	entry, err := cli.Get("ContainerList")
-	var containers []types.Container
-	if err == nil {
-		cli.log("Cache hit in /docker")
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&containers)
-	} else {
-		cli.log("Cache miss in /docker")
-		containers, err = cli.ContainerList(ctx, types.ContainerListOptions{})
-		if err != nil {
-			return nil, err
-		}
-
-		var data bytes.Buffer
-		enc := gob.NewEncoder(&data)
-		if err := enc.Encode(&containers); err != nil {
-			return nil, err
-		}
-		cli.Set("ContainerList", data.Bytes())
-		cli.updated = time.Now()
-	}
-	return containers, err
-}
-
-func (cli *Client) cachedContainerInspect(ctx context.Context, name string) (*types.ContainerJSON, error) {
-	entry, err := cli.Get(name)
-	var container types.ContainerJSON
-	if err == nil {
-		cli.log("Cache hit in /docker/%v", name)
-		rdr := bytes.NewReader(entry)
-		err = json.NewDecoder(rdr).Decode(&container)
-	} else {
-		cli.log("Cache miss in /docker/%v", name)
-		var raw []byte
-		container, raw, err = cli.ContainerInspectWithRaw(ctx, name, true)
-		if err != nil {
-			return nil, err
-		}
-
-		cli.Set(name, raw)
-	}
-
-	return &container, err
-}
-
-func (cli *Client) cachedContainerInspectRaw(ctx context.Context, name string) ([]byte, error) {
-	entry, err := cli.Get(name)
-	if err == nil {
-		cli.log("Cache hit in /docker/%v", name)
-		return entry, nil
-	} else {
-		cli.log("Cache miss in /docker/%v", name)
-		_, raw, err := cli.ContainerInspectWithRaw(ctx, name, true)
-		if err != nil {
-			return nil, err
-		}
-
-		cli.Set(name, raw)
-		return raw, nil
-	}
-}
-
 // Find container by ID.
 func (cli *Client) Find(ctx context.Context, name string) (*plugin.Entry, error) {
 	containers, err := cli.cachedContainerList(ctx)
@@ -142,15 +77,6 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 		keys[i] = plugin.Entry{Client: cli, Name: container.ID}
 	}
 	return keys, nil
-}
-
-func (cli *Client) readLog(name string) (io.ReadCloser, error) {
-	opts := types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Follow:     true,
-	}
-	return cli.ContainerLogs(context.Background(), name, opts)
 }
 
 // Attr returns attributes of the named resource.
@@ -198,6 +124,15 @@ func (cli *Client) Xattr(ctx context.Context, name string) (map[string][]byte, e
 		}
 	}
 	return d, nil
+}
+
+func (cli *Client) readLog(name string) (io.ReadCloser, error) {
+	opts := types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	}
+	return cli.ContainerLogs(context.Background(), name, opts)
 }
 
 // Open gets logs from a container.
