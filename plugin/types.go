@@ -11,6 +11,13 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
+// Entry represents a named filesystem resource.
+type Entry interface {
+	Node
+	Name() string
+	Parent() Entry
+}
+
 // IFileBuffer represents a file that can be ReadAt and Close.
 type IFileBuffer interface {
 	io.ReaderAt
@@ -25,21 +32,21 @@ type Attributes struct {
 
 // GroupTraversal that plugins are expected to model.
 type GroupTraversal interface {
-	Find(ctx context.Context, parent *Dir, name string) (Node, error)
-	List(ctx context.Context, parent *Dir) ([]Node, error)
+	Find(ctx context.Context, parent *Dir, name string) (Entry, error)
+	List(ctx context.Context, parent *Dir) ([]Entry, error)
 }
 
 // Content protocol.
 type Content interface {
-	Open(ctx context.Context, name string) (IFileBuffer, error)
+	Open(ctx context.Context, node Entry) (IFileBuffer, error)
 }
 
 // Stream protocol for data that we only stream?
 
 // Metadata covers protocols supported by all resources.
 type Metadata interface {
-	Attr(ctx context.Context, name string) (*Attributes, error)
-	Xattr(ctx context.Context, name string) (map[string][]byte, error)
+	Attr(ctx context.Context, node Entry) (*Attributes, error)
+	Xattr(ctx context.Context, node Entry) (map[string][]byte, error)
 }
 
 // DirProtocol is protocols expected of a Directory resource.
@@ -76,9 +83,9 @@ var _ fs.FS = (*FS)(nil)
 // Dir represents a directory within the system, with the client
 // necessary to represent it and the full path to the directory.
 type Dir struct {
-	Client DirProtocol
-	Parent *Dir
-	Name   string
+	client DirProtocol
+	parent *Dir
+	name   string
 }
 
 var _ fs.Node = (*Dir)(nil)
@@ -87,9 +94,9 @@ var _ = fs.HandleReadDirAller(&Dir{})
 
 // File contains metadata about the file.
 type File struct {
-	Client FileProtocol
-	Parent *Dir
-	Name   string
+	client FileProtocol
+	parent *Dir
+	name   string
 }
 
 var _ fs.Node = (*File)(nil)

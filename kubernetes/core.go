@@ -7,9 +7,11 @@ import (
 	"os/user"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -23,10 +25,17 @@ type Client struct {
 	*k8s.Clientset
 	cache   *bigcache.BigCache
 	debug   bool
+	mux     sync.Mutex
+	reqs    map[string]*datastore.StreamBuffer
 	updated time.Time
 	root    string
 	groups  []string
 }
+
+// Defines how quickly we should allow checks for updated content. This has to be consistent
+// across files and directories or we may not detect updates quickly enough, especially for files
+// that previously were empty.
+const validDuration = 100 * time.Millisecond
 
 // Create a new kubernetes client.
 func Create(debug bool) (*Client, error) {
@@ -66,7 +75,8 @@ func Create(debug bool) (*Client, error) {
 	groups := []string{"namespaces", "pods"}
 	sort.Strings(groups)
 
-	return &Client{clientset, cache, debug, time.Now(), "kubernetes", groups}, nil
+	reqs := make(map[string]*datastore.StreamBuffer)
+	return &Client{clientset, cache, debug, sync.Mutex{}, reqs, time.Now(), "kubernetes", groups}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -76,32 +86,32 @@ func (cli *Client) log(format string, v ...interface{}) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Node, error) {
-	switch parent.Name {
+func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Entry, error) {
+	switch parent.Name() {
 	case "kubernetes":
 		idx := sort.SearchStrings(cli.groups, name)
 		if cli.groups[idx] == name {
 			cli.log("Found group %v", name)
-			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+			return plugin.NewDir(cli, parent, name), nil
 		}
 	case "pods":
 		if pod, err := cli.cachedPodFind(ctx, name); err == nil {
 			cli.log("Found pod %v, %v", name, pod)
-			return &plugin.File{Client: cli, Parent: parent, Name: name}, nil
+			return plugin.NewFile(cli, parent, name), nil
 		}
 	case "namespaces":
 		if namespace, err := cli.cachedNamespaceFind(ctx, name); err == nil {
 			cli.log("Found namespace %v, %v", name, namespace)
-			return &plugin.Dir{Client: cli, Parent: parent, Name: name}, nil
+			return plugin.NewDir(cli, parent, name), nil
 		}
 	}
 
-	if parent.Parent.Name == "namespaces" {
-		if pods, err := cli.cachedNamespaceFind(ctx, parent.Name); err == nil {
+	if parent.Parent().Name() == "namespaces" {
+		if pods, err := cli.cachedNamespaceFind(ctx, parent.Name()); err == nil {
 			idx := sort.SearchStrings(pods, name)
 			if pods[idx] == name {
-				cli.log("Found pod %v in namespace %v", name, parent.Name)
-				return &plugin.File{Client: cli, Parent: parent, Name: name}, nil
+				cli.log("Found pod %v in namespace %v", name, parent.Name())
+				return plugin.NewFile(cli, parent, name), nil
 			}
 		}
 	}
@@ -109,13 +119,13 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 }
 
 // List all running pods as files.
-func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
-	switch parent.Name {
+func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry, error) {
+	switch parent.Name() {
 	case "kubernetes":
 		cli.log("Listing %v groups in /kubernetes", len(cli.groups))
-		entries := make([]plugin.Node, len(cli.groups))
+		entries := make([]plugin.Entry, len(cli.groups))
 		for i, v := range cli.groups {
-			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+			entries[i] = plugin.NewDir(cli, parent, v)
 		}
 		return entries, nil
 	case "pods":
@@ -124,9 +134,9 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node,
 			return nil, err
 		}
 		cli.log("Listing %v pods in /kubernetes/pods", len(pods))
-		entries := make([]plugin.Node, len(pods))
+		entries := make([]plugin.Entry, len(pods))
 		for i, v := range pods {
-			entries[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
+			entries[i] = plugin.NewFile(cli, parent, v)
 		}
 		return entries, nil
 	case "namespaces":
@@ -135,40 +145,59 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node,
 			return nil, err
 		}
 		cli.log("Listing %v namespaces in /kubernetes/namespaces", len(namespaces))
-		entries := make([]plugin.Node, len(namespaces))
+		entries := make([]plugin.Entry, len(namespaces))
 		for i, v := range namespaces {
-			entries[i] = &plugin.Dir{Client: cli, Parent: parent, Name: v}
+			entries[i] = plugin.NewDir(cli, parent, v)
 		}
 		return entries, nil
 	}
 
-	if parent.Parent.Name == "namespaces" {
-		pods, err := cli.cachedNamespaceFind(ctx, parent.Name)
+	if parent.Parent().Name() == "namespaces" {
+		pods, err := cli.cachedNamespaceFind(ctx, parent.Name())
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v pods in /kubernetes/namespaces/%v", len(pods), parent.Name)
-		entries := make([]plugin.Node, len(pods))
+		cli.log("Listing %v pods in /kubernetes/namespaces/%v", len(pods), parent.Name())
+		entries := make([]plugin.Entry, len(pods))
 		for i, v := range pods {
-			entries[i] = &plugin.File{Client: cli, Parent: parent, Name: v}
+			entries[i] = plugin.NewFile(cli, parent, v)
 		}
 		return entries, nil
 	}
-	return []plugin.Node{}, nil
+	return []plugin.Entry{}, nil
 }
 
 // Attr returns attributes of the named resource.
-func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
-	cli.log("Reading attributes of %v in /kubernetes", name)
-	return &plugin.Attributes{Mtime: cli.updated, Valid: 1 * time.Second}, nil
+func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attributes, error) {
+	if node == nil || node.Name() == cli.root {
+		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
+		latest := cli.updated
+		for _, v := range cli.reqs {
+			if updated := v.LastUpdate(); updated.After(latest) {
+				latest = updated
+			}
+		}
+		log.Printf("Mtime: %v", latest)
+		return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
+	}
+
+	cli.log("Reading attributes of %v in /kubernetes", node.Name())
+	// Read the content to figure out how large it is.
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+	if buf, ok := cli.reqs[node.Name()]; ok {
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
+	}
+
+	return &plugin.Attributes{Mtime: cli.updated, Valid: validDuration}, nil
 }
 
 // Xattr returns a map of extended attributes.
-func (cli *Client) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
+func (cli *Client) Xattr(ctx context.Context, node plugin.Entry) (map[string][]byte, error) {
 	return nil, plugin.ENOTSUP
 }
 
 // Open gets logs from a container.
-func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, error) {
+func (cli *Client) Open(ctx context.Context, node plugin.Entry) (plugin.IFileBuffer, error) {
 	return nil, plugin.ENOTSUP
 }

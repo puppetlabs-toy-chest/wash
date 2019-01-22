@@ -26,6 +26,11 @@ type Client struct {
 	root    string
 }
 
+// Defines how quickly we should allow checks for updated content. This has to be consistent
+// across files and directories or we may not detect updates quickly enough, especially for files
+// that previously were empty.
+const validDuration = 100 * time.Millisecond
+
 // Create a new docker client.
 func Create(debug bool) (*Client, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -51,7 +56,7 @@ func (cli *Client) log(format string, v ...interface{}) {
 }
 
 // Find container by ID.
-func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Node, error) {
+func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Entry, error) {
 	containers, err := cli.cachedContainerList(ctx)
 	if err != nil {
 		return nil, err
@@ -59,7 +64,7 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 	for _, container := range containers {
 		if container.ID == name {
 			cli.log("Found container %v, %v", name, container)
-			return &plugin.File{Client: cli, Parent: parent, Name: container.ID}, nil
+			return plugin.NewFile(cli, parent, container.ID), nil
 		}
 	}
 	cli.log("Container %v not found", name)
@@ -67,23 +72,22 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 }
 
 // List all running containers as files.
-func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node, error) {
+func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry, error) {
 	containers, err := cli.cachedContainerList(ctx)
 	if err != nil {
 		return nil, err
 	}
 	cli.log("Listing %v containers in /docker", len(containers))
-	keys := make([]plugin.Node, len(containers))
+	keys := make([]plugin.Entry, len(containers))
 	for i, container := range containers {
-		keys[i] = &plugin.File{Client: cli, Parent: parent, Name: container.ID}
+		keys[i] = plugin.NewFile(cli, parent, container.ID)
 	}
 	return keys, nil
 }
 
 // Attr returns attributes of the named resource.
-func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
-	cli.log("Reading attributes of %v in /docker", name)
-	if name == cli.root {
+func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attributes, error) {
+	if node == nil || node.Name() == cli.root {
 		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 		latest := cli.updated
 		for _, v := range cli.reqs {
@@ -92,22 +96,23 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 			}
 		}
 		log.Printf("Mtime: %v", latest)
-		return &plugin.Attributes{Mtime: latest, Valid: 100 * time.Millisecond}, nil
+		return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
 	}
 
+	cli.log("Reading attributes of %v in /docker", node.Name())
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
-	if buf, ok := cli.reqs[name]; ok {
-		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: 100 * time.Millisecond}, nil
+	if buf, ok := cli.reqs[node.Name()]; ok {
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
-	return &plugin.Attributes{Mtime: cli.updated, Valid: 1 * time.Second}, nil
+	return &plugin.Attributes{Mtime: cli.updated, Valid: validDuration}, nil
 }
 
 // Xattr returns a map of extended attributes.
-func (cli *Client) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
-	raw, err := cli.cachedContainerInspectRaw(ctx, name)
+func (cli *Client) Xattr(ctx context.Context, node plugin.Entry) (map[string][]byte, error) {
+	raw, err := cli.cachedContainerInspectRaw(ctx, node.Name())
 	if err != nil {
 		return nil, err
 	}
@@ -137,19 +142,19 @@ func (cli *Client) readLog(name string) (io.ReadCloser, error) {
 }
 
 // Open gets logs from a container.
-func (cli *Client) Open(ctx context.Context, name string) (plugin.IFileBuffer, error) {
+func (cli *Client) Open(ctx context.Context, node plugin.Entry) (plugin.IFileBuffer, error) {
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
 
-	c, err := cli.cachedContainerInspect(ctx, name)
+	c, err := cli.cachedContainerInspect(ctx, node.Name())
 	if err != nil {
 		return nil, err
 	}
 
-	buf, ok := cli.reqs[name]
+	buf, ok := cli.reqs[node.Name()]
 	if !ok {
-		buf = datastore.NewBuffer(name)
-		cli.reqs[name] = buf
+		buf = datastore.NewBuffer(node.Name())
+		cli.reqs[node.Name()] = buf
 	}
 
 	buffered := make(chan bool)

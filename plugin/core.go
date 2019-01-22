@@ -15,13 +15,13 @@ import (
 func (f *FS) Root() (fs.Node, error) {
 	log.Println("Entering root of filesystem")
 	return &Dir{
-		Client: f,
-		Name:   "/",
+		client: f,
+		name:   "/",
 	}, nil
 }
 
 // Find the named item or return nil.
-func (f *FS) Find(_ context.Context, parent *Dir, name string) (Node, error) {
+func (f *FS) Find(_ context.Context, parent *Dir, name string) (Entry, error) {
 	if client, ok := f.Clients[name]; ok {
 		log.Printf("Found client %v: %v", name, client)
 		return &Dir{client, parent, name}, nil
@@ -31,9 +31,9 @@ func (f *FS) Find(_ context.Context, parent *Dir, name string) (Node, error) {
 }
 
 // List all clients as directories.
-func (f *FS) List(_ context.Context, parent *Dir) ([]Node, error) {
+func (f *FS) List(_ context.Context, parent *Dir) ([]Entry, error) {
 	log.Printf("Listed %v clients in /", len(f.Clients))
-	keys := make([]Node, 0, len(f.Clients))
+	keys := make([]Entry, 0, len(f.Clients))
 	for k, v := range f.Clients {
 		keys = append(keys, &Dir{v, parent, k})
 	}
@@ -41,11 +41,11 @@ func (f *FS) List(_ context.Context, parent *Dir) ([]Node, error) {
 }
 
 // Attr returns basic (zero) attributes for the root directory.
-func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
+func (f *FS) Attr(ctx context.Context, node Entry) (*Attributes, error) {
 	// Only ever called with "/". Return latest Mtime of all clients.
 	var latest time.Time
-	for k, v := range f.Clients {
-		attr, err := v.Attr(ctx, k)
+	for _, v := range f.Clients {
+		attr, err := v.Attr(ctx, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -53,35 +53,50 @@ func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
 			latest = attr.Mtime
 		}
 	}
-	return &Attributes{Mtime: latest, Valid: 10 * time.Second}, nil
+	return &Attributes{Mtime: latest, Valid: 100 * time.Millisecond}, nil
 }
 
 // Xattr returns an empty map.
-func (f *FS) Xattr(ctx context.Context, name string) (map[string][]byte, error) {
+func (f *FS) Xattr(ctx context.Context, node Entry) (map[string][]byte, error) {
 	data := make(map[string][]byte)
 	return data, nil
+}
+
+// NewDir creates a new Dir object.
+func NewDir(client DirProtocol, parent *Dir, name string) *Dir {
+	return &Dir{client, parent, name}
+}
+
+// Parent returns the parent entry.
+func (d *Dir) Parent() Entry {
+	return d.parent
+}
+
+// Name returns the entries name.
+func (d *Dir) Name() string {
+	return d.name
 }
 
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = os.ModeDir | 0550
 
-	attr, err := d.Client.Attr(ctx, d.Name)
+	attr, err := d.client.Attr(ctx, d)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
 	a.Valid = attr.Valid
-	log.Printf("Attr of dir %v: %v, %v", d.Name, a.Mtime, a.Size)
+	log.Printf("Attr of dir %v: %v, %v", d.name, a.Mtime, a.Size)
 	return err
 }
 
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	return d.Client.Find(ctx, d, req.Name)
+	return d.client.Find(ctx, d, req.Name)
 }
 
 // ReadDirAll lists all children of the directory.
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	entries, err := d.Client.List(ctx, d)
+	entries, err := d.client.List(ctx, d)
 	if err != nil {
 		return nil, err
 	}
@@ -91,31 +106,46 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		var de fuse.Dirent
 		switch v := entry.(type) {
 		case *Dir:
-			de.Name = v.Name
+			de.Name = v.name
 			de.Type = fuse.DT_Dir
 		case *File:
-			de.Name = v.Name
+			de.Name = v.name
 		}
 		res[i] = de
 	}
 	return res, nil
 }
 
+// NewFile creates a new Dir object.
+func NewFile(client FileProtocol, parent *Dir, name string) *File {
+	return &File{client, parent, name}
+}
+
+// Parent returns the parent entry.
+func (f *File) Parent() Entry {
+	return f.parent
+}
+
+// Name returns the entries name.
+func (f *File) Name() string {
+	return f.name
+}
+
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = 0440
 
-	attr, err := f.Client.Attr(ctx, f.Name)
+	attr, err := f.client.Attr(ctx, f)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
 	a.Valid = attr.Valid
-	log.Printf("Attr of file %v: %v, %s", f.Name, a.Size, a.Mtime)
+	log.Printf("Attr of file %v: %v, %s", f.name, a.Size, a.Mtime)
 	return err
 }
 
 // Listxattr lists extended attributes for the resource.
 func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	xattrs, err := f.Client.Xattr(ctx, f.Name)
+	xattrs, err := f.client.Xattr(ctx, f)
 	if err != nil {
 		return err
 	}
@@ -128,7 +158,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 
 // Getxattr gets extended attributes for the resource.
 func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	xattrs, err := f.Client.Xattr(ctx, f.Name)
+	xattrs, err := f.client.Xattr(ctx, f)
 	if err != nil {
 		return err
 	}
@@ -140,11 +170,11 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 // Open a file for reading.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	r, err := f.Client.Open(ctx, f.Name)
+	r, err := f.client.Open(ctx, f)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Opened %v", f.Name)
+	log.Printf("Opened %v", f.name)
 	return &FileHandle{r: r}, nil
 }
 
