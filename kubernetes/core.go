@@ -24,6 +24,7 @@ type Client struct {
 	cache   *bigcache.BigCache
 	debug   bool
 	updated time.Time
+	root    string
 	groups  []string
 }
 
@@ -65,7 +66,7 @@ func Create(debug bool) (*Client, error) {
 	groups := []string{"deployments", "namespaces", "pods"}
 	sort.Strings(groups)
 
-	return &Client{clientset, cache, debug, time.Now(), groups}, nil
+	return &Client{clientset, cache, debug, time.Now(), "kubernetes", groups}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {

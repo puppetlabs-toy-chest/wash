@@ -23,6 +23,7 @@ type Client struct {
 	mux     sync.Mutex
 	reqs    map[string]*datastore.StreamBuffer
 	updated time.Time
+	root    string
 }
 
 // Create a new docker client.
@@ -40,7 +41,7 @@ func Create(debug bool) (*Client, error) {
 	}
 
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now()}, nil
+	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now(), "docker"}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -82,7 +83,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Node,
 // Attr returns attributes of the named resource.
 func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
 	cli.log("Reading attributes of %v in /docker", name)
-	if name == "docker" {
+	if name == cli.root {
 		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 		latest := cli.updated
 		for _, v := range cli.reqs {
