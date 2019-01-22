@@ -27,6 +27,7 @@ type IFileBuffer interface {
 type Attributes struct {
 	Mtime time.Time
 	Size  uint64
+	Valid time.Duration
 }
 
 // GroupTraversal that plugins are expected to model.

@@ -97,7 +97,7 @@ func (cli *Client) List(ctx context.Context) ([]plugin.Entry, error) {
 // Attr returns attributes of the named resource.
 func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, error) {
 	cli.log("Reading attributes of %v in /kubernetes", name)
-	return &plugin.Attributes{Mtime: cli.updated}, nil
+	return &plugin.Attributes{Mtime: cli.updated, Valid: 1 * time.Second}, nil
 }
 
 // Xattr returns a map of extended attributes.

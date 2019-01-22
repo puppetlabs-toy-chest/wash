@@ -57,7 +57,7 @@ func (f *FS) Attr(ctx context.Context, name string) (*Attributes, error) {
 			latest = attr.Mtime
 		}
 	}
-	return &Attributes{Mtime: latest}, nil
+	return &Attributes{Mtime: latest, Valid: 10 * time.Second}, nil
 }
 
 // Xattr returns an empty map.
@@ -66,16 +66,14 @@ func (f *FS) Xattr(ctx context.Context, name string) (map[string][]byte, error) 
 	return data, nil
 }
 
-const validFor = 100 * time.Millisecond
-
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = os.ModeDir | 0550
-	a.Valid = validFor
 
 	attr, err := d.client.Attr(ctx, d.name)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
+	a.Valid = attr.Valid
 	log.Printf("Attr of dir %v: %v, %v", d.name, a.Mtime, a.Size)
 	return err
 }
@@ -114,11 +112,11 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	a.Mode = 0440
-	a.Valid = validFor
 
 	attr, err := f.client.Attr(ctx, f.name)
 	a.Mtime = attr.Mtime
 	a.Size = attr.Size
+	a.Valid = attr.Valid
 	log.Printf("Attr of file %v: %v, %s", f.name, a.Size, a.Mtime)
 	return err
 }

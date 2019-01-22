@@ -91,17 +91,17 @@ func (cli *Client) Attr(ctx context.Context, name string) (*plugin.Attributes, e
 			}
 		}
 		log.Printf("Mtime: %v", latest)
-		return &plugin.Attributes{Mtime: latest}, nil
+		return &plugin.Attributes{Mtime: latest, Valid: 100 * time.Millisecond}, nil
 	}
 
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
 	if buf, ok := cli.reqs[name]; ok {
-		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size())}, nil
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: 100 * time.Millisecond}, nil
 	}
 
-	return &plugin.Attributes{Mtime: cli.updated}, nil
+	return &plugin.Attributes{Mtime: cli.updated, Valid: 1 * time.Second}, nil
 }
 
 // Xattr returns a map of extended attributes.
