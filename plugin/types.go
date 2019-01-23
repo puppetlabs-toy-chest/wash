@@ -11,11 +11,11 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
-// Entry in a filesystem
-type Entry struct {
-	Client interface{}
-	Name   string
-	Isdir  bool
+// Entry represents a named filesystem resource.
+type Entry interface {
+	Node
+	Name() string
+	Parent() Entry
 }
 
 // IFileBuffer represents a file that can be ReadAt and Close.
@@ -27,25 +27,26 @@ type IFileBuffer interface {
 type Attributes struct {
 	Mtime time.Time
 	Size  uint64
+	Valid time.Duration
 }
 
 // GroupTraversal that plugins are expected to model.
 type GroupTraversal interface {
-	Find(ctx context.Context, name string) (*Entry, error)
-	List(ctx context.Context) ([]Entry, error)
+	Find(ctx context.Context, parent *Dir, name string) (Entry, error)
+	List(ctx context.Context, parent *Dir) ([]Entry, error)
 }
 
 // Content protocol.
 type Content interface {
-	Open(ctx context.Context, name string) (IFileBuffer, error)
+	Open(ctx context.Context, node Entry) (IFileBuffer, error)
 }
 
 // Stream protocol for data that we only stream?
 
 // Metadata covers protocols supported by all resources.
 type Metadata interface {
-	Attr(ctx context.Context, name string) (*Attributes, error)
-	Xattr(ctx context.Context, name string) (map[string][]byte, error)
+	Attr(ctx context.Context, node Entry) (*Attributes, error)
+	Xattr(ctx context.Context, node Entry) (map[string][]byte, error)
 }
 
 // DirProtocol is protocols expected of a Directory resource.
@@ -67,7 +68,10 @@ type FileProtocol interface {
 type Node = fs.Node
 
 // ENOENT states the entity does not exist
-const ENOENT = fuse.ENOENT
+const (
+	ENOENT  = fuse.ENOENT
+	ENOTSUP = fuse.ENOTSUP
+)
 
 // FS contains the core filesystem data.
 type FS struct {
@@ -80,6 +84,7 @@ var _ fs.FS = (*FS)(nil)
 // necessary to represent it and the full path to the directory.
 type Dir struct {
 	client DirProtocol
+	parent *Dir
 	name   string
 }
 
@@ -90,6 +95,7 @@ var _ = fs.HandleReadDirAller(&Dir{})
 // File contains metadata about the file.
 type File struct {
 	client FileProtocol
+	parent *Dir
 	name   string
 }
 
