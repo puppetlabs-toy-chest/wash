@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"log"
@@ -29,7 +30,11 @@ type Client struct {
 // Defines how quickly we should allow checks for updated content. This has to be consistent
 // across files and directories or we may not detect updates quickly enough, especially for files
 // that previously were empty.
-const validDuration = 100 * time.Millisecond
+const (
+	validDuration = 100 * time.Millisecond
+	headerLen     = 8
+	headerSizeIdx = 4
+)
 
 // Create a new docker client.
 func Create(debug bool) (*Client, error) {
@@ -132,6 +137,41 @@ func (cli *Client) Xattr(ctx context.Context, node plugin.Entry) (map[string][]b
 	return d, nil
 }
 
+// Removes multiplex headers. Returns the new buffer length after compressing input,
+// and the new writeIndex that also includes unprocessed data.
+func processMultiplexedStreams(data []byte, writeIndex int) (int, int) {
+	// Do extra processing to strip out multiplex prefix. Format is of the form
+	//   [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4}[]byte{OUTPUT}
+	// readIndex represents how far we've processed the buffered input.
+	// writeIndex is the end of the buffered input.
+	// newLen represents the end of processed input, which will trail readIndex as we append new processed input.
+	newLen, readIndex, capacity := len(data), len(data), cap(data)
+	for writeIndex-readIndex >= headerLen {
+		// Get the remaining unprocessed buffer.
+		buf := data[readIndex:writeIndex]
+
+		// Read the next frame.
+		frameSize := int(binary.BigEndian.Uint32(buf[headerSizeIdx : headerSizeIdx+4]))
+
+		// Stop if the frame is larger than the remaining unprocessed buffer.
+		if headerLen+frameSize > len(buf) {
+			break
+		}
+
+		// Append frame to processed input and increment newLen.
+		// This space can later be used for coloring output based on stream.
+		copy(data[newLen:capacity], buf[headerLen:headerLen+frameSize])
+		readIndex += headerLen + frameSize
+		newLen += frameSize
+	}
+
+	// Append any remaining input to the processed input.
+	buf := data[readIndex:writeIndex]
+	copy(data[newLen:capacity], buf)
+	writeIndex = newLen + len(buf)
+	return newLen, writeIndex
+}
+
 func (cli *Client) readLog(name string) (io.ReadCloser, error) {
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
@@ -153,13 +193,18 @@ func (cli *Client) Open(ctx context.Context, node plugin.Entry) (plugin.IFileBuf
 
 	buf, ok := cli.reqs[node.Name()]
 	if !ok {
-		buf = datastore.NewBuffer(node.Name())
+		// Only do additional processing if container is not running with tty.
+		postProcessor := processMultiplexedStreams
+		if c.Config.Tty {
+			postProcessor = nil
+		}
+		buf = datastore.NewBuffer(node.Name(), postProcessor)
 		cli.reqs[node.Name()] = buf
 	}
 
 	buffered := make(chan bool)
 	go func() {
-		buf.Stream(cli.readLog, buffered, c.Config.Tty)
+		buf.Stream(cli.readLog, buffered)
 	}()
 	// Wait for some output to buffer.
 	<-buffered

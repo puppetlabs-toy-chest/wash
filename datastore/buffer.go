@@ -3,7 +3,6 @@ package datastore
 
 import (
 	"bytes"
-	"encoding/binary"
 	"io"
 	"log"
 	"sync"
@@ -14,26 +13,25 @@ import (
 // Includes locking on all operations so that they can safely be performed while data
 // is being streamed to its internal buffer. Implements interfaces io.ReaderAt and io.Closer.
 type StreamBuffer struct {
-	mux       sync.Mutex
-	name      string
-	data      []byte
-	input     io.ReadCloser
-	reader    *bytes.Reader
-	update    time.Time
-	size      int
-	streaming int
+	mux               sync.Mutex
+	name              string
+	data              []byte
+	input             io.ReadCloser
+	reader            *bytes.Reader
+	update            time.Time
+	size              int
+	streaming         int
+	postProcessStream func(data []byte, writeIndex int) (int, int)
 }
 
 const (
-	minRead       = 4096
-	slowLimit     = 64 * 1024 * 1024
-	headerLen     = 8
-	headerSizeIdx = 4
+	minRead   = 4096
+	slowLimit = 64 * 1024 * 1024
 )
 
 // NewBuffer instantiates a new streaming buffer for the named resource.
-func NewBuffer(name string) *StreamBuffer {
-	b := StreamBuffer{name: name, data: make([]byte, 0, minRead), update: time.Now()}
+func NewBuffer(name string, postProcessor func([]byte, int) (int, int)) *StreamBuffer {
+	b := StreamBuffer{name: name, data: make([]byte, 0, minRead), update: time.Now(), postProcessStream: postProcessor}
 	b.reader = bytes.NewReader(b.data)
 	return &b
 }
@@ -52,45 +50,10 @@ func (b *StreamBuffer) decr() int {
 	return b.streaming
 }
 
-// Removes multiplex headers. Returns the new buffer length after compressing input,
-// and the new writeIndex that also includes unprocessed data.
-func processMultiplexedStreams(data []byte, writeIndex int) (int, int) {
-	// Do extra processing to strip out multiplex prefix. Format is of the form
-	//   [8]byte{STREAM_TYPE, 0, 0, 0, SIZE1, SIZE2, SIZE3, SIZE4}[]byte{OUTPUT}
-	// readIndex represents how far we've processed the buffered input.
-	// writeIndex is the end of the buffered input.
-	// newLen represents the end of processed input, which will trail readIndex as we append new processed input.
-	newLen, readIndex, capacity := len(data), len(data), cap(data)
-	for writeIndex-readIndex >= headerLen {
-		// Get the remaining unprocessed buffer.
-		buf := data[readIndex:writeIndex]
-
-		// Read the next frame.
-		frameSize := int(binary.BigEndian.Uint32(buf[headerSizeIdx : headerSizeIdx+4]))
-
-		// Stop if the frame is larger than the remaining unprocessed buffer.
-		if headerLen+frameSize > len(buf) {
-			break
-		}
-
-		// Append frame to processed input and increment newLen.
-		// This space can later be used for coloring output based on stream.
-		copy(data[newLen:capacity], buf[headerLen:headerLen+frameSize])
-		readIndex += headerLen + frameSize
-		newLen += frameSize
-	}
-
-	// Append any remaining input to the processed input.
-	buf := data[readIndex:writeIndex]
-	copy(data[newLen:capacity], buf)
-	writeIndex = newLen + len(buf)
-	return newLen, writeIndex
-}
-
 // Stream reads from a reader instantiated with the specified callback. Stores all data in an
 // internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
-func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool, tty bool) {
+func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool) {
 	if count := b.incr(); count > 1 {
 		// Only initiate streaming if this is the first request.
 		confirm <- true
@@ -108,8 +71,8 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 		return
 	}
 
-	// Track writeIndex. For TTY containers, this will always match len(b.data).
-	// For non-TTY, it will be larger than len(b.data) when a partial frame is buffered.
+	// Track writeIndex. This will match len(b.data) unless the caller does additional processing
+	// via postProcessStreams.
 	writeIndex := 0
 	for {
 		// Grow the buffer as needed. Start out quadrupling, but slow down when storing tens of megabytes.
@@ -139,8 +102,8 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 		log.Printf("Read %v [%v/%v]", b.name, writeIndex, capacity)
 
 		newLen := writeIndex
-		if !tty {
-			newLen, writeIndex = processMultiplexedStreams(b.data, writeIndex)
+		if b.postProcessStream != nil {
+			newLen, writeIndex = b.postProcessStream(b.data, writeIndex)
 		}
 
 		// Update reader with new slice.
