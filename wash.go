@@ -39,24 +39,34 @@ func main() {
 	}
 }
 
-func mount(mountpoint string) error {
-	log.Println("Loading docker integration")
-	// TODO: initialize in parallel, add multiple context/configs
-	dockercli, err := docker.Create(*debug)
-	if err != nil {
-		return err
-	}
+type clientInit struct {
+	name   string
+	client plugin.DirProtocol
+	err    error
+}
 
-	log.Println("Loading kubernetes integration")
-	kubecli, err := kubernetes.Create(*debug)
-	if err != nil {
-		return err
-	}
+type instantiator = func(string, bool) (plugin.DirProtocol, error)
+
+func mount(mountpoint string) error {
+	clients := make(chan clientInit)
 
 	if *debug {
 		fuse.Debug = func(msg interface{}) {
 			log.Println(msg)
 		}
+	}
+
+	clientInstantiators := map[string]instantiator{
+		"docker":     docker.Create,
+		"kubernetes": kubernetes.Create,
+	}
+
+	for k, v := range clientInstantiators {
+		go func(name string, create instantiator) {
+			log.Printf("Loading %v integration", name)
+			client, err := create(name, *debug)
+			clients <- clientInit{name, client, err}
+		}(k, v)
 	}
 
 	log.Println("Mounting at", mountpoint)
@@ -66,13 +76,17 @@ func mount(mountpoint string) error {
 	}
 	defer c.Close()
 
-	log.Println("Serving filesystem")
-	filesys := &plugin.FS{
-		Clients: map[string]plugin.DirProtocol{
-			"docker":     dockercli,
-			"kubernetes": kubecli,
-		},
+	clientMap := make(map[string]plugin.DirProtocol)
+	for range clientInstantiators {
+		client := <-clients
+		if client.err != nil {
+			return client.err
+		}
+		clientMap[client.name] = client.client
 	}
+
+	log.Println("Serving filesystem")
+	filesys := &plugin.FS{Clients: clientMap}
 	if err := fs.Serve(c, filesys); err != nil {
 		return err
 	}

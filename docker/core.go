@@ -37,7 +37,7 @@ const (
 )
 
 // Create a new docker client.
-func Create(debug bool) (*Client, error) {
+func Create(name string, debug bool) (plugin.DirProtocol, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func Create(debug bool) (*Client, error) {
 	}
 
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now(), "docker"}, nil
+	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now(), name}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {

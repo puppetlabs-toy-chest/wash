@@ -41,7 +41,7 @@ type Client struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new kubernetes client.
-func Create(debug bool) (*Client, error) {
+func Create(name string, debug bool) (plugin.DirProtocol, error) {
 	me, err := user.Current()
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func Create(debug bool) (*Client, error) {
 	sort.Strings(groups)
 
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &Client{clientset, cache, debug, sync.Mutex{}, reqs, time.Now(), "kubernetes", groups}, nil
+	return &Client{clientset, cache, debug, sync.Mutex{}, reqs, time.Now(), name, groups}, nil
 }
 
 func (cli *Client) log(format string, v ...interface{}) {
@@ -91,7 +91,7 @@ func (cli *Client) log(format string, v ...interface{}) {
 // Find container by ID.
 func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (plugin.Entry, error) {
 	switch parent.Name() {
-	case "kubernetes":
+	case cli.root:
 		idx := sort.SearchStrings(cli.groups, name)
 		if cli.groups[idx] == name {
 			cli.log("Found group %v", name)
@@ -124,7 +124,7 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 // List all running pods as files.
 func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry, error) {
 	switch parent.Name() {
-	case "kubernetes":
+	case cli.root:
 		cli.log("Listing %v groups in /kubernetes", len(cli.groups))
 		entries := make([]plugin.Entry, len(cli.groups))
 		for i, v := range cli.groups {
