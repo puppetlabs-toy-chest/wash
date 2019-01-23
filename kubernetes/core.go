@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"flag"
+	"io"
 	"log"
 	"os/user"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
+	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -169,7 +171,8 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry
 
 // Attr returns attributes of the named resource.
 func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attributes, error) {
-	if node == nil || node.Name() == cli.root {
+	// TODO: need a better solution for multiple levels of nesting
+	if node == nil || node.Name() == cli.root || node.Name() == "pods" || node.Name() == "namespaces" || node.Parent().Name() == "namespaces" {
 		// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 		latest := cli.updated
 		for _, v := range cli.reqs {
@@ -193,10 +196,47 @@ func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attribu
 
 // Xattr returns a map of extended attributes.
 func (cli *Client) Xattr(ctx context.Context, node plugin.Entry) (map[string][]byte, error) {
+	// TODO
 	return nil, plugin.ENOTSUP
+}
+
+func (cli *Client) readLog(name string) (io.ReadCloser, error) {
+	// Pod logs must be retrieved by namespace and name, not UID.
+	pod, err := cli.cachedPodFind(context.Background(), name)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := corev1.PodLogOptions{
+		Follow: true,
+	}
+	req := cli.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &opts)
+	return req.Stream()
 }
 
 // Open gets logs from a container.
 func (cli *Client) Open(ctx context.Context, node plugin.Entry) (plugin.IFileBuffer, error) {
-	return nil, plugin.ENOTSUP
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+
+	// TODO: store as UID? Names are not guaranteed to be unique across namespaces, so the pods/ list may
+	// include duplicates. We can fix that by using UIDs or an amalgam of namespace+name, but then we have
+	// to always map that to the namespace and name when loading logs and make sure attribute queries always
+	// use a consistent key for lookup.
+	buf, ok := cli.reqs[node.Name()]
+	if !ok {
+		buf = datastore.NewBuffer(node.Name(), nil)
+		cli.reqs[node.Name()] = buf
+	}
+
+	buffered := make(chan bool)
+	go func() {
+		buf.Stream(cli.readLog, buffered)
+	}()
+	// Wait for some output to buffer.
+	<-buffered
+	// Wait a short time for reading the stream.
+	time.Sleep(100 * time.Millisecond)
+
+	return buf, nil
 }

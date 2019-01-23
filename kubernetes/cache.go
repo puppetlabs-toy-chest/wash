@@ -23,21 +23,20 @@ func (cli *Client) updateCachedPods(ctx context.Context) error {
 		return err
 	}
 
-	var data bytes.Buffer
-
 	podNames := make([]string, len(podList.Items))
 	namespaces := make(map[string][]string)
 	for i, pod := range podList.Items {
-		enc := gob.NewEncoder(&data)
-		if err := enc.Encode(pod); err != nil {
+		data, err := pod.Marshal()
+		if err != nil {
 			return err
 		}
-		cli.cache.Set(podPrefix+string(pod.UID), data.Bytes())
-		data.Reset()
+		cli.cache.Set(podPrefix+string(pod.Name), data)
 
-		podNames[i] = string(pod.UID)
-		namespaces[pod.Namespace] = append(namespaces[pod.Namespace], string(pod.UID))
+		podNames[i] = pod.Name
+		namespaces[pod.Namespace] = append(namespaces[pod.Namespace], pod.Name)
 	}
+
+	var data bytes.Buffer
 
 	namespaceNames := make([]string, 0, len(namespaces))
 	for key, value := range namespaces {
@@ -109,8 +108,7 @@ func (cli *Client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 	}
 
 	var pod corev1.Pod
-	dec := gob.NewDecoder(bytes.NewReader(entry))
-	err = dec.Decode(&pod)
+	err = pod.Unmarshal(entry)
 	return &pod, err
 }
 
