@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
@@ -196,8 +197,28 @@ func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attribu
 
 // Xattr returns a map of extended attributes.
 func (cli *Client) Xattr(ctx context.Context, node plugin.Entry) (map[string][]byte, error) {
-	// TODO
-	return nil, plugin.ENOTSUP
+	pod, err := cli.cachedPodFind(ctx, node.Name())
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]interface{}
+	inrec, err := json.Marshal(pod)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(inrec, &data); err != nil {
+		return nil, err
+	}
+
+	d := make(map[string][]byte)
+	for k, v := range data {
+		d[k], err = json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
 }
 
 func (cli *Client) readLog(name string) (io.ReadCloser, error) {
