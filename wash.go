@@ -9,6 +9,7 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/docker"
+	"github.com/puppetlabs/wash/gcp"
 	"github.com/puppetlabs/wash/kubernetes"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -59,6 +60,7 @@ func mount(mountpoint string) error {
 
 	clientInstantiators := map[string]instantiator{
 		"docker":     docker.Create,
+		"gcp":        gcp.Create,
 		"kubernetes": kubernetes.Create,
 	}
 
