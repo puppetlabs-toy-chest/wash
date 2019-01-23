@@ -21,6 +21,10 @@ Operations that work:
 - `stat` (kind of, information's not very useful)
 - `xattr` and a new command `meta`
 
+NOTE: requires golang 1.11.4.
+
+Obtain FUSE for OSX [here](https://osxfuse.github.io/).
+
 ### Container
 
 You can also use it as a container.
@@ -40,7 +44,7 @@ Then start a shell and explore with
 docker exec -it wash sh
 ```
 
-## Principals
+## Principles
 - Multiple ways to get data, but consistent language within the tool. i.e. may search for a database by saying type is 'db' or 'database', but the tool will always refer to them by 'database'.
 - Rich shell experience.
 - Store everything for future use.
