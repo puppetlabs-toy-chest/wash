@@ -177,7 +177,6 @@ func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attribu
 				latest = updated
 			}
 		}
-		log.Printf("Mtime: %v", latest)
 		return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
 	}
 
