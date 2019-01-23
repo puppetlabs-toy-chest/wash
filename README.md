@@ -11,7 +11,7 @@ Mount the filesystem with
 go run wash.go mnt
 ```
 
-In another shell navigate it at `mnt`.
+In another shell navigate it at `mnt`. When done `umount mnt`.
 
 Operations that work:
 - `ls`
