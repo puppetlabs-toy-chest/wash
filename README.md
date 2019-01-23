@@ -4,7 +4,7 @@ A cloud-native shell for bringing remote infrastructure to your terminal.
 
 ## Usage
 
-This prototype is built as a FUSE filesystem. It currently only supports viewing running containers in Docker (found from the local socket or via DOCKER environment variables).
+This prototype is built as a FUSE filesystem. It currently only supports viewing running containers in Docker (found from the local socket or via DOCKER environment variables) and Kubernetes (uses the currently selected context from `~/.kube/config`)
 
 Mount the filesystem with
 ```
@@ -15,10 +15,10 @@ In another shell navigate it at `mnt`.
 
 Operations that work:
 - `ls`
-- `ls docker`
-- `cat docker/*`
-- `tail docker/*`
-- `stat docker/*` (kind of, information's not very useful)
+- `cat`
+- `vim`
+- `tail [-f]`
+- `stat` (kind of, information's not very useful)
 - `xattr` and a new command `meta`
 
 ### Container
