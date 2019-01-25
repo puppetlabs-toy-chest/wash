@@ -177,6 +177,7 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 // Open a file for reading.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
+	log.Printf("Opening %v", f.name)
 	r, err := f.client.Open(ctx, f)
 	if err != nil {
 		return nil, err
