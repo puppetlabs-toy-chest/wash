@@ -11,6 +11,13 @@ import (
 	"bazil.org/fuse/fs"
 )
 
+// TrackTime helper is useful for timing functions.
+// Use with `defer plugin.TrackTime(time.Now(), "funcname")`.
+func TrackTime(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
+}
+
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
 	log.Println("Entering root of filesystem")
