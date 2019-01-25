@@ -256,8 +256,6 @@ func (cli *Client) Open(ctx context.Context, node plugin.Entry) (plugin.IFileBuf
 	}()
 	// Wait for some output to buffer.
 	<-buffered
-	// Wait a short time for reading the stream.
-	time.Sleep(100 * time.Millisecond)
 
 	return buf, nil
 }
