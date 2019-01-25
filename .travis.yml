@@ -1,0 +1,13 @@
+language: go
+services:
+- docker
+
+matrix:
+  include:
+  - go: 1.11.x
+    env: COMMAND='go test -v ./...'
+  - go: master
+    env: COMMAND='go test -v ./...'
+  - env: COMMAND='docker build .'
+
+script: $COMMAND
