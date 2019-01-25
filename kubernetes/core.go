@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"io"
-	"log"
 	"os/user"
 	"path/filepath"
 	"sort"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
+	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -27,7 +27,6 @@ import (
 type Client struct {
 	*k8s.Clientset
 	cache   *bigcache.BigCache
-	debug   bool
 	mux     sync.Mutex
 	reqs    map[string]*datastore.StreamBuffer
 	updated time.Time
@@ -41,7 +40,7 @@ type Client struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new kubernetes client.
-func Create(name string, debug bool) (plugin.DirProtocol, error) {
+func Create(name string) (plugin.DirProtocol, error) {
 	me, err := user.Current()
 	if err != nil {
 		return nil, err
@@ -79,13 +78,7 @@ func Create(name string, debug bool) (plugin.DirProtocol, error) {
 	sort.Strings(groups)
 
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &Client{clientset, cache, debug, sync.Mutex{}, reqs, time.Now(), name, groups}, nil
-}
-
-func (cli *Client) log(format string, v ...interface{}) {
-	if cli.debug {
-		log.Printf(format, v...)
-	}
+	return &Client{clientset, cache, sync.Mutex{}, reqs, time.Now(), name, groups}, nil
 }
 
 // Find container by ID.
@@ -94,17 +87,17 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 	case cli.root:
 		idx := sort.SearchStrings(cli.groups, name)
 		if cli.groups[idx] == name {
-			cli.log("Found group %v", name)
+			log.Debugf("Found group %v", name)
 			return plugin.NewDir(cli, parent, name), nil
 		}
 	case "pods":
 		if pod, err := cli.cachedPodFind(ctx, name); err == nil {
-			cli.log("Found pod %v, %v", name, pod)
+			log.Debugf("Found pod %v, %v", name, pod)
 			return plugin.NewFile(cli, parent, name), nil
 		}
 	case "namespaces":
 		if namespace, err := cli.cachedNamespaceFind(ctx, name); err == nil {
-			cli.log("Found namespace %v, %v", name, namespace)
+			log.Debugf("Found namespace %v, %v", name, namespace)
 			return plugin.NewDir(cli, parent, name), nil
 		}
 	}
@@ -113,7 +106,7 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 		if pods, err := cli.cachedNamespaceFind(ctx, parent.Name()); err == nil {
 			idx := sort.SearchStrings(pods, name)
 			if pods[idx] == name {
-				cli.log("Found pod %v in namespace %v", name, parent.Name())
+				log.Debugf("Found pod %v in namespace %v", name, parent.Name())
 				return plugin.NewFile(cli, parent, name), nil
 			}
 		}
@@ -125,7 +118,7 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry, error) {
 	switch parent.Name() {
 	case cli.root:
-		cli.log("Listing %v groups in /kubernetes", len(cli.groups))
+		log.Debugf("Listing %v groups in /kubernetes", len(cli.groups))
 		entries := make([]plugin.Entry, len(cli.groups))
 		for i, v := range cli.groups {
 			entries[i] = plugin.NewDir(cli, parent, v)
@@ -136,7 +129,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v pods in /kubernetes/pods", len(pods))
+		log.Debugf("Listing %v pods in /kubernetes/pods", len(pods))
 		entries := make([]plugin.Entry, len(pods))
 		for i, v := range pods {
 			entries[i] = plugin.NewFile(cli, parent, v)
@@ -147,7 +140,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v namespaces in /kubernetes/namespaces", len(namespaces))
+		log.Debugf("Listing %v namespaces in /kubernetes/namespaces", len(namespaces))
 		entries := make([]plugin.Entry, len(namespaces))
 		for i, v := range namespaces {
 			entries[i] = plugin.NewDir(cli, parent, v)
@@ -160,7 +153,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry
 		if err != nil {
 			return nil, err
 		}
-		cli.log("Listing %v pods in /kubernetes/namespaces/%v", len(pods), parent.Name())
+		log.Debugf("Listing %v pods in /kubernetes/namespaces/%v", len(pods), parent.Name())
 		entries := make([]plugin.Entry, len(pods))
 		for i, v := range pods {
 			entries[i] = plugin.NewFile(cli, parent, v)
@@ -184,7 +177,7 @@ func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attribu
 		return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
 	}
 
-	cli.log("Reading attributes of %v in /kubernetes", node.Name())
+	log.Debugf("Reading attributes of %v in /kubernetes", node.Name())
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()

@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -11,6 +10,7 @@ import (
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/kubernetes"
+	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -27,7 +27,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	log.SetFlags(log.Ldate | log.Lmicroseconds)
+	log.Init(*debug)
 
 	if flag.NArg() != 1 {
 		usage()
@@ -35,7 +35,8 @@ func main() {
 	}
 	mountpoint := flag.Arg(0)
 	if err := mount(mountpoint); err != nil {
-		log.Fatal(err)
+		log.Printf("%v", err)
+		os.Exit(1)
 	}
 }
 
@@ -45,14 +46,14 @@ type clientInit struct {
 	err    error
 }
 
-type instantiator = func(string, bool) (plugin.DirProtocol, error)
+type instantiator = func(string) (plugin.DirProtocol, error)
 
 func mount(mountpoint string) error {
 	clients := make(chan clientInit)
 
 	if *debug {
 		fuse.Debug = func(msg interface{}) {
-			log.Println(msg)
+			log.Debugf("%v", msg)
 		}
 	}
 
@@ -64,12 +65,12 @@ func mount(mountpoint string) error {
 	for k, v := range clientInstantiators {
 		go func(name string, create instantiator) {
 			log.Printf("Loading %v integration", name)
-			client, err := create(name, *debug)
+			client, err := create(name)
 			clients <- clientInit{name, client, err}
 		}(k, v)
 	}
 
-	log.Println("Mounting at", mountpoint)
+	log.Printf("Mounting at %v", mountpoint)
 	c, err := fuse.Mount(mountpoint)
 	if err != nil {
 		return err
@@ -85,7 +86,7 @@ func mount(mountpoint string) error {
 		clientMap[client.name] = client.client
 	}
 
-	log.Println("Serving filesystem")
+	log.Printf("Serving filesystem")
 	filesys := &plugin.FS{Clients: clientMap}
 	if err := fs.Serve(c, filesys); err != nil {
 		return err
@@ -96,7 +97,7 @@ func mount(mountpoint string) error {
 	if err := c.MountError; err != nil {
 		return err
 	}
-	log.Println("Done")
+	log.Printf("Done")
 
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io"
-	"log"
 	"sync"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/datastore"
+	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -20,7 +20,6 @@ import (
 type Client struct {
 	*client.Client
 	*bigcache.BigCache
-	debug   bool
 	mux     sync.Mutex
 	reqs    map[string]*datastore.StreamBuffer
 	updated time.Time
@@ -37,7 +36,7 @@ const (
 )
 
 // Create a new docker client.
-func Create(name string, debug bool) (plugin.DirProtocol, error) {
+func Create(name string) (plugin.DirProtocol, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
@@ -51,13 +50,7 @@ func Create(name string, debug bool) (plugin.DirProtocol, error) {
 	}
 
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &Client{cli, cache, debug, sync.Mutex{}, reqs, time.Now(), name}, nil
-}
-
-func (cli *Client) log(format string, v ...interface{}) {
-	if cli.debug {
-		log.Printf(format, v...)
-	}
+	return &Client{cli, cache, sync.Mutex{}, reqs, time.Now(), name}, nil
 }
 
 // Find container by ID.
@@ -68,11 +61,11 @@ func (cli *Client) Find(ctx context.Context, parent *plugin.Dir, name string) (p
 	}
 	for _, container := range containers {
 		if container.ID == name {
-			cli.log("Found container %v, %v", name, container)
+			log.Debugf("Found container %v, %v", name, container)
 			return plugin.NewFile(cli, parent, container.ID), nil
 		}
 	}
-	cli.log("Container %v not found", name)
+	log.Debugf("Container %v not found", name)
 	return nil, plugin.ENOENT
 }
 
@@ -82,7 +75,7 @@ func (cli *Client) List(ctx context.Context, parent *plugin.Dir) ([]plugin.Entry
 	if err != nil {
 		return nil, err
 	}
-	cli.log("Listing %v containers in /docker", len(containers))
+	log.Debugf("Listing %v containers in /docker", len(containers))
 	keys := make([]plugin.Entry, len(containers))
 	for i, container := range containers {
 		keys[i] = plugin.NewFile(cli, parent, container.ID)
@@ -103,7 +96,7 @@ func (cli *Client) Attr(ctx context.Context, node plugin.Entry) (*plugin.Attribu
 		return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
 	}
 
-	cli.log("Reading attributes of %v in /docker", node.Name())
+	log.Debugf("Reading attributes of %v in /docker", node.Name())
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()

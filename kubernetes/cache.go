@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"sort"
 
+	"github.com/puppetlabs/wash/log"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -71,7 +72,7 @@ func (cli *Client) updateCachedPods(ctx context.Context) error {
 func (cli *Client) cachedPodList(ctx context.Context) ([]string, error) {
 	entry, err := cli.cache.Get(podCacheName)
 	if err != nil {
-		cli.log("Cache miss in /kubernetes")
+		log.Debugf("Cache miss in /kubernetes")
 		if err := cli.updateCachedPods(ctx); err != nil {
 			return nil, err
 		}
@@ -79,7 +80,7 @@ func (cli *Client) cachedPodList(ctx context.Context) ([]string, error) {
 			return nil, err
 		}
 	} else {
-		cli.log("Cache hit in /kubernetes")
+		log.Debugf("Cache hit in /kubernetes")
 	}
 
 	var pods []string
@@ -93,7 +94,7 @@ func (cli *Client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 	if err != nil {
 		// If name wasn't found, check whether PodList was loaded and if not load it.
 		if _, cerr := cli.cache.Get(podCacheName); cerr != nil {
-			cli.log("Cache miss in /kubernetes/%v", name)
+			log.Debugf("Cache miss in /kubernetes/%v", name)
 			if err = cli.updateCachedPods(ctx); err != nil {
 				return nil, err
 			}
@@ -104,7 +105,7 @@ func (cli *Client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 			return nil, err
 		}
 	} else {
-		cli.log("Cache hit in /kubernetes/%v", name)
+		log.Debugf("Cache hit in /kubernetes/%v", name)
 	}
 
 	var pod corev1.Pod
@@ -115,7 +116,7 @@ func (cli *Client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 func (cli *Client) cachedNamespaceList(ctx context.Context) ([]string, error) {
 	entry, err := cli.cache.Get(nsCacheName)
 	if err != nil {
-		cli.log("Cache miss in /kubernetes")
+		log.Debugf("Cache miss in /kubernetes")
 		if err := cli.updateCachedPods(ctx); err != nil {
 			return nil, err
 		}
@@ -123,7 +124,7 @@ func (cli *Client) cachedNamespaceList(ctx context.Context) ([]string, error) {
 			return nil, err
 		}
 	} else {
-		cli.log("Cache hit in /kubernetes")
+		log.Debugf("Cache hit in /kubernetes")
 	}
 
 	var namespaces []string
@@ -137,7 +138,7 @@ func (cli *Client) cachedNamespaceFind(ctx context.Context, name string) ([]stri
 	if err != nil {
 		// If name wasn't found, check whether Namespaces was loaded and if not load it.
 		if _, cerr := cli.cache.Get(nsCacheName); cerr != nil {
-			cli.log("Cache miss in /kubernetes/%v", name)
+			log.Debugf("Cache miss in /kubernetes/%v", name)
 			if err = cli.updateCachedPods(ctx); err != nil {
 				return nil, err
 			}
@@ -148,7 +149,7 @@ func (cli *Client) cachedNamespaceFind(ctx context.Context, name string) ([]stri
 			return nil, err
 		}
 	} else {
-		cli.log("Cache hit in /kubernetes/%v", name)
+		log.Debugf("Cache hit in /kubernetes/%v", name)
 	}
 
 	var namespacePods []string

@@ -3,12 +3,12 @@ package plugin
 import (
 	"context"
 	"io"
-	"log"
 	"os"
 	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/log"
 )
 
 // TrackTime helper is useful for timing functions.
@@ -20,7 +20,7 @@ func TrackTime(start time.Time, name string) {
 
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
-	log.Println("Entering root of filesystem")
+	log.Printf("Entering root of filesystem")
 	return &Dir{
 		client: f,
 		name:   "/",

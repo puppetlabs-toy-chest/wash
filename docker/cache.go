@@ -8,17 +8,18 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/puppetlabs/wash/log"
 )
 
 func (cli *Client) cachedContainerList(ctx context.Context) ([]types.Container, error) {
 	entry, err := cli.Get("ContainerList")
 	var containers []types.Container
 	if err == nil {
-		cli.log("Cache hit in /docker")
+		log.Debugf("Cache hit in /docker")
 		dec := gob.NewDecoder(bytes.NewReader(entry))
 		err = dec.Decode(&containers)
 	} else {
-		cli.log("Cache miss in /docker")
+		log.Debugf("Cache miss in /docker")
 		containers, err = cli.ContainerList(ctx, types.ContainerListOptions{})
 		if err != nil {
 			return nil, err
@@ -39,11 +40,11 @@ func (cli *Client) cachedContainerInspect(ctx context.Context, name string) (*ty
 	entry, err := cli.Get(name)
 	var container types.ContainerJSON
 	if err == nil {
-		cli.log("Cache hit in /docker/%v", name)
+		log.Debugf("Cache hit in /docker/%v", name)
 		rdr := bytes.NewReader(entry)
 		err = json.NewDecoder(rdr).Decode(&container)
 	} else {
-		cli.log("Cache miss in /docker/%v", name)
+		log.Debugf("Cache miss in /docker/%v", name)
 		var raw []byte
 		container, raw, err = cli.ContainerInspectWithRaw(ctx, name, true)
 		if err != nil {
@@ -59,11 +60,11 @@ func (cli *Client) cachedContainerInspect(ctx context.Context, name string) (*ty
 func (cli *Client) cachedContainerInspectRaw(ctx context.Context, name string) ([]byte, error) {
 	entry, err := cli.Get(name)
 	if err == nil {
-		cli.log("Cache hit in /docker/%v", name)
+		log.Debugf("Cache hit in /docker/%v", name)
 		return entry, nil
 	}
 
-	cli.log("Cache miss in /docker/%v", name)
+	log.Debugf("Cache miss in /docker/%v", name)
 	_, raw, err := cli.ContainerInspectWithRaw(ctx, name, true)
 	if err != nil {
 		return nil, err
