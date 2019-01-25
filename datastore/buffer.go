@@ -54,17 +54,22 @@ func (b *StreamBuffer) decr() int {
 // internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
 func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool) {
+	start, confirmed := time.Now(), false
+	defer func() {
+		// Ensure we terminate the channel.
+		if !confirmed {
+			confirm <- true
+			close(confirm)
+		}
+	}()
+
 	if count := b.incr(); count > 1 {
 		// Only initiate streaming if this is the first request.
-		confirm <- true
-		close(confirm)
 		return
 	}
 
 	var err error
 	b.input, err = cb(b.name)
-	confirm <- true
-	close(confirm)
 	if err != nil {
 		log.Printf("Buffer setup failed: %v", err)
 		b.decr()
@@ -94,7 +99,25 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 		// Read data. This may block while waiting for new input.
 		capacity := cap(b.data)
 		log.Printf("Reading %v [%v/%v]", b.name, writeIndex, capacity)
-		bytesRead, err := b.input.Read(b.data[writeIndex:capacity])
+		var bytesRead int
+		if !confirmed {
+			// Restart a new timer to confirm we've read sufficient data until a confirmation is sent.
+			// It captures a new bytesRead var each time through the loop.
+			go func() {
+				// If no new data is read after 100ms or we've been streaming for 5s send confirmation.
+				time.Sleep(100 * time.Millisecond)
+				// Lock around checking and updating confirmed. Several timers may have been started, make
+				// sure only one actually closes the channel.
+				b.mux.Lock()
+				defer b.mux.Unlock()
+				if (bytesRead == 0 || time.Since(start) > 5*time.Second) && !confirmed {
+					confirm <- true
+					close(confirm)
+					confirmed = true
+				}
+			}()
+		}
+		bytesRead, err = b.input.Read(b.data[writeIndex:capacity])
 		if bytesRead < 0 {
 			panic("buffer: readFrom returned negative count from Read")
 		}
