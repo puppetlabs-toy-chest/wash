@@ -2,6 +2,8 @@ package gcp
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -16,8 +18,8 @@ type project struct {
 }
 
 // NewProject creates a new project with a collection of service clients.
-func newProject(name string, cache *bigcache.BigCache) (*project, error) {
-	services, err := newServices(name, cache)
+func newProject(name string, oauthClient *http.Client, cache *bigcache.BigCache) (*project, error) {
+	services, err := newServices(name, oauthClient, cache)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +43,11 @@ func (cli *project) List(ctx context.Context) ([]plugin.Node, error) {
 		entries = append(entries, plugin.NewDir(svc))
 	}
 	return entries, nil
+}
+
+// String returns a printable representation of the project.
+func (cli *project) String() string {
+	return fmt.Sprintf("gcp/%v", cli.name)
 }
 
 // Name returns the project name.

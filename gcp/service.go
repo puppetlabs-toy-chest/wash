@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
+	"net/http"
 	"sort"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+	dataflow "google.golang.org/api/dataflow/v1b3"
 	"google.golang.org/api/iterator"
 )
 
@@ -24,7 +27,10 @@ type service struct {
 	cache   *bigcache.BigCache
 }
 
-func newServices(projectName string, cache *bigcache.BigCache) (map[string]*service, error) {
+// Google auto-generated API scopes needed by services.
+var serviceScopes = []string{dataflow.CloudPlatformScope}
+
+func newServices(projectName string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
 	pubsub, err := pubsub.NewClient(context.Background(), projectName)
 	if err != nil {
 		return nil, err
@@ -32,8 +38,16 @@ func newServices(projectName string, cache *bigcache.BigCache) (map[string]*serv
 	reqs := make(map[string]*datastore.StreamBuffer)
 	pubsubService := &service{"pubsub", projectName, time.Now(), pubsub, reqs, cache}
 
+	dataflowClient, err := dataflow.New(oauthClient)
+	if err != nil {
+		return nil, err
+	}
+	reqs = make(map[string]*datastore.StreamBuffer)
+	dataflowService := &service{"dataflow", projectName, time.Now(), dataflowClient, reqs, cache}
+
 	return map[string]*service{
-		"pubsub": pubsubService,
+		"pubsub":   pubsubService,
+		"dataflow": dataflowService,
 	}, nil
 }
 
@@ -49,6 +63,17 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 		idx := sort.SearchStrings(topics, name)
 		if topics[idx] == name {
 			return plugin.NewFile(&topic{name, c, cli}), nil
+		}
+		return nil, plugin.ENOENT
+	case *dataflow.Service:
+		jobs, err := cli.cachedDataflowJobs(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+
+		idx := sort.SearchStrings(jobs, name)
+		if jobs[idx] == name {
+			return plugin.NewFile(&dataflowJob{name, c, cli}), nil
 		}
 		return nil, plugin.ENOENT
 	}
@@ -68,11 +93,26 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 			entries[i] = plugin.NewFile(&topic{id, c, cli})
 		}
 		return entries, nil
+	case *dataflow.Service:
+		jobs, err := cli.cachedDataflowJobs(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		entries := make([]plugin.Node, len(jobs))
+		for i, id := range jobs {
+			entries[i] = plugin.NewFile(&dataflowJob{id, c, cli})
+		}
+		return entries, nil
 	}
 	return nil, plugin.ENOTSUP
 }
 
-// Returns the service name.
+// String returns a printable representation of the service.
+func (cli *service) String() string {
+	return fmt.Sprintf("gcp/%v/%v", cli.proj, cli.name)
+}
+
+// Name returns the service name.
 func (cli *service) Name() string {
 	return cli.name
 }
@@ -106,7 +146,7 @@ func (cli *service) lastUpdate() time.Time {
 }
 
 func (cli *service) cachedTopics(ctx context.Context, c *pubsub.Client) ([]string, error) {
-	key := cli.proj + "/" + cli.name
+	key := cli.proj + "/topic/" + cli.name
 	entry, err := cli.cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit in /gcp")
@@ -139,4 +179,38 @@ func (cli *service) cachedTopics(ctx context.Context, c *pubsub.Client) ([]strin
 	cli.cache.Set(key, data.Bytes())
 	cli.updated = time.Now()
 	return topics, nil
+}
+
+func (cli *service) cachedDataflowJobs(ctx context.Context, c *dataflow.Service) ([]string, error) {
+	key := cli.proj + "/dataflow/" + cli.name
+	entry, err := cli.cache.Get(key)
+	if err == nil {
+		log.Debugf("Cache hit in /gcp")
+		var jobs []string
+		dec := gob.NewDecoder(bytes.NewReader(entry))
+		err = dec.Decode(&jobs)
+		return jobs, err
+	}
+
+	log.Debugf("Cache miss in /gcp")
+	projJobSvc := dataflow.NewProjectsJobsService(c)
+	projJobsResp, err := projJobSvc.List(cli.proj).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := make([]string, len(projJobsResp.Jobs))
+	for i, job := range projJobsResp.Jobs {
+		jobs[i] = job.Name
+	}
+	sort.Strings(jobs)
+
+	var data bytes.Buffer
+	enc := gob.NewEncoder(&data)
+	if err := enc.Encode(&jobs); err != nil {
+		return nil, err
+	}
+	cli.cache.Set(key, data.Bytes())
+	cli.updated = time.Now()
+	return jobs, nil
 }

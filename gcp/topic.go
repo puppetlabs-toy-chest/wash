@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/puppetlabs/wash/plugin"
@@ -13,6 +14,11 @@ type topic struct {
 	name   string
 	client *pubsub.Client
 	*service
+}
+
+// String returns a printable representation of the topic.
+func (cli *topic) String() string {
+	return fmt.Sprintf("gcp/%v/pubsub/topic/%v", cli.proj, cli.name)
 }
 
 // Returns the topic name.

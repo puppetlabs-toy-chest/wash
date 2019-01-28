@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"net/http"
 	"sort"
 	"time"
 
@@ -15,11 +16,12 @@ import (
 )
 
 type client struct {
-	lister   *crm.ProjectsListCall
-	projects map[string]*project
-	cache    *bigcache.BigCache
-	updated  time.Time
-	name     string
+	oauthClient *http.Client
+	lister      *crm.ProjectsListCall
+	projects    map[string]*project
+	cache       *bigcache.BigCache
+	updated     time.Time
+	name        string
 }
 
 // Defines how quickly we should allow checks for updated content. This has to be consistent
@@ -37,7 +39,8 @@ func Create(name string) (plugin.DirProtocol, error) {
 	}
 
 	// This API is terrible, but not supported by the better go sdk.
-	oauthClient, err := google.DefaultClient(context.Background(), crm.CloudPlatformScope)
+	cloudPlatformScopes := append([]string{crm.CloudPlatformScope}, serviceScopes...)
+	oauthClient, err := google.DefaultClient(context.Background(), cloudPlatformScopes...)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +51,7 @@ func Create(name string) (plugin.DirProtocol, error) {
 	lister := crm.NewProjectsService(crmService).List()
 
 	projmap := make(map[string]*project)
-	return &client{lister, projmap, cache, time.Now(), name}, nil
+	return &client{oauthClient, lister, projmap, cache, time.Now(), name}, nil
 }
 
 // Find project by name.
@@ -145,7 +148,7 @@ func (cli *client) refreshProjects(ctx context.Context) error {
 			continue
 		}
 
-		newProj, err := newProject(proj, cli.cache)
+		newProj, err := newProject(proj, cli.oauthClient, cli.cache)
 		if err != nil {
 			return err
 		}
