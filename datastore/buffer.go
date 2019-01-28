@@ -4,9 +4,10 @@ package datastore
 import (
 	"bytes"
 	"io"
-	"log"
 	"sync"
 	"time"
+
+	"github.com/puppetlabs/wash/log"
 )
 
 // StreamBuffer implements a streaming buffer that can be closed and re-opened.
@@ -98,7 +99,7 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 
 		// Read data. This may block while waiting for new input.
 		capacity := cap(b.data)
-		log.Printf("Reading %v [%v/%v]", b.name, writeIndex, capacity)
+		log.Debugf("Reading %v [%v/%v]", b.name, writeIndex, capacity)
 		var bytesRead int
 		if !confirmed {
 			// Restart a new timer to confirm we've read sufficient data until a confirmation is sent.
