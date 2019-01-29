@@ -1,9 +1,7 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"net/http"
 	"sort"
@@ -12,10 +10,8 @@ import (
 	"cloud.google.com/go/pubsub"
 	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	dataflow "google.golang.org/api/dataflow/v1b3"
-	"google.golang.org/api/iterator"
 )
 
 type service struct {
@@ -143,74 +139,4 @@ func (cli *service) lastUpdate() time.Time {
 		}
 	}
 	return latest
-}
-
-func (cli *service) cachedTopics(ctx context.Context, c *pubsub.Client) ([]string, error) {
-	key := cli.proj + "/topic/" + cli.name
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var topics []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&topics)
-		return topics, err
-	}
-
-	log.Debugf("Cache miss in /gcp")
-	topics := make([]string, 0)
-	it := c.Topics(ctx)
-	for {
-		t, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		topics = append(topics, t.ID())
-	}
-	sort.Strings(topics)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&topics); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return topics, nil
-}
-
-func (cli *service) cachedDataflowJobs(ctx context.Context, c *dataflow.Service) ([]string, error) {
-	key := cli.proj + "/dataflow/" + cli.name
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var jobs []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&jobs)
-		return jobs, err
-	}
-
-	log.Debugf("Cache miss in /gcp")
-	projJobSvc := dataflow.NewProjectsJobsService(c)
-	projJobsResp, err := projJobSvc.List(cli.proj).Do()
-	if err != nil {
-		return nil, err
-	}
-
-	jobs := make([]string, len(projJobsResp.Jobs))
-	for i, job := range projJobsResp.Jobs {
-		jobs[i] = job.Name
-	}
-	sort.Strings(jobs)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&jobs); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return jobs, nil
 }
