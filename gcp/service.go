@@ -78,9 +78,8 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		idx := sort.SearchStrings(jobs, name)
-		if jobs[idx] == name {
-			return plugin.NewFile(&dataflowJob{name, c, cli}), nil
+		if id, ok := searchDataflowJob(jobs, name); ok {
+			return plugin.NewFile(newDataflowJob(id, c, cli)), nil
 		}
 		return nil, plugin.ENOENT
 	case *bigquery.Client:
@@ -118,7 +117,7 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 		}
 		entries := make([]plugin.Node, len(jobs))
 		for i, id := range jobs {
-			entries[i] = plugin.NewFile(&dataflowJob{id, c, cli})
+			entries[i] = plugin.NewFile(newDataflowJob(id, c, cli))
 		}
 		return entries, nil
 	case *bigquery.Client:
