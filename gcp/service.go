@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/pubsub"
 	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
@@ -26,24 +27,34 @@ type service struct {
 // Google auto-generated API scopes needed by services.
 var serviceScopes = []string{dataflow.CloudPlatformScope}
 
+func buffer() map[string]*datastore.StreamBuffer {
+	return make(map[string]*datastore.StreamBuffer)
+}
+
 func newServices(projectName string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
-	pubsub, err := pubsub.NewClient(context.Background(), projectName)
+	ongoing := context.Background()
+	pubsubClient, err := pubsub.NewClient(ongoing, projectName)
 	if err != nil {
 		return nil, err
 	}
-	reqs := make(map[string]*datastore.StreamBuffer)
-	pubsubService := &service{"pubsub", projectName, time.Now(), pubsub, reqs, cache}
+	pubsubService := &service{"pubsub", projectName, time.Now(), pubsubClient, buffer(), cache}
 
 	dataflowClient, err := dataflow.New(oauthClient)
 	if err != nil {
 		return nil, err
 	}
-	reqs = make(map[string]*datastore.StreamBuffer)
-	dataflowService := &service{"dataflow", projectName, time.Now(), dataflowClient, reqs, cache}
+	dataflowService := &service{"dataflow", projectName, time.Now(), dataflowClient, buffer(), cache}
+
+	bigqueryClient, err := bigquery.NewClient(ongoing, projectName)
+	if err != nil {
+		return nil, err
+	}
+	bigqueryService := &service{"bigquery", projectName, time.Now(), bigqueryClient, buffer(), cache}
 
 	return map[string]*service{
 		"pubsub":   pubsubService,
 		"dataflow": dataflowService,
+		"bigquery": bigqueryService,
 	}, nil
 }
 
@@ -72,6 +83,17 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return plugin.NewFile(&dataflowJob{name, c, cli}), nil
 		}
 		return nil, plugin.ENOENT
+	case *bigquery.Client:
+		datasets, err := cli.cachedDatasets(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+
+		idx := sort.SearchStrings(datasets, name)
+		if datasets[idx] == name {
+			return plugin.NewDir(newBigqueryDataset(name, c, cli)), nil
+		}
+		return nil, plugin.ENOENT
 	}
 	return nil, plugin.ENOTSUP
 }
@@ -97,6 +119,16 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 		entries := make([]plugin.Node, len(jobs))
 		for i, id := range jobs {
 			entries[i] = plugin.NewFile(&dataflowJob{id, c, cli})
+		}
+		return entries, nil
+	case *bigquery.Client:
+		datasets, err := cli.cachedDatasets(ctx, c)
+		if err != nil {
+			return nil, err
+		}
+		entries := make([]plugin.Node, len(datasets))
+		for i, name := range datasets {
+			entries[i] = plugin.NewDir(newBigqueryDataset(name, c, cli))
 		}
 		return entries, nil
 	}
