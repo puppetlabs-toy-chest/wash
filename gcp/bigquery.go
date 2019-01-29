@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
 
 	"cloud.google.com/go/bigquery"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/iterator"
@@ -66,8 +68,17 @@ func (cli *bigqueryDataset) Attr(ctx context.Context) (*plugin.Attributes, error
 
 // Xattr returns a map of extended attributes.
 func (cli *bigqueryDataset) Xattr(ctx context.Context) (map[string][]byte, error) {
-	// TODO: return dataset config, https://godoc.org/cloud.google.com/go/bigquery#TableMetadata
-	return nil, plugin.ENOTSUP
+	data, err := datastore.CachedJSON(cli.cache, cli.String()+"/meta", func() ([]byte, error) {
+		meta, err := cli.Metadata(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(meta)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return plugin.JSONToJSONMap(data)
 }
 
 type bigqueryTable struct {
@@ -92,13 +103,22 @@ func (cli *bigqueryTable) Attr(ctx context.Context) (*plugin.Attributes, error) 
 
 // Xattr returns a map of extended attributes.
 func (cli *bigqueryTable) Xattr(ctx context.Context) (map[string][]byte, error) {
-	// TODO: return dataset config, https://godoc.org/cloud.google.com/go/bigquery#TableMetadata
-	return nil, plugin.ENOTSUP
+	data, err := datastore.CachedJSON(cli.dataset.cache, cli.String()+"/meta", func() ([]byte, error) {
+		meta, err := cli.Metadata(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(meta)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return plugin.JSONToJSONMap(data)
 }
 
 // Open is not supported for bigquery tables.
 func (cli *bigqueryTable) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	// TODO: what content is available from a table? Schema? Can we stream insertions?
+	// TODO: what content is available from a table? Can we stream insertions?
 	return nil, plugin.ENOTSUP
 }
 

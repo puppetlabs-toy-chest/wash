@@ -98,6 +98,34 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	return err
 }
 
+// Listxattr lists extended attributes for the resource.
+func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	xattrs, err := d.Xattr(ctx)
+	if err != nil {
+		log.Printf("Error[Xattr,%v]: %v", d, err)
+		return err
+	}
+
+	for k := range xattrs {
+		resp.Append(k)
+	}
+	log.Printf("Listxattr %v", d)
+	return nil
+}
+
+// Getxattr gets extended attributes for the resource.
+func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	xattrs, err := d.Xattr(ctx)
+	if err != nil {
+		log.Printf("Error[Xattr,%v]: %v", d, err)
+		return err
+	}
+
+	resp.Xattr = xattrs[req.Name]
+	log.Printf("Getxattr %v", d)
+	return nil
+}
+
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	return d.Find(ctx, req.Name)
@@ -164,6 +192,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 	for k := range xattrs {
 		resp.Append(k)
 	}
+	log.Printf("Listxattr %v", f)
 	return nil
 }
 
@@ -176,6 +205,7 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 	}
 
 	resp.Xattr = xattrs[req.Name]
+	log.Printf("Getxattr %v", f)
 	return nil
 }
 
