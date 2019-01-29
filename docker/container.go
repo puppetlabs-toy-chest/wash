@@ -38,24 +38,15 @@ func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (inst *container) Xattr(ctx context.Context) (map[string][]byte, error) {
-	raw, err := inst.cachedContainerInspectRaw(ctx, inst.name)
+	raw, err := datastore.CachedJSON(inst.root.BigCache, inst.name, func() ([]byte, error) {
+		_, raw, err := inst.ContainerInspectWithRaw(ctx, inst.name, true)
+		return raw, err
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	var data map[string]interface{}
-	if err := json.Unmarshal(raw, &data); err != nil {
-		return nil, err
-	}
-
-	d := make(map[string][]byte)
-	for k, v := range data {
-		d[k], err = json.Marshal(v)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return d, nil
+	return plugin.JSONToJSONMap(raw)
 }
 
 // Removes multiplex headers. Returns the new buffer length after compressing input,
@@ -152,21 +143,4 @@ func (inst *container) cachedContainerInspect(ctx context.Context, name string) 
 	}
 
 	return &container, err
-}
-
-func (inst *container) cachedContainerInspectRaw(ctx context.Context, name string) ([]byte, error) {
-	entry, err := inst.Get(name)
-	if err == nil {
-		log.Debugf("Cache hit in /docker/%v", name)
-		return entry, nil
-	}
-
-	log.Debugf("Cache miss in /docker/%v", name)
-	_, raw, err := inst.ContainerInspectWithRaw(ctx, name, true)
-	if err != nil {
-		return nil, err
-	}
-
-	inst.Set(name, raw)
-	return raw, nil
 }
