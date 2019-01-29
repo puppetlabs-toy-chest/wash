@@ -84,13 +84,13 @@ func processMultiplexedStreams(data []byte, writeIndex int) (int, int) {
 	return newLen, writeIndex
 }
 
-func (inst *container) readLog(name string) (io.ReadCloser, error) {
+func (inst *container) readLog() (io.ReadCloser, error) {
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Follow:     true,
 	}
-	return inst.ContainerLogs(context.Background(), name, opts)
+	return inst.ContainerLogs(context.Background(), inst.name, opts)
 }
 
 // Open gets logs from a container.

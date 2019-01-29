@@ -54,7 +54,7 @@ func (b *StreamBuffer) decr() int {
 // Stream reads from a reader instantiated with the specified callback. Stores all data in an
 // internal buffer. Sends a confirmation on the provided channel when some data has been buffered.
 // Whenever new data is injested, locks and updates the buffer's reader with a new slice.
-func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm chan bool) {
+func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan bool) {
 	start, confirmed := time.Now(), false
 	defer func() {
 		// Ensure we terminate the channel.
@@ -70,7 +70,7 @@ func (b *StreamBuffer) Stream(cb func(string) (io.ReadCloser, error), confirm ch
 	}
 
 	var err error
-	b.input, err = cb(b.name)
+	b.input, err = cb()
 	if err != nil {
 		log.Printf("Buffer setup failed: %v", err)
 		b.decr()

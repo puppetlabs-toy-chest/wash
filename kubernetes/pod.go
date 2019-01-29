@@ -48,9 +48,9 @@ func (cli *pod) Xattr(ctx context.Context) (map[string][]byte, error) {
 	return plugin.JSONToJSONMap(inrec)
 }
 
-func (cli *pod) readLog(name string) (io.ReadCloser, error) {
+func (cli *pod) readLog() (io.ReadCloser, error) {
 	// Pod logs must be retrieved by namespace and name, not UID.
-	pod, err := cli.cachedPodFind(context.Background(), name)
+	pod, err := cli.cachedPodFind(context.Background(), cli.name)
 	if err != nil {
 		return nil, err
 	}
