@@ -98,13 +98,13 @@ func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	inst.mux.Lock()
 	defer inst.mux.Unlock()
 
-	c, err := inst.cachedContainerInspect(ctx, inst.name)
-	if err != nil {
-		return nil, err
-	}
-
 	buf, ok := inst.reqs[inst.name]
 	if !ok {
+		c, err := inst.cachedContainerInspect(ctx, inst.name)
+		if err != nil {
+			return nil, err
+		}
+
 		// Only do additional processing if container is not running with tty.
 		postProcessor := processMultiplexedStreams
 		if c.Config.Tty {
