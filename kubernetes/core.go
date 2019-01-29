@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"context"
 	"flag"
-	"os/user"
+	"os"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -37,14 +37,9 @@ const validDuration = 100 * time.Millisecond
 
 // Create a new kubernetes client.
 func Create(name string) (plugin.DirProtocol, error) {
-	me, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-
 	var kubeconfig *string
-	if me.HomeDir != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(me.HomeDir, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	if h := os.Getenv("HOME"); h != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(h, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
