@@ -1,16 +1,12 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"sort"
-	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/puppetlabs/wash/log"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/iterator"
 )
@@ -88,37 +84,19 @@ func (cli *topic) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 }
 
 func (cli *service) cachedTopics(ctx context.Context, c *pubsub.Client) ([]string, error) {
-	key := cli.proj + "/topic/" + cli.name
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var topics []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&topics)
-		return topics, err
-	}
-
-	log.Debugf("Cache miss in /gcp")
-	topics := make([]string, 0)
-	it := c.Topics(ctx)
-	for {
-		t, err := it.Next()
-		if err == iterator.Done {
-			break
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+		topics := make([]string, 0)
+		it := c.Topics(ctx)
+		for {
+			t, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			topics = append(topics, t.ID())
 		}
-		if err != nil {
-			return nil, err
-		}
-		topics = append(topics, t.ID())
-	}
-	sort.Strings(topics)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&topics); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return topics, nil
+		return topics, nil
+	})
 }

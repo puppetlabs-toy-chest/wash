@@ -1,14 +1,13 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"net/http"
 	"sort"
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	"golang.org/x/oauth2/google"
@@ -97,35 +96,19 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
-	entry, err := cli.cache.Get("ProjectsList")
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var projects []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&projects)
-		return projects, err
-	}
+	return datastore.CachedStrings(cli.cache, "ProjectsList", func() ([]string, error) {
+		listResponse, err := cli.lister.Do()
+		if err != nil {
+			return nil, err
+		}
 
-	log.Debugf("Cache miss in /gcp")
-	listResponse, err := cli.lister.Do()
-	if err != nil {
-		return nil, err
-	}
-
-	projects := make([]string, len(listResponse.Projects))
-	for i, proj := range listResponse.Projects {
-		projects[i] = proj.ProjectId
-	}
-	sort.Strings(projects)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&projects); err != nil {
-		return nil, err
-	}
-	cli.cache.Set("ProjectsList", data.Bytes())
-	cli.updated = time.Now()
-	return projects, nil
+		projects := make([]string, len(listResponse.Projects))
+		for i, proj := range listResponse.Projects {
+			projects[i] = proj.ProjectId
+		}
+		cli.updated = time.Now()
+		return projects, nil
+	})
 }
 
 func (cli *client) refreshProjects(ctx context.Context) error {

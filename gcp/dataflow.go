@@ -1,14 +1,11 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
-	"sort"
 	"time"
 
-	"github.com/puppetlabs/wash/log"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	dataflow "google.golang.org/api/dataflow/v1b3"
 )
@@ -50,36 +47,19 @@ func (cli *dataflowJob) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	return nil, plugin.ENOTSUP
 }
 
-func (cli *service) cachedDataflowJobs(ctx context.Context, c *dataflow.Service) ([]string, error) {
-	key := cli.proj + "/dataflow/" + cli.name
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var jobs []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&jobs)
-		return jobs, err
-	}
+func (cli *service) cachedDataflowJobs(c *dataflow.Service) ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+		projJobSvc := dataflow.NewProjectsJobsService(c)
+		projJobsResp, err := projJobSvc.List(cli.proj).Do()
+		if err != nil {
+			return nil, err
+		}
 
-	log.Debugf("Cache miss in /gcp")
-	projJobSvc := dataflow.NewProjectsJobsService(c)
-	projJobsResp, err := projJobSvc.List(cli.proj).Do()
-	if err != nil {
-		return nil, err
-	}
-
-	jobs := make([]string, len(projJobsResp.Jobs))
-	for i, job := range projJobsResp.Jobs {
-		jobs[i] = job.Name
-	}
-	sort.Strings(jobs)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&jobs); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return jobs, nil
+		jobs := make([]string, len(projJobsResp.Jobs))
+		for i, job := range projJobsResp.Jobs {
+			jobs[i] = job.Name
+		}
+		cli.updated = time.Now()
+		return jobs, nil
+	})
 }

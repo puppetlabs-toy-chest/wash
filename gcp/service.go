@@ -73,7 +73,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 		}
 		return nil, plugin.ENOENT
 	case *dataflow.Service:
-		jobs, err := cli.cachedDataflowJobs(ctx, c)
+		jobs, err := cli.cachedDataflowJobs(c)
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 		}
 		return entries, nil
 	case *dataflow.Service:
-		jobs, err := cli.cachedDataflowJobs(ctx, c)
+		jobs, err := cli.cachedDataflowJobs(c)
 		if err != nil {
 			return nil, err
 		}

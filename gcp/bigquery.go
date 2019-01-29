@@ -1,9 +1,7 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -11,7 +9,6 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/iterator"
 )
@@ -123,73 +120,39 @@ func (cli *bigqueryTable) Open(ctx context.Context) (plugin.IFileBuffer, error) 
 }
 
 func (cli *service) cachedDatasets(ctx context.Context, c *bigquery.Client) ([]string, error) {
-	key := cli.proj + "/" + cli.name
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var datasets []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&datasets)
-		return datasets, err
-	}
-
-	log.Debugf("Cache miss in /gcp")
-	datasets := make([]string, 0)
-	it := c.Datasets(ctx)
-	for {
-		d, err := it.Next()
-		if err == iterator.Done {
-			break
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+		datasets := make([]string, 0)
+		it := c.Datasets(ctx)
+		for {
+			d, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			datasets = append(datasets, d.DatasetID)
 		}
-		if err != nil {
-			return nil, err
-		}
-		datasets = append(datasets, d.DatasetID)
-	}
-	sort.Strings(datasets)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&datasets); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return datasets, nil
+		cli.updated = time.Now()
+		return datasets, nil
+	})
 }
 
 func (cli *service) cachedTables(ctx context.Context, d *bigquery.Dataset) ([]string, error) {
-	key := cli.proj + "/" + cli.name + "/" + d.DatasetID
-	entry, err := cli.cache.Get(key)
-	if err == nil {
-		log.Debugf("Cache hit in /gcp")
-		var tables []string
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&tables)
-		return tables, err
-	}
-
-	log.Debugf("Cache miss in /gcp")
-	tables := make([]string, 0)
-	it := d.Tables(ctx)
-	for {
-		t, err := it.Next()
-		if err == iterator.Done {
-			break
+	return datastore.CachedStrings(cli.cache, cli.String()+"/"+d.DatasetID, func() ([]string, error) {
+		tables := make([]string, 0)
+		it := d.Tables(ctx)
+		for {
+			t, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			tables = append(tables, t.TableID)
 		}
-		if err != nil {
-			return nil, err
-		}
-		tables = append(tables, t.TableID)
-	}
-	sort.Strings(tables)
-
-	var data bytes.Buffer
-	enc := gob.NewEncoder(&data)
-	if err := enc.Encode(&tables); err != nil {
-		return nil, err
-	}
-	cli.cache.Set(key, data.Bytes())
-	cli.updated = time.Now()
-	return tables, nil
+		cli.updated = time.Now()
+		return tables, nil
+	})
 }
