@@ -72,24 +72,36 @@ func (cli *client) updateCachedPods(ctx context.Context) error {
 	return nil
 }
 
-func (cli *client) cachedPodList(ctx context.Context) ([]string, error) {
-	entry, err := cli.cache.Get(podCacheName)
+func (cli *client) retry(ctx context.Context, key string) ([]byte, error) {
+	if err := cli.updateCachedPods(ctx); err != nil {
+		return nil, err
+	}
+	return cli.cache.Get(key)
+}
+
+func (cli *client) cachedStrings(ctx context.Context, key string, cb func(context.Context, string) ([]byte, error)) ([]string, error) {
+	entry, err := cli.cache.Get(key)
 	if err != nil {
-		log.Debugf("Cache miss in /kubernetes")
-		if err := cli.updateCachedPods(ctx); err != nil {
-			return nil, err
-		}
-		if entry, err = cli.cache.Get(podCacheName); err != nil {
+		log.Printf("Cache miss on kubernetes/%v", key)
+		if entry, err = cb(ctx, key); err != nil {
 			return nil, err
 		}
 	} else {
-		log.Debugf("Cache hit in /kubernetes")
+		log.Debugf("Cache hit on kubernetes/%v", key)
 	}
 
-	var pods []string
+	var strings []string
 	dec := gob.NewDecoder(bytes.NewReader(entry))
-	err = dec.Decode(&pods)
-	return pods, err
+	err = dec.Decode(&strings)
+	return strings, err
+}
+
+func (cli *client) cachedPodList(ctx context.Context) ([]string, error) {
+	return cli.cachedStrings(ctx, podCacheName, cli.retry)
+}
+
+func (cli *client) cachedNamespaceList(ctx context.Context) ([]string, error) {
+	return cli.cachedStrings(ctx, nsCacheName, cli.retry)
 }
 
 func (cli *client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod, error) {
@@ -116,47 +128,14 @@ func (cli *client) cachedPodFind(ctx context.Context, name string) (*corev1.Pod,
 	return &pod, err
 }
 
-func (cli *client) cachedNamespaceList(ctx context.Context) ([]string, error) {
-	entry, err := cli.cache.Get(nsCacheName)
-	if err != nil {
-		log.Debugf("Cache miss in /kubernetes")
-		if err := cli.updateCachedPods(ctx); err != nil {
-			return nil, err
-		}
-		if entry, err = cli.cache.Get(nsCacheName); err != nil {
-			return nil, err
-		}
-	} else {
-		log.Debugf("Cache hit in /kubernetes")
-	}
-
-	var namespaces []string
-	dec := gob.NewDecoder(bytes.NewReader(entry))
-	err = dec.Decode(&namespaces)
-	return namespaces, err
-}
-
 func (cli *client) cachedNamespaceFind(ctx context.Context, name string) ([]string, error) {
-	entry, err := cli.cache.Get(nsPrefix + name)
-	if err != nil {
+	return cli.cachedStrings(ctx, nsPrefix+name, func(ctx context.Context, key string) ([]byte, error) {
 		// If name wasn't found, check whether Namespaces was loaded and if not load it.
-		if _, cerr := cli.cache.Get(nsCacheName); cerr != nil {
-			log.Debugf("Cache miss in /kubernetes/%v", name)
-			if err = cli.updateCachedPods(ctx); err != nil {
+		if _, err := cli.cache.Get(nsCacheName); err != nil {
+			if err := cli.updateCachedPods(ctx); err != nil {
 				return nil, err
 			}
-			if entry, err = cli.cache.Get(nsPrefix + name); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
 		}
-	} else {
-		log.Debugf("Cache hit in /kubernetes/%v", name)
-	}
-
-	var namespacePods []string
-	dec := gob.NewDecoder(bytes.NewReader(entry))
-	err = dec.Decode(&namespacePods)
-	return namespacePods, err
+		return cli.cache.Get(key)
+	})
 }
