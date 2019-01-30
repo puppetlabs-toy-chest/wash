@@ -36,8 +36,15 @@ docker build . -t wash
 
 Run with
 ```
-docker run --rm --name wash --device /dev/fuse --cap-add SYS_ADMIN -v /var/run/docker.sock:/var/run/docker.sock wash
+docker run --rm --name wash --device /dev/fuse --cap-add SYS_ADMIN wash
 ```
+
+If you want to be able to access Docker instances from your local Docker runtime add
+```
+-v /var/run/docker.sock:/var/run/docker.sock
+```
+
+To pull in your local config add `-v $HOME:/root`. Additionally add `-v $HOME:$HOME` if you use symlinks with any of your config.
 
 Then start a shell and explore with
 ```
