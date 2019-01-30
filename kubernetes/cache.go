@@ -52,6 +52,7 @@ func (cli *client) updateCachedPods(ctx context.Context) error {
 
 		namespaceNames = append(namespaceNames, key)
 	}
+	sort.Strings(namespaceNames)
 
 	enc := gob.NewEncoder(&data)
 	if err := enc.Encode(&podNames); err != nil {

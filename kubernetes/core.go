@@ -22,18 +22,20 @@ import (
 
 type client struct {
 	*k8s.Clientset
-	cache   *bigcache.BigCache
-	mux     sync.Mutex
-	reqs    map[string]*datastore.StreamBuffer
-	updated time.Time
-	root    string
-	groups  []string
+	cache      *bigcache.BigCache
+	nsmux      sync.Mutex
+	namespaces map[string]*namespace
+	mux        sync.Mutex
+	reqs       map[string]*datastore.StreamBuffer
+	updated    time.Time
+	root       string
 }
 
 // Defines how quickly we should allow checks for updated content. This has to be consistent
 // across files and directories or we may not detect updates quickly enough, especially for files
 // that previously were empty.
 const validDuration = 100 * time.Millisecond
+const allNamespace = "all"
 
 // Create a new kubernetes client.
 func Create(name string) (plugin.DirProtocol, error) {
@@ -65,29 +67,27 @@ func Create(name string) (plugin.DirProtocol, error) {
 		return nil, err
 	}
 
-	groups := []string{"namespaces", "pods"}
-	sort.Strings(groups)
-
+	namespaces := make(map[string]*namespace)
 	reqs := make(map[string]*datastore.StreamBuffer)
-	return &client{clientset, cache, sync.Mutex{}, reqs, time.Now(), name, groups}, nil
+	return &client{clientset, cache, sync.Mutex{}, namespaces, sync.Mutex{}, reqs, time.Now(), name}, nil
 }
 
-// Find container by ID.
+// Find namespace.
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
-	idx := sort.SearchStrings(cli.groups, name)
-	if cli.groups[idx] == name {
-		log.Debugf("Found group %v", name)
-		return plugin.NewDir(&node{cli, name, nil}), nil
+	cli.refreshNamespaces(ctx)
+	if ns, ok := cli.namespaces[name]; ok {
+		return plugin.NewDir(ns), nil
 	}
 	return nil, plugin.ENOENT
 }
 
-// List all running pods as files.
+// List all namespaces.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
-	log.Debugf("Listing %v groups in /kubernetes", len(cli.groups))
-	entries := make([]plugin.Node, len(cli.groups))
-	for i, v := range cli.groups {
-		entries[i] = plugin.NewDir(&node{cli, v, nil})
+	cli.refreshNamespaces(ctx)
+	log.Debugf("Listing %v namespaces in /kubernetes", len(cli.namespaces))
+	entries := make([]plugin.Node, 0, len(cli.namespaces))
+	for _, ns := range cli.namespaces {
+		entries = append(entries, plugin.NewDir(ns))
 	}
 	return entries, nil
 }
@@ -112,4 +112,35 @@ func (cli *client) Attr(ctx context.Context) (*plugin.Attributes, error) {
 // Xattr returns a map of extended attributes.
 func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 	return nil, plugin.ENOTSUP
+}
+
+func (cli *client) refreshNamespaces(ctx context.Context) error {
+	cli.nsmux.Lock()
+	defer cli.nsmux.Unlock()
+	namespaces, err := cli.cachedNamespaceList(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Remove unnamed namespaces
+	for name := range cli.namespaces {
+		if name == allNamespace {
+			// Don't remove 'all' namespace.
+			continue
+		}
+		idx := sort.SearchStrings(namespaces, name)
+		if namespaces[idx] != name {
+			delete(cli.namespaces, name)
+		}
+	}
+
+	// Ensure 'all' namespace is always included.
+	for _, name := range append(namespaces, allNamespace) {
+		if _, ok := cli.namespaces[name]; ok {
+			continue
+		}
+
+		cli.namespaces[name] = newNamespace(cli, name)
+	}
+	return nil
 }
