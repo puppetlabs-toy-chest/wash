@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"net/http"
-	"sort"
 	"sync"
 	"time"
 
@@ -124,8 +123,7 @@ func (cli *client) refreshProjects(ctx context.Context) error {
 
 	// Remove unnamed projects
 	for name, proj := range cli.projects {
-		idx := sort.SearchStrings(projectNames, name)
-		if projectNames[idx] != name {
+		if !datastore.ContainsString(projectNames, name) {
 			proj.closeServices(ctx)
 			delete(cli.projects, name)
 		}

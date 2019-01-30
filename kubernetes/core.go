@@ -5,7 +5,6 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
-	"sort"
 	"sync"
 	"time"
 
@@ -128,8 +127,7 @@ func (cli *client) refreshNamespaces(ctx context.Context) error {
 			// Don't remove 'all' namespace.
 			continue
 		}
-		idx := sort.SearchStrings(namespaces, name)
-		if namespaces[idx] != name {
+		if !datastore.ContainsString(namespaces, name) {
 			delete(cli.namespaces, name)
 		}
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -38,8 +37,7 @@ func (cli *bigqueryDataset) Find(ctx context.Context, name string) (plugin.Node,
 	if err != nil {
 		return nil, err
 	}
-	idx := sort.SearchStrings(tables, name)
-	if tables[idx] == name {
+	if datastore.ContainsString(tables, name) {
 		return plugin.NewFile(&bigqueryTable{cli.Table(name), cli}), nil
 	}
 	return nil, plugin.ENOENT

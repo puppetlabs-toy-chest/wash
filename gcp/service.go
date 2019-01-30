@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sort"
 	"sync"
 	"time"
 
@@ -70,8 +69,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		idx := sort.SearchStrings(topics, name)
-		if topics[idx] == name {
+		if datastore.ContainsString(topics, name) {
 			return plugin.NewFile(&pubsubTopic{name, c, cli}), nil
 		}
 		return nil, plugin.ENOENT
@@ -81,7 +79,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		if id, ok := searchDataflowJob(jobs, name); ok {
+		if id, ok := datastore.FindCompositeString(jobs, name); ok {
 			return plugin.NewFile(newDataflowJob(id, c, cli)), nil
 		}
 		return nil, plugin.ENOENT
@@ -91,8 +89,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		idx := sort.SearchStrings(datasets, name)
-		if datasets[idx] == name {
+		if datastore.ContainsString(datasets, name) {
 			return plugin.NewDir(newBigqueryDataset(name, c, cli)), nil
 		}
 		return nil, plugin.ENOENT
