@@ -61,6 +61,7 @@ func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan boo
 		if !confirmed {
 			confirm <- true
 			close(confirm)
+			confirmed = true
 		}
 	}()
 
