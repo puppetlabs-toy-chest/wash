@@ -126,9 +126,32 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 	return nil
 }
 
+func prefetch(entry fs.Node) {
+	switch v := entry.(type) {
+	case *Dir:
+		go func() { v.List(context.Background()) }()
+	case *File:
+		go func() {
+			buf, err := v.FileProtocol.Open(context.Background())
+			if err == nil {
+				go func() {
+					time.Sleep(5 * time.Second)
+					buf.Close()
+				}()
+			}
+		}()
+	default:
+		log.Debugf("Not sure how to prefetch for %v", v)
+	}
+}
+
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	return d.Find(ctx, req.Name)
+	entry, err := d.Find(ctx, req.Name)
+	if err == nil {
+		prefetch(entry)
+	}
+	return entry, err
 }
 
 // ReadDirAll lists all children of the directory.
@@ -141,11 +164,13 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
+		prefetch(entry)
 		var de fuse.Dirent
 		switch v := entry.(type) {
 		case *Dir:
 			de.Name = v.Name()
 			de.Type = fuse.DT_Dir
+			prefetch(entry)
 		case *File:
 			de.Name = v.Name()
 		}
@@ -224,11 +249,7 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 // Release closes the open file.
 func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	switch v := fh.r.(type) {
-	case io.Closer:
-		return v.Close()
-	}
-	return nil
+	return fh.r.Close()
 }
 
 // Read fills a buffer with the requested amount of data from the file.
