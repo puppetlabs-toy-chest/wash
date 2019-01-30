@@ -11,24 +11,24 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-type topic struct {
+type pubsubTopic struct {
 	name   string
 	client *pubsub.Client
 	*service
 }
 
-// String returns a printable representation of the topic.
-func (cli *topic) String() string {
-	return fmt.Sprintf("gcp/%v/pubsub/topic/%v", cli.proj, cli.name)
+// String returns a printable representation of the pubsubTopic.
+func (cli *pubsubTopic) String() string {
+	return fmt.Sprintf("gcp/%v/pubsub/pubsubTopic/%v", cli.proj, cli.name)
 }
 
-// Returns the topic name.
-func (cli *topic) Name() string {
+// Returns the pubsubTopic name.
+func (cli *pubsubTopic) Name() string {
 	return cli.name
 }
 
 // Attr returns attributes of the named resource.
-func (cli *topic) Attr(ctx context.Context) (*plugin.Attributes, error) {
+func (cli *pubsubTopic) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	if buf, ok := cli.reqs[cli.name]; ok {
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
@@ -37,7 +37,7 @@ func (cli *topic) Attr(ctx context.Context) (*plugin.Attributes, error) {
 }
 
 // Xattr returns a map of extended attributes.
-func (cli *topic) Xattr(ctx context.Context) (map[string][]byte, error) {
+func (cli *pubsubTopic) Xattr(ctx context.Context) (map[string][]byte, error) {
 	tpc := cli.client.Topic(cli.name)
 	data := make(map[string][]byte)
 	topicConfig, err := tpc.Config(ctx)
@@ -75,9 +75,9 @@ func (cli *topic) Xattr(ctx context.Context) (map[string][]byte, error) {
 	return data, nil
 }
 
-// Open subscribes to a topic and reads new messages.
-func (cli *topic) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	// TODO: subscribe to topic when opened.
+// Open subscribes to a pubsubTopic and reads new messages.
+func (cli *pubsubTopic) Open(ctx context.Context) (plugin.IFileBuffer, error) {
+	// TODO: subscribe to pubsubTopic when opened.
 	// https://godoc.org/cloud.google.com/go/pubsub#Client.CreateSubscription
 	// https://godoc.org/cloud.google.com/go/pubsub#Subscription.Receive
 	return nil, plugin.ENOTSUP

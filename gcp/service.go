@@ -72,7 +72,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 
 		idx := sort.SearchStrings(topics, name)
 		if topics[idx] == name {
-			return plugin.NewFile(&topic{name, c, cli}), nil
+			return plugin.NewFile(&pubsubTopic{name, c, cli}), nil
 		}
 		return nil, plugin.ENOENT
 	case *dataflow.Service:
@@ -110,7 +110,7 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 		}
 		entries := make([]plugin.Node, len(topics))
 		for i, id := range topics {
-			entries[i] = plugin.NewFile(&topic{id, c, cli})
+			entries[i] = plugin.NewFile(&pubsubTopic{id, c, cli})
 		}
 		return entries, nil
 	case *dataflow.Service:
