@@ -69,7 +69,7 @@ func (cli *project) closeServices(ctx context.Context) {
 	for name, svc := range cli.clients {
 		err := svc.close(ctx)
 		if err != nil {
-			log.Printf("Unable to close service %v in project %v", name, cli.name)
+			log.Printf("Unable to close service %v in project %v: %v", name, cli.name, err)
 		}
 	}
 }
