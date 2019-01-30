@@ -161,6 +161,10 @@ func (cli *service) close(ctx context.Context) error {
 	switch c := cli.client.(type) {
 	case *pubsub.Client:
 		return c.Close()
+	case *dataflow.Service:
+		return nil
+	case *bigquery.Client:
+		return c.Close()
 	}
 	return plugin.ENOTSUP
 }
