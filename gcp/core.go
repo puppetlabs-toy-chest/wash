@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
@@ -16,8 +17,10 @@ import (
 
 type client struct {
 	oauthClient *http.Client
+	projMux     sync.Mutex
 	lister      *crm.ProjectsListCall
 	projects    map[string]*project
+	mux         sync.Mutex
 	cache       *bigcache.BigCache
 	updated     time.Time
 	name        string
@@ -50,7 +53,7 @@ func Create(name string) (plugin.DirProtocol, error) {
 	lister := crm.NewProjectsService(crmService).List()
 
 	projmap := make(map[string]*project)
-	return &client{oauthClient, lister, projmap, cache, time.Now(), name}, nil
+	return &client{oauthClient, sync.Mutex{}, lister, projmap, sync.Mutex{}, cache, time.Now(), name}, nil
 }
 
 // Find project by name.
@@ -112,6 +115,8 @@ func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
 }
 
 func (cli *client) refreshProjects(ctx context.Context) error {
+	cli.projMux.Lock()
+	defer cli.projMux.Unlock()
 	projectNames, err := cli.cachedProjectsList(ctx)
 	if err != nil {
 		return err
