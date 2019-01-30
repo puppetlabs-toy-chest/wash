@@ -11,6 +11,36 @@ import (
 	"github.com/puppetlabs/wash/log"
 )
 
+// Marshalable is an object that can be marshaled and unmarshaled.
+type Marshalable interface {
+	Marshal() ([]byte, error)
+	Unmarshal([]byte) error
+}
+
+// CachedMarshalable retrieves a cached item that can be marshaled and unmarshaled.
+func CachedMarshalable(cache *bigcache.BigCache, key string, obj Marshalable, cb func() (Marshalable, error)) error {
+	entry, err := cache.Get(key)
+	if err == nil {
+		log.Debugf("Cache hit on %v", key)
+		err = obj.Unmarshal(entry)
+		return err
+	}
+
+	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
+	log.Printf("Cache miss on %v", key)
+	obj, err = cb()
+	if err != nil {
+		return err
+	}
+
+	entry, err = obj.Marshal()
+	if err != nil {
+		return err
+	}
+	cache.Set(key, entry)
+	return nil
+}
+
 // CachedJSON retrieves cached JSON. If uncached, uses the callback to initialize the cache.
 func CachedJSON(cache *bigcache.BigCache, key string, cb func() ([]byte, error)) ([]byte, error) {
 	entry, err := cache.Get(key)

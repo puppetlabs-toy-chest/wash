@@ -12,6 +12,7 @@ import (
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -35,6 +36,7 @@ type client struct {
 // that previously were empty.
 const validDuration = 100 * time.Millisecond
 const allNamespace = "all"
+const nsCacheName = "Namespaces"
 
 // Create a new kubernetes client.
 func Create(name string) (plugin.DirProtocol, error) {
@@ -116,7 +118,7 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 func (cli *client) refreshNamespaces(ctx context.Context) error {
 	cli.nsmux.Lock()
 	defer cli.nsmux.Unlock()
-	namespaces, err := cli.cachedNamespaceList(ctx)
+	namespaces, err := cli.cachedNamespaces(ctx)
 	if err != nil {
 		return err
 	}
@@ -141,4 +143,18 @@ func (cli *client) refreshNamespaces(ctx context.Context) error {
 		cli.namespaces[name] = newNamespace(cli, name)
 	}
 	return nil
+}
+
+func (cli *client) cachedNamespaces(ctx context.Context) ([]string, error) {
+	return datastore.CachedStrings(cli.cache, nsCacheName, func() ([]string, error) {
+		nsList, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		namespaces := make([]string, len(nsList.Items))
+		for i, ns := range nsList.Items {
+			namespaces[i] = ns.Name
+		}
+		return namespaces, nil
+	})
 }
