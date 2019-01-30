@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -83,9 +84,15 @@ func mount(mountpoint string) error {
 	for range clientInstantiators {
 		client := <-clients
 		if client.err != nil {
-			return client.err
+			log.Printf("Error loading %v: %v", client.name, client.err)
+		} else {
+			log.Printf("Loaded %v", client.name)
+			clientMap[client.name] = client.client
 		}
-		clientMap[client.name] = client.client
+	}
+
+	if len(clientMap) == 0 {
+		return errors.New("No plugins loaded")
 	}
 
 	log.Printf("Serving filesystem")
