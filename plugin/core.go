@@ -11,6 +11,13 @@ import (
 	"github.com/puppetlabs/wash/log"
 )
 
+var slow = false
+
+// Init sets up plugin core configuration on startup.
+func Init(_slow bool) {
+	slow = _slow
+}
+
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
 	log.Printf("Entering root of filesystem")
@@ -120,6 +127,10 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 }
 
 func prefetch(entry fs.Node) {
+	if slow {
+		return
+	}
+
 	switch v := entry.(type) {
 	case *Dir:
 		go func() { v.List(context.Background()) }()

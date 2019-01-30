@@ -18,6 +18,7 @@ import (
 
 var progName = filepath.Base(os.Args[0])
 var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
+var slow = flag.Bool("slow", false, "Disable prefetch on files and directories to reduce network activity")
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE", progName)
@@ -58,6 +59,7 @@ func mount(mountpoint string) error {
 			log.Debugf("%v", msg)
 		}
 	}
+	plugin.Init(*slow)
 
 	clientInstantiators := map[string]instantiator{
 		"docker":     docker.Create,
