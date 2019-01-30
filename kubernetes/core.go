@@ -59,7 +59,7 @@ func Create(name string) (plugin.DirProtocol, error) {
 	}
 
 	// TODO: this should be a helper, or passed to Create.
-	cacheconfig := bigcache.DefaultConfig(5 * time.Second)
+	cacheconfig := bigcache.DefaultConfig(plugin.DefaultTimeout)
 	cacheconfig.CleanWindow = 100 * time.Millisecond
 	cache, err := bigcache.NewBigCache(cacheconfig)
 	if err != nil {

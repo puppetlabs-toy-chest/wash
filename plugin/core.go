@@ -13,6 +13,9 @@ import (
 
 var slow = false
 
+// DefaultTimeout is a default cache timeout.
+const DefaultTimeout = 10 * time.Second
+
 // Init sets up plugin core configuration on startup.
 func Init(_slow bool) {
 	slow = _slow
@@ -139,7 +142,7 @@ func prefetch(entry fs.Node) {
 			buf, err := v.FileProtocol.Open(context.Background())
 			if err == nil {
 				go func() {
-					time.Sleep(5 * time.Second)
+					time.Sleep(DefaultTimeout)
 					buf.Close()
 				}()
 			}

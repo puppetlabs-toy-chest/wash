@@ -40,7 +40,7 @@ func Create(name string) (plugin.DirProtocol, error) {
 		return nil, err
 	}
 
-	config := bigcache.DefaultConfig(1 * time.Second)
+	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
 	config.CleanWindow = 100 * time.Millisecond
 	cache, err := bigcache.NewBigCache(config)
 	if err != nil {

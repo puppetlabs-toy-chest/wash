@@ -32,7 +32,7 @@ const validDuration = 100 * time.Millisecond
 
 // Create a new gcp client.
 func Create(name string) (plugin.DirProtocol, error) {
-	cacheconfig := bigcache.DefaultConfig(5 * time.Second)
+	cacheconfig := bigcache.DefaultConfig(plugin.DefaultTimeout)
 	cacheconfig.CleanWindow = 100 * time.Millisecond
 	cache, err := bigcache.NewBigCache(cacheconfig)
 	if err != nil {
