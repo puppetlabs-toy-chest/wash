@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -20,6 +21,7 @@ type service struct {
 	proj    string
 	updated time.Time
 	client  interface{}
+	mux     sync.Mutex
 	reqs    map[string]*datastore.StreamBuffer
 	cache   *bigcache.BigCache
 }
@@ -37,25 +39,26 @@ func newServices(projectName string, oauthClient *http.Client, cache *bigcache.B
 	if err != nil {
 		return nil, err
 	}
-	pubsubService := &service{"pubsub", projectName, time.Now(), pubsubClient, buffer(), cache}
 
 	dataflowClient, err := dataflow.New(oauthClient)
 	if err != nil {
 		return nil, err
 	}
-	dataflowService := &service{"dataflow", projectName, time.Now(), dataflowClient, buffer(), cache}
 
 	bigqueryClient, err := bigquery.NewClient(ongoing, projectName)
 	if err != nil {
 		return nil, err
 	}
-	bigqueryService := &service{"bigquery", projectName, time.Now(), bigqueryClient, buffer(), cache}
 
-	return map[string]*service{
-		"pubsub":   pubsubService,
-		"dataflow": dataflowService,
-		"bigquery": bigqueryService,
-	}, nil
+	services := make(map[string]*service)
+	for name, client := range map[string]interface{}{
+		"pubsub":   pubsubClient,
+		"dataflow": dataflowClient,
+		"bigquery": bigqueryClient,
+	} {
+		services[name] = &service{name, projectName, time.Now(), client, sync.Mutex{}, buffer(), cache}
+	}
+	return services, nil
 }
 
 // Find resource by name.

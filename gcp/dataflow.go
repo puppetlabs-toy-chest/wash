@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"time"
@@ -13,16 +14,17 @@ import (
 )
 
 type dataflowJob struct {
-	name   string
-	id     string
-	client *dataflow.Service
+	name    string
+	id      string
+	client  *dataflow.Service
+	updated time.Time
 	*service
 }
 
 // Constructs a dataflowJob from id, which combines name and job id.
 func newDataflowJob(id string, client *dataflow.Service, svc *service) *dataflowJob {
 	name, id := splitDataflowID(id)
-	return &dataflowJob{name, id, client, svc}
+	return &dataflowJob{name, id, client, time.Now(), svc}
 }
 
 // String returns a printable representation of the dataflow job.
@@ -60,10 +62,101 @@ func (cli *dataflowJob) Xattr(ctx context.Context) (map[string][]byte, error) {
 	return plugin.JSONToJSONMap(data)
 }
 
+type dataflowReader struct {
+	*dataflow.ProjectsJobsMessagesListCall
+	overflow []*dataflow.JobMessage
+	eof      bool
+}
+
+func (rdr *dataflowReader) consume(p []byte) ([]byte, int) {
+	consumed, n := 0, 0
+	for _, msg := range rdr.overflow {
+		msgLen := len(msg.Time) + len(msg.MessageImportance) + len(msg.MessageText) + 3
+		if msgLen > len(p) {
+			break
+		}
+		copy(p, msg.Time+" "+msg.MessageImportance+" "+msg.MessageText+"\n")
+		p = p[msgLen:]
+		n += msgLen
+		consumed++
+	}
+	rdr.overflow = rdr.overflow[consumed:]
+	return p, n
+}
+
+func (rdr *dataflowReader) Read(p []byte) (n int, err error) {
+	// If there was data left over, consume it. If any remains after filling the buffer, return.
+	var read int
+	if len(rdr.overflow) > 0 {
+		p, read = rdr.consume(p)
+		n += read
+		if len(rdr.overflow) > 0 {
+			return
+		}
+	}
+
+	// If EOF was reached on a previous call, return that. We only reach this point if all overflow
+	// has been consumed. Includes the number of bytes processing remaining overflow.
+	if rdr.eof {
+		err = io.EOF
+		return
+	}
+
+	// Keep reading pages from the API as needed to fill the buffer. Stash overflow.
+	var resp *dataflow.ListJobMessagesResponse
+	for {
+		resp, err = rdr.Do()
+		if err != nil {
+			return
+		}
+
+		// Process response
+		rdr.overflow = resp.JobMessages
+		p, read = rdr.consume(p)
+		n += read
+
+		// Setup the next read. If NextPageToken was empty, mark EOF.
+		rdr.PageToken(resp.NextPageToken)
+		if resp.NextPageToken == "" {
+			rdr.eof = true
+		}
+
+		// If the buffer is full or there's no more data to read, return.
+		if len(rdr.overflow) > 0 || rdr.eof {
+			return
+		}
+	}
+}
+
+func (rdr *dataflowReader) Close() error {
+	return nil
+}
+
+func (cli *dataflowJob) readLog() (io.ReadCloser, error) {
+	lister := dataflow.NewProjectsJobsMessagesService(cli.client).List(cli.proj, cli.id)
+	return &dataflowReader{ProjectsJobsMessagesListCall: lister}, nil
+}
+
 // Open subscribes to a dataflow job and reads new messages.
 func (cli *dataflowJob) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	// TODO: read dataflow logs, https://godoc.org/google.golang.org/api/dataflow/v1b3#ProjectsJobsMessagesService.List
-	return nil, plugin.ENOTSUP
+	// TODO: this is pretty generic boilerplate
+	cli.mux.Lock()
+	defer cli.mux.Unlock()
+
+	buf, ok := cli.reqs[cli.name]
+	if !ok {
+		buf = datastore.NewBuffer(cli.name, nil)
+		cli.reqs[cli.name] = buf
+	}
+
+	buffered := make(chan bool)
+	go func() {
+		buf.Stream(cli.readLog, buffered)
+	}()
+	// Wait for some output to buffer.
+	<-buffered
+
+	return buf, nil
 }
 
 // Returns an array where every even entry is a job name and the following entry is its id.
