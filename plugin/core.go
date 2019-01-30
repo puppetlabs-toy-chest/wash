@@ -224,11 +224,7 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 // Release closes the open file.
 func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	switch v := fh.r.(type) {
-	case io.Closer:
-		return v.Close()
-	}
-	return nil
+	return fh.r.Close()
 }
 
 // Read fills a buffer with the requested amount of data from the file.
