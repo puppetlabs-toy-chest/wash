@@ -2,10 +2,7 @@ package gcp
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
@@ -23,13 +20,13 @@ type dataflowJob struct {
 
 // Constructs a dataflowJob from id, which combines name and job id.
 func newDataflowJob(id string, client *dataflow.Service, svc *service) *dataflowJob {
-	name, id := splitDataflowID(id)
+	name, id := datastore.SplitCompositeString(id)
 	return &dataflowJob{name, id, client, time.Now(), svc}
 }
 
-// String returns a printable representation of the dataflow job.
+// String returns a unique representation of the dataflow job.
 func (cli *dataflowJob) String() string {
-	return fmt.Sprintf("gcp/%v/dataflow/job/%v", cli.proj, cli.name)
+	return cli.service.String() + "/" + cli.Name()
 }
 
 // Returns the dataflow job name.
@@ -170,33 +167,9 @@ func (cli *service) cachedDataflowJobs(c *dataflow.Service) ([]string, error) {
 
 		jobs := make([]string, len(projJobsResp.Jobs))
 		for i, job := range projJobsResp.Jobs {
-			jobs[i] = job.Name + "/" + job.Id
+			jobs[i] = datastore.MakeCompositeString(job.Name, job.Id)
 		}
 		cli.updated = time.Now()
 		return jobs, nil
 	})
-}
-
-func searchDataflowJob(jobs []string, name string) (string, bool) {
-	idx := sort.Search(len(jobs), func(i int) bool {
-		x, _ := splitDataflowID(jobs[i])
-		return x >= name
-	})
-	if idx < len(jobs) {
-		x, _ := splitDataflowID(jobs[idx])
-		if x == name {
-			return jobs[idx], true
-		}
-	}
-	return "", false
-}
-
-func splitDataflowID(id string) (string, string) {
-	// name is required to match [a-z]([-a-z0-9]{0,38}[a-z0-9])?, and id can additionally
-	// include underscores. Use '/' as a separator.
-	tokens := strings.Split(id, "/")
-	if len(tokens) != 2 {
-		panic("newDataflowJob given an invalid name/id pair")
-	}
-	return tokens[0], tokens[1]
 }

@@ -18,6 +18,16 @@ type container struct {
 	name string
 }
 
+const (
+	headerLen     = 8
+	headerSizeIdx = 4
+)
+
+// String returns a unique representation of the project.
+func (inst *container) String() string {
+	return inst.root.Name() + "/container/" + inst.Name()
+}
+
 // Name returns the container's ID.
 func (inst *container) Name() string {
 	return inst.name
@@ -25,7 +35,7 @@ func (inst *container) Name() string {
 
 // Attr returns attributes of the named resource.
 func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	log.Debugf("Reading attributes of %v in /docker", inst.name)
+	log.Debugf("Reading attributes of %v", inst)
 	// Read the content to figure out how large it is.
 	inst.mux.Lock()
 	defer inst.mux.Unlock()
@@ -125,14 +135,14 @@ func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 }
 
 func (inst *container) cachedContainerInspect(ctx context.Context, name string) (*types.ContainerJSON, error) {
-	entry, err := inst.Get(name)
+	entry, err := inst.Get(inst.String())
 	var container types.ContainerJSON
 	if err == nil {
-		log.Debugf("Cache hit in /docker/%v", name)
+		log.Debugf("Cache hit on %v", inst)
 		rdr := bytes.NewReader(entry)
 		err = json.NewDecoder(rdr).Decode(&container)
 	} else {
-		log.Debugf("Cache miss in /docker/%v", name)
+		log.Printf("Cache miss on %v", inst)
 		var raw []byte
 		container, raw, err = inst.ContainerInspectWithRaw(ctx, name, true)
 		if err != nil {

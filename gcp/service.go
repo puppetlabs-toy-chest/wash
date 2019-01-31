@@ -2,9 +2,7 @@ package gcp
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"sort"
 	"sync"
 	"time"
 
@@ -17,13 +15,14 @@ import (
 )
 
 type service struct {
-	name    string
-	proj    string
-	updated time.Time
-	client  interface{}
-	mux     sync.Mutex
-	reqs    map[string]*datastore.StreamBuffer
-	cache   *bigcache.BigCache
+	name      string
+	proj      string
+	projectid string
+	updated   time.Time
+	client    interface{}
+	mux       sync.Mutex
+	reqs      map[string]*datastore.StreamBuffer
+	cache     *bigcache.BigCache
 }
 
 // Google auto-generated API scopes needed by services.
@@ -33,9 +32,9 @@ func buffer() map[string]*datastore.StreamBuffer {
 	return make(map[string]*datastore.StreamBuffer)
 }
 
-func newServices(projectName string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
+func newServices(proj string, projectid string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
 	ongoing := context.Background()
-	pubsubClient, err := pubsub.NewClient(ongoing, projectName)
+	pubsubClient, err := pubsub.NewClient(ongoing, proj)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +44,7 @@ func newServices(projectName string, oauthClient *http.Client, cache *bigcache.B
 		return nil, err
 	}
 
-	bigqueryClient, err := bigquery.NewClient(ongoing, projectName)
+	bigqueryClient, err := bigquery.NewClient(ongoing, proj)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +55,7 @@ func newServices(projectName string, oauthClient *http.Client, cache *bigcache.B
 		"dataflow": dataflowClient,
 		"bigquery": bigqueryClient,
 	} {
-		services[name] = &service{name, projectName, time.Now(), client, sync.Mutex{}, buffer(), cache}
+		services[name] = &service{name, proj, projectid, time.Now(), client, sync.Mutex{}, buffer(), cache}
 	}
 	return services, nil
 }
@@ -70,8 +69,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		idx := sort.SearchStrings(topics, name)
-		if topics[idx] == name {
+		if datastore.ContainsString(topics, name) {
 			return plugin.NewFile(&pubsubTopic{name, c, cli}), nil
 		}
 		return nil, plugin.ENOENT
@@ -81,7 +79,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		if id, ok := searchDataflowJob(jobs, name); ok {
+		if id, ok := datastore.FindCompositeString(jobs, name); ok {
 			return plugin.NewFile(newDataflowJob(id, c, cli)), nil
 		}
 		return nil, plugin.ENOENT
@@ -91,8 +89,7 @@ func (cli *service) Find(ctx context.Context, name string) (plugin.Node, error) 
 			return nil, err
 		}
 
-		idx := sort.SearchStrings(datasets, name)
-		if datasets[idx] == name {
+		if datastore.ContainsString(datasets, name) {
 			return plugin.NewDir(newBigqueryDataset(name, c, cli)), nil
 		}
 		return nil, plugin.ENOENT
@@ -137,9 +134,9 @@ func (cli *service) List(ctx context.Context) ([]plugin.Node, error) {
 	return nil, plugin.ENOTSUP
 }
 
-// String returns a printable representation of the service.
+// String returns a unique representation of the service.
 func (cli *service) String() string {
-	return fmt.Sprintf("gcp/%v/%v", cli.proj, cli.name)
+	return cli.projectid + "/" + cli.Name()
 }
 
 // Name returns the service name.

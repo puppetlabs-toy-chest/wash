@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"cloud.google.com/go/pubsub"
 	"github.com/puppetlabs/wash/datastore"
@@ -17,9 +16,9 @@ type pubsubTopic struct {
 	*service
 }
 
-// String returns a printable representation of the pubsubTopic.
+// String returns a unique representation of the pubsubTopic.
 func (cli *pubsubTopic) String() string {
-	return fmt.Sprintf("gcp/%v/pubsub/pubsubTopic/%v", cli.proj, cli.name)
+	return cli.service.String() + "/" + cli.Name()
 }
 
 // Returns the pubsubTopic name.

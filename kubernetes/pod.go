@@ -9,11 +9,24 @@ import (
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type pod struct {
 	*client
 	name string
+	ns   string
+}
+
+func newPod(cli *client, id string) *pod {
+	name, ns := datastore.SplitCompositeString(id)
+	return &pod{cli, name, ns}
+}
+
+// A unique string describing the pod. Note that the same pod may appear in a specific namespace and 'all'.
+// It should use the same identifier in both cases.
+func (cli *pod) String() string {
+	return cli.client.Name() + "/" + cli.ns + "/pod/" + cli.Name()
 }
 
 // Name returns the pod's name.
@@ -23,7 +36,7 @@ func (cli *pod) Name() string {
 
 // Attr returns attributes of the named resource.
 func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	log.Debugf("Reading attributes of %v in /kubernetes", cli.name)
+	log.Debugf("Reading attributes of %v", cli)
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
@@ -36,7 +49,7 @@ func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *pod) Xattr(ctx context.Context) (map[string][]byte, error) {
-	pod, err := cli.cachedPodFind(ctx, cli.name)
+	pod, err := cli.cachedPod(ctx, cli.ns, cli.name)
 	if err != nil {
 		return nil, err
 	}
@@ -49,16 +62,10 @@ func (cli *pod) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *pod) readLog() (io.ReadCloser, error) {
-	// Pod logs must be retrieved by namespace and name, not UID.
-	pod, err := cli.cachedPodFind(context.Background(), cli.name)
-	if err != nil {
-		return nil, err
-	}
-
 	opts := corev1.PodLogOptions{
 		Follow: true,
 	}
-	req := cli.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &opts)
+	req := cli.CoreV1().Pods(cli.ns).GetLogs(cli.name, &opts)
 	return req.Stream()
 }
 
@@ -85,4 +92,32 @@ func (cli *pod) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	<-buffered
 
 	return buf, nil
+}
+
+func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) {
+	if ns == allNamespace {
+		ns = ""
+	}
+	return datastore.CachedStrings(cli.cache, cli.Name()+"/pods/"+ns, func() ([]string, error) {
+		podList, err := cli.CoreV1().Pods(ns).List(metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		pods := make([]string, len(podList.Items))
+		for i, pd := range podList.Items {
+			pods[i] = datastore.MakeCompositeString(pd.Name, pd.Namespace)
+		}
+		return pods, nil
+	})
+}
+
+func (cli *pod) cachedPod(ctx context.Context, ns string, name string) (*corev1.Pod, error) {
+	var result corev1.Pod
+	err := datastore.CachedMarshalable(cli.cache, cli.String(), &result, func() (datastore.Marshalable, error) {
+		return cli.CoreV1().Pods(ns).Get(name, metav1.GetOptions{})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }

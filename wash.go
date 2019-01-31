@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/gcp"
 	"github.com/puppetlabs/wash/kubernetes"
@@ -18,6 +20,7 @@ import (
 
 var progName = filepath.Base(os.Args[0])
 var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
+var slow = flag.Bool("slow", false, "Disable prefetch on files and directories to reduce network activity")
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE", progName)
@@ -48,16 +51,22 @@ type clientInit struct {
 	err    error
 }
 
-type instantiator = func(string) (plugin.DirProtocol, error)
+type instantiator = func(string, *bigcache.BigCache) (plugin.DirProtocol, error)
 
 func mount(mountpoint string) error {
-	clients := make(chan clientInit)
+	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
+	config.CleanWindow = 100 * time.Millisecond
+	cache, err := bigcache.NewBigCache(config)
+	if err != nil {
+		return err
+	}
 
 	if *debug {
 		fuse.Debug = func(msg interface{}) {
 			log.Debugf("%v", msg)
 		}
 	}
+	plugin.Init(*slow)
 
 	clientInstantiators := map[string]instantiator{
 		"docker":     docker.Create,
@@ -65,10 +74,11 @@ func mount(mountpoint string) error {
 		"kubernetes": kubernetes.Create,
 	}
 
+	clients := make(chan clientInit)
 	for k, v := range clientInstantiators {
 		go func(name string, create instantiator) {
 			log.Printf("Loading %v integration", name)
-			client, err := create(name)
+			client, err := create(name, cache)
 			clients <- clientInit{name, client, err}
 		}(k, v)
 	}

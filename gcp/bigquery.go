@@ -3,8 +3,6 @@ package gcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"sort"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -22,9 +20,9 @@ func newBigqueryDataset(name string, c *bigquery.Client, cli *service) *bigquery
 	return &bigqueryDataset{c.Dataset(name), cli}
 }
 
-// String returns a printable representation of the bigquery dataset.
+// String returns a unique representation of the bigquery dataset.
 func (cli *bigqueryDataset) String() string {
-	return fmt.Sprintf("gcp/%v/bigquery/%v", cli.ProjectID, cli.DatasetID)
+	return cli.service.String() + "/" + cli.Name()
 }
 
 // Returns the bigquery dataset name.
@@ -38,8 +36,7 @@ func (cli *bigqueryDataset) Find(ctx context.Context, name string) (plugin.Node,
 	if err != nil {
 		return nil, err
 	}
-	idx := sort.SearchStrings(tables, name)
-	if tables[idx] == name {
+	if datastore.ContainsString(tables, name) {
 		return plugin.NewFile(&bigqueryTable{cli.Table(name), cli}), nil
 	}
 	return nil, plugin.ENOENT
@@ -83,9 +80,9 @@ type bigqueryTable struct {
 	dataset *bigqueryDataset
 }
 
-// String returns a printable representation of the bigquery table.
+// String returns a unique representation of the bigquery table.
 func (cli *bigqueryTable) String() string {
-	return fmt.Sprintf("gcp/%v/bigquery/%v/%v", cli.ProjectID, cli.DatasetID, cli.TableID)
+	return cli.dataset.String() + "/" + cli.Name()
 }
 
 // Returns the bigquery table name.

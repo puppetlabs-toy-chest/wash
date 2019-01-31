@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -11,11 +12,14 @@ import (
 	"github.com/puppetlabs/wash/log"
 )
 
-// TrackTime helper is useful for timing functions.
-// Use with `defer plugin.TrackTime(time.Now(), "funcname")`.
-func TrackTime(start time.Time, name string) {
-	elapsed := time.Since(start)
-	log.Printf("%s took %s", name, elapsed)
+var slow = false
+
+// DefaultTimeout is a default cache timeout.
+const DefaultTimeout = 10 * time.Second
+
+// Init sets up plugin core configuration on startup.
+func Init(_slow bool) {
+	slow = _slow
 }
 
 // Root presents the root of the filesystem.
@@ -77,7 +81,7 @@ func NewDir(impl DirProtocol) *Dir {
 }
 
 func (d *Dir) String() string {
-	if v, ok := d.DirProtocol.(interface{ String() string }); ok {
+	if v, ok := d.DirProtocol.(fmt.Stringer); ok {
 		return v.String()
 	}
 	return d.Name()
@@ -127,6 +131,10 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 }
 
 func prefetch(entry fs.Node) {
+	if slow {
+		return
+	}
+
 	switch v := entry.(type) {
 	case *Dir:
 		go func() { v.List(context.Background()) }()
@@ -135,7 +143,7 @@ func prefetch(entry fs.Node) {
 			buf, err := v.FileProtocol.Open(context.Background())
 			if err == nil {
 				go func() {
-					time.Sleep(5 * time.Second)
+					time.Sleep(DefaultTimeout)
 					buf.Close()
 				}()
 			}
@@ -185,7 +193,7 @@ func NewFile(impl FileProtocol) *File {
 }
 
 func (f *File) String() string {
-	if v, ok := f.FileProtocol.(interface{ String() string }); ok {
+	if v, ok := f.FileProtocol.(fmt.Stringer); ok {
 		return v.String()
 	}
 	return f.Name()

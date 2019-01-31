@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"net/http"
-	"sort"
 	"sync"
 	"time"
 
@@ -32,14 +31,7 @@ type client struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new gcp client.
-func Create(name string) (plugin.DirProtocol, error) {
-	cacheconfig := bigcache.DefaultConfig(5 * time.Second)
-	cacheconfig.CleanWindow = 100 * time.Millisecond
-	cache, err := bigcache.NewBigCache(cacheconfig)
-	if err != nil {
-		return nil, err
-	}
-
+func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	// This API is terrible, but not supported by the better go sdk.
 	cloudPlatformScopes := append([]string{crm.CloudPlatformScope}, serviceScopes...)
 	oauthClient, err := google.DefaultClient(context.Background(), cloudPlatformScopes...)
@@ -60,7 +52,7 @@ func Create(name string) (plugin.DirProtocol, error) {
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 	cli.refreshProjects(ctx)
 	if proj, ok := cli.projects[name]; ok {
-		log.Debugf("Found project %v", name)
+		log.Debugf("Found project %v in %v", name, cli.Name())
 		return plugin.NewDir(proj), nil
 	}
 	return nil, plugin.ENOENT
@@ -69,7 +61,7 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 // List all projects as dirs.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
 	cli.refreshProjects(ctx)
-	log.Debugf("Listing %v projects in /gcp", len(cli.projects))
+	log.Debugf("Listing %v projects in %v", len(cli.projects), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.projects))
 	for _, proj := range cli.projects {
 		entries = append(entries, plugin.NewDir(proj))
@@ -99,7 +91,7 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, "ProjectsList", func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
 		listResponse, err := cli.lister.Do()
 		if err != nil {
 			return nil, err
@@ -124,8 +116,7 @@ func (cli *client) refreshProjects(ctx context.Context) error {
 
 	// Remove unnamed projects
 	for name, proj := range cli.projects {
-		idx := sort.SearchStrings(projectNames, name)
-		if projectNames[idx] != name {
+		if !datastore.ContainsString(projectNames, name) {
 			proj.closeServices(ctx)
 			delete(cli.projects, name)
 		}
@@ -136,7 +127,7 @@ func (cli *client) refreshProjects(ctx context.Context) error {
 			continue
 		}
 
-		newProj, err := newProject(proj, cli.oauthClient, cli.cache)
+		newProj, err := newProject(proj, cli.Name(), cli.oauthClient, cli.cache)
 		if err != nil {
 			return err
 		}
