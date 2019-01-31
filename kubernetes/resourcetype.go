@@ -55,6 +55,11 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 	return nil, plugin.ENOTSUP
 }
 
+// A unique string describing the resource type.
+func (cli *resourcetype) String() string {
+	return cli.namespace.String() + "/" + cli.Name()
+}
+
 // Name returns the name of the resource type.
 func (cli *resourcetype) Name() string {
 	return cli.typename

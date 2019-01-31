@@ -36,7 +36,6 @@ type client struct {
 // that previously were empty.
 const validDuration = 100 * time.Millisecond
 const allNamespace = "all"
-const nsCacheName = "Namespaces"
 
 // Create a new kubernetes client.
 func Create(name string) (plugin.DirProtocol, error) {
@@ -146,7 +145,7 @@ func (cli *client) refreshNamespaces(ctx context.Context) error {
 }
 
 func (cli *client) cachedNamespaces(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, nsCacheName, func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
 		nsList, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err

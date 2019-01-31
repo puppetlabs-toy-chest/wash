@@ -104,7 +104,7 @@ func (cli *root) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *root) cachedContainerList(ctx context.Context) ([]types.Container, error) {
-	entry, err := cli.Get("ContainerList")
+	entry, err := cli.Get(cli.Name())
 	var containers []types.Container
 	if err == nil {
 		log.Debugf("Cache hit in /docker")
@@ -122,7 +122,7 @@ func (cli *root) cachedContainerList(ctx context.Context) ([]types.Container, er
 		if err := enc.Encode(&containers); err != nil {
 			return nil, err
 		}
-		cli.Set("ContainerList", data.Bytes())
+		cli.Set(cli.Name(), data.Bytes())
 		cli.updated = time.Now()
 	}
 	return containers, err

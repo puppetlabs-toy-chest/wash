@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -12,18 +11,21 @@ import (
 )
 
 type project struct {
-	name    string
-	updated time.Time
-	clients map[string]*service
+	name     string
+	clientid string
+	updated  time.Time
+	clients  map[string]*service
 }
 
 // NewProject creates a new project with a collection of service clients.
-func newProject(name string, oauthClient *http.Client, cache *bigcache.BigCache) (*project, error) {
-	services, err := newServices(name, oauthClient, cache)
+func newProject(name string, clientid string, oauthClient *http.Client, cache *bigcache.BigCache) (*project, error) {
+	proj := &project{name, clientid, time.Now(), nil}
+	services, err := newServices(name, proj.String(), oauthClient, cache)
 	if err != nil {
 		return nil, err
 	}
-	return &project{name: name, updated: time.Now(), clients: services}, nil
+	proj.clients = services
+	return proj, nil
 }
 
 // Find service by name.
@@ -45,9 +47,9 @@ func (cli *project) List(ctx context.Context) ([]plugin.Node, error) {
 	return entries, nil
 }
 
-// String returns a printable representation of the project.
+// String returns a unique representation of the project.
 func (cli *project) String() string {
-	return fmt.Sprintf("gcp/%v", cli.name)
+	return cli.clientid + "/" + cli.Name()
 }
 
 // Name returns the project name.

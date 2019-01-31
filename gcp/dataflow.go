@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"time"
 
@@ -25,9 +24,9 @@ func newDataflowJob(id string, client *dataflow.Service, svc *service) *dataflow
 	return &dataflowJob{name, id, client, time.Now(), svc}
 }
 
-// String returns a printable representation of the dataflow job.
+// String returns a unique representation of the dataflow job.
 func (cli *dataflowJob) String() string {
-	return fmt.Sprintf("gcp/%v/dataflow/job/%v", cli.proj, cli.name)
+	return cli.service.String() + "/" + cli.Name()
 }
 
 // Returns the dataflow job name.

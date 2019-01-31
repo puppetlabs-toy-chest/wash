@@ -12,8 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const podPrefix = "Pod:"
-
 type pod struct {
 	*client
 	name string
@@ -23,6 +21,12 @@ type pod struct {
 func newPod(cli *client, id string) *pod {
 	name, ns := datastore.SplitCompositeString(id)
 	return &pod{cli, name, ns}
+}
+
+// A unique string describing the pod. Note that the same pod may appear in a specific namespace and 'all'.
+// It should use the same identifier in both cases.
+func (cli *pod) String() string {
+	return cli.client.Name() + "/" + cli.ns + "/pod/" + cli.Name()
 }
 
 // Name returns the pod's name.
@@ -94,7 +98,7 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 	if ns == allNamespace {
 		ns = ""
 	}
-	return datastore.CachedStrings(cli.cache, podPrefix+ns, func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.Name()+"/pods/"+ns, func() ([]string, error) {
 		podList, err := cli.CoreV1().Pods(ns).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
@@ -107,9 +111,9 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 	})
 }
 
-func (cli *client) cachedPod(ctx context.Context, ns string, name string) (*corev1.Pod, error) {
+func (cli *pod) cachedPod(ctx context.Context, ns string, name string) (*corev1.Pod, error) {
 	var result corev1.Pod
-	err := datastore.CachedMarshalable(cli.cache, podPrefix+ns+":"+name, &result, func() (datastore.Marshalable, error) {
+	err := datastore.CachedMarshalable(cli.cache, cli.String(), &result, func() (datastore.Marshalable, error) {
 		return cli.CoreV1().Pods(ns).Get(name, metav1.GetOptions{})
 	})
 	if err != nil {

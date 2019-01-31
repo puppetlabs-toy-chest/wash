@@ -38,6 +38,8 @@ type Content interface {
 // Stream protocol for data that we only stream?
 
 // Metadata covers protocols supported by all resources.
+// If caching data, you should implement `String() string` returning a unique identifier for
+// the resource.
 type Metadata interface {
 	Name() string
 	Attr(ctx context.Context) (*Attributes, error)

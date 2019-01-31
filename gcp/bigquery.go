@@ -3,7 +3,6 @@ package gcp
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -21,9 +20,9 @@ func newBigqueryDataset(name string, c *bigquery.Client, cli *service) *bigquery
 	return &bigqueryDataset{c.Dataset(name), cli}
 }
 
-// String returns a printable representation of the bigquery dataset.
+// String returns a unique representation of the bigquery dataset.
 func (cli *bigqueryDataset) String() string {
-	return fmt.Sprintf("gcp/%v/bigquery/%v", cli.ProjectID, cli.DatasetID)
+	return cli.service.String() + "/" + cli.Name()
 }
 
 // Returns the bigquery dataset name.
@@ -81,9 +80,9 @@ type bigqueryTable struct {
 	dataset *bigqueryDataset
 }
 
-// String returns a printable representation of the bigquery table.
+// String returns a unique representation of the bigquery table.
 func (cli *bigqueryTable) String() string {
-	return fmt.Sprintf("gcp/%v/bigquery/%v/%v", cli.ProjectID, cli.DatasetID, cli.TableID)
+	return cli.dataset.String() + "/" + cli.Name()
 }
 
 // Returns the bigquery table name.

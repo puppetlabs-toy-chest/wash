@@ -40,6 +40,11 @@ func (cli *namespace) List(ctx context.Context) ([]plugin.Node, error) {
 	return entries, nil
 }
 
+// A unique string describing the namespace.
+func (cli *namespace) String() string {
+	return cli.client.Name() + "/" + cli.Name()
+}
+
 // Name returns the namespace name.
 func (cli *namespace) Name() string {
 	return cli.name

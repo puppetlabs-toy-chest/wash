@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -80,7 +81,7 @@ func NewDir(impl DirProtocol) *Dir {
 }
 
 func (d *Dir) String() string {
-	if v, ok := d.DirProtocol.(interface{ String() string }); ok {
+	if v, ok := d.DirProtocol.(fmt.Stringer); ok {
 		return v.String()
 	}
 	return d.Name()
@@ -192,7 +193,7 @@ func NewFile(impl FileProtocol) *File {
 }
 
 func (f *File) String() string {
-	if v, ok := f.FileProtocol.(interface{ String() string }); ok {
+	if v, ok := f.FileProtocol.(fmt.Stringer); ok {
 		return v.String()
 	}
 	return f.Name()

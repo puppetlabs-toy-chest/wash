@@ -18,6 +18,11 @@ type container struct {
 	name string
 }
 
+// String returns a unique representation of the project.
+func (inst *container) String() string {
+	return inst.root.Name() + "/" + inst.Name()
+}
+
 // Name returns the container's ID.
 func (inst *container) Name() string {
 	return inst.name
@@ -125,7 +130,7 @@ func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 }
 
 func (inst *container) cachedContainerInspect(ctx context.Context, name string) (*types.ContainerJSON, error) {
-	entry, err := inst.Get(name)
+	entry, err := inst.Get(inst.String())
 	var container types.ContainerJSON
 	if err == nil {
 		log.Debugf("Cache hit in /docker/%v", name)

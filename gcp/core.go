@@ -98,7 +98,7 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, "ProjectsList", func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
 		listResponse, err := cli.lister.Do()
 		if err != nil {
 			return nil, err
@@ -134,7 +134,7 @@ func (cli *client) refreshProjects(ctx context.Context) error {
 			continue
 		}
 
-		newProj, err := newProject(proj, cli.oauthClient, cli.cache)
+		newProj, err := newProject(proj, cli.Name(), cli.oauthClient, cli.cache)
 		if err != nil {
 			return err
 		}
