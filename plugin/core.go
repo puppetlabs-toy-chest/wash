@@ -106,7 +106,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
 	xattrs, err := d.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Xattr,%v]: %v", d, err)
+		log.Printf("Error[Listxattr,%v]: %v", d, err)
 		return err
 	}
 
@@ -121,7 +121,7 @@ func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *f
 func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
 	xattrs, err := d.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Xattr,%v]: %v", d, err)
+		log.Printf("Error[Getxattr,%v,%v]: %v", d, req.Name, err)
 		return err
 	}
 
@@ -216,7 +216,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
 	xattrs, err := f.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Xattr,%v]: %v", f, err)
+		log.Printf("Error[Listxattr,%v]: %v", f, err)
 		return err
 	}
 
@@ -231,7 +231,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
 	xattrs, err := f.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Xattr,%v]: %v", f, err)
+		log.Printf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
 		return err
 	}
 
