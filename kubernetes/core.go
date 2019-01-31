@@ -38,7 +38,7 @@ const validDuration = 100 * time.Millisecond
 const allNamespace = "all"
 
 // Create a new kubernetes client.
-func Create(name string) (plugin.DirProtocol, error) {
+func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	var kubeconfig *string
 	if h := os.Getenv("HOME"); h != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(h, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -55,14 +55,6 @@ func Create(name string) (plugin.DirProtocol, error) {
 
 	// create the clientset
 	clientset, err := k8s.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: this should be a helper, or passed to Create.
-	cacheconfig := bigcache.DefaultConfig(plugin.DefaultTimeout)
-	cacheconfig.CleanWindow = 100 * time.Millisecond
-	cache, err := bigcache.NewBigCache(cacheconfig)
 	if err != nil {
 		return nil, err
 	}

@@ -34,15 +34,8 @@ const (
 )
 
 // Create a new docker client.
-func Create(name string) (plugin.DirProtocol, error) {
+func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return nil, err
-	}
-
-	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
-	config.CleanWindow = 100 * time.Millisecond
-	cache, err := bigcache.NewBigCache(config)
 	if err != nil {
 		return nil, err
 	}

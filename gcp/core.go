@@ -31,14 +31,7 @@ type client struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new gcp client.
-func Create(name string) (plugin.DirProtocol, error) {
-	cacheconfig := bigcache.DefaultConfig(plugin.DefaultTimeout)
-	cacheconfig.CleanWindow = 100 * time.Millisecond
-	cache, err := bigcache.NewBigCache(cacheconfig)
-	if err != nil {
-		return nil, err
-	}
-
+func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	// This API is terrible, but not supported by the better go sdk.
 	cloudPlatformScopes := append([]string{crm.CloudPlatformScope}, serviceScopes...)
 	oauthClient, err := google.DefaultClient(context.Background(), cloudPlatformScopes...)
