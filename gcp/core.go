@@ -52,7 +52,7 @@ func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 	cli.refreshProjects(ctx)
 	if proj, ok := cli.projects[name]; ok {
-		log.Debugf("Found project %v", name)
+		log.Debugf("Found project %v in %v", name, cli.Name())
 		return plugin.NewDir(proj), nil
 	}
 	return nil, plugin.ENOENT
@@ -61,7 +61,7 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 // List all projects as dirs.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
 	cli.refreshProjects(ctx)
-	log.Debugf("Listing %v projects in /gcp", len(cli.projects))
+	log.Debugf("Listing %v projects in %v", len(cli.projects), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.projects))
 	for _, proj := range cli.projects {
 		entries = append(entries, plugin.NewDir(proj))

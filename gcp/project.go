@@ -31,7 +31,7 @@ func newProject(name string, clientid string, oauthClient *http.Client, cache *b
 // Find service by name.
 func (cli *project) Find(ctx context.Context, name string) (plugin.Node, error) {
 	if svc, ok := cli.clients[name]; ok {
-		log.Debugf("Found client %v in project %v", name, cli.name)
+		log.Debugf("Found client %v", svc)
 		return plugin.NewDir(svc), nil
 	}
 	return nil, plugin.ENOENT
@@ -39,7 +39,7 @@ func (cli *project) Find(ctx context.Context, name string) (plugin.Node, error) 
 
 // List all services as dirs.
 func (cli *project) List(ctx context.Context) ([]plugin.Node, error) {
-	log.Debugf("Listing %v clients in /gcp/%v", len(cli.clients), cli.name)
+	log.Debugf("Listing %v clients in %v", len(cli.clients), cli)
 	entries := make([]plugin.Node, 0, len(cli.clients))
 	for _, svc := range cli.clients {
 		entries = append(entries, plugin.NewDir(svc))

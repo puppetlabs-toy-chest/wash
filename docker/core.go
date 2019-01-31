@@ -43,7 +43,7 @@ func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 // Find container by ID.
 func (cli *root) Find(ctx context.Context, name string) (plugin.Node, error) {
 	if rt, ok := cli.resourcetypes[name]; ok {
-		log.Debugf("Found resource type %v, %v", name, rt)
+		log.Debugf("Found resource type %v", rt)
 		return plugin.NewDir(rt), nil
 	}
 	return nil, plugin.ENOENT

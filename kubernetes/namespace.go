@@ -24,7 +24,7 @@ func newNamespace(cli *client, name string) *namespace {
 // Find resource type by name.
 func (cli *namespace) Find(ctx context.Context, name string) (plugin.Node, error) {
 	if rt, ok := cli.resourcetypes[name]; ok {
-		log.Debugf("Found resource type %v, %v", name, rt)
+		log.Debugf("Found resource type %v", rt)
 		return plugin.NewDir(rt), nil
 	}
 	return nil, plugin.ENOENT
@@ -32,7 +32,7 @@ func (cli *namespace) Find(ctx context.Context, name string) (plugin.Node, error
 
 // List all running pods as files.
 func (cli *namespace) List(ctx context.Context) ([]plugin.Node, error) {
-	log.Debugf("Listing %v resource types in /gcp/%v", len(cli.resourcetypes), cli.name)
+	log.Debugf("Listing %v resource types in %v", len(cli.resourcetypes), cli)
 	entries := make([]plugin.Node, 0, len(cli.resourcetypes))
 	for _, rt := range cli.resourcetypes {
 		entries = append(entries, plugin.NewDir(rt))

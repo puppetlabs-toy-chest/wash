@@ -76,7 +76,7 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 // List all namespaces.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
 	cli.refreshNamespaces(ctx)
-	log.Debugf("Listing %v namespaces in /kubernetes", len(cli.namespaces))
+	log.Debugf("Listing %v namespaces in %v", len(cli.namespaces), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.namespaces))
 	for _, ns := range cli.namespaces {
 		entries = append(entries, plugin.NewDir(ns))

@@ -34,11 +34,11 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 		}
 		for _, inst := range containers {
 			if inst.ID == name {
-				log.Debugf("Found container %v, %v", name, inst)
+				log.Debugf("Found container %v", inst)
 				return plugin.NewFile(&container{cli.root, inst.ID}), nil
 			}
 		}
-		log.Debugf("Container %v not found", name)
+		log.Debugf("Container %v not found in %v", name, cli)
 		return nil, plugin.ENOENT
 	}
 	return nil, plugin.ENOTSUP
@@ -52,7 +52,7 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Debugf("Listing %v containers in /docker", len(containers))
+		log.Debugf("Listing %v containers in %v", len(containers), cli)
 		keys := make([]plugin.Node, len(containers))
 		for i, inst := range containers {
 			keys[i] = plugin.NewFile(&container{cli.root, inst.ID})
@@ -94,11 +94,11 @@ func (cli *root) cachedContainerList(ctx context.Context) ([]types.Container, er
 	entry, err := cli.Get(cli.Name())
 	var containers []types.Container
 	if err == nil {
-		log.Debugf("Cache hit in /docker")
+		log.Debugf("Cache hit on %v", cli.Name())
 		dec := gob.NewDecoder(bytes.NewReader(entry))
 		err = dec.Decode(&containers)
 	} else {
-		log.Debugf("Cache miss in /docker")
+		log.Printf("Cache miss on %v", cli.Name())
 		containers, err = cli.ContainerList(ctx, types.ContainerListOptions{})
 		if err != nil {
 			return nil, err

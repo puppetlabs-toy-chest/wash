@@ -36,7 +36,7 @@ func (cli *pod) Name() string {
 
 // Attr returns attributes of the named resource.
 func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	log.Debugf("Reading attributes of %v in /kubernetes", cli.name)
+	log.Debugf("Reading attributes of %v", cli)
 	// Read the content to figure out how large it is.
 	cli.mux.Lock()
 	defer cli.mux.Unlock()

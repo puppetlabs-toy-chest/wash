@@ -27,11 +27,11 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 	case "pod":
 		if pods, err := cli.cachedPods(ctx, cli.name); err == nil {
 			if id, ok := datastore.FindCompositeString(pods, name); ok {
-				log.Debugf("Found pod %v in /kubernetes/%v", id, cli.name)
+				log.Debugf("Found pod %v in %v", id, cli)
 				return plugin.NewFile(newPod(cli.client, id)), nil
 			}
 		}
-		log.Debugf("Did not find %v in /kubernetes/%v", name, cli.name)
+		log.Debugf("Did not find %v in %v", name, cli)
 		return nil, plugin.ENOENT
 	}
 	return nil, plugin.ENOTSUP
@@ -45,7 +45,7 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.Debugf("Listing %v pods in /kubernetes/%v", len(pods), cli.name)
+		log.Debugf("Listing %v pods in %v", len(pods), cli)
 		entries := make([]plugin.Node, len(pods))
 		for i, id := range pods {
 			entries[i] = plugin.NewFile(newPod(cli.client, id))
