@@ -172,13 +172,11 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
-		prefetch(entry)
 		var de fuse.Dirent
 		switch v := entry.(type) {
 		case *Dir:
 			de.Name = v.Name()
 			de.Type = fuse.DT_Dir
-			prefetch(entry)
 		case *File:
 			de.Name = v.Name()
 		}
