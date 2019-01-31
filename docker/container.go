@@ -18,9 +18,14 @@ type container struct {
 	name string
 }
 
+const (
+	headerLen     = 8
+	headerSizeIdx = 4
+)
+
 // String returns a unique representation of the project.
 func (inst *container) String() string {
-	return inst.root.Name() + "/" + inst.Name()
+	return inst.root.Name() + "/container/" + inst.Name()
 }
 
 // Name returns the container's ID.
