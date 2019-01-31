@@ -13,12 +13,12 @@ import (
 )
 
 type pod struct {
-	*client
+	*resourcetype
 	name string
 	ns   string
 }
 
-func newPod(cli *client, id string) *pod {
+func newPod(cli *resourcetype, id string) *pod {
 	name, ns := datastore.SplitCompositeString(id)
 	return &pod{cli, name, ns}
 }
@@ -26,7 +26,7 @@ func newPod(cli *client, id string) *pod {
 // A unique string describing the pod. Note that the same pod may appear in a specific namespace and 'all'.
 // It should use the same identifier in both cases.
 func (cli *pod) String() string {
-	return cli.client.Name() + "/" + cli.ns + "/pod/" + cli.Name()
+	return cli.resourcetype.client.Name() + "/" + cli.ns + "/pod/" + cli.Name()
 }
 
 // Name returns the pod's name.
@@ -38,9 +38,8 @@ func (cli *pod) Name() string {
 func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	log.Debugf("Reading attributes of %v", cli)
 	// Read the content to figure out how large it is.
-	cli.mux.Lock()
-	defer cli.mux.Unlock()
-	if buf, ok := cli.reqs[cli.name]; ok {
+	if v, ok := cli.reqs.Load(cli.name); ok {
+		buf := v.(*datastore.StreamBuffer)
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
@@ -71,17 +70,13 @@ func (cli *pod) readLog() (io.ReadCloser, error) {
 
 // Open gets logs from a container.
 func (cli *pod) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	cli.mux.Lock()
-	defer cli.mux.Unlock()
-
 	// TODO: store as UID? Names are not guaranteed to be unique across namespaces, so the pods/ list may
 	// include duplicates. We can fix that by using UIDs or an amalgam of namespace+name, but then we have
 	// to always map that to the namespace and name when loading logs and make sure attribute queries always
 	// use a consistent key for lookup.
-	buf, ok := cli.reqs[cli.name]
-	if !ok {
-		buf = datastore.NewBuffer(cli.name, nil)
-		cli.reqs[cli.name] = buf
+	buf := datastore.NewBuffer(cli.name, nil)
+	if v, ok := cli.reqs.LoadOrStore(cli.name, buf); ok {
+		buf = v.(*datastore.StreamBuffer)
 	}
 
 	buffered := make(chan bool)

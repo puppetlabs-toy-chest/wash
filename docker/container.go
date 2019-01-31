@@ -14,7 +14,7 @@ import (
 )
 
 type container struct {
-	*root
+	*resourcetype
 	name string
 }
 
@@ -37,9 +37,8 @@ func (inst *container) Name() string {
 func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	log.Debugf("Reading attributes of %v", inst)
 	// Read the content to figure out how large it is.
-	inst.mux.Lock()
-	defer inst.mux.Unlock()
-	if buf, ok := inst.reqs[inst.name]; ok {
+	if v, ok := inst.reqs.Load(inst.name); ok {
+		buf := v.(*datastore.StreamBuffer)
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
@@ -105,23 +104,20 @@ func (inst *container) readLog() (io.ReadCloser, error) {
 
 // Open gets logs from a container.
 func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	inst.mux.Lock()
-	defer inst.mux.Unlock()
+	c, err := inst.cachedContainerInspect(ctx, inst.name)
+	if err != nil {
+		return nil, err
+	}
 
-	buf, ok := inst.reqs[inst.name]
-	if !ok {
-		c, err := inst.cachedContainerInspect(ctx, inst.name)
-		if err != nil {
-			return nil, err
-		}
+	// Only do additional processing if container is not running with tty.
+	postProcessor := processMultiplexedStreams
+	if c.Config.Tty {
+		postProcessor = nil
+	}
+	buf := datastore.NewBuffer(inst.name, postProcessor)
 
-		// Only do additional processing if container is not running with tty.
-		postProcessor := processMultiplexedStreams
-		if c.Config.Tty {
-			postProcessor = nil
-		}
-		buf = datastore.NewBuffer(inst.name, postProcessor)
-		inst.reqs[inst.name] = buf
+	if v, ok := inst.reqs.LoadOrStore(inst.name, buf); ok {
+		buf = v.(*datastore.StreamBuffer)
 	}
 
 	buffered := make(chan bool)

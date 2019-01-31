@@ -2,12 +2,10 @@ package docker
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/allegro/bigcache"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -15,8 +13,6 @@ import (
 type root struct {
 	*client.Client
 	*bigcache.BigCache
-	mux           sync.Mutex
-	reqs          map[string]*datastore.StreamBuffer
 	updated       time.Time
 	root          string
 	resourcetypes map[string]*resourcetype
@@ -34,8 +30,7 @@ func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 		return nil, err
 	}
 
-	reqs := make(map[string]*datastore.StreamBuffer)
-	cli := &root{dockerCli, cache, sync.Mutex{}, reqs, time.Now(), name, nil}
+	cli := &root{dockerCli, cache, time.Now(), name, nil}
 	cli.resourcetypes = newResourceTypes(cli)
 	return cli, nil
 }
@@ -68,9 +63,13 @@ func (cli *root) Name() string {
 func (cli *root) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 	latest := cli.updated
-	for _, v := range cli.reqs {
-		if updated := v.LastUpdate(); updated.After(latest) {
-			latest = updated
+	for _, v := range cli.resourcetypes {
+		attr, err := v.Attr(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if attr.Mtime.After(latest) {
+			latest = attr.Mtime
 		}
 	}
 	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil

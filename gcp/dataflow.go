@@ -36,7 +36,8 @@ func (cli *dataflowJob) Name() string {
 
 // Attr returns attributes of the named resource.
 func (cli *dataflowJob) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	if buf, ok := cli.reqs[cli.name]; ok {
+	if v, ok := cli.reqs.Load(cli.name); ok {
+		buf := v.(*datastore.StreamBuffer)
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
@@ -136,14 +137,9 @@ func (cli *dataflowJob) readLog() (io.ReadCloser, error) {
 
 // Open subscribes to a dataflow job and reads new messages.
 func (cli *dataflowJob) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	// TODO: this is pretty generic boilerplate
-	cli.mux.Lock()
-	defer cli.mux.Unlock()
-
-	buf, ok := cli.reqs[cli.name]
-	if !ok {
-		buf = datastore.NewBuffer(cli.name, nil)
-		cli.reqs[cli.name] = buf
+	buf := datastore.NewBuffer(cli.name, nil)
+	if v, ok := cli.reqs.LoadOrStore(cli.name, buf); ok {
+		buf = v.(*datastore.StreamBuffer)
 	}
 
 	buffered := make(chan bool)

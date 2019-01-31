@@ -165,7 +165,7 @@ func (b *StreamBuffer) ReadAt(p []byte, off int64) (int, error) {
 // Close implements the Closer interface. Includes reference counting of
 // times a stream was requested and only closes the input when that reaches 0.
 func (b *StreamBuffer) Close() error {
-	if count := b.decr(); count == 0 {
+	if count := b.decr(); count == 0 && b.input != nil {
 		return b.input.Close()
 	}
 	return nil
