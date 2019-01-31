@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -14,12 +16,13 @@ import (
 type resourcetype struct {
 	*root
 	typename string
+	reqs     sync.Map
 }
 
 func newResourceTypes(cli *root) map[string]*resourcetype {
 	resourcetypes := make(map[string]*resourcetype)
 	for _, name := range []string{"container"} {
-		resourcetypes[name] = &resourcetype{cli, name}
+		resourcetypes[name] = &resourcetype{cli, name, sync.Map{}}
 	}
 	return resourcetypes
 }
@@ -35,7 +38,7 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 		for _, inst := range containers {
 			if inst.ID == name {
 				log.Debugf("Found container %v", inst)
-				return plugin.NewFile(&container{cli.root, inst.ID}), nil
+				return plugin.NewFile(&container{cli, inst.ID}), nil
 			}
 		}
 		log.Debugf("Container %v not found in %v", name, cli)
@@ -55,7 +58,7 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		log.Debugf("Listing %v containers in %v", len(containers), cli)
 		keys := make([]plugin.Node, len(containers))
 		for i, inst := range containers {
-			keys[i] = plugin.NewFile(&container{cli.root, inst.ID})
+			keys[i] = plugin.NewFile(&container{cli, inst.ID})
 		}
 		return keys, nil
 	}
@@ -77,11 +80,12 @@ func (cli *resourcetype) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 	// TODO: make this more constrained to the specific resource.
 	latest := cli.updated
-	for _, v := range cli.reqs {
-		if updated := v.LastUpdate(); updated.After(latest) {
+	cli.reqs.Range(func(k, v interface{}) bool {
+		if updated := v.(*datastore.StreamBuffer).LastUpdate(); updated.After(latest) {
 			latest = updated
 		}
-	}
+		return true
+	})
 	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
 }
 

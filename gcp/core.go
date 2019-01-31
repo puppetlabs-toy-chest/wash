@@ -16,10 +16,9 @@ import (
 
 type client struct {
 	oauthClient *http.Client
-	projMux     sync.Mutex
+	projmux     sync.RWMutex
 	lister      *crm.ProjectsListCall
 	projects    map[string]*project
-	mux         sync.Mutex
 	cache       *bigcache.BigCache
 	updated     time.Time
 	name        string
@@ -45,12 +44,14 @@ func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	lister := crm.NewProjectsService(crmService).List()
 
 	projmap := make(map[string]*project)
-	return &client{oauthClient, sync.Mutex{}, lister, projmap, sync.Mutex{}, cache, time.Now(), name}, nil
+	return &client{oauthClient, sync.RWMutex{}, lister, projmap, cache, time.Now(), name}, nil
 }
 
 // Find project by name.
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 	cli.refreshProjects(ctx)
+	cli.projmux.RLock()
+	defer cli.projmux.RUnlock()
 	if proj, ok := cli.projects[name]; ok {
 		log.Debugf("Found project %v in %v", name, cli.Name())
 		return plugin.NewDir(proj), nil
@@ -61,6 +62,8 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 // List all projects as dirs.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
 	cli.refreshProjects(ctx)
+	cli.projmux.RLock()
+	defer cli.projmux.RUnlock()
 	log.Debugf("Listing %v projects in %v", len(cli.projects), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.projects))
 	for _, proj := range cli.projects {
@@ -77,6 +80,8 @@ func (cli *client) Name() string {
 // Attr returns attributes of the named project.
 func (cli *client) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	latest := cli.updated
+	cli.projmux.RLock()
+	defer cli.projmux.RUnlock()
 	for _, proj := range cli.projects {
 		if updated := proj.lastUpdate(); updated.After(latest) {
 			latest = updated
@@ -107,8 +112,8 @@ func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
 }
 
 func (cli *client) refreshProjects(ctx context.Context) error {
-	cli.projMux.Lock()
-	defer cli.projMux.Unlock()
+	cli.projmux.Lock()
+	defer cli.projmux.Unlock()
 	projectNames, err := cli.cachedProjectsList(ctx)
 	if err != nil {
 		return err

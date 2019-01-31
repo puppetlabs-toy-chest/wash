@@ -20,17 +20,12 @@ type service struct {
 	projectid string
 	updated   time.Time
 	client    interface{}
-	mux       sync.Mutex
-	reqs      map[string]*datastore.StreamBuffer
+	reqs      sync.Map
 	cache     *bigcache.BigCache
 }
 
 // Google auto-generated API scopes needed by services.
 var serviceScopes = []string{dataflow.CloudPlatformScope}
-
-func buffer() map[string]*datastore.StreamBuffer {
-	return make(map[string]*datastore.StreamBuffer)
-}
 
 func newServices(proj string, projectid string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
 	ongoing := context.Background()
@@ -55,7 +50,7 @@ func newServices(proj string, projectid string, oauthClient *http.Client, cache 
 		"dataflow": dataflowClient,
 		"bigquery": bigqueryClient,
 	} {
-		services[name] = &service{name, proj, projectid, time.Now(), client, sync.Mutex{}, buffer(), cache}
+		services[name] = &service{name, proj, projectid, time.Now(), client, sync.Map{}, cache}
 	}
 	return services, nil
 }
@@ -168,10 +163,11 @@ func (cli *service) close(ctx context.Context) error {
 
 func (cli *service) lastUpdate() time.Time {
 	latest := cli.updated
-	for _, v := range cli.reqs {
-		if updated := v.LastUpdate(); updated.After(latest) {
+	cli.reqs.Range(func(k, v interface{}) bool {
+		if updated := v.(*datastore.StreamBuffer).LastUpdate(); updated.After(latest) {
 			latest = updated
 		}
-	}
+		return true
+	})
 	return latest
 }

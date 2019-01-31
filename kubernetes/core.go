@@ -23,10 +23,8 @@ import (
 type client struct {
 	*k8s.Clientset
 	cache      *bigcache.BigCache
-	nsmux      sync.Mutex
+	nsmux      sync.RWMutex
 	namespaces map[string]*namespace
-	mux        sync.Mutex
-	reqs       map[string]*datastore.StreamBuffer
 	updated    time.Time
 	root       string
 }
@@ -60,13 +58,14 @@ func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
 	}
 
 	namespaces := make(map[string]*namespace)
-	reqs := make(map[string]*datastore.StreamBuffer)
-	return &client{clientset, cache, sync.Mutex{}, namespaces, sync.Mutex{}, reqs, time.Now(), name}, nil
+	return &client{clientset, cache, sync.RWMutex{}, namespaces, time.Now(), name}, nil
 }
 
 // Find namespace.
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 	cli.refreshNamespaces(ctx)
+	cli.nsmux.RLock()
+	defer cli.nsmux.RUnlock()
 	if ns, ok := cli.namespaces[name]; ok {
 		return plugin.NewDir(ns), nil
 	}
@@ -76,6 +75,8 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 // List all namespaces.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
 	cli.refreshNamespaces(ctx)
+	cli.nsmux.RLock()
+	defer cli.nsmux.RUnlock()
 	log.Debugf("Listing %v namespaces in %v", len(cli.namespaces), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.namespaces))
 	for _, ns := range cli.namespaces {
@@ -93,9 +94,15 @@ func (cli *client) Name() string {
 func (cli *client) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
 	latest := cli.updated
-	for _, v := range cli.reqs {
-		if updated := v.LastUpdate(); updated.After(latest) {
-			latest = updated
+	cli.nsmux.RLock()
+	defer cli.nsmux.RUnlock()
+	for _, v := range cli.namespaces {
+		attr, err := v.Attr(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if attr.Mtime.After(latest) {
+			latest = attr.Mtime
 		}
 	}
 	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil

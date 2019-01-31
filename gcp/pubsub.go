@@ -28,7 +28,8 @@ func (cli *pubsubTopic) Name() string {
 
 // Attr returns attributes of the named resource.
 func (cli *pubsubTopic) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	if buf, ok := cli.reqs[cli.name]; ok {
+	if v, ok := cli.reqs.Load(cli.name); ok {
+		buf := v.(*datastore.StreamBuffer)
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 

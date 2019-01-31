@@ -53,11 +53,14 @@ func (cli *namespace) Name() string {
 // Attr returns attributes of the namespace.
 func (cli *namespace) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	// Now that content updates are asynchronous, we can make directory mtime reflect when we get new content.
-	// TODO: make this more constrained for namespaces.
 	latest := cli.updated
-	for _, v := range cli.reqs {
-		if updated := v.LastUpdate(); updated.After(latest) {
-			latest = updated
+	for _, v := range cli.resourcetypes {
+		attr, err := v.Attr(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if attr.Mtime.After(latest) {
+			latest = attr.Mtime
 		}
 	}
 	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
