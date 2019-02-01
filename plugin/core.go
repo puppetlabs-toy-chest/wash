@@ -70,8 +70,7 @@ func (f *FS) Attr(ctx context.Context) (*Attributes, error) {
 
 // Xattr returns an empty map.
 func (f *FS) Xattr(ctx context.Context) (map[string][]byte, error) {
-	data := make(map[string][]byte)
-	return data, nil
+	return map[string][]byte{}, nil
 }
 
 // ==== FUSE Directory Interface ====

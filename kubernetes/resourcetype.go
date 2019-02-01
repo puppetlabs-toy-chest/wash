@@ -83,5 +83,5 @@ func (cli *resourcetype) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *resourcetype) Xattr(ctx context.Context) (map[string][]byte, error) {
-	return nil, plugin.ENOTSUP
+	return map[string][]byte{}, nil
 }
