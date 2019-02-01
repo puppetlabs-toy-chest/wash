@@ -71,7 +71,7 @@ const (
 
 // FS contains the core filesystem data.
 type FS struct {
-	Clients map[string]DirProtocol
+	Plugins map[string]DirProtocol
 }
 
 var _ fs.FS = (*FS)(nil)
