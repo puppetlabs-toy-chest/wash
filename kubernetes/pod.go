@@ -90,19 +90,27 @@ func (cli *pod) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 }
 
 func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) {
-	if ns == allNamespace {
-		ns = ""
-	}
 	return datastore.CachedStrings(cli.cache, cli.Name()+"/pods/"+ns, func() ([]string, error) {
-		podList, err := cli.CoreV1().Pods(ns).List(metav1.ListOptions{})
+		// Query all pods and refresh all cache entries. Then return just the one that was requested.
+		podList, err := cli.CoreV1().Pods("").List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
-		pods := make([]string, len(podList.Items))
+		allpods := make([]string, len(podList.Items))
+		pods := make(map[string][]string)
 		for i, pd := range podList.Items {
-			pods[i] = datastore.MakeCompositeString(pd.Name, pd.Namespace)
+			allpods[i] = datastore.MakeCompositeString(pd.Name, pd.Namespace)
+			pods[pd.Namespace] = append(pods[pd.Namespace], allpods[i])
 		}
-		return pods, nil
+		pods[allNamespace] = allpods
+
+		for name, data := range pods {
+			// Skip the one we're returning because CachedStrings will encode and store to cache for us.
+			if name != ns {
+				datastore.CacheStrings(cli.cache, cli.Name()+"/pods/"+name, data)
+			}
+		}
+		return pods[ns], nil
 	})
 }
 

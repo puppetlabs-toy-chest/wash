@@ -77,17 +77,24 @@ func CachedStrings(cache *bigcache.BigCache, key string, cb func() ([]string, er
 	if err != nil {
 		return nil, err
 	}
-
-	// Guarantee results are sorted.
 	sort.Strings(strings)
 
+	if err := CacheStrings(cache, key, strings); err != nil {
+		return nil, err
+	}
+	return strings, nil
+}
+
+// CacheStrings encodes strings as a byte array and stores it in the cache.
+func CacheStrings(cache *bigcache.BigCache, key string, strings []string) error {
+	// Guarantee results are sorted.
 	var data bytes.Buffer
 	enc := gob.NewEncoder(&data)
 	if err := enc.Encode(&strings); err != nil {
-		return nil, err
+		return err
 	}
 	cache.Set(key, data.Bytes())
-	return strings, nil
+	return nil
 }
 
 // ContainsString returns whether the named string is included in strings,
