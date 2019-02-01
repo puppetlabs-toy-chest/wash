@@ -45,9 +45,9 @@ func main() {
 	}
 }
 
-type clientInit struct {
+type pluginInit struct {
 	name   string
-	client plugin.DirProtocol
+	plugin plugin.DirProtocol
 	err    error
 }
 
@@ -68,52 +68,52 @@ func mount(mountpoint string) error {
 	}
 	plugin.Init(*slow)
 
-	clientInstantiators := map[string]instantiator{
+	pluginInstantiators := map[string]instantiator{
 		"docker":     docker.Create,
 		"gcp":        gcp.Create,
 		"kubernetes": kubernetes.Create,
 	}
 
-	clients := make(chan clientInit)
-	for k, v := range clientInstantiators {
+	plugins := make(chan pluginInit)
+	for k, v := range pluginInstantiators {
 		go func(name string, create instantiator) {
 			log.Printf("Loading %v integration", name)
-			client, err := create(name, cache)
-			clients <- clientInit{name, client, err}
+			pluginInst, err := create(name, cache)
+			plugins <- pluginInit{name, pluginInst, err}
 		}(k, v)
 	}
 
 	log.Printf("Mounting at %v", mountpoint)
-	c, err := fuse.Mount(mountpoint)
+	fuseServer, err := fuse.Mount(mountpoint)
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer fuseServer.Close()
 
-	clientMap := make(map[string]plugin.DirProtocol)
-	for range clientInstantiators {
-		client := <-clients
-		if client.err != nil {
-			log.Printf("Error loading %v: %v", client.name, client.err)
+	pluginMap := make(map[string]plugin.DirProtocol)
+	for range pluginInstantiators {
+		pluginInst := <-plugins
+		if pluginInst.err != nil {
+			log.Printf("Error loading %v: %v", pluginInst.name, pluginInst.err)
 		} else {
-			log.Printf("Loaded %v", client.name)
-			clientMap[client.name] = client.client
+			log.Printf("Loaded %v", pluginInst.name)
+			pluginMap[pluginInst.name] = pluginInst.plugin
 		}
 	}
 
-	if len(clientMap) == 0 {
+	if len(pluginMap) == 0 {
 		return errors.New("No plugins loaded")
 	}
 
 	log.Printf("Serving filesystem")
-	filesys := &plugin.FS{Clients: clientMap}
-	if err := fs.Serve(c, filesys); err != nil {
+	filesys := &plugin.FS{Plugins: pluginMap}
+	if err := fs.Serve(fuseServer, filesys); err != nil {
 		return err
 	}
 
 	// check if the mount process has an error to report
-	<-c.Ready
-	if err := c.MountError; err != nil {
+	<-fuseServer.Ready
+	if err := fuseServer.MountError; err != nil {
 		return err
 	}
 	log.Printf("Done")

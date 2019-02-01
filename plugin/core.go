@@ -22,6 +22,8 @@ func Init(_slow bool) {
 	slow = _slow
 }
 
+// ==== Plugin registry (FS) ====
+
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
 	log.Printf("Entering root of filesystem")
@@ -30,19 +32,16 @@ func (f *FS) Root() (fs.Node, error) {
 
 // Find the named item or return nil.
 func (f *FS) Find(_ context.Context, name string) (Node, error) {
-	if client, ok := f.Clients[name]; ok {
-		log.Printf("Found client %v: %v", name, client)
+	if client, ok := f.Plugins[name]; ok {
 		return &Dir{client}, nil
 	}
-	log.Printf("Client %v not found", name)
 	return nil, ENOENT
 }
 
 // List all clients as directories.
 func (f *FS) List(_ context.Context) ([]Node, error) {
-	log.Printf("Listed %v clients in /", len(f.Clients))
-	keys := make([]Node, 0, len(f.Clients))
-	for _, v := range f.Clients {
+	keys := make([]Node, 0, len(f.Plugins))
+	for _, v := range f.Plugins {
 		keys = append(keys, &Dir{v})
 	}
 	return keys, nil
@@ -57,7 +56,7 @@ func (f *FS) Name() string {
 func (f *FS) Attr(ctx context.Context) (*Attributes, error) {
 	// Only ever called with "/". Return latest Mtime of all clients.
 	var latest time.Time
-	for _, v := range f.Clients {
+	for _, v := range f.Plugins {
 		attr, err := v.Attr(ctx)
 		if err != nil {
 			return nil, err
@@ -74,6 +73,8 @@ func (f *FS) Xattr(ctx context.Context) (map[string][]byte, error) {
 	data := make(map[string][]byte)
 	return data, nil
 }
+
+// ==== FUSE Directory Interface ====
 
 // NewDir creates a new Dir object.
 func NewDir(impl DirProtocol) *Dir {
@@ -161,7 +162,10 @@ func prefetch(entry fs.Node) {
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entry, err := d.Find(ctx, req.Name)
 	if err == nil {
+		log.Printf("Found %v in %v", req.Name, d)
 		prefetch(entry)
+	} else {
+		log.Printf("%v not found in %v", req.Name, d)
 	}
 	return entry, err
 }
@@ -173,6 +177,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		log.Printf("Error[List,%v]: %v", d, err)
 		return nil, err
 	}
+
+	log.Printf("Listed %v in %v", len(entries), d)
 
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
@@ -188,6 +194,8 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	}
 	return res, nil
 }
+
+// ==== FUSE File Interface ====
 
 // NewFile creates a new Dir object.
 func NewFile(impl FileProtocol) *File {
