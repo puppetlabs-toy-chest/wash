@@ -107,7 +107,7 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 		for name, data := range pods {
 			// Skip the one we're returning because CachedStrings will encode and store to cache for us.
 			if name != ns {
-				datastore.CacheStrings(cli.cache, cli.Name()+"/pods/"+name, data)
+				datastore.CacheAny(cli.cache, cli.Name()+"/pods/"+name, data)
 			}
 		}
 		return pods[ns], nil
