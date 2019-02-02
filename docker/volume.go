@@ -2,7 +2,9 @@ package docker
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -30,20 +32,12 @@ type volume struct {
 }
 
 func (cli *volume) Find(ctx context.Context, name string) (plugin.Node, error) {
-	lines, err := cli.cachedList(ctx)
+	attrs, err := cli.cachedAttributes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, line := range lines {
-		attr, entry, err := parseStat(line)
-		if err != nil {
-			return nil, err
-		}
-		if name != entry {
-			continue
-		}
-
+	if attr, ok := attrs[name]; ok {
 		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + name}
 		if attr.Mode.IsDir() {
 			return plugin.NewDir(newvol), nil
@@ -55,22 +49,18 @@ func (cli *volume) Find(ctx context.Context, name string) (plugin.Node, error) {
 }
 
 func (cli *volume) List(ctx context.Context) ([]plugin.Node, error) {
-	lines, err := cli.cachedList(ctx)
+	attrs, err := cli.cachedAttributes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	entries := make([]plugin.Node, 0, len(lines))
-	for _, line := range lines {
-		attr, name, err := parseStat(line)
-		if err != nil {
-			return nil, err
-		}
-		if name == ".." || name == "." {
+	entries := make([]plugin.Node, 0, len(attrs))
+	for entry, attr := range attrs {
+		if entry == ".." || entry == "." {
 			continue
 		}
 
-		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + name}
+		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + entry}
 		if attr.Mode.IsDir() {
 			entries = append(entries, plugin.NewDir(newvol))
 		} else {
@@ -133,7 +123,6 @@ func parseStat(line string) (plugin.Attributes, string, error) {
 	attr.Mode = os.FileMode(mode)
 
 	_, file := path.Split(segments[5])
-
 	return attr, file, nil
 }
 
@@ -148,79 +137,97 @@ func statFormat() string {
 	return "%s %X %Y %Z %f %n"
 }
 
-func (cli *volume) cachedList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.BigCache, cli.String(), func() ([]string, error) {
-		// Create a container that mounts a volume and inspects it. Run it and capture the output.
-		cmd := strslice.StrSlice{"sh", "-c", "stat -c '" + statFormat() + "' /mnt" + cli.path + "/.* /mnt" + cli.path + "/*"}
-		// Use tty to avoid messing with the extra log formatting.
-		cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
-		mounts := []mount.Mount{mount.Mount{
-			Type:     mount.TypeVolume,
-			Source:   cli.name,
-			Target:   "/mnt",
-			ReadOnly: true,
-		}}
-		hostcfg := docontainer.HostConfig{Mounts: mounts}
-		netcfg := network.NetworkingConfig{}
-		created, err := cli.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
+func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
+	key := cli.String()
+	entry, err := cli.Get(key)
+	if err == nil {
+		log.Debugf("Cache hit on %v", key)
+		var attrs map[string]plugin.Attributes
+		dec := gob.NewDecoder(bytes.NewReader(entry))
+		err = dec.Decode(&attrs)
+		return attrs, err
+	}
+
+	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
+	log.Printf("Cache miss on %v", key)
+
+	// Create a container that mounts a volume and inspects it. Run it and capture the output.
+	cmd := strslice.StrSlice{"sh", "-c", "stat -c '" + statFormat() + "' /mnt" + cli.path + "/.* /mnt" + cli.path + "/*"}
+	// Use tty to avoid messing with the extra log formatting.
+	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
+	mounts := []mount.Mount{mount.Mount{
+		Type:     mount.TypeVolume,
+		Source:   cli.name,
+		Target:   "/mnt",
+		ReadOnly: true,
+	}}
+	hostcfg := docontainer.HostConfig{Mounts: mounts}
+	netcfg := network.NetworkingConfig{}
+	created, err := cli.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
+	if err != nil {
+		return nil, err
+	}
+	for _, warn := range created.Warnings {
+		log.Debugf("Warning creating %v: %v", cli.String(), warn)
+	}
+	cid := created.ID
+	defer cli.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+	log.Debugf("Starting container %v", cid)
+	if err := cli.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Waiting for container %v", cid)
+	waitC, errC := cli.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+	var statusCode int64
+	select {
+	case err := <-errC:
+		return nil, err
+	case result := <-waitC:
+		statusCode = result.StatusCode
+		log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+	}
+
+	opts := types.ContainerLogsOptions{ShowStdout: true}
+	if statusCode != 0 {
+		opts.ShowStderr = true
+	}
+
+	log.Debugf("Gathering logs for %v", cid)
+	output, err := cli.ContainerLogs(ctx, cid, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer output.Close()
+
+	if statusCode != 0 {
+		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
 			return nil, err
 		}
-		for _, warn := range created.Warnings {
-			log.Debugf("Warning creating %v: %v", cli.String(), warn)
-		}
-		cid := created.ID
-		defer cli.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		log.Debugf("Starting container %v", cid)
-		if err := cli.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-			return nil, err
-		}
+		return nil, errors.New(string(bytes))
+	}
 
-		log.Debugf("Waiting for container %v", cid)
-		waitC, errC := cli.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-		var statusCode int64
-		select {
-		case err := <-errC:
-			return nil, err
-		case result := <-waitC:
-			statusCode = result.StatusCode
-			log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-		}
-
-		opts := types.ContainerLogsOptions{ShowStdout: true}
-		if statusCode != 0 {
-			opts.ShowStderr = true
-		}
-
-		log.Debugf("Gathering logs for %v", cid)
-		output, err := cli.ContainerLogs(ctx, cid, opts)
-		if err != nil {
-			return nil, err
-		}
-		defer output.Close()
-
-		if statusCode != 0 {
-			bytes, err := ioutil.ReadAll(output)
+	scanner := bufio.NewScanner(output)
+	attrs := make(map[string]plugin.Attributes)
+	for scanner.Scan() {
+		text := strings.TrimSpace(scanner.Text())
+		if text != "" {
+			attr, name, err := parseStat(text)
 			if err != nil {
 				return nil, err
 			}
-			return nil, errors.New(string(bytes))
-		}
-
-		scanner := bufio.NewScanner(output)
-		lines := make([]string, 0)
-		for scanner.Scan() {
-			text := strings.TrimSpace(scanner.Text())
-			if text != "" {
-				lines = append(lines, text)
+			if name == ".." || name == "." {
+				continue
 			}
+			attrs[name] = attr
 		}
-		if err := scanner.Err(); err != nil {
-			return nil, err
-		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
 
-		log.Printf("Lines: %v", lines)
-		cli.updated = time.Now()
-		return lines, nil
-	})
+	cli.updated = time.Now()
+	err = datastore.CacheAny(cli.BigCache, key, attrs)
+	return attrs, err
 }
