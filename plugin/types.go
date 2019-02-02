@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"io"
+	"os"
 	"time"
 
 	"bazil.org/fuse"
@@ -19,7 +20,10 @@ type IFileBuffer interface {
 
 // Attributes of resources.
 type Attributes struct {
+	Atime time.Time
 	Mtime time.Time
+	Ctime time.Time
+	Mode  os.FileMode
 	Size  uint64
 	Valid time.Duration
 }
