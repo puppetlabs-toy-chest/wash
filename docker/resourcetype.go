@@ -44,7 +44,7 @@ func newResourceTypes(cli *root) map[string]*resourcetype {
 	return resourcetypes
 }
 
-// Find resource by ID.
+// Find the instance of the resource type by its ID
 func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, error) {
 	switch cli.typename {
 	case "container":
@@ -73,7 +73,7 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 	return nil, plugin.ENOTSUP
 }
 
-// List all resources as files.
+// List all instances of the resource type as files.
 func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 	switch cli.typename {
 	case "container":

@@ -35,7 +35,7 @@ func Create(name string, _ interface{}, cache *bigcache.BigCache) (plugin.DirPro
 	return cli, nil
 }
 
-// Find container by ID.
+// Find the resource type by its ID.
 func (cli *root) Find(ctx context.Context, name string) (plugin.Node, error) {
 	if rt, ok := cli.resourcetypes[name]; ok {
 		log.Debugf("Found resource type %v", rt)
@@ -44,7 +44,7 @@ func (cli *root) Find(ctx context.Context, name string) (plugin.Node, error) {
 	return nil, plugin.ENOENT
 }
 
-// List all running containers as files.
+// List the available resource types as directories
 func (cli *root) List(ctx context.Context) ([]plugin.Node, error) {
 	log.Debugf("Listing %v resource types in %v", len(cli.resourcetypes), cli.Name())
 	entries := make([]plugin.Node, 0, len(cli.resourcetypes))
