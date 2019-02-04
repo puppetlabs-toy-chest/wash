@@ -15,7 +15,6 @@ import (
 // IFileBuffer represents a file that can be ReadAt and Close.
 type IFileBuffer interface {
 	io.ReaderAt
-	io.Closer
 }
 
 // Attributes of resources.
