@@ -55,7 +55,7 @@ type instantiator = func(string, *bigcache.BigCache) (plugin.DirProtocol, error)
 
 func mount(mountpoint string) error {
 	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
-	config.CleanWindow = 100 * time.Millisecond
+	config.CleanWindow = 1 * time.Second
 	cache, err := bigcache.NewBigCache(config)
 	if err != nil {
 		return err
