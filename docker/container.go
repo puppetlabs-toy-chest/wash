@@ -47,7 +47,7 @@ func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (inst *container) Xattr(ctx context.Context) (map[string][]byte, error) {
-	raw, err := datastore.CachedJSON(inst.root.BigCache, inst.name, func() ([]byte, error) {
+	raw, err := datastore.CachedJSON(inst.root.BigCache, inst.String(), func() ([]byte, error) {
 		_, raw, err := inst.ContainerInspectWithRaw(ctx, inst.name, true)
 		return raw, err
 	})
@@ -104,7 +104,7 @@ func (inst *container) readLog() (io.ReadCloser, error) {
 
 // Open gets logs from a container.
 func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	c, err := inst.cachedContainerInspect(ctx, inst.name)
+	c, err := inst.cachedContainerInspect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	return buf, nil
 }
 
-func (inst *container) cachedContainerInspect(ctx context.Context, name string) (*types.ContainerJSON, error) {
+func (inst *container) cachedContainerInspect(ctx context.Context) (*types.ContainerJSON, error) {
 	entry, err := inst.Get(inst.String())
 	var container types.ContainerJSON
 	if err == nil {
@@ -140,12 +140,12 @@ func (inst *container) cachedContainerInspect(ctx context.Context, name string) 
 	} else {
 		log.Printf("Cache miss on %v", inst)
 		var raw []byte
-		container, raw, err = inst.ContainerInspectWithRaw(ctx, name, true)
+		container, raw, err = inst.ContainerInspectWithRaw(ctx, inst.name, true)
 		if err != nil {
 			return nil, err
 		}
 
-		inst.Set(name, raw)
+		inst.Set(inst.name, raw)
 	}
 
 	return &container, err
