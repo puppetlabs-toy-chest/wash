@@ -102,7 +102,7 @@ func (cli *volume) Xattr(ctx context.Context) (map[string][]byte, error) {
 	if cli.path == "" {
 		// Return metadata for the volume if it's already loaded.
 		key := cli.String()
-		if entry, err := cli.Get(key); err != nil {
+		if entry, err := cli.cache.Get(key); err != nil {
 			log.Printf("Cache miss on %v, skipping lookup", key)
 		} else {
 			log.Debugf("Cache hit on %v", key)
@@ -184,7 +184,7 @@ const mountpoint = "/mnt"
 
 func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
 	key := cli.String() + "/list"
-	entry, err := cli.Get(key)
+	entry, err := cli.cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
 		var attrs map[string]plugin.Attributes
@@ -260,13 +260,13 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	}
 
 	cli.updated = time.Now()
-	err = datastore.CacheAny(cli.BigCache, key, attrs)
+	err = datastore.CacheAny(cli.cache, key, attrs)
 	return attrs, err
 }
 
 func (cli *volume) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	key := cli.String() + "/content"
-	entry, err := cli.Get(key)
+	entry, err := cli.cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
 		return bytes.NewReader(entry), nil
@@ -306,7 +306,7 @@ func (cli *volume) cachedContent(ctx context.Context) (plugin.IFileBuffer, error
 	}
 
 	cli.updated = time.Now()
-	cli.Set(key, bits)
+	cli.cache.Set(key, bits)
 	return bytes.NewReader(bits), nil
 }
 

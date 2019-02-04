@@ -12,7 +12,7 @@ import (
 
 type root struct {
 	*client.Client
-	*bigcache.BigCache
+	cache         *bigcache.BigCache
 	updated       time.Time
 	root          string
 	resourcetypes map[string]*resourcetype

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/allegro/bigcache"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/puppetlabs/wash/datastore"
@@ -17,12 +18,28 @@ type resourcetype struct {
 	*root
 	typename string
 	reqs     sync.Map
+	cache    *bigcache.BigCache
 }
 
 func newResourceTypes(cli *root) map[string]*resourcetype {
 	resourcetypes := make(map[string]*resourcetype)
-	for _, name := range []string{"container", "volume"} {
-		resourcetypes[name] = &resourcetype{cli, name, sync.Map{}}
+	// Use individual caches for slower resources like volumes to control the timeout.
+	for name, timeout := range map[string]time.Duration{
+		"container": plugin.DefaultTimeout,
+		"volume":    30 * time.Second,
+	} {
+		cache := cli.cache
+		if plugin.DefaultTimeout != timeout {
+			config := bigcache.DefaultConfig(timeout)
+			config.CleanWindow = 1 * time.Second
+			if ch, err := bigcache.NewBigCache(config); err == nil {
+				cache = ch
+			} else {
+				log.Printf("Unable to create new cache, using existing one: %v", err)
+			}
+		}
+
+		resourcetypes[name] = &resourcetype{root: cli, typename: name, cache: cache}
 	}
 	return resourcetypes
 }
@@ -115,7 +132,7 @@ func (cli *resourcetype) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *resourcetype) cachedContainerList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.BigCache, cli.String(), func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
 		containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 		if err != nil {
 			return nil, err
@@ -130,7 +147,7 @@ func (cli *resourcetype) cachedContainerList(ctx context.Context) ([]string, err
 }
 
 func (cli *resourcetype) cachedVolumeList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.BigCache, cli.String(), func() ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
 		volumes, err := cli.VolumeList(ctx, filters.Args{})
 		if err != nil {
 			return nil, err
@@ -141,7 +158,7 @@ func (cli *resourcetype) cachedVolumeList(ctx context.Context) ([]string, error)
 			// Also cache 'volume', as this is the same data returned by VolumeInspect.
 			// Store as JSON since that's how we'll process it.
 			if js, err := json.Marshal(volume); err == nil {
-				cli.Set(cli.String()+"/"+volume.Name, js)
+				cli.cache.Set(cli.String()+"/"+volume.Name, js)
 			} else {
 				log.Printf("Unable to marshal volume %v to JSON: %v", volume, err)
 			}
