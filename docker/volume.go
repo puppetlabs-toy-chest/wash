@@ -29,6 +29,11 @@ type volume struct {
 	*resourcetype
 	name string
 	path string
+	attr plugin.Attributes
+}
+
+func newVolume(cli *resourcetype, name string) *volume {
+	return &volume{cli, name, "", plugin.Attributes{}}
 }
 
 func (cli *volume) Find(ctx context.Context, name string) (plugin.Node, error) {
@@ -38,7 +43,7 @@ func (cli *volume) Find(ctx context.Context, name string) (plugin.Node, error) {
 	}
 
 	if attr, ok := attrs[name]; ok {
-		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + name}
+		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + name, attr}
 		if attr.Mode.IsDir() {
 			return plugin.NewDir(newvol), nil
 		}
@@ -60,7 +65,7 @@ func (cli *volume) List(ctx context.Context) ([]plugin.Node, error) {
 			continue
 		}
 
-		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + entry}
+		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + entry, attr}
 		if attr.Mode.IsDir() {
 			entries = append(entries, plugin.NewDir(newvol))
 		} else {
@@ -83,10 +88,25 @@ func (cli *volume) Name() string {
 }
 
 func (cli *volume) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	return &plugin.Attributes{}, nil
+	if cli.path != "" {
+		return &cli.attr, nil
+	}
+	// Rather than load a pod to get mtime, say it's always changing.
+	// Leave it up to the caller whether they need to dig further.
+	return &plugin.Attributes{Mtime: time.Now(), Valid: validDuration}, nil
 }
 
 func (cli *volume) Xattr(ctx context.Context) (map[string][]byte, error) {
+	if cli.path == "" {
+		// Return metadata for the volume if it's already loaded.
+		key := cli.String()
+		if entry, err := cli.Get(key); err != nil {
+			log.Printf("Cache miss on %v, skipping lookup", key)
+		} else {
+			log.Debugf("Cache hit on %v", key)
+			return plugin.JSONToJSONMap(entry)
+		}
+	}
 	return map[string][]byte{}, nil
 }
 
@@ -120,7 +140,24 @@ func parseStat(line string) (plugin.Attributes, string, error) {
 	if err != nil {
 		return attr, "", err
 	}
-	attr.Mode = os.FileMode(mode)
+	// mode output of stat is not directly convertible to os.FileMode.
+	attr.Mode = os.FileMode(mode & 0777)
+	for bits, mod := range map[uint64]os.FileMode{
+		0140000: os.ModeSocket,
+		0120000: os.ModeSymlink,
+		// Skip file, absence of these implies a regular file.
+		0060000: os.ModeDevice,
+		0040000: os.ModeDir,
+		0020000: os.ModeCharDevice,
+		0010000: os.ModeNamedPipe,
+		0004000: os.ModeSetuid,
+		0002000: os.ModeSetgid,
+		0001000: os.ModeSticky,
+	} {
+		if mode&bits != 0 {
+			attr.Mode |= mod
+		}
+	}
 
 	_, file := path.Split(segments[5])
 	return attr, file, nil
@@ -138,7 +175,7 @@ func statFormat() string {
 }
 
 func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
-	key := cli.String()
+	key := cli.String() + "/list"
 	entry, err := cli.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
@@ -168,7 +205,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 		return nil, err
 	}
 	for _, warn := range created.Warnings {
-		log.Debugf("Warning creating %v: %v", cli.String(), warn)
+		log.Debugf("Warning creating %v: %v", key, warn)
 	}
 	cid := created.ID
 	defer cli.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})

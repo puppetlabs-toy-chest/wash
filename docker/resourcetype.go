@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -47,7 +48,7 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 		}
 		if ok := datastore.ContainsString(volumes, name); ok {
 			log.Debugf("Found volume %v", name)
-			return plugin.NewDir(&volume{cli, name, ""}), nil
+			return plugin.NewDir(newVolume(cli, name)), nil
 		}
 		log.Debugf("Volume %v not found in %v", name, cli)
 		return nil, plugin.ENOENT
@@ -77,7 +78,7 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		log.Debugf("Listing %v volumes in %v", len(volumes), cli)
 		keys := make([]plugin.Node, len(volumes))
 		for i, vol := range volumes {
-			keys[i] = plugin.NewDir(&volume{cli, vol, ""})
+			keys[i] = plugin.NewDir(newVolume(cli, vol))
 		}
 		return keys, nil
 	}
@@ -136,8 +137,14 @@ func (cli *resourcetype) cachedVolumeList(ctx context.Context) ([]string, error)
 		}
 		strings := make([]string, len(volumes.Volumes))
 		for i, volume := range volumes.Volumes {
-			// TODO: also cache 'volume', as this is the same data returned by VolumeInspect.
 			strings[i] = volume.Name
+			// Also cache 'volume', as this is the same data returned by VolumeInspect.
+			// Store as JSON since that's how we'll process it.
+			if js, err := json.Marshal(volume); err == nil {
+				cli.Set(cli.String()+"/"+volume.Name, js)
+			} else {
+				log.Printf("Unable to marshal volume %v to JSON: %v", volume, err)
+			}
 		}
 		cli.updated = time.Now()
 		return strings, nil
