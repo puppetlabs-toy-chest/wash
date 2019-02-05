@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
+	typev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // Designed to be used recursively to list the volume hierarchy.
@@ -71,7 +72,7 @@ func (cli *pvc) List(ctx context.Context) ([]plugin.Node, error) {
 }
 
 func (cli *pvc) baseID() string {
-	return cli.resourcetype.client.Name() + "/" + cli.ns + "/pvc/" + cli.Name()
+	return cli.resourcetype.client.Name() + "/" + cli.ns + "/pvc/" + cli.name
 }
 
 // A unique string describing the pod. Note that the same pvc may appear in a specific namespace and 'all'.
@@ -115,11 +116,46 @@ func (cli *pvc) Xattr(ctx context.Context) (map[string][]byte, error) {
 func (cli *pvc) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	cli.mux.Lock()
 	defer cli.mux.Unlock()
-	//return cli.cachedContent(ctx)
-	return nil, plugin.ENOTSUP
+	return cli.cachedContent(ctx)
 }
 
 const mountpoint = "/mnt"
+
+var errPodTerminated = errors.New("Pod terminated unexpectedly")
+
+func waitForPod(podi typev1.PodInterface, pid string) error {
+	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
+	watcher, err := podi.Watch(watchOpts)
+	if err != nil {
+		return err
+	}
+	defer watcher.Stop()
+
+	ch := watcher.ResultChan()
+	for {
+		select {
+		case e, ok := <-ch:
+			if !ok {
+				return fmt.Errorf("Channel error waiting for pod %v: %v", pid, e)
+			}
+			switch e.Type {
+			case watch.Modified:
+				switch e.Object.(*corev1.Pod).Status.Phase {
+				case corev1.PodSucceeded:
+					return nil
+				case corev1.PodFailed:
+					return errPodTerminated
+				case corev1.PodUnknown:
+					log.Printf("Unknown state for pod %v: %v", pid, e.Object)
+				}
+			case watch.Error:
+				return fmt.Errorf("Pod %v errored: %v", pid, e.Object)
+			}
+		case <-time.After(30 * time.Second):
+			return fmt.Errorf("Timed out waiting for pod %v", pid)
+		}
+	}
+}
 
 func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
 	key := cli.String() + "/list"
@@ -136,57 +172,27 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := cli.createPod(plugin.StatCmd(mountpoint))
+	podi := cli.CoreV1().Pods(cli.ns)
+	pid, err := cli.createPod(podi, plugin.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
-	podi := cli.CoreV1().Pods(cli.ns)
 	defer podi.Delete(pid, &metav1.DeleteOptions{})
 
 	log.Debugf("Waiting for pod %v", pid)
 	// Start watching for new events related to the pod we created.
-	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
-	watcher, err := podi.Watch(watchOpts)
-	if err != nil {
+	if err = waitForPod(podi, pid); err != nil && err != errPodTerminated {
 		return nil, err
-	}
-	defer watcher.Stop()
-
-	ch := watcher.ResultChan()
-	success := true
-	for ch != nil {
-		select {
-		case e, ok := <-ch:
-			if !ok {
-				return nil, fmt.Errorf("Channel error waiting for pod %v: %v", pid, e)
-			}
-			switch e.Type {
-			case watch.Modified:
-				switch e.Object.(*corev1.Pod).Status.Phase {
-				case corev1.PodSucceeded:
-					ch = nil
-				case corev1.PodFailed:
-					ch = nil
-					success = false
-				case corev1.PodUnknown:
-					log.Printf("Unknown state for pod %v: %v", pid, e.Object)
-				}
-			case watch.Error:
-				return nil, fmt.Errorf("Pod %v errored: %v", pid, e.Object)
-			}
-		case <-time.After(30 * time.Second):
-			return nil, fmt.Errorf("Timed out waiting for pod %v", pid)
-		}
 	}
 
 	log.Debugf("Gathering logs for %v", pid)
-	output, err := podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-	if err != nil {
-		return nil, err
+	output, lerr := podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if lerr != nil {
+		return nil, lerr
 	}
 	defer output.Close()
 
-	if !success {
+	if err == errPodTerminated {
 		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
 			return nil, err
@@ -209,7 +215,6 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	return attrs[cli.path+"/"], err
 }
 
-/*
 func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	key := cli.String() + "/content"
 	entry, err := cli.cache.Get(key)
@@ -222,44 +227,45 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and waits. Use it to download a file.
-	cid, err := cli.startContainer(ctx, []string{"sleep", "60"})
+	podi := cli.CoreV1().Pods(cli.ns)
+	pid, err := cli.createPod(podi, []string{"cat", mountpoint + cli.path})
+	log.Printf("Reading from: %v", mountpoint+cli.path)
 	if err != nil {
 		return nil, err
 	}
-	defer cli.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+	defer podi.Delete(pid, &metav1.DeleteOptions{})
 
-	log.Debugf("Starting container %v", cid)
-	if err := cli.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+	log.Debugf("Waiting for pod %v", pid)
+	// Start watching for new events related to the pod we created.
+	if err = waitForPod(podi, pid); err != nil && err != errPodTerminated {
 		return nil, err
 	}
-	defer cli.ContainerKill(ctx, cid, "SIGKILL")
+	podErr := err
 
-	// Download file, then kill container.
-	rdr, _, err := cli.CopyFromContainer(ctx, cid, mountpoint+cli.path)
+	log.Debugf("Gathering logs for %v", pid)
+	output, err := podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 	if err != nil {
 		return nil, err
 	}
-	defer rdr.Close()
+	defer output.Close()
 
-	tarReader := tar.NewReader(rdr)
-	// Only expect one file.
-	if _, err := tarReader.Next(); err != nil {
-		return nil, err
-	}
-	bits, err := ioutil.ReadAll(tarReader)
+	bits, err := ioutil.ReadAll(output)
 	if err != nil {
 		return nil, err
+	}
+	log.Printf("Read: %v", bits)
+
+	if podErr == errPodTerminated {
+		return nil, errors.New(string(bits))
 	}
 
 	cli.updated = time.Now()
 	cli.cache.Set(key, bits)
 	return bytes.NewReader(bits), nil
 }
-*/
 
 // Create a container that mounts a pvc to a default mountpoint and runs a command.
-func (cli *pvc) createPod(cmd []string) (string, error) {
-	podi := cli.CoreV1().Pods(cli.ns)
+func (cli *pvc) createPod(podi typev1.PodInterface, cmd []string) (string, error) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "wash",
@@ -269,7 +275,7 @@ func (cli *pvc) createPod(cmd []string) (string, error) {
 				corev1.Container{
 					Name:  "busybox",
 					Image: "busybox",
-					Args:  plugin.StatCmd(mountpoint + cli.path),
+					Args:  cmd,
 					VolumeMounts: []corev1.VolumeMount{
 						corev1.VolumeMount{
 							Name:      cli.name,
