@@ -2,9 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"flag"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -35,22 +32,30 @@ type client struct {
 const validDuration = 100 * time.Millisecond
 const allNamespace = "all"
 
-// Create a new kubernetes client.
-func Create(name string, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
-	var kubeconfig *string
-	if h := os.Getenv("HOME"); h != "" {
-		kubeconfig = flag.String("kubeconfig", filepath.Join(h, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	flag.Parse()
+// ListContexts lists the available kubernetes contexts.
+func ListContexts() (map[string]clientcmd.ClientConfig, error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
 
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+	raw, err := config.RawConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	configs := make(map[string]clientcmd.ClientConfig)
+	for name := range raw.Contexts {
+		configs[name] = clientcmd.NewNonInteractiveClientConfig(raw, name, configOverrides, config.ConfigAccess())
+	}
+	return configs, nil
+}
+
+// Create a new kubernetes client.
+func Create(name string, context interface{}, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
+	config, err := context.(clientcmd.ClientConfig).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
 	// create the clientset
 	clientset, err := k8s.NewForConfig(config)
 	if err != nil {

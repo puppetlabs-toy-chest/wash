@@ -51,7 +51,11 @@ type pluginInit struct {
 	err    error
 }
 
-type instantiator = func(string, *bigcache.BigCache) (plugin.DirProtocol, error)
+type instantiator = func(string, interface{}, *bigcache.BigCache) (plugin.DirProtocol, error)
+type instData struct {
+	instantiator
+	context interface{}
+}
 
 func mount(mountpoint string) error {
 	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
@@ -68,17 +72,24 @@ func mount(mountpoint string) error {
 	}
 	plugin.Init(*slow)
 
-	pluginInstantiators := map[string]instantiator{
-		"docker":     docker.Create,
-		"gcp":        gcp.Create,
-		"kubernetes": kubernetes.Create,
+	pluginInstantiators := map[string]instData{
+		"docker": {docker.Create, nil},
+		"gcp":    {gcp.Create, nil},
+	}
+
+	k8sContexts, err := kubernetes.ListContexts()
+	if err != nil {
+		return err
+	}
+	for name, context := range k8sContexts {
+		pluginInstantiators["kubernetes_"+name] = instData{kubernetes.Create, context}
 	}
 
 	plugins := make(chan pluginInit)
 	for k, v := range pluginInstantiators {
-		go func(name string, create instantiator) {
+		go func(name string, create instData) {
 			log.Printf("Loading %v integration", name)
-			pluginInst, err := create(name, cache)
+			pluginInst, err := create.instantiator(name, create.context, cache)
 			plugins <- pluginInit{name, pluginInst, err}
 		}(k, v)
 	}
