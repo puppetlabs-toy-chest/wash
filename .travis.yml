@@ -1,4 +1,7 @@
 language: go
+cache:
+  directories:
+  - $HOME/.go
 services:
 - docker
 
