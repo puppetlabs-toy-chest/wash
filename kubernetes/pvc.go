@@ -1,16 +1,25 @@
 package kubernetes
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 // Designed to be used recursively to list the volume hierarchy.
@@ -29,47 +38,42 @@ func newPvc(cli *resourcetype, id string) *pvc {
 }
 
 func (cli *pvc) Find(ctx context.Context, name string) (plugin.Node, error) {
-	/*
-		attrs, err := cli.cachedAttributes(ctx)
-		if err != nil {
-			return nil, err
-		}
+	attrs, err := cli.cachedAttributes(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-		if attr, ok := attrs[name]; ok {
-			newvol := &pvc{cli.resourcetype, cli.name, cli.ns, cli.path + "/" + name, attr, sync.Mutex{}}
-			if attr.Mode.IsDir() {
-				return plugin.NewDir(newvol), nil
-			}
-			return plugin.NewFile(newvol), nil
+	if attr, ok := attrs[name]; ok {
+		newvol := &pvc{cli.resourcetype, cli.name, cli.ns, cli.path + "/" + name, attr, sync.Mutex{}}
+		if attr.Mode.IsDir() {
+			return plugin.NewDir(newvol), nil
 		}
-	*/
+		return plugin.NewFile(newvol), nil
+	}
 
 	return nil, plugin.ENOENT
 }
 
 func (cli *pvc) List(ctx context.Context) ([]plugin.Node, error) {
-	/*
-		attrs, err := cli.cachedAttributes(ctx)
-		if err != nil {
-			return nil, err
+	attrs, err := cli.cachedAttributes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]plugin.Node, 0, len(attrs))
+	for entry, attr := range attrs {
+		if entry == ".." || entry == "." {
+			continue
 		}
 
-		entries := make([]plugin.Node, 0, len(attrs))
-		for entry, attr := range attrs {
-			if entry == ".." || entry == "." {
-				continue
-			}
-
-			newvol := &pvc{cli.resourcetype, cli.name, cli.ns, cli.path + "/" + entry, attr, sync.Mutex{}}
-			if attr.Mode.IsDir() {
-				entries = append(entries, plugin.NewDir(newvol))
-			} else {
-				entries = append(entries, plugin.NewFile(newvol))
-			}
+		newvol := &pvc{cli.resourcetype, cli.name, cli.ns, cli.path + "/" + entry, attr, sync.Mutex{}}
+		if attr.Mode.IsDir() {
+			entries = append(entries, plugin.NewDir(newvol))
+		} else {
+			entries = append(entries, plugin.NewFile(newvol))
 		}
-		return entries, nil
-	*/
-	return []plugin.Node{}, nil
+	}
+	return entries, nil
 }
 
 // A unique string describing the pod. Note that the same pod may appear in a specific namespace and 'all'.
@@ -117,7 +121,6 @@ func (cli *pvc) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	return nil, plugin.ENOTSUP
 }
 
-/*
 const mountpoint = "/mnt"
 
 func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
@@ -135,40 +138,58 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	cid, err := cli.startContainer(ctx, plugin.StatCmd(mountpoint+cli.path))
+	pid, err := cli.createPod(plugin.StatCmd(mountpoint + cli.path))
 	if err != nil {
 		return nil, err
 	}
-	defer cli.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+	podi := cli.CoreV1().Pods(cli.ns)
+	defer podi.Delete(pid, &metav1.DeleteOptions{})
 
-	log.Debugf("Starting container %v", cid)
-	if err := cli.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		return nil, err
-	}
-
-	log.Debugf("Waiting for container %v", cid)
-	waitC, errC := cli.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-	var statusCode int64
-	select {
-	case err := <-errC:
-		return nil, err
-	case result := <-waitC:
-		statusCode = result.StatusCode
-		log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-	}
-
-	opts := types.ContainerLogsOptions{ShowStdout: true}
-	if statusCode != 0 {
-		opts.ShowStderr = true
-	}
-
-	log.Debugf("Gathering logs for %v", cid)
-	output, err := cli.ContainerLogs(ctx, cid, opts)
+	log.Printf("Waiting for pod %v", pid)
+	// Start watching for new events related to the pod we created.
+	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
+	watcher, err := podi.Watch(watchOpts)
 	if err != nil {
 		return nil, err
 	}
+	defer watcher.Stop()
 
-	if statusCode != 0 {
+	ch := watcher.ResultChan()
+	success := true
+	for ch != nil {
+		select {
+		case e, ok := <-ch:
+			if !ok {
+				return nil, fmt.Errorf("Channel error waiting for pod %v: %v", pid, e)
+			}
+			switch e.Type {
+			case watch.Modified:
+				switch e.Object.(*corev1.Pod).Status.Phase {
+				case corev1.PodSucceeded:
+					ch = nil
+				case corev1.PodFailed:
+					ch = nil
+					success = false
+				case corev1.PodUnknown:
+					log.Printf("Unknown state for pod %v: %v", pid, e.Object)
+				}
+			case watch.Error:
+				return nil, fmt.Errorf("Pod %v errored: %v", pid, e.Object)
+			}
+		case <-time.After(30 * time.Second):
+			return nil, fmt.Errorf("Timed out waiting for pod %v", pid)
+		}
+	}
+
+	log.Printf("Reading logs for pod %v", pid)
+	output, err := podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if err != nil {
+		return nil, err
+	}
+	defer output.Close()
+
+	// TODO: pod errors if the mounted volume is empty.
+	if !success {
 		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
 			return nil, err
@@ -180,7 +201,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	attrs := make(map[string]plugin.Attributes)
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		if text != "" {
+		if text != "" && !strings.HasPrefix(text, "stat:") {
 			attr, name, err := plugin.StatParse(text)
 			if err != nil {
 				return nil, err
@@ -200,6 +221,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	return attrs, err
 }
 
+/*
 func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	key := cli.String() + "/content"
 	entry, err := cli.cache.Get(key)
@@ -245,29 +267,50 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	cli.cache.Set(key, bits)
 	return bytes.NewReader(bits), nil
 }
+*/
 
 // Create a container that mounts a pvc to a default mountpoint and runs a command.
-func (cli *pvc) startContainer(ctx context.Context, cmd []string) (string, error) {
-	// Use tty to avoid messing with the extra log formatting.
-	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
-	mounts := []mount.Mount{mount.Mount{
-		Type:     mount.TypeVolume,
-		Source:   cli.name,
-		Target:   mountpoint,
-		ReadOnly: true,
-	}}
-	hostcfg := docontainer.HostConfig{Mounts: mounts}
-	netcfg := network.NetworkingConfig{}
-	created, err := cli.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
+func (cli *pvc) createPod(cmd []string) (string, error) {
+	podi := cli.CoreV1().Pods(cli.ns)
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "wash",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "busybox",
+					Image: "busybox",
+					Args:  plugin.StatCmd(mountpoint + cli.path),
+					VolumeMounts: []corev1.VolumeMount{
+						corev1.VolumeMount{
+							Name:      cli.name,
+							MountPath: mountpoint,
+							ReadOnly:  true,
+						},
+					},
+				},
+			},
+			RestartPolicy: corev1.RestartPolicyNever,
+			Volumes: []corev1.Volume{
+				corev1.Volume{
+					Name: cli.name,
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+							ClaimName: cli.name,
+							ReadOnly:  true,
+						},
+					},
+				},
+			},
+		},
+	}
+	created, err := podi.Create(pod)
 	if err != nil {
 		return "", err
 	}
-	for _, warn := range created.Warnings {
-		log.Debugf("Warning creating %v: %v", created.ID, warn)
-	}
-	return created.ID, nil
+	return created.Name, nil
 }
-*/
 
 func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) {
 	return datastore.CachedStrings(cli.cache, cli.Name()+"/pvcs/"+ns, func() ([]string, error) {

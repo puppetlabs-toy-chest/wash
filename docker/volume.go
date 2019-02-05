@@ -167,6 +167,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	}
 	defer output.Close()
 
+	// TODO: pod errors if the mounted volume is empty.
 	if statusCode != 0 {
 		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
