@@ -87,18 +87,47 @@ func (d *Dir) String() string {
 	return d.Name()
 }
 
+var startTime = time.Now()
+
+// Applies attributes where non-default, and sets defaults otherwise.
+func applyAttr(a *fuse.Attr, attr *Attributes) {
+	a.Valid = 1 * time.Minute
+	if attr.Valid != 0 {
+		a.Valid = attr.Valid
+	}
+
+	// TODO: tie this to actual hard links in plugins
+	a.Nlink = 1
+	a.Mode = attr.Mode
+	a.Size = attr.Size
+
+	var zero time.Time
+	a.Mtime = startTime
+	if attr.Mtime != zero {
+		a.Mtime = attr.Mtime
+	}
+	a.Atime = startTime
+	if attr.Atime != zero {
+		a.Atime = attr.Atime
+	}
+	a.Ctime = startTime
+	if attr.Ctime != zero {
+		a.Ctime = attr.Ctime
+	}
+	a.Crtime = startTime
+}
+
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Mode = os.ModeDir | 0550
-
 	attr, err := d.DirProtocol.Attr(ctx)
 	if err != nil {
 		log.Printf("Error[Attr,%v]: %v", d, err)
 	}
-	a.Mtime = attr.Mtime
-	a.Size = attr.Size
-	a.Valid = attr.Valid
-	log.Printf("Attr of dir %v: %v, %v", d, a.Mtime, a.Size)
+	if attr.Mode == 0 {
+		attr.Mode = os.ModeDir | 0550
+	}
+	applyAttr(a, attr)
+	log.Printf("Attr of dir %v: %v", d, a)
 	return err
 }
 
@@ -212,16 +241,15 @@ func (f *File) String() string {
 
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	a.Mode = 0440
-
 	attr, err := f.FileProtocol.Attr(ctx)
 	if err != nil {
 		log.Printf("Error[Attr,%v]: %v", f, err)
 	}
-	a.Mtime = attr.Mtime
-	a.Size = attr.Size
-	a.Valid = attr.Valid
-	log.Printf("Attr of file %v: %v, %s", f, a.Size, a.Mtime)
+	if attr.Mode == 0 {
+		attr.Mode = 0440
+	}
+	applyAttr(a, attr)
+	log.Printf("Attr of file %v: %v", f, a)
 	return err
 }
 
