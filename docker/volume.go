@@ -7,11 +7,8 @@ import (
 	"context"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -119,67 +116,6 @@ func (cli *volume) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 	return cli.cachedContent(ctx)
 }
 
-// TODO: the stat format, parsing it, and starting a container to run a command is almost certainly
-// useful other places as well. Find a place to put them.
-func parseStat(line string) (plugin.Attributes, string, error) {
-	var attr plugin.Attributes
-	segments := strings.SplitN(line, " ", 6)
-	if len(segments) != 6 {
-		return attr, "", fmt.Errorf("Stat did not return 6 components: %v", line)
-	}
-
-	var err error
-	attr.Size, err = strconv.ParseUint(segments[0], 10, 64)
-	if err != nil {
-		return attr, "", err
-	}
-
-	for i, target := range []*time.Time{&attr.Atime, &attr.Mtime, &attr.Ctime} {
-		epoch, err := strconv.ParseInt(segments[i+1], 10, 64)
-		if err != nil {
-			return attr, "", err
-		}
-		*target = time.Unix(epoch, 0)
-	}
-
-	mode, err := strconv.ParseUint(segments[4], 16, 32)
-	if err != nil {
-		return attr, "", err
-	}
-	// mode output of stat is not directly convertible to os.FileMode.
-	attr.Mode = os.FileMode(mode & 0777)
-	for bits, mod := range map[uint64]os.FileMode{
-		0140000: os.ModeSocket,
-		0120000: os.ModeSymlink,
-		// Skip file, absence of these implies a regular file.
-		0060000: os.ModeDevice,
-		0040000: os.ModeDir,
-		0020000: os.ModeCharDevice,
-		0010000: os.ModeNamedPipe,
-		0004000: os.ModeSetuid,
-		0002000: os.ModeSetgid,
-		0001000: os.ModeSticky,
-	} {
-		if mode&bits != 0 {
-			attr.Mode |= mod
-		}
-	}
-
-	_, file := path.Split(segments[5])
-	return attr, file, nil
-}
-
-func statFormat() string {
-	// size, atime, mtime, ctime, mode, name
-	// %s - Total size, in bytes
-	// %X - Time of last access as seconds since Epoch
-	// %Y - Time of last data modification as seconds since Epoch
-	// %Z - Time of last status change as seconds since Epoch
-	// %f - Raw mode in hex
-	// %n - File name
-	return "%s %X %Y %Z %f %n"
-}
-
 const mountpoint = "/mnt"
 
 func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
@@ -197,8 +133,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cmd := []string{"sh", "-c", "stat -c '" + statFormat() + "' " + mountpoint + cli.path + "/.* " + mountpoint + cli.path + "/*"}
-	cid, err := cli.createContainer(ctx, cmd)
+	cid, err := cli.createContainer(ctx, plugin.StatCmd(mountpoint+cli.path))
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +180,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {
-			attr, name, err := parseStat(text)
+			attr, name, err := plugin.StatParse(text)
 			if err != nil {
 				return nil, err
 			}
