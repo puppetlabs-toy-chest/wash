@@ -48,16 +48,15 @@ func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *pod) Xattr(ctx context.Context) (map[string][]byte, error) {
-	pod, err := cli.cachedPod(ctx, cli.ns, cli.name)
-	if err != nil {
-		return nil, err
+	// Return metadata for the pod if it's already loaded.
+	key := cli.String()
+	if entry, err := cli.resourcetype.client.cache.Get(key); err != nil {
+		log.Printf("Cache miss on %v, skipping lookup", key)
+	} else {
+		log.Debugf("Cache hit on %v", key)
+		return plugin.JSONToJSONMap(entry)
 	}
-
-	inrec, err := json.Marshal(pod)
-	if err != nil {
-		return nil, err
-	}
-	return plugin.JSONToJSONMap(inrec)
+	return map[string][]byte{}, nil
 }
 
 func (cli *pod) readLog() (io.ReadCloser, error) {
@@ -101,6 +100,12 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 		for i, pd := range podList.Items {
 			allpods[i] = datastore.MakeCompositeString(pd.Name, pd.Namespace)
 			pods[pd.Namespace] = append(pods[pd.Namespace], allpods[i])
+			// Also cache individual pod data as JSON for use in xattributes.
+			if bits, err := json.Marshal(pd); err == nil {
+				cli.cache.Set(cli.Name()+"/"+pd.Namespace+"/pod/"+pd.Name, bits)
+			} else {
+				log.Printf("Unable to marshal pod %v: %v", pd, err)
+			}
 		}
 		pods[allNamespace] = allpods
 
@@ -112,15 +117,4 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 		}
 		return pods[ns], nil
 	})
-}
-
-func (cli *pod) cachedPod(ctx context.Context, ns string, name string) (*corev1.Pod, error) {
-	var result corev1.Pod
-	err := datastore.CachedMarshalable(cli.cache, cli.String(), &result, func() (datastore.Marshalable, error) {
-		return cli.CoreV1().Pods(ns).Get(name, metav1.GetOptions{})
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &result, nil
 }
