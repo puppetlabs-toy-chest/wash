@@ -117,6 +117,12 @@ func applyAttr(a *fuse.Attr, attr *Attributes) {
 	a.Crtime = startTime
 }
 
+// Getattr implements the NodeGetattrer interface.
+func (d *Dir) Getattr(ctx context.Context, req *fuse.GetattrRequest, resp *fuse.GetattrResponse) error {
+	log.Printf("Getattr[pid=%v] %v", req.Pid, d)
+	return d.Attr(ctx, &resp.Attr)
+}
+
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := d.DirProtocol.Attr(ctx)
@@ -142,7 +148,7 @@ func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *f
 	for k := range xattrs {
 		resp.Append(k)
 	}
-	log.Printf("Listxattr %v", d)
+	log.Printf("Listxattr[pid=%v] %v", req.Pid, d)
 	return nil
 }
 
@@ -159,7 +165,7 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 	}
 
 	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr %v", d)
+	log.Printf("Getxattr[pid=%v] %v", req.Pid, d)
 	return nil
 }
 
@@ -192,7 +198,7 @@ func prefetch(entry fs.Node) {
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entry, err := d.Find(ctx, req.Name)
 	if err == nil {
-		log.Printf("Found %v in %v", req.Name, d)
+		log.Printf("Find[pid=%v] %v", req.Pid, entry)
 		prefetch(entry)
 	} else {
 		log.Printf("%v not found in %v", req.Name, d)
@@ -208,7 +214,7 @@ func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		return nil, err
 	}
 
-	log.Printf("Listed %v in %v", len(entries), d)
+	log.Printf("List %v in %v", len(entries), d)
 
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
@@ -239,6 +245,12 @@ func (f *File) String() string {
 	return f.Name()
 }
 
+// Getattr implements the NodeGetattrer interface.
+func (f *File) Getattr(ctx context.Context, req *fuse.GetattrRequest, resp *fuse.GetattrResponse) error {
+	log.Printf("Getattr[pid=%v] %v", req.Pid, f)
+	return f.Attr(ctx, &resp.Attr)
+}
+
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := f.FileProtocol.Attr(ctx)
@@ -264,7 +276,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 	for k := range xattrs {
 		resp.Append(k)
 	}
-	log.Printf("Listxattr %v", f)
+	log.Printf("Listxattr[pid=%v] %v", req.Pid, f)
 	return nil
 }
 
@@ -281,25 +293,26 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 	}
 
 	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr %v", f)
+	log.Printf("Getxattr[pid=%v] %v", req.Pid, f)
 	return nil
 }
 
 // Open a file for reading.
 func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	log.Printf("Opening %v", f)
+	log.Printf("Opening[pid=%v] %v", req.Pid, f)
 	r, err := f.FileProtocol.Open(ctx)
 	if err != nil {
 		log.Printf("Error[Open,%v]: %v", f, err)
 		return nil, err
 	}
-	log.Printf("Opened %v", f)
-	return &FileHandle{r: r}, nil
+	log.Printf("Opened[pid=%v] %v", req.Pid, f)
+	return &FileHandle{r: r, id: f.String()}, nil
 }
 
 // Release closes the open file.
 func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
+	log.Printf("Release[pid=%v] %v", req.Pid, fh.id)
 	if closer, ok := fh.r.(io.Closer); ok {
 		return closer.Close()
 	}
@@ -313,7 +326,7 @@ func (fh *FileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fus
 	if err == io.EOF {
 		err = nil
 	}
-	log.Printf("Read %v/%v bytes starting at %v: %v", n, req.Size, req.Offset, err)
+	log.Printf("Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
 	resp.Data = buf[:n]
 	return err
 }
