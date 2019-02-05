@@ -146,7 +146,7 @@ func (cli *service) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *service) Xattr(ctx context.Context) (map[string][]byte, error) {
-	return nil, plugin.ENOTSUP
+	return map[string][]byte{}, nil
 }
 
 func (cli *service) close(ctx context.Context) error {

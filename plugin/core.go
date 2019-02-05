@@ -70,8 +70,7 @@ func (f *FS) Attr(ctx context.Context) (*Attributes, error) {
 
 // Xattr returns an empty map.
 func (f *FS) Xattr(ctx context.Context) (map[string][]byte, error) {
-	data := make(map[string][]byte)
-	return data, nil
+	return map[string][]byte{}, nil
 }
 
 // ==== FUSE Directory Interface ====
@@ -144,12 +143,14 @@ func prefetch(entry fs.Node) {
 	case *Dir:
 		go func() { v.List(context.Background()) }()
 	case *File:
+		// TODO: This can be pretty expensive. Probably better to move it to individual implementations
+		// where they can choose to do this if Attr is requested.
 		go func() {
 			buf, err := v.FileProtocol.Open(context.Background())
-			if err == nil {
+			if closer, ok := buf.(io.Closer); err == nil && ok {
 				go func() {
 					time.Sleep(DefaultTimeout)
-					buf.Close()
+					closer.Close()
 				}()
 			}
 		}()
@@ -271,7 +272,10 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 // Release closes the open file.
 func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	return fh.r.Close()
+	if closer, ok := fh.r.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
 }
 
 // Read fills a buffer with the requested amount of data from the file.

@@ -1,13 +1,14 @@
 package docker
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/json"
 	"sync"
 	"time"
 
+	"github.com/allegro/bigcache"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -17,12 +18,28 @@ type resourcetype struct {
 	*root
 	typename string
 	reqs     sync.Map
+	cache    *bigcache.BigCache
 }
 
 func newResourceTypes(cli *root) map[string]*resourcetype {
 	resourcetypes := make(map[string]*resourcetype)
-	for _, name := range []string{"container"} {
-		resourcetypes[name] = &resourcetype{cli, name, sync.Map{}}
+	// Use individual caches for slower resources like volumes to control the timeout.
+	for name, timeout := range map[string]time.Duration{
+		"container": plugin.DefaultTimeout,
+		"volume":    30 * time.Second,
+	} {
+		cache := cli.cache
+		if plugin.DefaultTimeout != timeout {
+			config := bigcache.DefaultConfig(timeout)
+			config.CleanWindow = 1 * time.Second
+			if ch, err := bigcache.NewBigCache(config); err == nil {
+				cache = ch
+			} else {
+				log.Printf("Unable to create new cache, using existing one: %v", err)
+			}
+		}
+
+		resourcetypes[name] = &resourcetype{root: cli, typename: name, cache: cache}
 	}
 	return resourcetypes
 }
@@ -35,13 +52,22 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 		if err != nil {
 			return nil, err
 		}
-		for _, inst := range containers {
-			if inst.ID == name {
-				log.Debugf("Found container %v", inst)
-				return plugin.NewFile(&container{cli, inst.ID}), nil
-			}
+		if ok := datastore.ContainsString(containers, name); ok {
+			log.Debugf("Found container %v", name)
+			return plugin.NewFile(&container{cli, name}), nil
 		}
 		log.Debugf("Container %v not found in %v", name, cli)
+		return nil, plugin.ENOENT
+	case "volume":
+		volumes, err := cli.cachedVolumeList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if ok := datastore.ContainsString(volumes, name); ok {
+			log.Debugf("Found volume %v", name)
+			return plugin.NewDir(newVolume(cli, name)), nil
+		}
+		log.Debugf("Volume %v not found in %v", name, cli)
 		return nil, plugin.ENOENT
 	}
 	return nil, plugin.ENOTSUP
@@ -58,7 +84,18 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		log.Debugf("Listing %v containers in %v", len(containers), cli)
 		keys := make([]plugin.Node, len(containers))
 		for i, inst := range containers {
-			keys[i] = plugin.NewFile(&container{cli, inst.ID})
+			keys[i] = plugin.NewFile(&container{cli, inst})
+		}
+		return keys, nil
+	case "volume":
+		volumes, err := cli.cachedVolumeList(ctx)
+		if err != nil {
+			return nil, err
+		}
+		log.Debugf("Listing %v volumes in %v", len(volumes), cli)
+		keys := make([]plugin.Node, len(volumes))
+		for i, vol := range volumes {
+			keys[i] = plugin.NewDir(newVolume(cli, vol))
 		}
 		return keys, nil
 	}
@@ -91,30 +128,42 @@ func (cli *resourcetype) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *resourcetype) Xattr(ctx context.Context) (map[string][]byte, error) {
-	return nil, plugin.ENOTSUP
+	return map[string][]byte{}, nil
 }
 
-func (cli *root) cachedContainerList(ctx context.Context) ([]types.Container, error) {
-	entry, err := cli.Get(cli.Name())
-	var containers []types.Container
-	if err == nil {
-		log.Debugf("Cache hit on %v", cli.Name())
-		dec := gob.NewDecoder(bytes.NewReader(entry))
-		err = dec.Decode(&containers)
-	} else {
-		log.Printf("Cache miss on %v", cli.Name())
-		containers, err = cli.ContainerList(ctx, types.ContainerListOptions{})
+func (cli *resourcetype) cachedContainerList(ctx context.Context) ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+		containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 		if err != nil {
 			return nil, err
 		}
+		strings := make([]string, len(containers))
+		for i, container := range containers {
+			strings[i] = container.ID
+		}
+		cli.updated = time.Now()
+		return strings, nil
+	})
+}
 
-		var data bytes.Buffer
-		enc := gob.NewEncoder(&data)
-		if err := enc.Encode(&containers); err != nil {
+func (cli *resourcetype) cachedVolumeList(ctx context.Context) ([]string, error) {
+	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+		volumes, err := cli.VolumeList(ctx, filters.Args{})
+		if err != nil {
 			return nil, err
 		}
-		cli.Set(cli.Name(), data.Bytes())
+		strings := make([]string, len(volumes.Volumes))
+		for i, volume := range volumes.Volumes {
+			strings[i] = volume.Name
+			// Also cache 'volume', as this is the same data returned by VolumeInspect.
+			// Store as JSON since that's how we'll process it.
+			if js, err := json.Marshal(volume); err == nil {
+				cli.cache.Set(cli.String()+"/"+volume.Name, js)
+			} else {
+				log.Printf("Unable to marshal volume %v to JSON: %v", volume, err)
+			}
+		}
 		cli.updated = time.Now()
-	}
-	return containers, err
+		return strings, nil
+	})
 }

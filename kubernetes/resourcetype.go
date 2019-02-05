@@ -3,7 +3,9 @@ package kubernetes
 import (
 	"context"
 	"sync"
+	"time"
 
+	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -13,12 +15,28 @@ type resourcetype struct {
 	*namespace
 	typename string
 	reqs     sync.Map
+	cache    *bigcache.BigCache
 }
 
 func newResourceTypes(ns *namespace) map[string]*resourcetype {
 	resourcetypes := make(map[string]*resourcetype)
-	for _, name := range []string{"pod"} {
-		resourcetypes[name] = &resourcetype{ns, name, sync.Map{}}
+	// Use individual caches for slower resources like volumes to control the timeout.
+	for name, timeout := range map[string]time.Duration{
+		"pod": plugin.DefaultTimeout,
+		"pvc": 30 * time.Second,
+	} {
+		cache := ns.cache
+		if plugin.DefaultTimeout != timeout {
+			config := bigcache.DefaultConfig(timeout)
+			config.CleanWindow = 1 * time.Second
+			if ch, err := bigcache.NewBigCache(config); err == nil {
+				cache = ch
+			} else {
+				log.Printf("Unable to create new cache, using existing one: %v", err)
+			}
+		}
+
+		resourcetypes[name] = &resourcetype{ns, name, sync.Map{}, cache}
 	}
 	return resourcetypes
 }
@@ -31,6 +49,15 @@ func (cli *resourcetype) Find(ctx context.Context, name string) (plugin.Node, er
 			if id, ok := datastore.FindCompositeString(pods, name); ok {
 				log.Debugf("Found pod %v in %v", id, cli)
 				return plugin.NewFile(newPod(cli, id)), nil
+			}
+		}
+		log.Debugf("Did not find %v in %v", name, cli)
+		return nil, plugin.ENOENT
+	case "pvc":
+		if pvcs, err := cli.cachedPvcs(ctx, cli.name); err == nil {
+			if id, ok := datastore.FindCompositeString(pvcs, name); ok {
+				log.Debugf("Found persistent volume claim %v in %v", id, cli)
+				return plugin.NewDir(newPvc(cli, id)), nil
 			}
 		}
 		log.Debugf("Did not find %v in %v", name, cli)
@@ -51,6 +78,17 @@ func (cli *resourcetype) List(ctx context.Context) ([]plugin.Node, error) {
 		entries := make([]plugin.Node, len(pods))
 		for i, id := range pods {
 			entries[i] = plugin.NewFile(newPod(cli, id))
+		}
+		return entries, nil
+	case "pvc":
+		pvcs, err := cli.cachedPvcs(ctx, cli.name)
+		if err != nil {
+			return nil, err
+		}
+		log.Debugf("Listing %v pvcs in %v", len(pvcs), cli)
+		entries := make([]plugin.Node, len(pvcs))
+		for i, id := range pvcs {
+			entries[i] = plugin.NewDir(newPvc(cli, id))
 		}
 		return entries, nil
 	}
@@ -83,5 +121,5 @@ func (cli *resourcetype) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *resourcetype) Xattr(ctx context.Context) (map[string][]byte, error) {
-	return nil, plugin.ENOTSUP
+	return map[string][]byte{}, nil
 }

@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"io"
+	"os"
 	"time"
 
 	"bazil.org/fuse"
@@ -14,12 +15,14 @@ import (
 // IFileBuffer represents a file that can be ReadAt and Close.
 type IFileBuffer interface {
 	io.ReaderAt
-	io.Closer
 }
 
 // Attributes of resources.
 type Attributes struct {
+	Atime time.Time
 	Mtime time.Time
+	Ctime time.Time
+	Mode  os.FileMode
 	Size  uint64
 	Valid time.Duration
 }
