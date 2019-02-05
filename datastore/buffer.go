@@ -140,7 +140,11 @@ func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan boo
 		b.mux.Unlock()
 
 		if err == io.EOF {
+			b.mux.Lock()
 			b.input.Close()
+			b.input = nil
+			b.mux.Unlock()
+
 			break
 		} else if err != nil {
 			log.Printf("Read failed, perhaps connection or file was closed: %v", err)
@@ -165,8 +169,13 @@ func (b *StreamBuffer) ReadAt(p []byte, off int64) (int, error) {
 // Close implements the Closer interface. Includes reference counting of
 // times a stream was requested and only closes the input when that reaches 0.
 func (b *StreamBuffer) Close() error {
-	if count := b.decr(); count == 0 && b.input != nil {
-		return b.input.Close()
+	if count := b.decr(); count == 0 {
+		b.mux.Lock()
+		defer b.mux.Unlock()
+
+		if b.input != nil {
+			return b.input.Close()
+		}
 	}
 	return nil
 }
