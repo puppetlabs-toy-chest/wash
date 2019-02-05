@@ -63,7 +63,8 @@ func StatParse(line string) (Attributes, string, error) {
 		0002000: os.ModeSetgid,
 		0001000: os.ModeSticky,
 	} {
-		if mode&bits != 0 {
+		// Ensure exact match of all bits in the mask.
+		if mode&bits == bits {
 			attr.Mode |= mod
 		}
 	}

@@ -101,7 +101,8 @@ var _ = fs.NodeListxattrer(&File{})
 
 // FileHandle contains an IO object that can be read.
 type FileHandle struct {
-	r IFileBuffer
+	r  IFileBuffer
+	id string
 }
 
 var _ fs.Handle = (*FileHandle)(nil)
