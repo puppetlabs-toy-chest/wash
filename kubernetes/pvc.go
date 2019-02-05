@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/gob"
@@ -10,7 +9,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -62,10 +60,6 @@ func (cli *pvc) List(ctx context.Context) ([]plugin.Node, error) {
 
 	entries := make([]plugin.Node, 0, len(attrs))
 	for entry, attr := range attrs {
-		if entry == ".." || entry == "." {
-			continue
-		}
-
 		newvol := &pvc{cli.resourcetype, cli.name, cli.ns, cli.path + "/" + entry, attr, sync.Mutex{}}
 		if attr.Mode.IsDir() {
 			entries = append(entries, plugin.NewDir(newvol))
@@ -76,10 +70,14 @@ func (cli *pvc) List(ctx context.Context) ([]plugin.Node, error) {
 	return entries, nil
 }
 
-// A unique string describing the pod. Note that the same pod may appear in a specific namespace and 'all'.
+func (cli *pvc) baseID() string {
+	return cli.resourcetype.client.Name() + "/" + cli.ns + "/pvc/" + cli.Name()
+}
+
+// A unique string describing the pod. Note that the same pvc may appear in a specific namespace and 'all'.
 // It should use the same identifier in both cases.
 func (cli *pvc) String() string {
-	return cli.resourcetype.client.Name() + "/" + cli.ns + "/pvc/" + cli.Name()
+	return cli.baseID() + cli.path
 }
 
 func (cli *pvc) Name() string {
@@ -138,14 +136,14 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := cli.createPod(plugin.StatCmd(mountpoint + cli.path))
+	pid, err := cli.createPod(plugin.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
 	podi := cli.CoreV1().Pods(cli.ns)
 	defer podi.Delete(pid, &metav1.DeleteOptions{})
 
-	log.Printf("Waiting for pod %v", pid)
+	log.Debugf("Waiting for pod %v", pid)
 	// Start watching for new events related to the pod we created.
 	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
 	watcher, err := podi.Watch(watchOpts)
@@ -181,14 +179,13 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 		}
 	}
 
-	log.Printf("Reading logs for pod %v", pid)
+	log.Debugf("Gathering logs for %v", pid)
 	output, err := podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 	if err != nil {
 		return nil, err
 	}
 	defer output.Close()
 
-	// TODO: pod errors if the mounted volume is empty.
 	if !success {
 		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
@@ -197,28 +194,19 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 		return nil, errors.New(string(bytes))
 	}
 
-	scanner := bufio.NewScanner(output)
-	attrs := make(map[string]plugin.Attributes)
-	for scanner.Scan() {
-		text := strings.TrimSpace(scanner.Text())
-		if text != "" && !strings.HasPrefix(text, "stat:") {
-			attr, name, err := plugin.StatParse(text)
-			if err != nil {
-				return nil, err
-			}
-			if name == ".." || name == "." {
-				continue
-			}
-			attrs[name] = attr
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	attrs, err := plugin.StatParseAll(output, mountpoint)
+	if err != nil {
 		return nil, err
 	}
 
+	for dir, attrmap := range attrs {
+		key := cli.baseID() + dir + "list"
+		if err = datastore.CacheAny(cli.cache, key, attrmap); err != nil {
+			log.Printf("Failed to cache %v: %v", key, err)
+		}
+	}
 	cli.updated = time.Now()
-	err = datastore.CacheAny(cli.cache, key, attrs)
-	return attrs, err
+	return attrs[cli.path+"/"], err
 }
 
 /*

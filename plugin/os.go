@@ -1,7 +1,9 @@
 package plugin
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
@@ -18,7 +20,7 @@ func StatCmd(path string) []string {
 	// %Z - Time of last status change as seconds since Epoch
 	// %f - Raw mode in hex
 	// %n - File name
-	return []string{"sh", "-c", "stat -c '%s %X %Y %Z %f %n' " + path + "/.* " + path + "/*"}
+	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", ";"}
 }
 
 // StatParse parses a single line of the output of StatCmd into Attrbutes and a name.
@@ -66,6 +68,33 @@ func StatParse(line string) (Attributes, string, error) {
 		}
 	}
 
-	_, file := path.Split(segments[5])
-	return attr, file, nil
+	return attr, segments[5], nil
+}
+
+// StatParseAll an output stream that is the result of running StatCmd.
+// Strips 'base' from the file paths, and maps each directory (full path with trailing slash)
+// to a map of files in that directory and their attributes.
+func StatParseAll(output io.Reader, base string) (map[string]map[string]Attributes, error) {
+	scanner := bufio.NewScanner(output)
+	attrs := make(map[string]map[string]Attributes)
+	for scanner.Scan() {
+		text := strings.TrimSpace(scanner.Text())
+		if text != "" {
+			attr, fullpath, err := StatParse(text)
+			if err != nil {
+				return nil, err
+			}
+
+			relative := strings.TrimPrefix(fullpath, base)
+			parent, file := path.Split(relative)
+			if len(attrs[parent]) == 0 {
+				attrs[parent] = make(map[string]Attributes)
+			}
+			attrs[parent][file] = attr
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return attrs, nil
 }

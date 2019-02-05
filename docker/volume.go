@@ -2,14 +2,12 @@ package docker
 
 import (
 	"archive/tar"
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
 	"io/ioutil"
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -60,10 +58,6 @@ func (cli *volume) List(ctx context.Context) ([]plugin.Node, error) {
 
 	entries := make([]plugin.Node, 0, len(attrs))
 	for entry, attr := range attrs {
-		if entry == ".." || entry == "." {
-			continue
-		}
-
 		newvol := &volume{cli.resourcetype, cli.name, cli.path + "/" + entry, attr, sync.Mutex{}}
 		if attr.Mode.IsDir() {
 			entries = append(entries, plugin.NewDir(newvol))
@@ -74,8 +68,12 @@ func (cli *volume) List(ctx context.Context) ([]plugin.Node, error) {
 	return entries, nil
 }
 
+func (cli *volume) baseID() string {
+	return cli.resourcetype.String() + "/" + cli.name
+}
+
 func (cli *volume) String() string {
-	return cli.resourcetype.String() + "/" + cli.name + cli.path
+	return cli.baseID() + cli.path
 }
 
 func (cli *volume) Name() string {
@@ -133,7 +131,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	log.Printf("Cache miss on %v", key)
 
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cid, err := cli.createContainer(ctx, plugin.StatCmd(mountpoint+cli.path))
+	cid, err := cli.createContainer(ctx, plugin.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +165,6 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	}
 	defer output.Close()
 
-	// TODO: pod errors if the mounted volume is empty.
 	if statusCode != 0 {
 		bytes, err := ioutil.ReadAll(output)
 		if err != nil {
@@ -176,28 +173,19 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 		return nil, errors.New(string(bytes))
 	}
 
-	scanner := bufio.NewScanner(output)
-	attrs := make(map[string]plugin.Attributes)
-	for scanner.Scan() {
-		text := strings.TrimSpace(scanner.Text())
-		if text != "" {
-			attr, name, err := plugin.StatParse(text)
-			if err != nil {
-				return nil, err
-			}
-			if name == ".." || name == "." {
-				continue
-			}
-			attrs[name] = attr
-		}
-	}
-	if err := scanner.Err(); err != nil {
+	attrs, err := plugin.StatParseAll(output, mountpoint)
+	if err != nil {
 		return nil, err
 	}
 
+	for dir, attrmap := range attrs {
+		key := cli.baseID() + dir + "list"
+		if err = datastore.CacheAny(cli.cache, key, attrmap); err != nil {
+			log.Printf("Failed to cache %v: %v", key, err)
+		}
+	}
 	cli.updated = time.Now()
-	err = datastore.CacheAny(cli.cache, key, attrs)
-	return attrs, err
+	return attrs[cli.path+"/"], err
 }
 
 func (cli *volume) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
