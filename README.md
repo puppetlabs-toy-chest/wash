@@ -58,6 +58,8 @@ docker exec -it wash sh
 
 ## Examples
 
+> This is a collection of examples showing how we think `wash` could work. The actual project doesn't currently reflect many of these patterns.
+
 We approach the shell as a way of understanding what cloud resources exist that we can see, and a set of tools for interacting with them.
 
 ### Navigation
