@@ -8,7 +8,6 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"cloud.google.com/go/pubsub"
-	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	dataflow "google.golang.org/api/dataflow/v1b3"
@@ -21,13 +20,13 @@ type service struct {
 	updated   time.Time
 	client    interface{}
 	reqs      sync.Map
-	cache     *bigcache.BigCache
+	cache     *datastore.MemCache
 }
 
 // Google auto-generated API scopes needed by services.
 var serviceScopes = []string{dataflow.CloudPlatformScope}
 
-func newServices(proj string, projectid string, oauthClient *http.Client, cache *bigcache.BigCache) (map[string]*service, error) {
+func newServices(proj string, projectid string, oauthClient *http.Client, cache *datastore.MemCache) (map[string]*service, error) {
 	ongoing := context.Background()
 	pubsubClient, err := pubsub.NewClient(ongoing, proj)
 	if err != nil {

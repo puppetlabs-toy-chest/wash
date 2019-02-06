@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/allegro/bigcache"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -18,7 +18,7 @@ type project struct {
 }
 
 // NewProject creates a new project with a collection of service clients.
-func newProject(name string, clientid string, oauthClient *http.Client, cache *bigcache.BigCache) (*project, error) {
+func newProject(name string, clientid string, oauthClient *http.Client, cache *datastore.MemCache) (*project, error) {
 	proj := &project{name, clientid, time.Now(), nil}
 	services, err := newServices(name, proj.String(), oauthClient, cache)
 	if err != nil {

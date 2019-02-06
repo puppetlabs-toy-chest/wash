@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -19,7 +18,7 @@ import (
 
 type client struct {
 	*k8s.Clientset
-	cache      *bigcache.BigCache
+	cache      *datastore.MemCache
 	nsmux      sync.RWMutex
 	namespaces map[string]*namespace
 	updated    time.Time
@@ -51,7 +50,7 @@ func ListContexts() (map[string]clientcmd.ClientConfig, error) {
 }
 
 // Create a new kubernetes client.
-func Create(name string, context interface{}, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
+func Create(name string, context interface{}, cache *datastore.MemCache) (plugin.DirProtocol, error) {
 	config, err := context.(clientcmd.ClientConfig).ClientConfig()
 	if err != nil {
 		return nil, err

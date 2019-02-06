@@ -207,7 +207,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 
 	for dir, attrmap := range attrs {
 		key := cli.baseID() + dir + "list"
-		if err = datastore.CacheAny(cli.cache, key, attrmap); err != nil {
+		if err = cli.cache.SetAny(key, attrmap, datastore.Slow); err != nil {
 			log.Printf("Failed to cache %v: %v", key, err)
 		}
 	}
@@ -260,7 +260,7 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	}
 
 	cli.updated = time.Now()
-	cli.cache.Set(key, bits)
+	cli.cache.SetSlow(key, bits)
 	return bytes.NewReader(bits), nil
 }
 
@@ -330,7 +330,7 @@ func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) 
 		for name, data := range pvcs {
 			// Skip the one we're returning because CachedStrings will encode and store to cache for us.
 			if name != ns {
-				datastore.CacheAny(cli.cache, cli.Name()+"/pvcs/"+name, data)
+				cli.cache.SetAny(cli.Name()+"/pvcs/"+name, data, datastore.Fast)
 			}
 		}
 		return pvcs[ns], nil

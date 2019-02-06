@@ -180,7 +180,7 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 
 	for dir, attrmap := range attrs {
 		key := cli.baseID() + dir + "list"
-		if err = datastore.CacheAny(cli.cache, key, attrmap); err != nil {
+		if err = cli.cache.SetAny(key, attrmap, datastore.Slow); err != nil {
 			log.Printf("Failed to cache %v: %v", key, err)
 		}
 	}
@@ -230,7 +230,7 @@ func (cli *volume) cachedContent(ctx context.Context) (plugin.IFileBuffer, error
 	}
 
 	cli.updated = time.Now()
-	cli.cache.Set(key, bits)
+	cli.cache.SetSlow(key, bits)
 	return bytes.NewReader(bits), nil
 }
 

@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/allegro/bigcache"
 	"github.com/docker/docker/client"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
 
 type root struct {
 	*client.Client
-	cache         *bigcache.BigCache
+	cache         *datastore.MemCache
 	updated       time.Time
 	root          string
 	resourcetypes map[string]*resourcetype
@@ -24,7 +24,7 @@ type root struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new docker client.
-func Create(name string, _ interface{}, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
+func Create(name string, _ interface{}, cache *datastore.MemCache) (plugin.DirProtocol, error) {
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
