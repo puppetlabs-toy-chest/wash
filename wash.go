@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,11 +10,11 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/aws"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/gcp"
 	"github.com/puppetlabs/wash/kubernetes"
-	"github.com/puppetlabs/wash/aws"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -48,7 +47,7 @@ func main() {
 	}
 
 	mountpoint := flag.Arg(0)
-	go startAPI(filesys, 3333)
+	go startAPI(filesys, "wash-api.sock")
 
 	if err := serveFuseFS(filesys, mountpoint); err != nil {
 		log.Printf("%v", err)
@@ -56,34 +55,44 @@ func main() {
 	}
 }
 
-func startAPI(filesys *plugin.FS, port int) error {
+func startAPI(filesys *plugin.FS, socketPath string) error {
 	log.Printf("API: started")
-	server, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+
+	if _, err := os.Stat(socketPath); err == nil {
+		// Socket already exists, so nuke it and recreate it
+		log.Printf("API: Cleaning up old socket")
+		if err := os.Remove(socketPath); err != nil {
+			log.Printf("API: %v", err)
+			return err
+		}
+	}
+
+	server, err := net.Listen("unix", socketPath)
 	if err != nil {
+		log.Printf("API: %v", err)
 		return err
 	}
-	defer server.Close()
 
 	for {
 		conn, err := server.Accept()
 		log.Printf("API: accepted connection")
 		if err != nil {
-			log.Printf("%v", err)
+			log.Printf("API: %v", err)
 			return err
 		}
-		go handleAPIRequest(conn, filesys)
+		go func() {
+			if err := handleAPIRequest(conn, filesys); err != nil {
+				log.Printf("API: %v", err)
+			}
+		}()
 	}
 }
 
 func handleAPIRequest(conn net.Conn, filesys *plugin.FS) error {
 	defer conn.Close()
-	reader := bufio.NewReader(conn)
-	str, err := reader.ReadString('\n')
-	if err != nil {
-		log.Printf("%v", err)
-		return err
-	}
-	fmt.Fprintf(os.Stderr, "API: %s", str)
+
+	// TODO: Fill in with an actual API
+
 	return nil
 }
 
@@ -127,7 +136,7 @@ func buildFS() (*plugin.FS, error) {
 
 	awsProfiles, err := aws.ListProfiles()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, profile := range awsProfiles {
 		pluginInstantiators["aws_"+profile] = instData{aws.Create, profile}
