@@ -18,11 +18,6 @@ type root struct {
 	resourcetypes map[string]*resourcetype
 }
 
-// Defines how quickly we should allow checks for updated content. This has to be consistent
-// across files and directories or we may not detect updates quickly enough, especially for files
-// that previously were empty.
-const validDuration = 100 * time.Millisecond
-
 // Create a new docker client.
 func Create(name string, _ interface{}, cache *datastore.MemCache) (plugin.DirProtocol, error) {
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
@@ -72,7 +67,7 @@ func (cli *root) Attr(ctx context.Context) (*plugin.Attributes, error) {
 			latest = attr.Mtime
 		}
 	}
-	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: latest}, nil
 }
 
 // Xattr returns a map of extended attributes.

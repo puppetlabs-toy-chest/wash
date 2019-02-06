@@ -90,7 +90,7 @@ func (cli *volume) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	}
 	// Rather than load a pod to get mtime, say it's always changing.
 	// Leave it up to the caller whether they need to dig further.
-	return &plugin.Attributes{Mtime: time.Now(), Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: time.Now()}, nil
 }
 
 func (cli *volume) Xattr(ctx context.Context) (map[string][]byte, error) {

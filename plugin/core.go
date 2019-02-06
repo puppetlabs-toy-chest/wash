@@ -131,7 +131,7 @@ var startTime = time.Now()
 
 // Applies attributes where non-default, and sets defaults otherwise.
 func applyAttr(a *fuse.Attr, attr *Attributes) {
-	a.Valid = 1 * time.Minute
+	a.Valid = 1 * time.Second
 	if attr.Valid != 0 {
 		a.Valid = attr.Valid
 	}

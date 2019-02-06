@@ -107,7 +107,7 @@ func (cli *resourcetype) Attr(ctx context.Context) (*plugin.Attributes, error) {
 		}
 		return true
 	})
-	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: latest}, nil
 }
 
 // Xattr returns a map of extended attributes.

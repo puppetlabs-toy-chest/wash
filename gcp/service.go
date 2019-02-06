@@ -140,7 +140,7 @@ func (cli *service) Name() string {
 
 // Attr returns attributes of the named resource.
 func (cli *service) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	return &plugin.Attributes{Mtime: cli.lastUpdate(), Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: cli.lastUpdate()}, nil
 }
 
 // Xattr returns a map of extended attributes.

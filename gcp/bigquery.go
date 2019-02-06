@@ -57,7 +57,7 @@ func (cli *bigqueryDataset) List(ctx context.Context) ([]plugin.Node, error) {
 
 // Attr returns attributes of the named resource.
 func (cli *bigqueryDataset) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	return &plugin.Attributes{Mtime: cli.updated, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: cli.updated}, nil
 }
 
 // Xattr returns a map of extended attributes.
@@ -92,7 +92,7 @@ func (cli *bigqueryTable) Name() string {
 
 // Attr returns attributes of the named table.
 func (cli *bigqueryTable) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	return &plugin.Attributes{Mtime: cli.dataset.updated, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: cli.dataset.updated}, nil
 }
 
 // Xattr returns a map of extended attributes.
