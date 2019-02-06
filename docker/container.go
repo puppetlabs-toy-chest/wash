@@ -42,6 +42,9 @@ func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
+	// Prefetch content for next time.
+	go plugin.PrefetchOpen(inst)
+
 	return &plugin.Attributes{Mtime: inst.updated, Valid: validDuration}, nil
 }
 

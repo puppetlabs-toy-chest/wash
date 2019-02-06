@@ -14,7 +14,7 @@ import (
 
 var slow = false
 
-// DefaultTimeout is a default cache timeout.
+// DefaultTimeout is a default timeout for prefetched data.
 const DefaultTimeout = 10 * time.Second
 
 // Init sets up plugin core configuration on startup.
@@ -182,17 +182,7 @@ func prefetch(entry fs.Node) {
 	case *Dir:
 		go func() { v.List(context.Background()) }()
 	case *File:
-		// TODO: This can be pretty expensive. Probably better to move it to individual implementations
-		// where they can choose to do this if Attr is requested.
-		go func() {
-			buf, err := v.FileProtocol.Open(context.Background())
-			if closer, ok := buf.(io.Closer); err == nil && ok {
-				go func() {
-					time.Sleep(DefaultTimeout)
-					closer.Close()
-				}()
-			}
-		}()
+		log.Debugf("Prefetch is not enabled for files due to potentail cost")
 	default:
 		log.Debugf("Not sure how to prefetch for %v", v)
 	}
