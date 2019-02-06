@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 )
@@ -42,4 +43,14 @@ func SplitCompositeString(id string) (string, string) {
 // MakeCompositeString makes a composite string by joining name and extra with a '/' separator.
 func MakeCompositeString(name string, extra string) string {
 	return name + "/" + extra
+}
+
+// Keys returns an array of keys consisting of all '/' separated subkeys between base and start,
+// including an optional suffix.
+func Keys(base string, start string, suffix string) []string {
+	ks := make([]string, 0)
+	for pre := start; pre != "" && pre != "/"; pre = path.Dir(pre) {
+		ks = append(ks, base+pre+suffix)
+	}
+	return append(ks, base+suffix)
 }

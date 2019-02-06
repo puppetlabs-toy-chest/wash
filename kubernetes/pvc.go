@@ -158,6 +158,13 @@ func waitForPod(podi typev1.PodInterface, pid string) error {
 }
 
 func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
+	// Lock all known paths. That way if a deeper path is refreshing the cache, we'll wait for it to finish.
+	keys := datastore.Keys(cli.baseID(), cli.path, "/list")
+	for _, l := range cli.cache.LocksForKeys(keys) {
+		l.Lock()
+		defer l.Unlock()
+	}
+
 	key := cli.String() + "/list"
 	entry, err := cli.cache.Get(key)
 	if err == nil {

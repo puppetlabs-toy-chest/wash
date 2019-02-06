@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/allegro/bigcache"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/puppetlabs/wash/log"
 )
 
@@ -25,9 +26,11 @@ const (
 // Backends lists available backend keys.
 var Backends = []TTL{Slow, Fast}
 
-// MemCache is an in-memory cache. It supports concurrent get/set.
+// MemCache is an in-memory cache. It supports concurrent get/set, as well as the ability
+// to get-or-update cached data in a single transaction to avoid redundant update activity.
 type MemCache struct {
 	backends map[TTL]*bigcache.BigCache
+	locks    []*locksutil.LockEntry
 }
 
 // NewMemCache creates a new in-memory cache populated with available TTLs.
@@ -42,7 +45,7 @@ func NewMemCache() (*MemCache, error) {
 		}
 		backends[ttl] = backend
 	}
-	return &MemCache{backends}, nil
+	return &MemCache{backends, locksutil.CreateLocks()}, nil
 }
 
 // Get a cached entry by key from the cache.
@@ -103,6 +106,17 @@ func (cache *MemCache) SetAny(key string, obj interface{}, ttl TTL) error {
 	return nil
 }
 
+// LockForKey retrieve the lock used for a specific key.
+func (cache *MemCache) LockForKey(key string) *locksutil.LockEntry {
+	return locksutil.LockForKey(cache.locks, key)
+}
+
+// LocksForKeys retrieves a list of locks used for a specific key. They must be locked
+// in-order to avoid deadlocks.
+func (cache *MemCache) LocksForKeys(keys []string) []*locksutil.LockEntry {
+	return locksutil.LocksForKeys(cache.locks, keys)
+}
+
 // Marshalable is an object that can be marshaled and unmarshaled.
 type Marshalable interface {
 	Marshal() ([]byte, error)
@@ -111,6 +125,11 @@ type Marshalable interface {
 
 // CachedMarshalable retrieves a cached item that can be marshaled and unmarshaled.
 func (cache *MemCache) CachedMarshalable(key string, obj Marshalable, cb func() (Marshalable, error)) error {
+	// Acquire a lock for the duration of this operation.
+	l := cache.LockForKey(key)
+	l.Lock()
+	defer l.Unlock()
+
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
@@ -135,6 +154,10 @@ func (cache *MemCache) CachedMarshalable(key string, obj Marshalable, cb func() 
 
 // CachedJSON retrieves cached JSON. If uncached, uses the callback to initialize the cache.
 func (cache *MemCache) CachedJSON(key string, cb func() ([]byte, error)) ([]byte, error) {
+	l := cache.LockForKey(key)
+	l.Lock()
+	defer l.Unlock()
+
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
@@ -154,6 +177,10 @@ func (cache *MemCache) CachedJSON(key string, cb func() ([]byte, error)) ([]byte
 // CachedStrings retrieves a cached array of strings. If uncached, uses the callback to initialize the cache.
 // Returned array will always be sorted lexicographically.
 func (cache *MemCache) CachedStrings(key string, cb func() ([]string, error)) ([]string, error) {
+	l := cache.LockForKey(key)
+	l.Lock()
+	defer l.Unlock()
+
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
