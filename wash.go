@@ -13,6 +13,7 @@ import (
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/gcp"
 	"github.com/puppetlabs/wash/kubernetes"
+	"github.com/puppetlabs/wash/aws"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -80,6 +81,14 @@ func mount(mountpoint string) error {
 	}
 	for name, context := range k8sContexts {
 		pluginInstantiators["kubernetes_"+name] = instData{kubernetes.Create, context}
+	}
+
+	awsProfiles, err := aws.ListProfiles()
+	if err != nil {
+		return err
+	}
+	for _, profile := range awsProfiles {
+		pluginInstantiators["aws_"+profile] = instData{aws.Create, profile}
 	}
 
 	plugins := make(chan pluginInit)

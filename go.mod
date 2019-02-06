@@ -10,6 +10,8 @@ require (
 	github.com/Microsoft/go-winio v0.4.11 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/allegro/bigcache v1.1.0
+	github.com/aws/aws-sdk-go v1.16.28
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
 	github.com/docker/distribution v2.7.0+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -37,12 +39,14 @@ require (
 	github.com/pkg/xattr v0.4.0
 	github.com/sirupsen/logrus v1.3.0 // indirect
 	github.com/spf13/pflag v1.0.3 // indirect
+	github.com/wallix/awless v0.1.11 // indirect
 	go.opencensus.io v0.19.0 // indirect
 	golang.org/x/net v0.0.0-20190110200230-915654e7eabc // indirect
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890
 	golang.org/x/sys v0.0.0-20190114130336-2be517255631 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/api v0.1.0
+	gopkg.in/go-ini/ini.v1 v1.41.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20181221193117-173ce66c1e39
