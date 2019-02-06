@@ -72,12 +72,13 @@ func StatParse(line string) (Attributes, string, error) {
 	return attr, segments[5], nil
 }
 
-// StatParseAll an output stream that is the result of running StatCmd.
-// Strips 'base' from the file paths, and maps each directory (full path with trailing slash)
-// to a map of files in that directory and their attributes.
+// StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
+// file paths, and maps each directory to a map of files in that directory and their attributes.
 func StatParseAll(output io.Reader, base string) (map[string]map[string]Attributes, error) {
 	scanner := bufio.NewScanner(output)
-	attrs := make(map[string]map[string]Attributes)
+	// Create lookup table for directories to contents, and prepopulate the root entry because
+	// the mount point won't be included in the stat output.
+	attrs := map[string]map[string]Attributes{"": make(map[string]Attributes)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {
@@ -87,10 +88,14 @@ func StatParseAll(output io.Reader, base string) (map[string]map[string]Attribut
 			}
 
 			relative := strings.TrimPrefix(fullpath, base)
-			parent, file := path.Split(relative)
-			if len(attrs[parent]) == 0 {
-				attrs[parent] = make(map[string]Attributes)
+			// Create an entry for each directory.
+			if attr.Mode.IsDir() {
+				attrs[relative] = make(map[string]Attributes)
 			}
+
+			// Add each entry to its parent's listing.
+			parent, file := path.Split(relative)
+			parent = strings.TrimSuffix(parent, "/")
 			attrs[parent][file] = attr
 		}
 	}
