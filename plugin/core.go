@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -84,7 +85,7 @@ func (f *FS) List(_ context.Context) ([]Node, error) {
 
 // Open is not supported.
 func (f *FS) Open(_ context.Context) (IFileBuffer, error) {
-	return nil, ENOTSUP
+	return bytes.NewReader([]byte{}), nil
 }
 
 // Name returns '/'.
@@ -131,7 +132,7 @@ var startTime = time.Now()
 
 // Applies attributes where non-default, and sets defaults otherwise.
 func applyAttr(a *fuse.Attr, attr *Attributes) {
-	a.Valid = 1 * time.Minute
+	a.Valid = 1 * time.Second
 	if attr.Valid != 0 {
 		a.Valid = attr.Valid
 	}

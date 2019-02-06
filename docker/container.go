@@ -39,13 +39,13 @@ func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	// Read the content to figure out how large it is.
 	if v, ok := inst.reqs.Load(inst.name); ok {
 		buf := v.(*datastore.StreamBuffer)
-		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size())}, nil
 	}
 
 	// Prefetch content for next time.
 	go plugin.PrefetchOpen(inst)
 
-	return &plugin.Attributes{Mtime: inst.updated, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: inst.updated}, nil
 }
 
 // Xattr returns a map of extended attributes.

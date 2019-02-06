@@ -90,7 +90,7 @@ func (cli *volume) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	}
 	// Rather than load a pod to get mtime, say it's always changing.
 	// Leave it up to the caller whether they need to dig further.
-	return &plugin.Attributes{Mtime: time.Now(), Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: time.Now()}, nil
 }
 
 func (cli *volume) Xattr(ctx context.Context) (map[string][]byte, error) {
@@ -186,13 +186,13 @@ func (cli *volume) cachedAttributes(ctx context.Context) (map[string]plugin.Attr
 	}
 
 	for dir, attrmap := range attrs {
-		key := cli.baseID() + dir + "list"
+		key := cli.baseID() + dir + "/list"
 		if err = cli.cache.SetAny(key, attrmap, datastore.Slow); err != nil {
 			log.Printf("Failed to cache %v: %v", key, err)
 		}
 	}
 	cli.updated = time.Now()
-	return attrs[cli.path+"/"], err
+	return attrs[cli.path], err
 }
 
 func (cli *volume) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {

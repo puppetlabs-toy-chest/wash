@@ -30,10 +30,10 @@ func (cli *pubsubTopic) Name() string {
 func (cli *pubsubTopic) Attr(ctx context.Context) (*plugin.Attributes, error) {
 	if v, ok := cli.reqs.Load(cli.name); ok {
 		buf := v.(*datastore.StreamBuffer)
-		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
+		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size())}, nil
 	}
 
-	return &plugin.Attributes{Mtime: cli.updated, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: cli.updated}, nil
 }
 
 // Xattr returns a map of extended attributes.

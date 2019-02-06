@@ -63,7 +63,7 @@ func (cli *namespace) Attr(ctx context.Context) (*plugin.Attributes, error) {
 			latest = attr.Mtime
 		}
 	}
-	return &plugin.Attributes{Mtime: latest, Valid: validDuration}, nil
+	return &plugin.Attributes{Mtime: latest}, nil
 }
 
 // Xattr returns a map of extended attributes.
