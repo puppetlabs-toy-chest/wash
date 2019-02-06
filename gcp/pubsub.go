@@ -84,7 +84,7 @@ func (cli *pubsubTopic) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 }
 
 func (cli *service) cachedTopics(ctx context.Context, c *pubsub.Client) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String(), func() ([]string, error) {
 		topics := make([]string, 0)
 		it := c.Topics(ctx)
 		for {

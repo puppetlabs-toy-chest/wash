@@ -110,7 +110,7 @@ type Marshalable interface {
 }
 
 // CachedMarshalable retrieves a cached item that can be marshaled and unmarshaled.
-func CachedMarshalable(cache *MemCache, key string, obj Marshalable, cb func() (Marshalable, error)) error {
+func (cache *MemCache) CachedMarshalable(key string, obj Marshalable, cb func() (Marshalable, error)) error {
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
@@ -134,7 +134,7 @@ func CachedMarshalable(cache *MemCache, key string, obj Marshalable, cb func() (
 }
 
 // CachedJSON retrieves cached JSON. If uncached, uses the callback to initialize the cache.
-func CachedJSON(cache *MemCache, key string, cb func() ([]byte, error)) ([]byte, error) {
+func (cache *MemCache) CachedJSON(key string, cb func() ([]byte, error)) ([]byte, error) {
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)
@@ -153,7 +153,7 @@ func CachedJSON(cache *MemCache, key string, cb func() ([]byte, error)) ([]byte,
 
 // CachedStrings retrieves a cached array of strings. If uncached, uses the callback to initialize the cache.
 // Returned array will always be sorted lexicographically.
-func CachedStrings(cache *MemCache, key string, cb func() ([]string, error)) ([]string, error) {
+func (cache *MemCache) CachedStrings(key string, cb func() ([]string, error)) ([]string, error) {
 	entry, err := cache.Get(key)
 	if err == nil {
 		log.Debugf("Cache hit on %v", key)

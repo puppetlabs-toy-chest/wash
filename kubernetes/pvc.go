@@ -307,7 +307,7 @@ func (cli *pvc) createPod(podi typev1.PodInterface, cmd []string) (string, error
 }
 
 func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.Name()+"/pvcs/"+ns, func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.Name()+"/pvcs/"+ns, func() ([]string, error) {
 		pvcList, err := cli.CoreV1().PersistentVolumeClaims("").List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err

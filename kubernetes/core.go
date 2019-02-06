@@ -148,7 +148,7 @@ func (cli *client) refreshNamespaces(ctx context.Context) error {
 }
 
 func (cli *client) cachedNamespaces(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.Name(), func() ([]string, error) {
 		nsList, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err

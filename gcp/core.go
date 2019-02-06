@@ -95,7 +95,7 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.Name(), func() ([]string, error) {
 		listResponse, err := cli.lister.Do()
 		if err != nil {
 			return nil, err

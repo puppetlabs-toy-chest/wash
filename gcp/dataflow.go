@@ -46,7 +46,7 @@ func (cli *dataflowJob) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *dataflowJob) Xattr(ctx context.Context) (map[string][]byte, error) {
-	data, err := datastore.CachedJSON(cli.cache, cli.String(), func() ([]byte, error) {
+	data, err := cli.cache.CachedJSON(cli.String(), func() ([]byte, error) {
 		projJobSvc := dataflow.NewProjectsJobsService(cli.client)
 		job, err := projJobSvc.Get(cli.proj, cli.id).Do()
 		if err != nil {
@@ -154,7 +154,7 @@ func (cli *dataflowJob) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 
 // Returns an array where every even entry is a job name and the following entry is its id.
 func (cli *service) cachedDataflowJobs(c *dataflow.Service) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String(), func() ([]string, error) {
 		projJobSvc := dataflow.NewProjectsJobsService(c)
 		projJobsResp, err := projJobSvc.List(cli.proj).Do()
 		if err != nil {

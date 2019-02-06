@@ -116,7 +116,7 @@ func (cli *resourcetype) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *resourcetype) cachedContainerList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String(), func() ([]string, error) {
 		containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
 		if err != nil {
 			return nil, err
@@ -131,7 +131,7 @@ func (cli *resourcetype) cachedContainerList(ctx context.Context) ([]string, err
 }
 
 func (cli *resourcetype) cachedVolumeList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String(), func() ([]string, error) {
 		volumes, err := cli.VolumeList(ctx, filters.Args{})
 		if err != nil {
 			return nil, err
