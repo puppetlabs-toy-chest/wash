@@ -133,7 +133,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = os.ModeDir | 0550
 	}
 	applyAttr(a, attr)
-	log.Printf("Attr of dir %v: %v", d, a)
+	log.Debugf("Attr of dir %v: %v", d, a)
 	return err
 }
 
@@ -261,7 +261,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = 0440
 	}
 	applyAttr(a, attr)
-	log.Printf("Attr of file %v: %v", f, a)
+	log.Debugf("Attr of file %v: %v", f, a)
 	return err
 }
 
