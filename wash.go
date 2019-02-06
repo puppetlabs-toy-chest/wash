@@ -23,7 +23,7 @@ var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
 var slow = flag.Bool("slow", false, "Disable prefetch on files and directories to reduce network activity")
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE", progName)
+	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE\n", progName)
 	fmt.Fprintf(os.Stderr, "Usage: %s MOUNTPOINT\n", progName)
 	flag.PrintDefaults()
 }

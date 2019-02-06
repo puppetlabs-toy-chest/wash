@@ -23,6 +23,10 @@ func Init(_slow bool) {
 }
 
 // ==== Plugin registry (FS) ====
+//
+// Here we implement the DirProtocol interface for FS so
+// that FUSE can recognize it as a valid root directory
+//
 
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
