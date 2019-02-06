@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -38,11 +40,51 @@ func main() {
 		usage()
 		os.Exit(2)
 	}
-	mountpoint := flag.Arg(0)
-	if err := mount(mountpoint); err != nil {
+
+	filesys, err := buildFS()
+	if err != nil {
 		log.Printf("%v", err)
 		os.Exit(1)
 	}
+
+	mountpoint := flag.Arg(0)
+	go startAPI(filesys, 3333)
+
+	if err := serveFuseFS(filesys, mountpoint); err != nil {
+		log.Printf("%v", err)
+		os.Exit(1)
+	}
+}
+
+func startAPI(filesys *plugin.FS, port int) error {
+	log.Printf("API: started")
+	server, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return err
+	}
+	defer server.Close()
+
+	for {
+		conn, err := server.Accept()
+		log.Printf("API: accepted connection")
+		if err != nil {
+			log.Printf("%v", err)
+			return err
+		}
+		go handleAPIRequest(conn, filesys)
+	}
+}
+
+func handleAPIRequest(conn net.Conn, filesys *plugin.FS) error {
+	defer conn.Close()
+	reader := bufio.NewReader(conn)
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("%v", err)
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "API: %s", str)
+	return nil
 }
 
 type pluginInit struct {
@@ -57,10 +99,10 @@ type instData struct {
 	context interface{}
 }
 
-func mount(mountpoint string) error {
+func buildFS() (*plugin.FS, error) {
 	cache, err := datastore.NewMemCache()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if *debug {
@@ -77,7 +119,7 @@ func mount(mountpoint string) error {
 
 	k8sContexts, err := kubernetes.ListContexts()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for name, context := range k8sContexts {
 		pluginInstantiators["kubernetes_"+name] = instData{kubernetes.Create, context}
@@ -100,13 +142,6 @@ func mount(mountpoint string) error {
 		}(k, v)
 	}
 
-	log.Printf("Mounting at %v", mountpoint)
-	fuseServer, err := fuse.Mount(mountpoint)
-	if err != nil {
-		return err
-	}
-	defer fuseServer.Close()
-
 	pluginMap := make(map[string]plugin.DirProtocol)
 	for range pluginInstantiators {
 		pluginInst := <-plugins
@@ -119,11 +154,21 @@ func mount(mountpoint string) error {
 	}
 
 	if len(pluginMap) == 0 {
-		return errors.New("No plugins loaded")
+		return nil, errors.New("No plugins loaded")
 	}
 
 	log.Printf("Serving filesystem")
-	filesys := plugin.NewFS(pluginMap)
+	return plugin.NewFS(pluginMap), nil
+}
+
+func serveFuseFS(filesys *plugin.FS, mountpoint string) error {
+	log.Printf("Mounting at %v", mountpoint)
+	fuseServer, err := fuse.Mount(mountpoint)
+	if err != nil {
+		return err
+	}
+	defer fuseServer.Close()
+
 	if err := fs.Serve(fuseServer, filesys); err != nil {
 		return err
 	}
