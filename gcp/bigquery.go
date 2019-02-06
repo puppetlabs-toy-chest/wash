@@ -62,7 +62,7 @@ func (cli *bigqueryDataset) Attr(ctx context.Context) (*plugin.Attributes, error
 
 // Xattr returns a map of extended attributes.
 func (cli *bigqueryDataset) Xattr(ctx context.Context) (map[string][]byte, error) {
-	data, err := datastore.CachedJSON(cli.cache, cli.String()+"/meta", func() ([]byte, error) {
+	data, err := cli.cache.CachedJSON(cli.String()+"/meta", func() ([]byte, error) {
 		meta, err := cli.Metadata(ctx)
 		if err != nil {
 			return nil, err
@@ -97,7 +97,7 @@ func (cli *bigqueryTable) Attr(ctx context.Context) (*plugin.Attributes, error) 
 
 // Xattr returns a map of extended attributes.
 func (cli *bigqueryTable) Xattr(ctx context.Context) (map[string][]byte, error) {
-	data, err := datastore.CachedJSON(cli.dataset.cache, cli.String()+"/meta", func() ([]byte, error) {
+	data, err := cli.dataset.cache.CachedJSON(cli.String()+"/meta", func() ([]byte, error) {
 		meta, err := cli.Metadata(ctx)
 		if err != nil {
 			return nil, err
@@ -117,7 +117,7 @@ func (cli *bigqueryTable) Open(ctx context.Context) (plugin.IFileBuffer, error) 
 }
 
 func (cli *service) cachedDatasets(ctx context.Context, c *bigquery.Client) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String(), func() ([]string, error) {
 		datasets := make([]string, 0)
 		it := c.Datasets(ctx)
 		for {
@@ -136,7 +136,7 @@ func (cli *service) cachedDatasets(ctx context.Context, c *bigquery.Client) ([]s
 }
 
 func (cli *service) cachedTables(ctx context.Context, d *bigquery.Dataset) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.String()+"/"+d.DatasetID, func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.String()+"/"+d.DatasetID, func() ([]string, error) {
 		tables := make([]string, 0)
 		it := d.Tables(ctx)
 		for {

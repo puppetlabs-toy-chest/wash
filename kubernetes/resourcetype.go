@@ -3,9 +3,7 @@ package kubernetes
 import (
 	"context"
 	"sync"
-	"time"
 
-	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -15,28 +13,13 @@ type resourcetype struct {
 	*namespace
 	typename string
 	reqs     sync.Map
-	cache    *bigcache.BigCache
 }
 
 func newResourceTypes(ns *namespace) map[string]*resourcetype {
 	resourcetypes := make(map[string]*resourcetype)
 	// Use individual caches for slower resources like volumes to control the timeout.
-	for name, timeout := range map[string]time.Duration{
-		"pod": plugin.DefaultTimeout,
-		"pvc": 30 * time.Second,
-	} {
-		cache := ns.cache
-		if plugin.DefaultTimeout != timeout {
-			config := bigcache.DefaultConfig(timeout)
-			config.CleanWindow = 1 * time.Second
-			if ch, err := bigcache.NewBigCache(config); err == nil {
-				cache = ch
-			} else {
-				log.Printf("Unable to create new cache, using existing one: %v", err)
-			}
-		}
-
-		resourcetypes[name] = &resourcetype{ns, name, sync.Map{}, cache}
+	for _, name := range []string{"pod", "pvc"} {
+		resourcetypes[name] = &resourcetype{ns, name, sync.Map{}}
 	}
 	return resourcetypes
 }

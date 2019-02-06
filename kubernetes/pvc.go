@@ -158,6 +158,13 @@ func waitForPod(podi typev1.PodInterface, pid string) error {
 }
 
 func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attributes, error) {
+	// Lock all known paths. That way if a deeper path is refreshing the cache, we'll wait for it to finish.
+	keys := datastore.Keys(cli.baseID(), cli.path, "/list")
+	for _, l := range cli.cache.LocksForKeys(keys) {
+		l.Lock()
+		defer l.Unlock()
+	}
+
 	key := cli.String() + "/list"
 	entry, err := cli.cache.Get(key)
 	if err == nil {
@@ -207,7 +214,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 
 	for dir, attrmap := range attrs {
 		key := cli.baseID() + dir + "list"
-		if err = datastore.CacheAny(cli.cache, key, attrmap); err != nil {
+		if err = cli.cache.SetAny(key, attrmap, datastore.Slow); err != nil {
 			log.Printf("Failed to cache %v: %v", key, err)
 		}
 	}
@@ -260,7 +267,7 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	}
 
 	cli.updated = time.Now()
-	cli.cache.Set(key, bits)
+	cli.cache.SetSlow(key, bits)
 	return bytes.NewReader(bits), nil
 }
 
@@ -307,7 +314,7 @@ func (cli *pvc) createPod(podi typev1.PodInterface, cmd []string) (string, error
 }
 
 func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.Name()+"/pvcs/"+ns, func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.Name()+"/pvcs/"+ns, func() ([]string, error) {
 		pvcList, err := cli.CoreV1().PersistentVolumeClaims("").List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
@@ -330,7 +337,7 @@ func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) 
 		for name, data := range pvcs {
 			// Skip the one we're returning because CachedStrings will encode and store to cache for us.
 			if name != ns {
-				datastore.CacheAny(cli.cache, cli.Name()+"/pvcs/"+name, data)
+				cli.cache.SetAny(cli.Name()+"/pvcs/"+name, data, datastore.Fast)
 			}
 		}
 		return pvcs[ns], nil

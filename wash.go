@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/allegro/bigcache"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/gcp"
 	"github.com/puppetlabs/wash/kubernetes"
@@ -51,16 +50,14 @@ type pluginInit struct {
 	err    error
 }
 
-type instantiator = func(string, interface{}, *bigcache.BigCache) (plugin.DirProtocol, error)
+type instantiator = func(string, interface{}, *datastore.MemCache) (plugin.DirProtocol, error)
 type instData struct {
 	instantiator
 	context interface{}
 }
 
 func mount(mountpoint string) error {
-	config := bigcache.DefaultConfig(plugin.DefaultTimeout)
-	config.CleanWindow = 1 * time.Second
-	cache, err := bigcache.NewBigCache(config)
+	cache, err := datastore.NewMemCache()
 	if err != nil {
 		return err
 	}

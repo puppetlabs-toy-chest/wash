@@ -47,7 +47,7 @@ func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (inst *container) Xattr(ctx context.Context) (map[string][]byte, error) {
-	raw, err := datastore.CachedJSON(inst.cache, inst.String(), func() ([]byte, error) {
+	raw, err := inst.cache.CachedJSON(inst.String(), func() ([]byte, error) {
 		_, raw, err := inst.ContainerInspectWithRaw(ctx, inst.name, true)
 		return raw, err
 	})

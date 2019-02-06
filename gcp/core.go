@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/allegro/bigcache"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -19,7 +18,7 @@ type client struct {
 	projmux     sync.RWMutex
 	lister      *crm.ProjectsListCall
 	projects    map[string]*project
-	cache       *bigcache.BigCache
+	cache       *datastore.MemCache
 	updated     time.Time
 	name        string
 }
@@ -30,7 +29,7 @@ type client struct {
 const validDuration = 100 * time.Millisecond
 
 // Create a new gcp client.
-func Create(name string, _ interface{}, cache *bigcache.BigCache) (plugin.DirProtocol, error) {
+func Create(name string, _ interface{}, cache *datastore.MemCache) (plugin.DirProtocol, error) {
 	// This API is terrible, but not supported by the better go sdk.
 	cloudPlatformScopes := append([]string{crm.CloudPlatformScope}, serviceScopes...)
 	oauthClient, err := google.DefaultClient(context.Background(), cloudPlatformScopes...)
@@ -96,7 +95,7 @@ func (cli *client) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *client) cachedProjectsList(ctx context.Context) ([]string, error) {
-	return datastore.CachedStrings(cli.cache, cli.Name(), func() ([]string, error) {
+	return cli.cache.CachedStrings(cli.Name(), func() ([]string, error) {
 		listResponse, err := cli.lister.Do()
 		if err != nil {
 			return nil, err
