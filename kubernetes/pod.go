@@ -43,6 +43,9 @@ func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
 		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size()), Valid: validDuration}, nil
 	}
 
+	// Prefetch content for next time.
+	go plugin.PrefetchOpen(cli)
+
 	return &plugin.Attributes{Mtime: cli.updated, Valid: validDuration}, nil
 }
 

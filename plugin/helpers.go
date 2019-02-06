@@ -1,7 +1,9 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/puppetlabs/wash/log"
@@ -30,4 +32,16 @@ func JSONToJSONMap(inrec []byte) (map[string][]byte, error) {
 func TrackTime(start time.Time, name string) {
 	elapsed := time.Since(start)
 	log.Printf("%s took %s", name, elapsed)
+}
+
+// PrefetchOpen can be called to open a file for DefaultTimeout (if it supports Close).
+// Commonly used as `go PrefetchOpen(...)` to kick off prefetching asynchronously.
+func PrefetchOpen(file FileProtocol) {
+	buf, err := file.Open(context.Background())
+	if closer, ok := buf.(io.Closer); err == nil && ok {
+		go func() {
+			time.Sleep(DefaultTimeout)
+			closer.Close()
+		}()
+	}
 }

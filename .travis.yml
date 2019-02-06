@@ -5,6 +5,9 @@ cache:
 services:
 - docker
 
+env:
+  global:
+  - GO111MODULE=on
 matrix:
   include:
   - go: 1.11.x

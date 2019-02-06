@@ -73,8 +73,12 @@ const (
 )
 
 // FS contains the core filesystem data.
+// Plugins: maps plugin mount points to their implementations.
+// files: lists extra files that tell the OS to ignore us.
 type FS struct {
 	Plugins map[string]DirProtocol
+	files   []string
+	name    string
 }
 
 var _ fs.FS = (*FS)(nil)

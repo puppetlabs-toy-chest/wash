@@ -114,7 +114,7 @@ func mount(mountpoint string) error {
 	}
 
 	log.Printf("Serving filesystem")
-	filesys := &plugin.FS{Plugins: pluginMap}
+	filesys := plugin.NewFS(pluginMap)
 	if err := fs.Serve(fuseServer, filesys); err != nil {
 		return err
 	}

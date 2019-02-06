@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"strings"
 	"time"
 
 	"bazil.org/fuse"
@@ -14,7 +16,7 @@ import (
 
 var slow = false
 
-// DefaultTimeout is a default cache timeout.
+// DefaultTimeout is a default timeout for prefetched data.
 const DefaultTimeout = 10 * time.Second
 
 // Init sets up plugin core configuration on startup.
@@ -28,6 +30,12 @@ func Init(_slow bool) {
 // that FUSE can recognize it as a valid root directory
 //
 
+// NewFS creates a new FS.
+func NewFS(plugins map[string]DirProtocol) *FS {
+	files := []string{".metadata_never_index", ".Trashes", ".fseventsd/no_log"}
+	return &FS{Plugins: plugins, files: files, name: "/"}
+}
+
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
 	log.Printf("Entering root of filesystem")
@@ -39,6 +47,20 @@ func (f *FS) Find(_ context.Context, name string) (Node, error) {
 	if client, ok := f.Plugins[name]; ok {
 		return &Dir{client}, nil
 	}
+	for _, p := range f.files {
+		dir, file := path.Split(p)
+		// If dir is not empty and matches name, create Dir and pass only file.
+		// If dir is empty, create File and pass empty files.
+		if dir == "" {
+			if file == name {
+				return &File{&FS{name: name}}, nil
+			}
+		} else {
+			if strings.TrimSuffix(dir, "/") == name {
+				return &Dir{&FS{files: []string{file}, name: name}}, nil
+			}
+		}
+	}
 	return nil, ENOENT
 }
 
@@ -48,12 +70,26 @@ func (f *FS) List(_ context.Context) ([]Node, error) {
 	for _, v := range f.Plugins {
 		keys = append(keys, &Dir{v})
 	}
+	for _, p := range f.files {
+		dir, file := path.Split(p)
+		if dir == "" {
+			keys = append(keys, &File{&FS{name: file}})
+		} else {
+			dir = strings.TrimSuffix(dir, "/")
+			keys = append(keys, &Dir{&FS{files: []string{file}, name: dir}})
+		}
+	}
 	return keys, nil
+}
+
+// Open is not supported.
+func (f *FS) Open(_ context.Context) (IFileBuffer, error) {
+	return nil, ENOTSUP
 }
 
 // Name returns '/'.
 func (f *FS) Name() string {
-	return "/"
+	return f.name
 }
 
 // Attr returns basic (zero) attributes for the root directory.
@@ -182,17 +218,7 @@ func prefetch(entry fs.Node) {
 	case *Dir:
 		go func() { v.List(context.Background()) }()
 	case *File:
-		// TODO: This can be pretty expensive. Probably better to move it to individual implementations
-		// where they can choose to do this if Attr is requested.
-		go func() {
-			buf, err := v.FileProtocol.Open(context.Background())
-			if closer, ok := buf.(io.Closer); err == nil && ok {
-				go func() {
-					time.Sleep(DefaultTimeout)
-					closer.Close()
-				}()
-			}
-		}()
+		log.Debugf("Prefetch is not enabled for files due to potentail cost")
 	default:
 		log.Debugf("Not sure how to prefetch for %v", v)
 	}
