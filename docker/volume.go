@@ -95,14 +95,15 @@ func (cli *volume) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 func (cli *volume) Xattr(ctx context.Context) (map[string][]byte, error) {
 	if cli.path == "" {
-		// Return metadata for the volume if it's already loaded.
-		key := cli.String()
-		if entry, err := cli.cache.Get(key); err != nil {
-			log.Printf("Cache miss on %v, skipping lookup", key)
-		} else {
-			log.Debugf("Cache hit on %v", key)
-			return plugin.JSONToJSONMap(entry)
+		// Return metadata for the volume.
+		entry, err := cli.cache.CachedJSON(cli.String(), func() ([]byte, error) {
+			_, raw, err := cli.VolumeInspectWithRaw(ctx, cli.name)
+			return raw, err
+		})
+		if err != nil {
+			return nil, err
 		}
+		return plugin.JSONToJSONMap(entry)
 	}
 	return map[string][]byte{}, nil
 }

@@ -51,15 +51,17 @@ func (cli *pod) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 // Xattr returns a map of extended attributes.
 func (cli *pod) Xattr(ctx context.Context) (map[string][]byte, error) {
-	// Return metadata for the pod if it's already loaded.
-	key := cli.String()
-	if entry, err := cli.resourcetype.client.cache.Get(key); err != nil {
-		log.Printf("Cache miss on %v, skipping lookup", key)
-	} else {
-		log.Debugf("Cache hit on %v", key)
-		return plugin.JSONToJSONMap(entry)
+	entry, err := cli.cache.CachedJSON(cli.String(), func() ([]byte, error) {
+		pd, err := cli.CoreV1().Pods(cli.ns).Get(cli.name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(pd)
+	})
+	if err != nil {
+		return nil, err
 	}
-	return map[string][]byte{}, nil
+	return plugin.JSONToJSONMap(entry)
 }
 
 func (cli *pod) readLog() (io.ReadCloser, error) {
@@ -93,8 +95,8 @@ func (cli *pod) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 
 func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) {
 	return cli.cache.CachedStrings(cli.Name()+"/pods/"+ns, func() ([]string, error) {
-		// Query all pods and refresh all cache entries. Then return just the one that was requested.
-		podList, err := cli.CoreV1().Pods("").List(metav1.ListOptions{})
+		// Query pods and refresh all cache entries. Then return just the one that was requested.
+		podList, err := cli.CoreV1().Pods(cli.queryScope()).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
