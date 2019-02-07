@@ -222,13 +222,14 @@ func prefetch(entry fs.Node) {
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entry, err := d.Find(ctx, req.Name)
-	if err == nil {
-		log.Printf("Find[d,pid=%v] %v", req.Pid, entry)
-		prefetch(entry)
-	} else {
+	if err != nil {
 		log.Printf("%v not found in %v", req.Name, d)
+		return nil, err
 	}
-	return entry, err
+
+	log.Printf("Find[d,pid=%v] %v", req.Pid, entry)
+	prefetch(entry)
+	return entry, nil
 }
 
 // ReadDirAll lists all children of the directory.
