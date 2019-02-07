@@ -33,7 +33,7 @@ func Init(_slow bool) {
 
 // NewFS creates a new FS.
 func NewFS(plugins map[string]DirProtocol) *FS {
-	files := []string{".metadata_never_index", ".Trashes", ".fseventsd/no_log"}
+	files := []string{".Trashes", ".fseventsd/no_log"}
 	return &FS{Plugins: plugins, files: files, name: "/"}
 }
 

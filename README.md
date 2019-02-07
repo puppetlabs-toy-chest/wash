@@ -21,9 +21,13 @@ Operations that work:
 - `stat` (kind of, information's not very useful)
 - `xattr` and a new command `meta`
 
-NOTE: requires golang 1.11.4.
+> Requires golang 1.11+.
+
+### macOS Setup
 
 Obtain FUSE for OSX [here](https://osxfuse.github.io/).
+
+Add your mount directory to Spotlight's list of excluded directories to avoid heavy load.
 
 ### Container
 
