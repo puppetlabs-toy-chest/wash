@@ -158,12 +158,6 @@ func applyAttr(a *fuse.Attr, attr *Attributes) {
 	a.Crtime = startTime
 }
 
-// Getattr implements the NodeGetattrer interface.
-func (d *Dir) Getattr(ctx context.Context, req *fuse.GetattrRequest, resp *fuse.GetattrResponse) error {
-	log.Printf("Getattr[pid=%v] %v", req.Pid, d)
-	return d.Attr(ctx, &resp.Attr)
-}
-
 // Attr returns the attributes of a directory.
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := d.DirProtocol.Attr(ctx)
@@ -174,7 +168,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = os.ModeDir | 0550
 	}
 	applyAttr(a, attr)
-	log.Debugf("Attr of dir %v: %v", d, a)
+	log.Printf("Attr[d] %v %v", d, a)
 	return err
 }
 
@@ -189,7 +183,7 @@ func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *f
 	for k := range xattrs {
 		resp.Append(k)
 	}
-	log.Printf("Listxattr[pid=%v] %v", req.Pid, d)
+	log.Printf("Listxattr[d,pid=%v] %v", req.Pid, d)
 	return nil
 }
 
@@ -206,7 +200,7 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 	}
 
 	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr[pid=%v] %v", req.Pid, d)
+	log.Printf("Getxattr[d,pid=%v] %v", req.Pid, d)
 	return nil
 }
 
@@ -228,13 +222,14 @@ func prefetch(entry fs.Node) {
 // Lookup searches a directory for children.
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entry, err := d.Find(ctx, req.Name)
-	if err == nil {
-		log.Printf("Find[pid=%v] %v", req.Pid, entry)
-		prefetch(entry)
-	} else {
+	if err != nil {
 		log.Printf("%v not found in %v", req.Name, d)
+		return nil, err
 	}
-	return entry, err
+
+	log.Printf("Find[d,pid=%v] %v", req.Pid, entry)
+	prefetch(entry)
+	return entry, nil
 }
 
 // ReadDirAll lists all children of the directory.
@@ -276,12 +271,6 @@ func (f *File) String() string {
 	return f.Name()
 }
 
-// Getattr implements the NodeGetattrer interface.
-func (f *File) Getattr(ctx context.Context, req *fuse.GetattrRequest, resp *fuse.GetattrResponse) error {
-	log.Printf("Getattr[pid=%v] %v", req.Pid, f)
-	return f.Attr(ctx, &resp.Attr)
-}
-
 // Attr returns the attributes of a file.
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := f.FileProtocol.Attr(ctx)
@@ -292,7 +281,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = 0440
 	}
 	applyAttr(a, attr)
-	log.Debugf("Attr of file %v: %v", f, a)
+	log.Printf("Attr[f] %v %v", f, a)
 	return err
 }
 
@@ -307,7 +296,7 @@ func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *
 	for k := range xattrs {
 		resp.Append(k)
 	}
-	log.Printf("Listxattr[pid=%v] %v", req.Pid, f)
+	log.Printf("Listxattr[f,pid=%v] %v", req.Pid, f)
 	return nil
 }
 
@@ -324,7 +313,7 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 	}
 
 	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr[pid=%v] %v", req.Pid, f)
+	log.Printf("Getxattr[f,pid=%v] %v", req.Pid, f)
 	return nil
 }
 
