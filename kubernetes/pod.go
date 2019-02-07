@@ -93,8 +93,8 @@ func (cli *pod) Open(ctx context.Context) (plugin.IFileBuffer, error) {
 
 func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) {
 	return cli.cache.CachedStrings(cli.Name()+"/pods/"+ns, func() ([]string, error) {
-		// Query all pods and refresh all cache entries. Then return just the one that was requested.
-		podList, err := cli.CoreV1().Pods("").List(metav1.ListOptions{})
+		// Query pods and refresh all cache entries. Then return just the one that was requested.
+		podList, err := cli.CoreV1().Pods(cli.queryScope()).List(metav1.ListOptions{})
 		if err != nil {
 			return nil, err
 		}

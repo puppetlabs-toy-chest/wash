@@ -23,6 +23,7 @@ type client struct {
 	namespaces map[string]*namespace
 	updated    time.Time
 	root       string
+	defaultns  string
 }
 
 const allNamespace = "all"
@@ -58,12 +59,18 @@ func Create(name string, context interface{}, cache *datastore.MemCache) (plugin
 	}
 
 	namespaces := make(map[string]*namespace)
-	return &client{clientset, cache, sync.RWMutex{}, namespaces, time.Now(), name}, nil
+	defaultns, _, err := context.(clientcmd.ClientConfig).Namespace()
+	if err != nil {
+		return nil, err
+	}
+	return &client{clientset, cache, sync.RWMutex{}, namespaces, time.Now(), name, defaultns}, nil
 }
 
 // Find namespace.
 func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
-	cli.refreshNamespaces(ctx)
+	if err := cli.refreshNamespaces(ctx); err != nil {
+		return nil, err
+	}
 	cli.nsmux.RLock()
 	defer cli.nsmux.RUnlock()
 	if ns, ok := cli.namespaces[name]; ok {
@@ -74,7 +81,9 @@ func (cli *client) Find(ctx context.Context, name string) (plugin.Node, error) {
 
 // List all namespaces.
 func (cli *client) List(ctx context.Context) ([]plugin.Node, error) {
-	cli.refreshNamespaces(ctx)
+	if err := cli.refreshNamespaces(ctx); err != nil {
+		return nil, err
+	}
 	cli.nsmux.RLock()
 	defer cli.nsmux.RUnlock()
 	log.Debugf("Listing %v namespaces in %v", len(cli.namespaces), cli.Name())
@@ -147,12 +156,23 @@ func (cli *client) cachedNamespaces(ctx context.Context) ([]string, error) {
 	return cli.cache.CachedStrings(cli.Name(), func() ([]string, error) {
 		nsList, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
-			return nil, err
+			log.Printf("Error loading namespaces, using default namespace: %v", err)
+			return []string{cli.defaultns}, nil
 		}
+
 		namespaces := make([]string, len(nsList.Items))
 		for i, ns := range nsList.Items {
 			namespaces[i] = ns.Name
 		}
 		return namespaces, nil
 	})
+}
+
+func (cli *client) queryScope() string {
+	if len(cli.namespaces) == 2 {
+		// Only one namespace and 'all' were found, we may not have permission to query across multiple.
+		return cli.defaultns
+	}
+	// Query all namespaces.
+	return ""
 }
