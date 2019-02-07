@@ -100,14 +100,17 @@ func (cli *pvc) Attr(ctx context.Context) (*plugin.Attributes, error) {
 
 func (cli *pvc) Xattr(ctx context.Context) (map[string][]byte, error) {
 	if cli.path == "" {
-		// Return metadata for the pvc if it's already loaded.
-		key := cli.String()
-		if entry, err := cli.resourcetype.client.cache.Get(key); err != nil {
-			log.Printf("Cache miss on %v, skipping lookup", key)
-		} else {
-			log.Debugf("Cache hit on %v", key)
-			return plugin.JSONToJSONMap(entry)
+		entry, err := cli.cache.CachedJSON(cli.String(), func() ([]byte, error) {
+			pvc, err := cli.CoreV1().PersistentVolumeClaims(cli.ns).Get(cli.name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			return json.Marshal(pvc)
+		})
+		if err != nil {
+			return nil, err
 		}
+		return plugin.JSONToJSONMap(entry)
 	}
 	return map[string][]byte{}, nil
 }
