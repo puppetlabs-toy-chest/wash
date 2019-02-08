@@ -19,7 +19,7 @@ func (c *k8context) LS(ctx context.Context) ([]plugin.Entry, error) {
 	nsi := c.client.CoreV1().Namespaces()
 	nsList, err := nsi.List(metav1.ListOptions{})
 	if err != nil {
-		log.Printf("Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
+		log.Infof("Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
 		ns, err := nsi.Get(c.defaultns, metav1.GetOptions{})
 		if err != nil {
 			log.Debugf("Error loading default namespace, metadata will not be available: %v", err)

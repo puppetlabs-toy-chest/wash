@@ -11,6 +11,10 @@ env:
 jobs:
   include:
   - name: Test with Go stable
+  - name: Lint with errcheck
+    script:
+    - go get -v github.com/kisielk/errcheck
+    - errcheck ./...
   - name: Build Docker container
     install: skip
     script: docker build .

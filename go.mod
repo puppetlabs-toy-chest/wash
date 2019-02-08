@@ -7,6 +7,7 @@ require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	cloud.google.com/go v0.34.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
+	github.com/Benchkram/errz v0.0.0-20180520163740-571a80a661f2
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.11 // indirect
@@ -34,7 +35,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/pkg/xattr v0.4.0
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/cobra v0.0.3

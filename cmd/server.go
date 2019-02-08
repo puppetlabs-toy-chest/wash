@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/docker"
@@ -32,10 +33,10 @@ func serverCommand() *cobra.Command {
 	}
 
 	serverCmd.Flags().String("loglevel", "info", "Set the logging level")
-	viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel"))
+	errz.Fatal(viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel")))
 
 	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
-	viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile"))
+	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
 
 	serverCmd.RunE = toRunE(serverMain)
 
@@ -53,12 +54,12 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	if logFH != nil {
-		defer logFH.Close()
+		defer func() { plugin.LogErr(logFH.Close()) }()
 	}
 
 	registry, err := initializePlugins()
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warn(err)
 		return exitCode{1}
 	}
 
@@ -66,7 +67,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
 	if err != nil {
-		log.Warnf("%v", err)
+		log.Warn(err)
 		return exitCode{1}
 	}
 	stopAPIServer := func() {
@@ -81,7 +82,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
-		log.Warnf("%v", err)
+		log.Warn(err)
 		return exitCode{1}
 	}
 	stopFUSEServer := func() {

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api"
 
 	"github.com/pkg/xattr"
@@ -57,7 +58,7 @@ func (c *DomainSocketClient) performRequest(endpoint string, result interface{})
 		return err
 	}
 
-	defer response.Body.Close()
+	defer func() { errz.Log(response.Body.Close()) }()
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Println(err)

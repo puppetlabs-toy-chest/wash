@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -96,7 +95,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Print(err)
+			fmt.Fprintln(os.Stderr, err)
 			return exitCode{1}
 		}
 
@@ -105,7 +104,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		writeError(err)
+		fmt.Fprintln(os.Stderr, err)
 		return exitCode{1}
 	}
 
@@ -113,7 +112,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		writeError(err)
+		fmt.Fprintln(os.Stderr, err)
 		return exitCode{1}
 	}
 

@@ -30,7 +30,9 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 
-		fmt.Fprintln(w, err.Error())
+		if _, err := fmt.Fprintln(w, err.Error()); err != nil {
+			log.Warnf("API: Failed writing error response: %v", err)
+		}
 	}
 }
 

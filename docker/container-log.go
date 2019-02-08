@@ -69,7 +69,7 @@ func (clf *containerLogFile) Stream(ctx context.Context) (io.Reader, error) {
 		if _, err = stdcopy.StdCopy(w, w, rdr); err != nil {
 			log.Debugf("Errored reading container %v: %v", clf.containerName, err)
 		}
-		w.Close()
+		plugin.LogErr(w.Close())
 	}()
 	return r, nil
 }
