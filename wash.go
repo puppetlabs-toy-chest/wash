@@ -20,7 +20,8 @@ import (
 )
 
 var progName = filepath.Base(os.Args[0])
-var debug = flag.Bool("debug", false, "Enable debug output from FUSE")
+var debug = flag.Bool("debug", false, "Enable debug output")
+var quiet = flag.Bool("quiet", false, "Suppress operational logging and only log errors")
 var slow = flag.Bool("slow", false, "Disable prefetch on files and directories to reduce network activity")
 
 func usage() {
@@ -33,7 +34,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	log.Init(*debug)
+	log.Init(*debug, *quiet)
 
 	if flag.NArg() != 1 {
 		usage()
@@ -42,7 +43,7 @@ func main() {
 
 	filesys, err := buildFS()
 	if err != nil {
-		log.Printf("%v", err)
+		log.Warnf("%v", err)
 		os.Exit(1)
 	}
 
@@ -50,7 +51,7 @@ func main() {
 	go startAPI(filesys, "wash-api.sock")
 
 	if err := serveFuseFS(filesys, mountpoint); err != nil {
-		log.Printf("%v", err)
+		log.Warnf("%v", err)
 		os.Exit(1)
 	}
 }
@@ -62,14 +63,14 @@ func startAPI(filesys *plugin.FS, socketPath string) error {
 		// Socket already exists, so nuke it and recreate it
 		log.Printf("API: Cleaning up old socket")
 		if err := os.Remove(socketPath); err != nil {
-			log.Printf("API: %v", err)
+			log.Warnf("API: %v", err)
 			return err
 		}
 	}
 
 	server, err := net.Listen("unix", socketPath)
 	if err != nil {
-		log.Printf("API: %v", err)
+		log.Warnf("API: %v", err)
 		return err
 	}
 
@@ -77,12 +78,12 @@ func startAPI(filesys *plugin.FS, socketPath string) error {
 		conn, err := server.Accept()
 		log.Printf("API: accepted connection")
 		if err != nil {
-			log.Printf("API: %v", err)
+			log.Warnf("API: %v", err)
 			return err
 		}
 		go func() {
 			if err := handleAPIRequest(conn, filesys); err != nil {
-				log.Printf("API: %v", err)
+				log.Warnf("API: %v", err)
 			}
 		}()
 	}
@@ -155,9 +156,9 @@ func buildFS() (*plugin.FS, error) {
 	for range pluginInstantiators {
 		pluginInst := <-plugins
 		if pluginInst.err != nil {
-			log.Printf("Error loading %v: %v", pluginInst.name, pluginInst.err)
+			log.Warnf("Error loading %v: %v", pluginInst.name, pluginInst.err)
 		} else {
-			log.Printf("Loaded %v", pluginInst.name)
+			log.Warnf("Loaded %v", pluginInst.name)
 			pluginMap[pluginInst.name] = pluginInst.plugin
 		}
 	}
@@ -166,7 +167,6 @@ func buildFS() (*plugin.FS, error) {
 		return nil, errors.New("No plugins loaded")
 	}
 
-	log.Printf("Serving filesystem")
 	return plugin.NewFS(pluginMap), nil
 }
 
@@ -178,6 +178,7 @@ func serveFuseFS(filesys *plugin.FS, mountpoint string) error {
 	}
 	defer fuseServer.Close()
 
+	log.Warnf("Serving filesystem")
 	if err := fs.Serve(fuseServer, filesys); err != nil {
 		return err
 	}
@@ -187,7 +188,7 @@ func serveFuseFS(filesys *plugin.FS, mountpoint string) error {
 	if err := fuseServer.MountError; err != nil {
 		return err
 	}
-	log.Printf("Done")
+	log.Warnf("Done")
 
 	return nil
 }

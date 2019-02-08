@@ -2,32 +2,32 @@ package log
 
 import (
 	clog "log"
-	"sync"
 )
 
-var debug = false
-
-// TODO: why does this help?
-var mux = sync.Mutex{}
+var debug, quiet = false, false
 
 // Init initializes logging format and toggles whether to print debug messages.
-func Init(dbg bool) {
+func Init(dbg bool, qt bool) {
 	debug = dbg
+	quiet = qt
 	clog.SetFlags(clog.Ldate | clog.Lmicroseconds)
 }
 
-// Printf always prints the message via golang's log package.
-func Printf(format string, v ...interface{}) {
-	mux.Lock()
+// Warnf always prints the message via golang's log package.
+func Warnf(format string, v ...interface{}) {
 	clog.Printf(format, v...)
-	mux.Unlock()
+}
+
+// Printf prints the message via golang's log package unless Quiet is true.
+func Printf(format string, v ...interface{}) {
+	if !quiet {
+		clog.Printf(format, v...)
+	}
 }
 
 // Debugf prints the message via golang's log package only if Debug is true.
 func Debugf(format string, v ...interface{}) {
 	if debug {
-		mux.Lock()
 		clog.Printf(format, v...)
-		mux.Unlock()
 	}
 }

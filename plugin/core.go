@@ -162,7 +162,7 @@ func applyAttr(a *fuse.Attr, attr *Attributes) {
 func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := d.DirProtocol.Attr(ctx)
 	if err != nil {
-		log.Printf("Error[Attr,%v]: %v", d, err)
+		log.Warnf("Error[Attr,%v]: %v", d, err)
 	}
 	if attr.Mode == 0 {
 		attr.Mode = os.ModeDir | 0550
@@ -176,7 +176,7 @@ func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
 func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
 	xattrs, err := d.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Listxattr,%v]: %v", d, err)
+		log.Warnf("Error[Listxattr,%v]: %v", d, err)
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 
 	xattrs, err := d.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Getxattr,%v,%v]: %v", d, req.Name, err)
+		log.Warnf("Error[Getxattr,%v,%v]: %v", d, req.Name, err)
 		return err
 	}
 
@@ -223,7 +223,7 @@ func prefetch(entry fs.Node) {
 func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entry, err := d.Find(ctx, req.Name)
 	if err != nil {
-		log.Printf("%v not found in %v", req.Name, d)
+		log.Warnf("Error[Find,%v,%v]: %v", d, req.Name, err)
 		return nil, err
 	}
 
@@ -236,7 +236,7 @@ func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	entries, err := d.List(ctx)
 	if err != nil {
-		log.Printf("Error[List,%v]: %v", d, err)
+		log.Warnf("Error[List,%v]: %v", d, err)
 		return nil, err
 	}
 
@@ -275,7 +275,7 @@ func (f *File) String() string {
 func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 	attr, err := f.FileProtocol.Attr(ctx)
 	if err != nil {
-		log.Printf("Error[Attr,%v]: %v", f, err)
+		log.Warnf("Error[Attr,%v]: %v", f, err)
 	}
 	if attr.Mode == 0 {
 		attr.Mode = 0440
@@ -289,7 +289,7 @@ func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
 func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
 	xattrs, err := f.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Listxattr,%v]: %v", f, err)
+		log.Warnf("Error[Listxattr,%v]: %v", f, err)
 		return err
 	}
 
@@ -308,7 +308,7 @@ func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 
 	xattrs, err := f.Xattr(ctx)
 	if err != nil {
-		log.Printf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
+		log.Warnf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
 		return err
 	}
 
@@ -323,7 +323,7 @@ func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	log.Printf("Opening[pid=%v] %v", req.Pid, f)
 	r, err := f.FileProtocol.Open(ctx)
 	if err != nil {
-		log.Printf("Error[Open,%v]: %v", f, err)
+		log.Warnf("Error[Open,%v]: %v", f, err)
 		return nil, err
 	}
 	log.Printf("Opened[pid=%v] %v", req.Pid, f)
