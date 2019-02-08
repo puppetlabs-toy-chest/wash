@@ -4,7 +4,10 @@ A cloud-native shell for bringing remote infrastructure to your terminal.
 
 ## Usage
 
-This prototype is built as a FUSE filesystem. It currently only supports viewing running containers in Docker (found from the local socket or via DOCKER environment variables) and Kubernetes (uses the currently selected context from `~/.kube/config`)
+This prototype is built as a FUSE filesystem. It currently supports
+- viewing running containers and volumes in Docker (found from the local socket or via DOCKER environment variables)
+- viewing running containers and persistent volume claims in Kubernetes (uses contexts from `~/.kube/config`)
+- viewing metadata for Google Pub/Sub, Dataflow, and BigQuery (requires gcloud login and possibly setting `GOOGLE_APPLICATION_CREDENTIALS` as described in https://developers.google.com/accounts/docs/application-default-credentials)
 
 Mount the filesystem with
 ```
