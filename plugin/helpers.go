@@ -36,7 +36,7 @@ func TrackTime(start time.Time, name string) {
 
 // PrefetchOpen can be called to open a file for DefaultTimeout (if it supports Close).
 // Commonly used as `go PrefetchOpen(...)` to kick off prefetching asynchronously.
-func PrefetchOpen(file FileProtocol) {
+func PrefetchOpen(file Readable) {
 	buf, err := file.Open(context.Background())
 	if closer, ok := buf.(io.Closer); err == nil && ok {
 		go func() {

@@ -12,9 +12,65 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
-// IFileBuffer represents a file that can be ReadAt and Close.
-type IFileBuffer interface {
-	io.ReaderAt
+// Entry is a basic named resource type
+type Entry interface{ Name() string }
+
+// EntryT implements Entry, making it easy to create new named types.
+type EntryT struct{ EntryName string }
+
+// Name returns the entry's name.
+func (e EntryT) Name() string { return e.EntryName }
+
+// Resource is an entry that has metadata.
+type Resource interface {
+	Entry
+	Metadata(context.Context) (interface{}, error)
+}
+
+// Group is an entry that can list its contents, an array of entries.
+// It will be represented as a directory in the wash filesystem.
+type Group interface {
+	Entry
+	LS(context.Context) ([]Entry, error)
+}
+
+// Execable is an entry that can have a command run on it.
+type Execable interface {
+	Entry
+	Exec(context.Context, string) (io.Reader, error)
+}
+
+// File is an entry that specifies filesystem attributes.
+type File interface {
+	Entry
+	Attr() Attributes
+}
+
+// Dir is an entry that specifically lists files. This exists primarily to help
+// distinguish directories with file contents from organizational groups.
+type Dir interface {
+	Entry
+	FileLS(context.Context) ([]File, error)
+}
+
+// Pipe is an entry that returns a stream of updates. It will be represented
+// as a named pipe (FIFO) in the wash filesystem.
+type Pipe interface {
+	Entry
+	Stream(context.Context) (io.Reader, error)
+}
+
+// Readable is an entry that has a fixed amount of content we can read.
+type Readable interface {
+	Entry
+	Size() uint64
+	Open(context.Context) (io.ReaderAt, error)
+}
+
+// Writable is an entry that we can write new data to.
+type Writable interface {
+	Entry
+	Save(context.Context, io.Reader) error
 }
 
 // Attributes of resources.
@@ -25,40 +81,6 @@ type Attributes struct {
 	Mode  os.FileMode
 	Size  uint64
 	Valid time.Duration
-}
-
-// GroupTraversal models a resource that can list and find specific children.
-type GroupTraversal interface {
-	Find(ctx context.Context, name string) (Node, error)
-	List(ctx context.Context) ([]Node, error)
-}
-
-// Content protocol.
-type Content interface {
-	Open(ctx context.Context) (IFileBuffer, error)
-}
-
-// Stream protocol for data that we only stream?
-
-// Metadata covers protocols supported by all resources.
-// If caching data, you should implement `String() string` returning a unique identifier for
-// the resource.
-type Metadata interface {
-	Name() string
-	Attr(ctx context.Context) (*Attributes, error)
-	Xattr(ctx context.Context) (map[string][]byte, error)
-}
-
-// DirProtocol is protocols expected of a Directory resource.
-type DirProtocol interface {
-	GroupTraversal
-	Metadata
-}
-
-// FileProtocol is protocols expected of a File resource.
-type FileProtocol interface {
-	Content
-	Metadata
 }
 
 // ==== FUSE Adapters ====
@@ -74,41 +96,7 @@ const (
 
 // FS contains the core filesystem data.
 // Plugins: maps plugin mount points to their implementations.
-// files: lists extra files that tell the OS to ignore us.
 type FS struct {
-	Plugins map[string]DirProtocol
-	files   []string
-	name    string
+	Entry
+	Plugins map[string]Entry
 }
-
-var _ fs.FS = (*FS)(nil)
-
-// Dir represents a directory within the system, with the client
-// necessary to represent it and the full path to the directory.
-type Dir struct {
-	DirProtocol
-}
-
-var _ fs.Node = (*Dir)(nil)
-var _ = fs.NodeRequestLookuper(&Dir{})
-var _ = fs.HandleReadDirAller(&Dir{})
-
-// File contains metadata about the file.
-type File struct {
-	FileProtocol
-}
-
-var _ fs.Node = (*File)(nil)
-var _ = fs.NodeOpener(&File{})
-var _ = fs.NodeGetxattrer(&File{})
-var _ = fs.NodeListxattrer(&File{})
-
-// FileHandle contains an IO object that can be read.
-type FileHandle struct {
-	r  IFileBuffer
-	id string
-}
-
-var _ fs.Handle = (*FileHandle)(nil)
-var _ = fs.HandleReleaser(&FileHandle{})
-var _ = fs.HandleReader(&FileHandle{})

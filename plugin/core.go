@@ -1,13 +1,7 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
-	"fmt"
-	"io"
-	"os"
-	"path"
-	"strings"
 	"time"
 
 	"bazil.org/fuse"
@@ -27,105 +21,30 @@ func Init(_slow bool) {
 
 // ==== Plugin registry (FS) ====
 //
-// Here we implement the DirProtocol interface for FS so
+// Here we implement directory methods for FS so
 // that FUSE can recognize it as a valid root directory
 //
 
+var _ fs.FS = (*FS)(nil)
+
 // NewFS creates a new FS.
-func NewFS(plugins map[string]DirProtocol) *FS {
-	files := []string{".Trashes", ".fseventsd/no_log"}
-	return &FS{Plugins: plugins, files: files, name: "/"}
+func NewFS(plugins map[string]Entry) *FS {
+	return &FS{Plugins: plugins, Entry: EntryT{"/"}}
 }
 
 // Root presents the root of the filesystem.
 func (f *FS) Root() (fs.Node, error) {
 	log.Printf("Entering root of filesystem")
-	return &Dir{f}, nil
+	return &dir{f, ""}, nil
 }
 
-// Find the named item or return nil.
-func (f *FS) Find(_ context.Context, name string) (Node, error) {
-	if client, ok := f.Plugins[name]; ok {
-		return &Dir{client}, nil
-	}
-	for _, p := range f.files {
-		dir, file := path.Split(p)
-		// If dir is not empty and matches name, create Dir and pass only file.
-		// If dir is empty, create File and pass empty files.
-		if dir == "" {
-			if file == name {
-				return &File{&FS{name: name}}, nil
-			}
-		} else {
-			if strings.TrimSuffix(dir, "/") == name {
-				return &Dir{&FS{files: []string{file}, name: name}}, nil
-			}
-		}
-	}
-	return nil, ENOENT
-}
-
-// List all clients as directories.
-func (f *FS) List(_ context.Context) ([]Node, error) {
-	keys := make([]Node, 0, len(f.Plugins))
+// LS lists all clients as directories.
+func (f *FS) LS(_ context.Context) ([]Entry, error) {
+	keys := make([]Entry, 0, len(f.Plugins))
 	for _, v := range f.Plugins {
-		keys = append(keys, &Dir{v})
-	}
-	for _, p := range f.files {
-		dir, file := path.Split(p)
-		if dir == "" {
-			keys = append(keys, &File{&FS{name: file}})
-		} else {
-			dir = strings.TrimSuffix(dir, "/")
-			keys = append(keys, &Dir{&FS{files: []string{file}, name: dir}})
-		}
+		keys = append(keys, v)
 	}
 	return keys, nil
-}
-
-// Open is not supported.
-func (f *FS) Open(_ context.Context) (IFileBuffer, error) {
-	return bytes.NewReader([]byte{}), nil
-}
-
-// Name returns '/'.
-func (f *FS) Name() string {
-	return f.name
-}
-
-// Attr returns basic (zero) attributes for the root directory.
-func (f *FS) Attr(ctx context.Context) (*Attributes, error) {
-	// Only ever called with "/". Return latest Mtime of all clients.
-	var latest time.Time
-	for _, v := range f.Plugins {
-		attr, err := v.Attr(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if attr.Mtime.After(latest) {
-			latest = attr.Mtime
-		}
-	}
-	return &Attributes{Mtime: latest, Valid: 100 * time.Millisecond}, nil
-}
-
-// Xattr returns an empty map.
-func (f *FS) Xattr(ctx context.Context) (map[string][]byte, error) {
-	return map[string][]byte{}, nil
-}
-
-// ==== FUSE Directory Interface ====
-
-// NewDir creates a new Dir object.
-func NewDir(impl DirProtocol) *Dir {
-	return &Dir{impl}
-}
-
-func (d *Dir) String() string {
-	if v, ok := d.DirProtocol.(fmt.Stringer); ok {
-		return v.String()
-	}
-	return d.Name()
 }
 
 var startTime = time.Now()
@@ -156,197 +75,4 @@ func applyAttr(a *fuse.Attr, attr *Attributes) {
 		a.Ctime = attr.Ctime
 	}
 	a.Crtime = startTime
-}
-
-// Attr returns the attributes of a directory.
-func (d *Dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	attr, err := d.DirProtocol.Attr(ctx)
-	if err != nil {
-		log.Warnf("Error[Attr,%v]: %v", d, err)
-	}
-	if attr.Mode == 0 {
-		attr.Mode = os.ModeDir | 0550
-	}
-	applyAttr(a, attr)
-	log.Printf("Attr[d] %v %v", d, a)
-	return err
-}
-
-// Listxattr lists extended attributes for the resource.
-func (d *Dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	xattrs, err := d.Xattr(ctx)
-	if err != nil {
-		log.Warnf("Error[Listxattr,%v]: %v", d, err)
-		return err
-	}
-
-	for k := range xattrs {
-		resp.Append(k)
-	}
-	log.Printf("Listxattr[d,pid=%v] %v", req.Pid, d)
-	return nil
-}
-
-// Getxattr gets extended attributes for the resource.
-func (d *Dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	if req.Name == "com.apple.FinderInfo" {
-		return nil
-	}
-
-	xattrs, err := d.Xattr(ctx)
-	if err != nil {
-		log.Warnf("Error[Getxattr,%v,%v]: %v", d, req.Name, err)
-		return err
-	}
-
-	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr[d,pid=%v] %v", req.Pid, d)
-	return nil
-}
-
-func prefetch(entry fs.Node) {
-	if slow {
-		return
-	}
-
-	switch v := entry.(type) {
-	case *Dir:
-		go func() { v.List(context.Background()) }()
-	case *File:
-		log.Debugf("Prefetch is not enabled for files due to potentail cost")
-	default:
-		log.Debugf("Not sure how to prefetch for %v", v)
-	}
-}
-
-// Lookup searches a directory for children.
-func (d *Dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	entry, err := d.Find(ctx, req.Name)
-	if err != nil {
-		log.Warnf("Error[Find,%v,%v]: %v", d, req.Name, err)
-		return nil, err
-	}
-
-	log.Printf("Find[d,pid=%v] %v", req.Pid, entry)
-	prefetch(entry)
-	return entry, nil
-}
-
-// ReadDirAll lists all children of the directory.
-func (d *Dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	entries, err := d.List(ctx)
-	if err != nil {
-		log.Warnf("Error[List,%v]: %v", d, err)
-		return nil, err
-	}
-
-	log.Printf("List %v in %v", len(entries), d)
-
-	res := make([]fuse.Dirent, len(entries))
-	for i, entry := range entries {
-		var de fuse.Dirent
-		switch v := entry.(type) {
-		case *Dir:
-			de.Name = v.Name()
-			de.Type = fuse.DT_Dir
-		case *File:
-			de.Name = v.Name()
-		}
-		res[i] = de
-	}
-	return res, nil
-}
-
-// ==== FUSE File Interface ====
-
-// NewFile creates a new Dir object.
-func NewFile(impl FileProtocol) *File {
-	return &File{impl}
-}
-
-func (f *File) String() string {
-	if v, ok := f.FileProtocol.(fmt.Stringer); ok {
-		return v.String()
-	}
-	return f.Name()
-}
-
-// Attr returns the attributes of a file.
-func (f *File) Attr(ctx context.Context, a *fuse.Attr) error {
-	attr, err := f.FileProtocol.Attr(ctx)
-	if err != nil {
-		log.Warnf("Error[Attr,%v]: %v", f, err)
-	}
-	if attr.Mode == 0 {
-		attr.Mode = 0440
-	}
-	applyAttr(a, attr)
-	log.Printf("Attr[f] %v %v", f, a)
-	return err
-}
-
-// Listxattr lists extended attributes for the resource.
-func (f *File) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	xattrs, err := f.Xattr(ctx)
-	if err != nil {
-		log.Warnf("Error[Listxattr,%v]: %v", f, err)
-		return err
-	}
-
-	for k := range xattrs {
-		resp.Append(k)
-	}
-	log.Printf("Listxattr[f,pid=%v] %v", req.Pid, f)
-	return nil
-}
-
-// Getxattr gets extended attributes for the resource.
-func (f *File) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	if req.Name == "com.apple.FinderInfo" {
-		return nil
-	}
-
-	xattrs, err := f.Xattr(ctx)
-	if err != nil {
-		log.Warnf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
-		return err
-	}
-
-	resp.Xattr = xattrs[req.Name]
-	log.Printf("Getxattr[f,pid=%v] %v", req.Pid, f)
-	return nil
-}
-
-// Open a file for reading.
-func (f *File) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	// Initiate content request and return a channel providing the results.
-	log.Printf("Opening[pid=%v] %v", req.Pid, f)
-	r, err := f.FileProtocol.Open(ctx)
-	if err != nil {
-		log.Warnf("Error[Open,%v]: %v", f, err)
-		return nil, err
-	}
-	log.Printf("Opened[pid=%v] %v", req.Pid, f)
-	return &FileHandle{r: r, id: f.String()}, nil
-}
-
-// Release closes the open file.
-func (fh *FileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	log.Printf("Release[pid=%v] %v", req.Pid, fh.id)
-	if closer, ok := fh.r.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
-// Read fills a buffer with the requested amount of data from the file.
-func (fh *FileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	buf := make([]byte, req.Size)
-	n, err := fh.r.ReadAt(buf, req.Offset)
-	if err == io.EOF {
-		err = nil
-	}
-	log.Printf("Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
-	resp.Data = buf[:n]
-	return err
 }

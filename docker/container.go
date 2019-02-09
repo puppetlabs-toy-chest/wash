@@ -1,65 +1,26 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"io"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
 
 type container struct {
-	*resourcetype
-	name string
+	*client.Client
+	plugin.EntryT
+	buf *datastore.StreamBuffer
 }
 
 const (
 	headerLen     = 8
 	headerSizeIdx = 4
 )
-
-// String returns a unique representation of the project.
-func (inst *container) String() string {
-	return inst.root.Name() + "/container/" + inst.Name()
-}
-
-// Name returns the container's ID.
-func (inst *container) Name() string {
-	return inst.name
-}
-
-// Attr returns attributes of the named resource.
-func (inst *container) Attr(ctx context.Context) (*plugin.Attributes, error) {
-	log.Debugf("Reading attributes of %v", inst)
-	// Read the content to figure out how large it is.
-	if v, ok := inst.reqs.Load(inst.name); ok {
-		buf := v.(*datastore.StreamBuffer)
-		return &plugin.Attributes{Mtime: buf.LastUpdate(), Size: uint64(buf.Size())}, nil
-	}
-
-	// Prefetch content for next time.
-	go plugin.PrefetchOpen(inst)
-
-	return &plugin.Attributes{Mtime: inst.updated}, nil
-}
-
-// Xattr returns a map of extended attributes.
-func (inst *container) Xattr(ctx context.Context) (map[string][]byte, error) {
-	raw, err := inst.cache.CachedJSON(inst.String(), func() ([]byte, error) {
-		_, raw, err := inst.ContainerInspectWithRaw(ctx, inst.name, true)
-		return raw, err
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return plugin.JSONToJSONMap(raw)
-}
 
 // Removes multiplex headers. Returns the new buffer length after compressing input,
 // and the new writeIndex that also includes unprocessed data.
@@ -100,56 +61,50 @@ func (inst *container) readLog() (io.ReadCloser, error) {
 	opts := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Follow:     true,
 	}
-	return inst.ContainerLogs(context.Background(), inst.name, opts)
+	return inst.ContainerLogs(context.Background(), inst.Name(), opts)
+}
+
+func (inst *container) Metadata(ctx context.Context) (interface{}, error) {
+	// Use raw to also get the container size.
+	container, _, err := inst.ContainerInspectWithRaw(ctx, inst.Name(), true)
+	return container, err
+}
+
+func (inst *container) Size() uint64 {
+	if inst.buf != nil {
+		return uint64(inst.buf.Size())
+	}
+	return 0
 }
 
 // Open gets logs from a container.
-func (inst *container) Open(ctx context.Context) (plugin.IFileBuffer, error) {
-	c, err := inst.cachedContainerInspect(ctx)
-	if err != nil {
+func (inst *container) Open(ctx context.Context) (io.ReaderAt, error) {
+	tty := false
+	// TODO: how should we get the cached version from the engine?
+	if meta, err := inst.Metadata(ctx); err == nil {
+		if c, ok := meta.(*types.ContainerJSON); ok {
+			tty = c.Config.Tty
+		}
+	} else {
 		return nil, err
 	}
 
 	// Only do additional processing if container is not running with tty.
 	postProcessor := processMultiplexedStreams
-	if c.Config.Tty {
+	if tty {
 		postProcessor = nil
 	}
-	buf := datastore.NewBuffer(inst.name, postProcessor)
 
-	if v, ok := inst.reqs.LoadOrStore(inst.name, buf); ok {
-		buf = v.(*datastore.StreamBuffer)
-	}
+	// TODO: switch to non-streaming output
+	inst.buf = datastore.NewBuffer(inst.Name(), postProcessor)
 
 	buffered := make(chan bool)
 	go func() {
-		buf.Stream(inst.readLog, buffered)
+		inst.buf.Stream(inst.readLog, buffered)
 	}()
 	// Wait for some output to buffer.
 	<-buffered
 
-	return buf, nil
-}
-
-func (inst *container) cachedContainerInspect(ctx context.Context) (*types.ContainerJSON, error) {
-	entry, err := inst.cache.Get(inst.String())
-	var container types.ContainerJSON
-	if err == nil {
-		log.Debugf("Cache hit on %v", inst)
-		rdr := bytes.NewReader(entry)
-		err = json.NewDecoder(rdr).Decode(&container)
-	} else {
-		log.Printf("Cache miss on %v", inst)
-		var raw []byte
-		container, raw, err = inst.ContainerInspectWithRaw(ctx, inst.name, true)
-		if err != nil {
-			return nil, err
-		}
-
-		inst.cache.Set(inst.name, raw)
-	}
-
-	return &container, err
+	return inst.buf, nil
 }

@@ -10,11 +10,8 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/aws"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/docker"
-	"github.com/puppetlabs/wash/gcp"
-	"github.com/puppetlabs/wash/kubernetes"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -99,11 +96,11 @@ func handleAPIRequest(conn net.Conn, filesys *plugin.FS) error {
 
 type pluginInit struct {
 	name   string
-	plugin plugin.DirProtocol
+	plugin plugin.Entry
 	err    error
 }
 
-type instantiator = func(string, interface{}, *datastore.MemCache) (plugin.DirProtocol, error)
+type instantiator = func(string, interface{}, *datastore.MemCache) (plugin.Entry, error)
 type instData struct {
 	instantiator
 	context interface{}
@@ -124,23 +121,6 @@ func buildFS() (*plugin.FS, error) {
 
 	pluginInstantiators := map[string]instData{
 		"docker": {docker.Create, nil},
-		"gcp":    {gcp.Create, nil},
-	}
-
-	k8sContexts, err := kubernetes.ListContexts()
-	if err != nil {
-		return nil, err
-	}
-	for name, context := range k8sContexts {
-		pluginInstantiators["kubernetes_"+name] = instData{kubernetes.Create, context}
-	}
-
-	awsProfiles, err := aws.ListProfiles()
-	if err != nil {
-		return nil, err
-	}
-	for _, profile := range awsProfiles {
-		pluginInstantiators["aws_"+profile] = instData{aws.Create, profile}
 	}
 
 	plugins := make(chan pluginInit)
@@ -152,7 +132,7 @@ func buildFS() (*plugin.FS, error) {
 		}(k, v)
 	}
 
-	pluginMap := make(map[string]plugin.DirProtocol)
+	pluginMap := make(map[string]plugin.Entry)
 	for range pluginInstantiators {
 		pluginInst := <-plugins
 		if pluginInst.err != nil {
