@@ -6,7 +6,8 @@ This is an attempt to construct a taxonomy for cloud resources. We start by defi
 - metadata: everything has metadata
 - group traversal (ls, find, tree): this object has Cloud Resources that can be enumerated
 - file traversal (ls, find, tree): this object has Filesystem Resources that can be enumerated
-- content (cat, tail/streaming): this object has content we can view
+- content (cat): this object has content we can view
+- stream (tail -f/streaming): this content has a stream of data we can follow
 - editable (edit): this object has content we can modify
 - exec (bolt): we can invoke commands on this object
 
@@ -18,7 +19,7 @@ This is an attempt to construct a taxonomy for cloud resources. We start by defi
 
 Systems that provide compute capacity.
 
-Protocols: metadata, content (logs), exec. Could arguably have filesystem traversal, but that's probably not feasible.
+Protocols: metadata, stream (logs), exec. Could arguably have filesystem traversal, but that's probably not feasible.
 
 Examples: AWS EC2, AWS Lambda, K8s Pod, network device (with shell access)
 
@@ -26,7 +27,7 @@ Examples: AWS EC2, AWS Lambda, K8s Pod, network device (with shell access)
 
 A place to store hierarchical data.
 
-Protocols: metadata, content (access logs, optional), file traversal
+Protocols: metadata, stream (access logs, optional), file traversal
 
 Examples: AWS EBS, K8s Volume
 
@@ -34,11 +35,11 @@ Examples: AWS EBS, K8s Volume
 
 An appliance that provides a service.
 
-Protocols: metadata (configuration), content (logs, optional)
+Protocols: metadata (configuration), stream (logs, optional)
 
 Examples: AWS ELB, K8s Ingress, network device (with no shell access)
 
-#### Grouping
+#### Group
 
 Organizational tools for grouping resources.
 
@@ -50,13 +51,8 @@ Examples: user, K8s namespace, cloud service (such as K8s cluster, aws), region,
 
 #### File
 
-Protocols: metadata, content, editable
+Protocols: attributes, content, editable
 
 #### Directory
 
-Protocols: metadata, file traversal
-
-#### Symbolic Link
-
-Protocols: metadata
-
+Protocols: attributes, file traversal
