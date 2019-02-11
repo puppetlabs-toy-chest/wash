@@ -36,7 +36,6 @@ type Group interface {
 
 // Execable is an entry that can have a command run on it.
 type Execable interface {
-	Entry
 	Exec(context.Context, string) (io.Reader, error)
 }
 
@@ -46,30 +45,20 @@ type File interface {
 	Attr() Attributes
 }
 
-// Dir is an entry that specifically lists files. This exists primarily to help
-// distinguish directories with file contents from organizational groups.
-type Dir interface {
-	Entry
-	FileLS(context.Context) ([]File, error)
-}
-
 // Pipe is an entry that returns a stream of updates. It will be represented
 // as a named pipe (FIFO) in the wash filesystem.
 type Pipe interface {
-	Entry
 	Stream(context.Context) (io.Reader, error)
 }
 
 // Readable is an entry that has a fixed amount of content we can read.
 type Readable interface {
-	Entry
 	Size() uint64
 	Open(context.Context) (io.ReaderAt, error)
 }
 
 // Writable is an entry that we can write new data to.
 type Writable interface {
-	Entry
 	Save(context.Context, io.Reader) error
 }
 
@@ -94,9 +83,8 @@ const (
 	ENOTSUP = fuse.ENOTSUP
 )
 
-// FS contains the core filesystem data.
+// The Registry contains the core filesystem data.
 // Plugins: maps plugin mount points to their implementations.
-type FS struct {
-	Entry
+type Registry struct {
 	Plugins map[string]Entry
 }

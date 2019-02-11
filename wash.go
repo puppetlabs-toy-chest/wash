@@ -8,12 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"bazil.org/fuse"
-	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/fuse"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -38,22 +37,22 @@ func main() {
 		os.Exit(2)
 	}
 
-	filesys, err := buildFS()
+	registry, err := initializePlugins()
 	if err != nil {
 		log.Warnf("%v", err)
 		os.Exit(1)
 	}
 
 	mountpoint := flag.Arg(0)
-	go startAPI(filesys, "wash-api.sock")
+	go startAPI(registry, "wash-api.sock")
 
-	if err := serveFuseFS(filesys, mountpoint); err != nil {
+	if err := fuse.ServeFuseFS(registry, mountpoint, *debug); err != nil {
 		log.Warnf("%v", err)
 		os.Exit(1)
 	}
 }
 
-func startAPI(filesys *plugin.FS, socketPath string) error {
+func startAPI(registry *plugin.Registry, socketPath string) error {
 	log.Printf("API: started")
 
 	if _, err := os.Stat(socketPath); err == nil {
@@ -79,14 +78,14 @@ func startAPI(filesys *plugin.FS, socketPath string) error {
 			return err
 		}
 		go func() {
-			if err := handleAPIRequest(conn, filesys); err != nil {
+			if err := handleAPIRequest(conn, registry); err != nil {
 				log.Warnf("API: %v", err)
 			}
 		}()
 	}
 }
 
-func handleAPIRequest(conn net.Conn, filesys *plugin.FS) error {
+func handleAPIRequest(conn net.Conn, registry *plugin.Registry) error {
 	defer conn.Close()
 
 	// TODO: Fill in with an actual API
@@ -106,18 +105,11 @@ type instData struct {
 	context interface{}
 }
 
-func buildFS() (*plugin.FS, error) {
+func initializePlugins() (*plugin.Registry, error) {
 	cache, err := datastore.NewMemCache()
 	if err != nil {
 		return nil, err
 	}
-
-	if *debug {
-		fuse.Debug = func(msg interface{}) {
-			log.Debugf("%v", msg)
-		}
-	}
-	plugin.Init(*slow)
 
 	pluginInstantiators := map[string]instData{
 		"docker": {docker.Create, nil},
@@ -147,28 +139,5 @@ func buildFS() (*plugin.FS, error) {
 		return nil, errors.New("No plugins loaded")
 	}
 
-	return plugin.NewFS(pluginMap), nil
-}
-
-func serveFuseFS(filesys *plugin.FS, mountpoint string) error {
-	log.Printf("Mounting at %v", mountpoint)
-	fuseServer, err := fuse.Mount(mountpoint)
-	if err != nil {
-		return err
-	}
-	defer fuseServer.Close()
-
-	log.Warnf("Serving filesystem")
-	if err := fs.Serve(fuseServer, filesys); err != nil {
-		return err
-	}
-
-	// check if the mount process has an error to report
-	<-fuseServer.Ready
-	if err := fuseServer.MountError; err != nil {
-		return err
-	}
-	log.Warnf("Done")
-
-	return nil
+	return &plugin.Registry{Plugins: pluginMap}, nil
 }

@@ -1,4 +1,4 @@
-package plugin
+package fuse
 
 import (
 	"context"
@@ -7,12 +7,13 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/log"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // ==== FUSE file Interface ====
 
 type file struct {
-	Entry
+	plugin.Entry
 	parent string
 }
 
@@ -21,7 +22,7 @@ var _ = fs.NodeOpener(&file{})
 var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
-func newFile(e Entry, parent string) *file {
+func newFile(e plugin.Entry, parent string) *file {
 	return &file{e, parent + "/" + e.Name()}
 }
 
@@ -31,10 +32,10 @@ func (f *file) String() string {
 
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	var attr Attributes
-	if file, ok := f.Entry.(File); ok {
+	var attr plugin.Attributes
+	if file, ok := f.Entry.(plugin.File); ok {
 		attr = file.Attr()
-	} else if readable, ok := f.Entry.(Readable); ok {
+	} else if readable, ok := f.Entry.(plugin.Readable); ok {
 		attr.Size = readable.Size()
 	}
 	if attr.Mode == 0 {
@@ -47,7 +48,7 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 
 // Listxattr lists extended attributes for the resource.
 func (f *file) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	if resource, ok := f.Entry.(Resource); ok {
+	if resource, ok := f.Entry.(plugin.Resource); ok {
 		_, err := resource.Metadata(ctx)
 		if err != nil {
 			log.Warnf("Error[Listxattr,%v]: %v", f, err)
@@ -66,7 +67,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 		return nil
 	}
 
-	if resource, ok := f.Entry.(Resource); ok {
+	if resource, ok := f.Entry.(plugin.Resource); ok {
 		_, err := resource.Metadata(ctx)
 		if err != nil {
 			log.Warnf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
@@ -83,7 +84,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
 	log.Printf("Opening[pid=%v] %v", req.Pid, f)
-	if rdr, ok := f.Entry.(Readable); ok {
+	if rdr, ok := f.Entry.(plugin.Readable); ok {
 		r, err := rdr.Open(ctx)
 		if err != nil {
 			log.Warnf("Error[Open,%v]: %v", f, err)
@@ -93,7 +94,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		return &fileHandle{r: r, id: f.String()}, nil
 	}
 	log.Warnf("Error[Open,%v]: cannot open this entry", f)
-	return nil, ENOTSUP
+	return nil, fuse.ENOTSUP
 }
 
 type fileHandle struct {
