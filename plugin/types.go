@@ -23,7 +23,7 @@ func (e *EntryBase) Name() string { return e.name }
 // Resource is an entry that has metadata.
 type Resource interface {
 	Entry
-	Metadata(context.Context) (interface{}, error)
+	Metadata(context.Context) (map[string]interface{}, error)
 }
 
 // Group is an entry that can list its contents, an array of entries.
@@ -58,7 +58,7 @@ type Pipe interface {
 
 // Readable is an entry that has a fixed amount of content we can read.
 type Readable interface {
-	Size() uint64
+	Size(context.Context) (uint64, error)
 	Open(context.Context) (io.ReaderAt, error)
 }
 

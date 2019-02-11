@@ -36,7 +36,12 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	if file, ok := f.Entry.(plugin.File); ok {
 		attr = file.Attr()
 	} else if readable, ok := f.Entry.(plugin.Readable); ok {
-		attr.Size = readable.Size()
+		size, err := readable.Size(ctx)
+		if err != nil {
+			return err
+		}
+		attr.Size = size
+
 	}
 	if attr.Mode == 0 {
 		attr.Mode = 0440
