@@ -1,16 +1,6 @@
 package docker
 
-import (
-	"context"
-	"encoding/binary"
-	"io"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/plugin"
-)
-
+/*
 type container struct {
 	*client.Client
 	plugin.EntryT
@@ -108,3 +98,4 @@ func (inst *container) Open(ctx context.Context) (io.ReaderAt, error) {
 
 	return inst.buf, nil
 }
+*/

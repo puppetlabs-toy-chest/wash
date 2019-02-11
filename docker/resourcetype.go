@@ -1,15 +1,6 @@
 package docker
 
-import (
-	"context"
-	"sync"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/log"
-	"github.com/puppetlabs/wash/plugin"
-)
-
+/*
 type resourcetype struct {
 	*client.Client
 	plugin.EntryT
@@ -43,3 +34,4 @@ func (cli *resourcetype) LS(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	return nil, plugin.ENOTSUP
 }
+*/

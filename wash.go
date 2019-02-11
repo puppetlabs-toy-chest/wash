@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -18,7 +17,6 @@ import (
 var progName = filepath.Base(os.Args[0])
 var debug = flag.Bool("debug", false, "Enable debug output")
 var quiet = flag.Bool("quiet", false, "Suppress operational logging and only log errors")
-var slow = flag.Bool("slow", false, "Disable prefetch on files and directories to reduce network activity")
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "%s mounts remote resources with FUSE\n", progName)
@@ -99,45 +97,20 @@ type pluginInit struct {
 	err    error
 }
 
-type instantiator = func(string, interface{}, *datastore.MemCache) (plugin.Entry, error)
-type instData struct {
-	instantiator
-	context interface{}
-}
-
 func initializePlugins() (*plugin.Registry, error) {
-	cache, err := datastore.NewMemCache()
-	if err != nil {
-		return nil, err
-	}
+	plugins := make(map[string]plugin.Root)
 
-	pluginInstantiators := map[string]instData{
-		"docker": {docker.Create, nil},
-	}
+	plugins["docker"] = &docker.Root{}
 
-	plugins := make(chan pluginInit)
-	for k, v := range pluginInstantiators {
-		go func(name string, create instData) {
-			log.Printf("Loading %v integration", name)
-			pluginInst, err := create.instantiator(name, create.context, cache)
-			plugins <- pluginInit{name, pluginInst, err}
-		}(k, v)
-	}
-
-	pluginMap := make(map[string]plugin.Entry)
-	for range pluginInstantiators {
-		pluginInst := <-plugins
-		if pluginInst.err != nil {
-			log.Warnf("Error loading %v: %v", pluginInst.name, pluginInst.err)
-		} else {
-			log.Warnf("Loaded %v", pluginInst.name)
-			pluginMap[pluginInst.name] = pluginInst.plugin
+	for _, plugin := range plugins {
+		if err := plugin.Init(); err != nil {
+			return nil, err
 		}
 	}
 
-	if len(pluginMap) == 0 {
+	if len(plugins) == 0 {
 		return nil, errors.New("No plugins loaded")
 	}
 
-	return &plugin.Registry{Plugins: pluginMap}, nil
+	return &plugin.Registry{Plugins: plugins}, nil
 }

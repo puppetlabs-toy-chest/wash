@@ -9,6 +9,14 @@ import (
 	"github.com/puppetlabs/wash/log"
 )
 
+// DefaultTimeout is the default timeout for prefetching
+var DefaultTimeout = 10 * time.Second
+
+// NewEntry creates a new named entry
+func NewEntry(name string) EntryBase {
+	return EntryBase{name}
+}
+
 // JSONToJSONMap converts JSON to a map of its top-level keys to JSON serialized values.
 func JSONToJSONMap(inrec []byte) (map[string][]byte, error) {
 	var data map[string]interface{}

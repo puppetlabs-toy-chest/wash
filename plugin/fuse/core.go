@@ -12,8 +12,9 @@ import (
 
 var startTime = time.Now()
 
+// Root represents the root of the FUSE filesystem
 type Root struct {
-	Plugins map[string]plugin.Entry
+	Plugins map[string]plugin.Root
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.

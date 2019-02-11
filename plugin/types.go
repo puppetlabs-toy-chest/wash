@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 )
 
@@ -15,11 +14,11 @@ import (
 // Entry is a basic named resource type
 type Entry interface{ Name() string }
 
-// EntryT implements Entry, making it easy to create new named types.
-type EntryT struct{ EntryName string }
+// EntryBase implements Entry, making it easy to create new entries
+type EntryBase struct{ name string }
 
 // Name returns the entry's name.
-func (e EntryT) Name() string { return e.EntryName }
+func (e *EntryBase) Name() string { return e.name }
 
 // Resource is an entry that has metadata.
 type Resource interface {
@@ -32,6 +31,12 @@ type Resource interface {
 type Group interface {
 	Entry
 	LS(context.Context) ([]Entry, error)
+}
+
+// Root is the root object of a plugin.
+type Root interface {
+	Group
+	Init() error
 }
 
 // Execable is an entry that can have a command run on it.
@@ -77,14 +82,8 @@ type Attributes struct {
 // Node represents a filesystem node
 type Node = fs.Node
 
-// ENOENT states the entity does not exist
-const (
-	ENOENT  = fuse.ENOENT
-	ENOTSUP = fuse.ENOTSUP
-)
-
 // The Registry contains the core filesystem data.
 // Plugins: maps plugin mount points to their implementations.
 type Registry struct {
-	Plugins map[string]Entry
+	Plugins map[string]Root
 }
