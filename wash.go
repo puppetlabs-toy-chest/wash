@@ -4,10 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 
+	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
@@ -42,53 +42,12 @@ func main() {
 	}
 
 	mountpoint := flag.Arg(0)
-	go startAPI(registry, "wash-api.sock")
+	go api.StartAPI(registry, "wash-api.sock")
 
 	if err := fuse.ServeFuseFS(registry, mountpoint, *debug); err != nil {
 		log.Warnf("%v", err)
 		os.Exit(1)
 	}
-}
-
-func startAPI(registry *plugin.Registry, socketPath string) error {
-	log.Printf("API: started")
-
-	if _, err := os.Stat(socketPath); err == nil {
-		// Socket already exists, so nuke it and recreate it
-		log.Printf("API: Cleaning up old socket")
-		if err := os.Remove(socketPath); err != nil {
-			log.Warnf("API: %v", err)
-			return err
-		}
-	}
-
-	server, err := net.Listen("unix", socketPath)
-	if err != nil {
-		log.Warnf("API: %v", err)
-		return err
-	}
-
-	for {
-		conn, err := server.Accept()
-		log.Printf("API: accepted connection")
-		if err != nil {
-			log.Warnf("API: %v", err)
-			return err
-		}
-		go func() {
-			if err := handleAPIRequest(conn, registry); err != nil {
-				log.Warnf("API: %v", err)
-			}
-		}()
-	}
-}
-
-func handleAPIRequest(conn net.Conn, registry *plugin.Registry) error {
-	defer conn.Close()
-
-	// TODO: Fill in with an actual API
-
-	return nil
 }
 
 type pluginInit struct {

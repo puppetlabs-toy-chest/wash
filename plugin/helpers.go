@@ -3,7 +3,9 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/log"
@@ -52,4 +54,44 @@ func PrefetchOpen(file Readable) {
 			closer.Close()
 		}()
 	}
+}
+
+// FindEntryByName finds an entry by name within the given group
+func FindEntryByName(ctx context.Context, group Group, name string) (Entry, error) {
+	entries, err := group.LS(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.Name() == name {
+			return entry, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Could not find entry %v in group %v", name, group.Name())
+}
+
+// FindEntryByPath finds an entry in the group from a given path
+func FindEntryByPath(ctx context.Context, group Group, segments []string) (Entry, error) {
+	var curEntry Entry
+	curEntry = group
+
+	for _, segment := range segments {
+		switch group := curEntry.(type) {
+		case Group:
+			entry, err := FindEntryByName(ctx, group, segment)
+			if err != nil {
+				return nil, err
+			}
+
+			curEntry = entry
+		default:
+			// TODO: Make this return a structured error. This would let us distinguish
+			// between different cases (e.g. Not Found vs. IO error vs. Malformed path)
+			return nil, fmt.Errorf("Segment %v of path %v is not a Group", curEntry.Name(), strings.Join(segments, "/"))
+		}
+	}
+
+	return curEntry, nil
 }
