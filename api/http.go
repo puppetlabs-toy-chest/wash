@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 
@@ -57,24 +57,25 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 	return http.Serve(server, r)
 }
 
-func segmentsFromRawURLPath(rawPath string) ([]string, error) {
-	segments := strings.Split(rawPath, "/")
-	for i, rawSegment := range segments {
-		segment, err := url.PathUnescape(rawSegment)
-		if err != nil {
-			return nil, err
-		}
-
-		segments[i] = segment
-	}
-
-	return segments, nil
-}
-
+// Query parameter ?op=metadata
 func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	pluginName := vars["plugin"]
-	rawPath := vars["path"]
+	path := vars["path"]
+
+	// Get the operation for early validation
+	if err := r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Could not parse request parameters: %v\n", err)
+		return
+	}
+
+	op := r.Form.Get("op")
+	if op != "metadata" {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Operation %v is not supported\n", op)
+		return
+	}
 
 	ctx := r.Context()
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
@@ -85,12 +86,7 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	segments, err := segmentsFromRawURLPath(rawPath)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "The path %v is malformed: %v\n", strings.Join(segments, "/"), err)
-		return
-	}
+	segments := strings.Split(path, "/")
 
 	entry, err := plugin.FindEntryByPath(ctx, root, segments)
 	if err != nil {
@@ -101,6 +97,33 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Found entry %v\n", entry.Name())
+	switch op {
+	// TODO: Make "metadata" constant at some point
+	case "metadata":
+		if resource, ok := entry.(plugin.Resource); ok {
+			metadata, err := resource.Metadata(ctx)
+
+			// TODO: Definitely figure out the error handling at some
+			// point
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "Could not get metadata for %v: %v\n", path, err)
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+			jsonEncoder := json.NewEncoder(w)
+			if err = jsonEncoder.Encode(metadata); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprintf(w, "Could not marshal metadata for %v: %v\n", path, err)
+				return
+			}
+
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "Entry %v does not support the %v operation\n", path, op)
+	return
 }
