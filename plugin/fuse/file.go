@@ -2,6 +2,7 @@ package fuse
 
 import (
 	"context"
+	"fmt"
 	"io"
 
 	"bazil.org/fuse"
@@ -14,7 +15,8 @@ import (
 
 type file struct {
 	plugin.Entry
-	parent string
+	id      string
+	content plugin.SizedReader
 }
 
 var _ fs.Node = (*file)(nil)
@@ -23,11 +25,11 @@ var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
 func newFile(e plugin.Entry, parent string) *file {
-	return &file{e, parent + "/" + e.Name()}
+	return &file{Entry: e, id: parent + "/" + e.Name()}
 }
 
 func (f *file) String() string {
-	return f.parent + "/" + f.Name()
+	return f.id
 }
 
 // Attr returns the attributes of a file.
@@ -36,12 +38,25 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	if file, ok := f.Entry.(plugin.File); ok {
 		attr = file.Attr()
 	} else if readable, ok := f.Entry.(plugin.Readable); ok {
-		size, err := readable.Size(ctx)
-		if err != nil {
+		if f.content == nil {
+			log.Printf("[Attr,%v]: Recomputing the file's size attr", f)
+			sizedReader, err := readable.Open(ctx)
+			if err != nil {
+				log.Warnf("Error[Attr,%v]: %v", f, err)
+				return err
+			}
+
+			f.content = sizedReader
+		}
+
+		size := f.content.Size()
+		if size < 0 {
+			err := fmt.Errorf("Returned a negative value for the size: %v", size)
+			log.Warnf("Error[Attr,%v]: %v", f, err)
 			return err
 		}
-		attr.Size = size
 
+		attr.Size = uint64(size)
 	}
 	if attr.Mode == 0 {
 		attr.Mode = 0440
@@ -89,14 +104,20 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
 	log.Printf("Opening[pid=%v] %v", req.Pid, f)
-	if rdr, ok := f.Entry.(plugin.Readable); ok {
-		r, err := rdr.Open(ctx)
-		if err != nil {
-			log.Warnf("Error[Open,%v]: %v", f, err)
-			return nil, err
+	if readable, ok := f.Entry.(plugin.Readable); ok {
+		if f.content == nil {
+			log.Printf("[Open,%v]: Recomputing the file contents", f)
+			sizedReader, err := readable.Open(ctx)
+			if err != nil {
+				log.Warnf("Error[Open,%v]: %v", f, err)
+				return nil, err
+			}
+
+			f.content = sizedReader
 		}
+
 		log.Printf("Opened[pid=%v] %v", req.Pid, f)
-		return &fileHandle{r: r, id: f.String()}, nil
+		return &fileHandle{r: f.content, id: f.String()}, nil
 	}
 	log.Warnf("Error[Open,%v]: cannot open this entry", f)
 	return nil, fuse.ENOTSUP

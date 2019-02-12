@@ -56,10 +56,14 @@ type Pipe interface {
 	Stream(context.Context) (io.Reader, error)
 }
 
+type SizedReader interface {
+	io.ReaderAt
+	Size() int64
+}
+
 // Readable is an entry that has a fixed amount of content we can read.
 type Readable interface {
-	Size(context.Context) (uint64, error)
-	Open(context.Context) (io.ReaderAt, error)
+	Open(context.Context) (SizedReader, error)
 }
 
 // Writable is an entry that we can write new data to.

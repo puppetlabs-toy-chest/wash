@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -98,16 +97,7 @@ type containerMetadata struct {
 	container *container
 }
 
-func (cm *containerMetadata) Size(ctx context.Context) (uint64, error) {
-	rdr, err := cm.Open(ctx)
-	if err != nil {
-		return 0, err
-	}
-
-	return uint64(rdr.(*bytes.Reader).Size()), nil
-}
-
-func (cm *containerMetadata) Open(ctx context.Context) (io.ReaderAt, error) {
+func (cm *containerMetadata) Open(ctx context.Context) (plugin.SizedReader, error) {
 	metadata, err := cm.container.Metadata(ctx)
 	if err != nil {
 		return nil, err
