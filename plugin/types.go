@@ -81,6 +81,13 @@ type Attributes struct {
 	Valid time.Duration
 }
 
+// Protocols is the list of supported protocols for Wash
+const (
+	MetadataCommand = "metadata"
+	ListCommand     = "list"
+	ReadCommand     = "read"
+)
+
 // ==== FUSE Adapters ====
 
 // Node represents a filesystem node

@@ -47,7 +47,7 @@ func main() {
 		},
 	}
 
-	url := fmt.Sprintf("http://localhost/fs%v?op=metadata", string(apiPath))
+	url := fmt.Sprintf("http://localhost/fs/metadata%v", string(apiPath))
 	response, err := httpc.Get(url)
 	if err != nil {
 		log.Fatal(err)

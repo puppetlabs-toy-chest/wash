@@ -14,11 +14,6 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// ApiHandler is the API handler
-type ApiHandler struct {
-	pluginRegistry *plugin.Registry
-}
-
 type key int
 
 const pluginRegistryKey key = iota
@@ -52,36 +47,22 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/fs/{path:.*}", ApiHandler{pluginRegistry: registry})
+
+	r.HandleFunc("/fs/list/{path:.+}", listHandler)
+	r.HandleFunc("/fs/metadata/{path:.+}", metadataHandler)
+
 	r.Use(addPluginRegistryMiddleware)
 	return http.Serve(server, r)
 }
 
-// Query parameter ?op=metadata
-func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
 	vars := mux.Vars(r)
 	path := vars["path"]
-
-	// Get the operation for early validation
-	if err := r.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Could not parse request parameters: %v\n", err)
-		return
+	if path == "" {
+		panic("path should never be empty")
 	}
 
-	op := r.Form.Get("op")
-	if op == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Must provide the op query parameter\n")
-		return
-	}
-
-	if op != "metadata" {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Operation %v is not supported\n", op)
-		return
-	}
-
+	// What happens if segments is empty
 	segments := strings.Split(path, "/")
 	pluginName := segments[0]
 	segments = segments[1:]
@@ -90,49 +71,78 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
 	root, ok := registry.Plugins[pluginName]
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Plugin %v does not exist\n", pluginName)
-		return
+		return nil, path, fmt.Errorf("Plugin %v does not exist", pluginName)
 	}
 
 	entry, err := plugin.FindEntryByPath(ctx, root, segments)
 	if err != nil {
-		// TODO: Make the error structured so we can distinguish between
-		// a NotFound vs. bad path vs. other stuff
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "Entry not found: %v\n", err)
+		return nil, path, fmt.Errorf("Entry not found: %v", err)
+	}
+
+	return entry, path, nil
+}
+
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	entry, path, err := getEntryFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	switch op {
-	// TODO: Make "metadata" constant at some point
-	case "metadata":
-		resource, ok := entry.(plugin.Resource)
-		if !ok {
-			break
-		}
-
-		metadata, err := resource.Metadata(ctx)
-
-		// TODO: Definitely figure out the error handling at some
-		// point
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Could not get metadata for %v: %v\n", path, err)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		jsonEncoder := json.NewEncoder(w)
-		if err = jsonEncoder.Encode(metadata); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Could not marshal metadata for %v: %v\n", path, err)
-			return
-		}
-
+	group, ok := entry.(plugin.Group)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Entry %v does not support the list command", path), http.StatusNotFound)
 		return
 	}
 
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Entry %v does not support the %v operation\n", path, op)
+	entries, err := group.LS(r.Context())
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Could not list the entries for %v: %v", path, err), http.StatusInternalServerError)
+		return
+	}
+
+	result := make([]map[string]interface{}, len(entries))
+	for i, entry := range entries {
+		result[i] = map[string]interface{}{
+			"name":     entry.Name(),
+			"commands": []string{},
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	if err = jsonEncoder.Encode(result); err != nil {
+		http.Error(w, fmt.Sprintf("Could not marshal list results for %v: %v", path, err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func metadataHandler(w http.ResponseWriter, r *http.Request) {
+	entry, path, err := getEntryFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	resource, ok := entry.(plugin.Resource)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Entry %v does not support the metadata command", path), http.StatusNotFound)
+		return
+	}
+
+	metadata, err := resource.Metadata(r.Context())
+
+	// TODO: Definitely figure out the error handling at some
+	// point
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Could not get metadata for %v: %v\n", path, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	jsonEncoder := json.NewEncoder(w)
+	if err = jsonEncoder.Encode(metadata); err != nil {
+		http.Error(w, fmt.Sprintf("Could not marshal metadata for %v: %v\n", path, err), http.StatusInternalServerError)
+		return
+	}
 }
