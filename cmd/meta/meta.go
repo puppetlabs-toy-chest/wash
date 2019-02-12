@@ -1,16 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
-
-	"github.com/go-yaml/yaml"
-	"github.com/pkg/xattr"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -31,31 +32,35 @@ func main() {
 	}
 
 	path := flag.Arg(0)
+	url := fmt.Sprintf("http://localhost/fs/%v?op=metadata", path)
 
-	var err error
-	var list []string
-	if list, err = xattr.List(path); err != nil {
+	httpc := http.Client{
+		Transport: &http.Transport{
+			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", "/tmp/wash-api.sock")
+			},
+		},
+	}
+
+	response, err := httpc.Get(url)
+	if err != nil {
 		log.Fatal(err)
+		return
 	}
 
-	sort.Strings(list)
-	everything := make(map[string]interface{})
-	for _, key := range list {
-		var data []byte
-		if data, err = xattr.Get(path, key); err != nil {
-			log.Fatal(err)
-		}
-
-		var structured interface{}
-		if err = json.Unmarshal(data, &structured); err != nil {
-			everything[key] = string(data)
-		} else {
-			everything[key] = structured
-		}
-	}
-	if b, err := yaml.Marshal(everything); err != nil {
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
 		log.Fatal(err)
-	} else {
-		fmt.Println(string(b))
+		return
 	}
+
+	if response.StatusCode != http.StatusOK {
+		log.Fatal(fmt.Sprintf("Status: %v, Body: %v", response.StatusCode, string(body)))
+		return
+	}
+
+	var metadataBuffer bytes.Buffer
+	json.Indent(&metadataBuffer, body, "", "  ")
+
+	metadataBuffer.WriteTo(os.Stdout)
 }

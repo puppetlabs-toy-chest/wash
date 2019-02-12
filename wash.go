@@ -42,7 +42,7 @@ func main() {
 	}
 
 	mountpoint := flag.Arg(0)
-	go api.StartAPI(registry, "wash-api.sock")
+	go api.StartAPI(registry, "/tmp/wash-api.sock")
 
 	if err := fuse.ServeFuseFS(registry, mountpoint, *debug); err != nil {
 		log.Warnf("%v", err)

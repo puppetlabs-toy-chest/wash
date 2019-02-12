@@ -52,7 +52,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/fs/{plugin}/{path:.*}", ApiHandler{pluginRegistry: registry})
+	r.Handle("/fs/{path:.*}", ApiHandler{pluginRegistry: registry})
 	r.Use(addPluginRegistryMiddleware)
 	return http.Serve(server, r)
 }
@@ -60,7 +60,6 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 // Query parameter ?op=metadata
 func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	pluginName := vars["plugin"]
 	path := vars["path"]
 
 	// Get the operation for early validation
@@ -71,11 +70,21 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	op := r.Form.Get("op")
+	if op == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Must provide the op query parameter\n")
+		return
+	}
+
 	if op != "metadata" {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "Operation %v is not supported\n", op)
 		return
 	}
+
+	segments := strings.Split(path, "/")
+	pluginName := segments[0]
+	segments = segments[1:]
 
 	ctx := r.Context()
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
@@ -85,8 +94,6 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Plugin %v does not exist\n", pluginName)
 		return
 	}
-
-	segments := strings.Split(path, "/")
 
 	entry, err := plugin.FindEntryByPath(ctx, root, segments)
 	if err != nil {
