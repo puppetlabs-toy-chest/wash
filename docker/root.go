@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -59,7 +60,11 @@ func (cs *containers) LS(ctx context.Context) ([]plugin.Entry, error) {
 	log.Debugf("Listing %v containers in %v", len(containers), cs)
 	keys := make([]plugin.Entry, len(containers))
 	for i, inst := range containers {
-		keys[i] = &container{EntryBase: plugin.NewEntry(inst.ID), client: cs.client}
+		keys[i] = &container{
+			EntryBase: plugin.NewEntry(inst.ID),
+			client:    cs.client,
+			startTime: time.Unix(inst.Created, 0),
+		}
 	}
 	return keys, nil
 }
@@ -68,7 +73,8 @@ func (cs *containers) LS(ctx context.Context) ([]plugin.Entry, error) {
 
 type container struct {
 	plugin.EntryBase
-	client *client.Client
+	client    *client.Client
+	startTime time.Time
 }
 
 // Metadata
@@ -85,6 +91,15 @@ func (c *container) Metadata(ctx context.Context) (map[string]interface{}, error
 	}
 
 	return metadata, nil
+}
+
+// Attr
+func (c *container) Attr() plugin.Attributes {
+	return plugin.Attributes{
+		Ctime: c.startTime,
+		Mtime: c.startTime,
+		Atime: c.startTime,
+	}
 }
 
 func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
