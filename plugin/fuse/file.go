@@ -68,35 +68,19 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 
 // Listxattr lists extended attributes for the resource.
 func (f *file) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	if resource, ok := f.Entry.(plugin.Resource); ok {
-		_, err := resource.Metadata(ctx)
-		if err != nil {
-			log.Warnf("Error[Listxattr,%v]: %v", f, err)
-			return err
-		}
-		// TODO: turn meta into a list of extended attributes
-		//for k := range xattrs { resp.Append(k) }
-	}
 	log.Printf("Listxattr[f,pid=%v] %v", req.Pid, f)
+	resp.Append("wash.id")
 	return nil
 }
 
 // Getxattr gets extended attributes for the resource.
 func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	if req.Name == "com.apple.FinderInfo" {
-		return nil
+	log.Printf("Getxattr[f,pid=%v] %v", req.Pid, f)
+	switch req.Name {
+	case "wash.id":
+		resp.Xattr = []byte(f.String())
 	}
 
-	if resource, ok := f.Entry.(plugin.Resource); ok {
-		_, err := resource.Metadata(ctx)
-		if err != nil {
-			log.Warnf("Error[Getxattr,%v,%v]: %v", f, req.Name, err)
-			return err
-		}
-		// TODO: get specific attrbute from meta
-		// resp.Xattr = xattrs[req.Name]
-	}
-	log.Printf("Getxattr[f,pid=%v] %v", req.Pid, f)
 	return nil
 }
 

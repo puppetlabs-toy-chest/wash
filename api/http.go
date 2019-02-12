@@ -107,30 +107,32 @@ func (handler ApiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch op {
 	// TODO: Make "metadata" constant at some point
 	case "metadata":
-		if resource, ok := entry.(plugin.Resource); ok {
-			metadata, err := resource.Metadata(ctx)
+		resource, ok := entry.(plugin.Resource)
+		if !ok {
+			break
+		}
 
-			// TODO: Definitely figure out the error handling at some
-			// point
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "Could not get metadata for %v: %v\n", path, err)
-				return
-			}
+		metadata, err := resource.Metadata(ctx)
 
-			w.WriteHeader(http.StatusOK)
-			jsonEncoder := json.NewEncoder(w)
-			if err = jsonEncoder.Encode(metadata); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "Could not marshal metadata for %v: %v\n", path, err)
-				return
-			}
-
+		// TODO: Definitely figure out the error handling at some
+		// point
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Could not get metadata for %v: %v\n", path, err)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
+		jsonEncoder := json.NewEncoder(w)
+		if err = jsonEncoder.Encode(metadata); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, "Could not marshal metadata for %v: %v\n", path, err)
+			return
+		}
+
+		return
 	}
 
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprintf(w, "Entry %v does not support the %v operation\n", path, op)
-	return
 }

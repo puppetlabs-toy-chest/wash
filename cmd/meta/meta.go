@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/pkg/xattr"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -32,7 +34,10 @@ func main() {
 	}
 
 	path := flag.Arg(0)
-	url := fmt.Sprintf("http://localhost/fs/%v?op=metadata", path)
+	apiPath, err := xattr.Get(path, "wash.id")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	httpc := http.Client{
 		Transport: &http.Transport{
@@ -42,6 +47,7 @@ func main() {
 		},
 	}
 
+	url := fmt.Sprintf("http://localhost/fs%v?op=metadata", string(apiPath))
 	response, err := httpc.Get(url)
 	if err != nil {
 		log.Fatal(err)
