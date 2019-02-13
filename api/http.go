@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -50,6 +51,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 
 	r.HandleFunc("/fs/list/{path:.+}", listHandler)
 	r.HandleFunc("/fs/metadata/{path:.+}", metadataHandler)
+	r.HandleFunc("/fs/read/{path:.+}", readHandler)
 
 	r.Use(addPluginRegistryMiddleware)
 	return http.Serve(server, r)
@@ -176,4 +178,30 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Could not marshal metadata for %v: %v\n", path, err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func readHandler(w http.ResponseWriter, r *http.Request) {
+	entry, path, err := getEntryFromRequest(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	readable, ok := entry.(plugin.Readable)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Entry %v does not support the read command", path), http.StatusNotFound)
+		return
+	}
+
+	content, err := readable.Open(r.Context())
+
+	// TODO: Definitely figure out the error handling at some
+	// point
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Could not read %v: %v\n", path, err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	io.Copy(w, content)
 }
