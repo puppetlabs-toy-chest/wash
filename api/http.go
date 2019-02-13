@@ -64,11 +64,14 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
 		panic("path should never be empty")
 	}
 
-	// What happens if segments is empty
+	// Don't interpret trailing slash as a new segment
+	path = strings.TrimSuffix(path, "/")
+	// Split into plugin name and an optional list of segments.
 	segments := strings.Split(path, "/")
 	pluginName := segments[0]
 	segments = segments[1:]
 
+	// Get the registry from context (added by registry middleware).
 	ctx := r.Context()
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
 	root, ok := registry.Plugins[pluginName]
