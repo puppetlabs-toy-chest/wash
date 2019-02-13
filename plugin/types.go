@@ -50,12 +50,12 @@ type File interface {
 	Attr() Attributes
 }
 
-// Pipe is an entry that returns a stream of updates. It will be represented
-// as a named pipe (FIFO) in the wash filesystem.
+// Pipe is an entry that returns a stream of updates.
 type Pipe interface {
 	Stream(context.Context) (io.Reader, error)
 }
 
+// SizedReader returns a ReaderAt that can report its Size.
 type SizedReader interface {
 	io.ReaderAt
 	Size() int64

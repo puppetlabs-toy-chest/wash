@@ -38,7 +38,7 @@ func (r *Root) Init() error {
 	return nil
 }
 
-// LS
+// LS lists the types of resources the Docker plugin exposes.
 func (r *Root) LS(ctx context.Context) ([]plugin.Entry, error) {
 	return r.resources, nil
 }
@@ -103,7 +103,10 @@ func (c *container) Attr() plugin.Attributes {
 }
 
 func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
-	return []plugin.Entry{&containerMetadata{EntryBase: plugin.NewEntry("metadata.json"), container: c}}, nil
+	return []plugin.Entry{
+		&containerMetadata{plugin.NewEntry("metadata.json"), c},
+		&containerLogFile{plugin.NewEntry("log"), c.Name(), c.client},
+	}, nil
 }
 
 // CONTAINER METADATA FILE
