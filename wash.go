@@ -9,9 +9,9 @@ import (
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/docker"
+	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/puppetlabs/wash/plugin/fuse"
 )
 
 var progName = filepath.Base(os.Args[0])
