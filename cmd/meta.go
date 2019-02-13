@@ -1,48 +1,47 @@
-package main
+package cmd
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/pkg/xattr"
+	"github.com/puppetlabs/wash/config"
+	"github.com/spf13/cobra"
 )
 
-var progName = filepath.Base(os.Args[0])
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "%s prints all extended attributes of a file as a YAML object\n", progName)
-	fmt.Fprintf(os.Stderr, "Usage: %s FILE\n", progName)
-	flag.PrintDefaults()
-}
-
-func main() {
-	flag.Usage = usage
-	flag.Parse()
-
-	if flag.NArg() != 1 {
-		usage()
-		os.Exit(2)
+func metaCommand() *cobra.Command {
+	metaCmd := &cobra.Command{
+		Use:   "meta <file>",
+		Short: "Prints the metadata of a file",
+		Args:  cobra.MinimumNArgs(1),
 	}
 
-	path := flag.Arg(0)
+	metaCmd.Run = metaMain
+
+	return metaCmd
+}
+
+func metaMain(cmd *cobra.Command, args []string) {
+	path := args[0]
+	socket := config.Fields.Socket
+
 	apiPath, err := xattr.Get(path, "wash.id")
 	if err != nil {
+		// log.Fatal will exit the program with an exit code of 1
 		log.Fatal(err)
 	}
 
 	httpc := http.Client{
 		Transport: &http.Transport{
 			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", "/tmp/wash-api.sock")
+				return net.Dial("unix", socket)
 			},
 		},
 	}
@@ -51,22 +50,21 @@ func main() {
 	response, err := httpc.Get(url)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Fatal(err)
-		return
 	}
 
 	if response.StatusCode != http.StatusOK {
 		log.Fatal(fmt.Sprintf("Status: %v, Body: %v", response.StatusCode, string(body)))
-		return
 	}
 
 	var metadataBuffer bytes.Buffer
 	json.Indent(&metadataBuffer, body, "", "  ")
 
 	metadataBuffer.WriteTo(os.Stdout)
+
+	os.Exit(0)
 }
