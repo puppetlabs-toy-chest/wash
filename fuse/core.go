@@ -64,31 +64,61 @@ func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-func ServeFuseFS(filesys *plugin.Registry, mountpoint string, debug bool) error {
+// ServeFuseFS serves the FUSE filesystem
+func ServeFuseFS(filesys *plugin.Registry, mountpoint string, debug bool) (chan bool, error) {
 	if debug {
 		fuse.Debug = func(msg interface{}) {
 			log.Debugf("%v", msg)
 		}
 	}
 
-	log.Printf("Mounting at %v", mountpoint)
-	fuseServer, err := fuse.Mount(mountpoint)
+	log.Printf("FUSE: Mounting at %v", mountpoint)
+	fuseConn, err := fuse.Mount(mountpoint)
 	if err != nil {
-		return err
-	}
-	defer fuseServer.Close()
-
-	log.Warnf("Serving filesystem")
-	if err := fs.Serve(fuseServer, &Root{Plugins: filesys.Plugins}); err != nil {
-		return err
+		return nil, err
 	}
 
-	// check if the mount process has an error to report
-	<-fuseServer.Ready
-	if err := fuseServer.MountError; err != nil {
-		return err
-	}
-	log.Warnf("Done")
+	// Start the FUSE server
+	fuseServerStoppedCh := make(chan struct{})
+	go func() {
+		defer close(fuseServerStoppedCh)
+		defer func() {
+			err := fuseConn.Close()
+			if err != nil {
+				log.Printf("FUSE: Error closing the connection: %v", err)
+			}
+		}()
 
-	return nil
+		log.Printf("FUSE: Serving filesystem")
+		if err := fs.Serve(fuseConn, &Root{Plugins: filesys.Plugins}); err != nil {
+			log.Warnf("FUSE: fs.Serve errored with: %v", err)
+		}
+
+		// check if the mount process has an error to report
+		<-fuseConn.Ready
+		if err := fuseConn.MountError; err != nil {
+			log.Warnf("FUSE: Mount process errored with: %v", err)
+		}
+		log.Printf("FUSE: Server was shut down")
+	}()
+
+	// Clean-up
+	stopCh := make(chan bool)
+	go func() {
+		defer close(stopCh)
+		<-stopCh
+
+		log.Printf("FUSE: Shutting down the server")
+
+		log.Printf("FUSE: Unmounting %v", mountpoint)
+		if err := fuse.Unmount(mountpoint); err != nil {
+			log.Warnf("FUSE: Failed to unmount %v: %v", mountpoint, err.Error())
+			return
+		}
+
+		// Wait for the FUSE server to shutdown.
+		<-fuseServerStoppedCh
+	}()
+
+	return stopCh, nil
 }

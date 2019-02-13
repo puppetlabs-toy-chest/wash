@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
+	"time"
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/docker"
@@ -41,13 +45,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	mountpoint := flag.Arg(0)
-	go api.StartAPI(registry, "/tmp/wash-api.sock")
-
-	if err := fuse.ServeFuseFS(registry, mountpoint, *debug); err != nil {
+	apiServerStopCh, err := api.StartAPI(registry, "/tmp/wash-api.sock")
+	if err != nil {
 		log.Warnf("%v", err)
 		os.Exit(1)
 	}
+	stopAPIServer := func() {
+		// Shutdown the API server; wait for the shutdown to finish
+		apiShutdownDeadline := time.Now().Add(3 * time.Second)
+		apiShutdownCtx, cancelFunc := context.WithDeadline(context.Background(), apiShutdownDeadline)
+		defer cancelFunc()
+		apiServerStopCh <- apiShutdownCtx
+		<-apiServerStopCh
+	}
+
+	mountpoint := flag.Arg(0)
+	fuseServerStopCh, err := fuse.ServeFuseFS(registry, mountpoint, *debug)
+	if err != nil {
+		log.Warnf("%v", err)
+		stopAPIServer()
+		os.Exit(1)
+	}
+
+	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
+	// server and unmounting the FS.
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh, syscall.SIGINT)
+
+	<-sigCh
+
+	stopAPIServer()
+
+	// Shutdown the FUSE server; wait for the shutdown to finish
+	fuseServerStopCh <- true
+	<-fuseServerStopCh
 }
 
 type pluginInit struct {

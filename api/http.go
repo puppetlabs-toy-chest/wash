@@ -19,8 +19,8 @@ type key int
 
 const pluginRegistryKey key = iota
 
-// StartAPI starts the api
-func StartAPI(registry *plugin.Registry, socketPath string) error {
+// StartAPI starts the api.
+func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Context, error) {
 	log.Printf("API: started")
 
 	if _, err := os.Stat(socketPath); err == nil {
@@ -28,14 +28,14 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 		log.Printf("API: Cleaning up old socket")
 		if err := os.Remove(socketPath); err != nil {
 			log.Warnf("API: %v", err)
-			return err
+			return nil, err
 		}
 	}
 
 	server, err := net.Listen("unix", socketPath)
 	if err != nil {
 		log.Warnf("API: %v", err)
-		return err
+		return nil, err
 	}
 
 	addPluginRegistryMiddleware := func(next http.Handler) http.Handler {
@@ -54,7 +54,37 @@ func StartAPI(registry *plugin.Registry, socketPath string) error {
 	r.HandleFunc("/fs/read/{path:.+}", readHandler)
 
 	r.Use(addPluginRegistryMiddleware)
-	return http.Serve(server, r)
+
+	httpServer := http.Server{Handler: r}
+
+	// Start the server
+	serverStoppedCh := make(chan struct{})
+	go func() {
+		defer close(serverStoppedCh)
+
+		err := httpServer.Serve(server)
+		if err != nil && err != http.ErrServerClosed {
+			log.Warnf("API: %v", err)
+		}
+
+		log.Printf("API: Server was shut down")
+	}()
+
+	stopCh := make(chan context.Context)
+	go func() {
+		defer close(stopCh)
+		ctx := <-stopCh
+
+		log.Printf("API: Shutting down the server")
+		err := httpServer.Shutdown(ctx)
+		if err != nil {
+			log.Warnf("API: Shutdown failed: %v", err)
+		}
+
+		<-serverStoppedCh
+	}()
+
+	return stopCh, nil
 }
 
 func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
