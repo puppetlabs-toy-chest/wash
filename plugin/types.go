@@ -57,8 +57,6 @@ type Pipe interface {
 }
 
 type SizedReader interface {
-	// TODO: Implement our own Read method? We know the size.
-	io.Reader
 	io.ReaderAt
 	Size() int64
 }

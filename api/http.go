@@ -203,5 +203,5 @@ func readHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	io.Copy(w, content)
+	io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 }
