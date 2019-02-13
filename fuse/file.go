@@ -35,12 +35,14 @@ func (f *file) String() string {
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	var attr plugin.Attributes
-	if file, ok := f.Entry.(plugin.File); ok {
-		attr = file.Attr()
-	} else if readable, ok := f.Entry.(plugin.Readable); ok {
+	switch item := f.Entry.(type) {
+	case plugin.File:
+		attr = item.Attr()
+	case plugin.Readable:
+		// TODO: this should be cached with a specific lifetime because fs.Node are almost never recreated.
 		if f.content == nil {
 			log.Printf("[Attr,%v]: Recomputing the file's size attr", f)
-			sizedReader, err := readable.Open(ctx)
+			sizedReader, err := item.Open(ctx)
 			if err != nil {
 				log.Warnf("Error[Attr,%v]: %v", f, err)
 				return err
@@ -58,6 +60,7 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 
 		attr.Size = uint64(size)
 	}
+
 	if attr.Mode == 0 {
 		attr.Mode = 0440
 	}
