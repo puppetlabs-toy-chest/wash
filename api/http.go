@@ -82,6 +82,24 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
 	return entry, path, nil
 }
 
+func supportedCommands(entry plugin.Entry) []string {
+	commands := make([]string, 0)
+
+	if _, ok := entry.(plugin.Group); ok {
+		commands = append(commands, plugin.ListCommand)
+	}
+
+	if _, ok := entry.(plugin.Resource); ok {
+		commands = append(commands, plugin.MetadataCommand)
+	}
+
+	if _, ok := entry.(plugin.Readable); ok {
+		commands = append(commands, plugin.ReadCommand)
+	}
+
+	return commands
+}
+
 func listHandler(w http.ResponseWriter, r *http.Request) {
 	entry, path, err := getEntryFromRequest(r)
 	if err != nil {
@@ -101,12 +119,25 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make([]map[string]interface{}, len(entries))
-	for i, entry := range entries {
-		result[i] = map[string]interface{}{
+	info := func(entry plugin.Entry) map[string]interface{} {
+		result := map[string]interface{}{
 			"name":     entry.Name(),
-			"commands": []string{},
+			"commands": supportedCommands(entry),
 		}
+
+		if file, ok := entry.(plugin.File); ok {
+			result["attributes"] = file.Attr()
+		}
+
+		return result
+	}
+
+	result := make([]map[string]interface{}, len(entries)+1)
+	result[0] = info(group)
+	result[0]["name"] = "."
+
+	for i, entry := range entries {
+		result[i+1] = info(entry)
 	}
 
 	w.WriteHeader(http.StatusOK)
