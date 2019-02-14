@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/InVisionApp/tabular"
-	"github.com/pkg/xattr"
 
 	"github.com/puppetlabs/wash/api/client"
 )
@@ -96,16 +95,16 @@ func main() {
 	}
 
 	path := flag.Arg(0)
-	apiPath, err := xattr.Get(path, "wash.id")
+	apiPath, err := client.APIPathFromXattrs(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	conn := client.ForUNIXSocket("/tmp/wash-api.sock")
-	ls, err := client.List(conn, string(apiPath))
 
+	ls, err := conn.List(apiPath)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	fmt.Print(formatTabularListing(ls))

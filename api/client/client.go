@@ -8,6 +8,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+
+	"github.com/pkg/xattr"
 )
 
 // A DomainSocketClient is a wash API client.
@@ -45,15 +47,15 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
-func callResponse(client DomainSocketClient, path string) (*http.Response, error) {
+func (c *DomainSocketClient) callResponse(path string) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", domainSocketBaseURL, path)
-	return client.Get(url)
+	return c.Get(url)
 }
 
 // List lists the resources located at "path".
-func List(client DomainSocketClient, path string) ([]LSItem, error) {
+func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
 	url := fmt.Sprintf("/fs/list%s", path)
-	response, err := callResponse(client, url)
+	response, err := c.callResponse(url)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -77,4 +79,15 @@ func List(client DomainSocketClient, path string) ([]LSItem, error) {
 	}
 
 	return ls, nil
+}
+
+// APIPathFromXattrs will take a path to an object within the wash filesystem,
+// and interrogate it to determine its path relative to the wash filesystem
+// root. This is stored in the extended attributes of every file in the wash fs.
+func APIPathFromXattrs(fspath string) (string, error) {
+	p, err := xattr.Get(fspath, "wash.id")
+	if err != nil {
+		return "", err
+	}
+	return string(p), nil
 }
