@@ -10,13 +10,15 @@ import (
 	"net/http"
 )
 
+// A DomainSocketClient is a wash API client.
 type DomainSocketClient struct {
 	http.Client
 }
 
 var domainSocketBaseURL = "http://localhost"
 
-// TODO: consider moving this into the api package
+// LSItem represents a single entry from the result of issuing a wash "list"
+// request.
 type LSItem struct {
 	Commands   []string `json:"commands"`
 	Name       string   `json:"name"`
@@ -30,7 +32,9 @@ type LSItem struct {
 	} `json:"attributes"`
 }
 
-func ClientUNIXSocket(pathToSocket string) DomainSocketClient {
+// ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
+// domain socket.
+func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 	return DomainSocketClient{
 		http.Client{
 			Transport: &http.Transport{
@@ -41,14 +45,15 @@ func ClientUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
-func CallResponse(client DomainSocketClient, path string) (*http.Response, error) {
+func callResponse(client DomainSocketClient, path string) (*http.Response, error) {
 	url := fmt.Sprintf("%s%s", domainSocketBaseURL, path)
 	return client.Get(url)
 }
 
+// List lists the resources located at "path".
 func List(client DomainSocketClient, path string) ([]LSItem, error) {
 	url := fmt.Sprintf("/fs/list%s", path)
-	response, err := CallResponse(client, url)
+	response, err := callResponse(client, url)
 	if err != nil {
 		log.Println(err)
 		return nil, err

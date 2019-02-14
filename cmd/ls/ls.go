@@ -19,7 +19,7 @@ import (
 var progName = filepath.Base(os.Args[0])
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "%s prints all extended attributes of a file as a YAML object\n", progName)
+	fmt.Fprintf(os.Stderr, "%s Lists the resources at the indicated path\n", progName)
 	fmt.Fprintf(os.Stderr, "Usage: %s FILE\n", progName)
 	flag.PrintDefaults()
 }
@@ -101,7 +101,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn := client.ClientUNIXSocket("/tmp/wash-api.sock")
+	conn := client.ForUNIXSocket("/tmp/wash-api.sock")
 	ls, err := client.List(conn, string(apiPath))
 
 	if err != nil {
