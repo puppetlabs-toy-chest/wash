@@ -52,6 +52,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 	r.HandleFunc("/fs/list/{path:.+}", listHandler)
 	r.HandleFunc("/fs/metadata/{path:.+}", metadataHandler)
 	r.HandleFunc("/fs/read/{path:.+}", readHandler)
+	r.HandleFunc("/fs/stream/{path:.+}", streamHandler)
 
 	r.Use(addPluginRegistryMiddleware)
 

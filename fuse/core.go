@@ -2,6 +2,8 @@ package fuse
 
 import (
 	"context"
+	"os/user"
+	"strconv"
 	"time"
 
 	"bazil.org/fuse"
@@ -16,6 +18,27 @@ var startTime = time.Now()
 type Root struct {
 	Plugins map[string]plugin.Root
 }
+
+func getIDs() (uint32, uint32) {
+	me, err := user.Current()
+	if err != nil {
+		log.Printf("Unable to fetch user: %v", err)
+		return 0, 0
+	}
+	uid, err := strconv.ParseUint(me.Uid, 10, 32)
+	if err != nil {
+		log.Printf("Unable to parse uid: %v", err)
+		return 0, 0
+	}
+	gid, err := strconv.ParseUint(me.Gid, 10, 32)
+	if err != nil {
+		log.Printf("Unable to parse gid: %v", err)
+		return 0, 0
+	}
+	return uint32(uid), uint32(gid)
+}
+
+var uid, gid = getIDs()
 
 // Applies attributes where non-default, and sets defaults otherwise.
 func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
@@ -43,8 +66,12 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 		a.Ctime = attr.Ctime
 	}
 	a.Crtime = startTime
+	a.BlockSize = 4096
+	a.Uid = uid
+	a.Gid = gid
 }
 
+// Name returns '/', the name for the filesystem root.
 func (f *Root) Name() string {
 	return "/"
 }
@@ -64,7 +91,7 @@ func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
 	return keys, nil
 }
 
-// ServeFuseFS serves the FUSE filesystem
+// ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.
 func ServeFuseFS(filesys *plugin.Registry, mountpoint string, debug bool) (chan bool, error) {
 	if debug {
 		fuse.Debug = func(msg interface{}) {

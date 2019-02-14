@@ -94,7 +94,6 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			prefetch(entry)
 			switch v := entry.(type) {
 			case plugin.Group:
-				log.Printf("New directory: %v", v)
 				return newDir(v, d.String()), nil
 			default:
 				return newFile(v, d.String()), nil
@@ -117,12 +116,10 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
 		var de fuse.Dirent
-		switch v := entry.(type) {
+		de.Name = entry.Name()
+		switch entry.(type) {
 		case plugin.Group:
-			de.Name = v.Name()
 			de.Type = fuse.DT_Dir
-		default:
-			de.Name = v.Name()
 		}
 		res[i] = de
 	}
