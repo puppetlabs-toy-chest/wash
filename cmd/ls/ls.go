@@ -1,14 +1,9 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,6 +11,8 @@ import (
 
 	"github.com/InVisionApp/tabular"
 	"github.com/pkg/xattr"
+
+	"github.com/puppetlabs/wash/api/client"
 )
 
 var progName = filepath.Base(os.Args[0])
@@ -26,60 +23,7 @@ func usage() {
 	flag.PrintDefaults()
 }
 
-// TODO: consider moving this into the api package
-type listingEntry struct {
-	Commands   []string `json:"commands"`
-	Name       string   `json:"name"`
-	Attributes struct {
-		Atime string `json:"Atime"`
-		Mtime string `json:"Mtime"`
-		Ctime string `json:"Ctime"`
-		Mode  int    `json:"Mode"`
-		Size  int    `json:"Size"`
-		Valid int    `json:"Valid"`
-	} `json:"attributes"`
-}
-
-type listing []listingEntry
-
-func api(client http.Client, command string, path string) ([]byte, error) {
-	url := fmt.Sprintf("http://localhost/fs/%s%s", command, path)
-	response, err := client.Get(url)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		// Generate a real error object for this
-		log.Printf("Status: %v, Body: %v", response.StatusCode, string(body))
-		return nil, err
-	}
-
-	return body, nil
-}
-
-func getListing(client http.Client, path string) (listing, error) {
-	body, err := api(client, "list", path)
-	if err != nil {
-		return nil, err
-	}
-
-	var ls listing
-	if err := json.Unmarshal(body, &ls); err != nil {
-		return nil, err
-	}
-
-	return ls, nil
-}
-
-func longestFieldFromListing(ls listing, lookup func(listingEntry) string) string {
+func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) string) string {
 	max := 0
 	var match string
 	for _, entry := range ls {
@@ -93,16 +37,16 @@ func longestFieldFromListing(ls listing, lookup func(listingEntry) string) strin
 	return match
 }
 
-func formatTabularListing(ls listing) string {
+func formatTabularListing(ls []client.LSItem) string {
 	var out string
 	var tab tabular.Table
 
 	// Setup the output table
 	tab = tabular.New()
-	nameWidth := len(longestFieldFromListing(ls, func(e listingEntry) string {
+	nameWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
 		return e.Name
 	}))
-	verbsWidth := len(longestFieldFromListing(ls, func(e listingEntry) string {
+	verbsWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
 		return strings.Join(e.Commands, ", ")
 	}))
 	tab.Col("size", "NAME", nameWidth+2)
@@ -149,15 +93,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	httpc := http.Client{
-		Transport: &http.Transport{
-			DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-				return net.Dial("unix", "/tmp/wash-api.sock")
-			},
-		},
-	}
+	conn := client.ClientUNIXSocket("/tmp/wash-api.sock")
+	ls, err := client.List(conn, string(apiPath))
 
-	ls, err := getListing(httpc, string(apiPath))
 	if err != nil {
 		panic("Fatal error")
 	}
