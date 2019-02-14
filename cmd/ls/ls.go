@@ -51,7 +51,7 @@ func formatTabularListing(ls []client.LSItem) string {
 		return strings.Join(e.Commands, ", ")
 	}))
 	tab.Col("size", "NAME", nameWidth+2)
-	tab.Col("ctime", "CREATED", 25+2)
+	tab.Col("ctime", "CREATED", 19+2)
 	tab.Col("verbs", "ACTIONS", verbsWidth+2)
 
 	table := tab.Parse("*")
