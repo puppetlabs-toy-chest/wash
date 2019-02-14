@@ -105,7 +105,7 @@ func main() {
 	ls, err := client.List(conn, string(apiPath))
 
 	if err != nil {
-		panic("Fatal error")
+		panic(err)
 	}
 
 	fmt.Print(formatTabularListing(ls))
