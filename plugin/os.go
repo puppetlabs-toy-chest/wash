@@ -72,13 +72,16 @@ func StatParse(line string) (Attributes, string, error) {
 	return attr, segments[5], nil
 }
 
+// A DirMap is a map of directory names to a map of their children and the children's attributes.
+type DirMap = map[string]map[string]Attributes
+
 // StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
 // file paths, and maps each directory to a map of files in that directory and their attributes.
-func StatParseAll(output io.Reader, base string) (map[string]map[string]Attributes, error) {
+func StatParseAll(output io.Reader, base string) (DirMap, error) {
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
-	attrs := map[string]map[string]Attributes{"": make(map[string]Attributes)}
+	attrs := DirMap{"": make(map[string]Attributes)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {

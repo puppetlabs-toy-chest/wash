@@ -33,6 +33,7 @@ func (r *Root) Init() error {
 
 	r.resources = []plugin.Entry{
 		&containers{EntryBase: plugin.NewEntry("containers"), client: r.client},
+		&volumes{EntryBase: plugin.NewEntry("volumes"), client: r.client},
 	}
 
 	return nil
