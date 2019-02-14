@@ -65,7 +65,7 @@ func serverMain(cmd *cobra.Command, args []string) {
 	fuseServerStopCh, err := fuse.ServeFuseFS(registry, mountpoint, debug)
 	if err != nil {
 		stopAPIServer()
-		log.Warnf("%v")
+		log.Warnf("%v", err)
 		os.Exit(1)
 	}
 
@@ -81,8 +81,6 @@ func serverMain(cmd *cobra.Command, args []string) {
 	// Shutdown the FUSE server; wait for the shutdown to finish
 	fuseServerStopCh <- true
 	<-fuseServerStopCh
-
-	os.Exit(0)
 }
 
 type pluginInit struct {

@@ -82,6 +82,31 @@ func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
 	return ls, nil
 }
 
+// Metadata gets the metadata of the resource located at "path".
+func (c *DomainSocketClient) Metadata(path string) ([]byte, error) {
+	url := fmt.Sprintf("/fs/metadata%s", path)
+	response, err := c.callResponse(url)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		// Generate a real error object for this
+		log.Printf("Status: %v, Body: %v", response.StatusCode, string(body))
+		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, path, string(body))
+	}
+
+	return body, nil
+}
+
 // APIPathFromXattrs will take a path to an object within the wash filesystem,
 // and interrogate it to determine its path relative to the wash filesystem
 // root. This is stored in the extended attributes of every file in the wash fs.
