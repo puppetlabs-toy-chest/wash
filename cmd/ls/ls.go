@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/InVisionApp/tabular"
 	"github.com/pkg/xattr"
@@ -62,6 +63,13 @@ func formatTabularListing(ls []client.LSItem) string {
 		ctime := entry.Attributes.Ctime
 		if ctime == "" {
 			ctime = "<unknown>"
+		} else {
+			t, err := time.Parse("2006-01-02T15:04:05-07:00", ctime)
+			if err != nil {
+				ctime = fmt.Sprintf("<raw:%s>", err)
+			} else {
+				ctime = t.Format(time.RFC822)
+			}
 		}
 
 		cmds := entry.Commands
