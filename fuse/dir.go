@@ -6,8 +6,8 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
+	log "github.com/sirupsen/logrus"
 )
 
 // ==== FUSE Directory Interface ====
@@ -91,7 +91,8 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	for _, entry := range entries {
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d.String(), entry.Name())
-			prefetch(entry)
+			// TODO: Re-enable prefetch. It doesn't help until we cache the results.
+			//prefetch(entry)
 			switch v := entry.(type) {
 			case plugin.Group:
 				return newDir(v, d.String()), nil

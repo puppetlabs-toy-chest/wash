@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"time"
-
-	"bazil.org/fuse/fs"
 )
 
 // ==== Wash Protocols and Resources ====
@@ -87,11 +85,6 @@ const (
 	ListCommand     = "list"
 	ReadCommand     = "read"
 )
-
-// ==== FUSE Adapters ====
-
-// Node represents a filesystem node
-type Node = fs.Node
 
 // The Registry contains the core filesystem data.
 // Plugins: maps plugin mount points to their implementations.
