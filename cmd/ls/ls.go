@@ -95,7 +95,7 @@ func main() {
 	}
 
 	path := flag.Arg(0)
-	apiPath, err := client.APIPathFromXattrs(path)
+	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
 		log.Fatal(err)
 	}

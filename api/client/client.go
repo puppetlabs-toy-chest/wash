@@ -85,7 +85,7 @@ func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
 // APIPathFromXattrs will take a path to an object within the wash filesystem,
 // and interrogate it to determine its path relative to the wash filesystem
 // root. This is stored in the extended attributes of every file in the wash fs.
-func APIPathFromXattrs(fspath string) (string, error) {
+func APIKeyFromPath(fspath string) (string, error) {
 	p, err := xattr.Get(fspath, "wash.id")
 	if err != nil {
 		return "", err
