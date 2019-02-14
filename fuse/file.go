@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,7 +18,7 @@ import (
 type file struct {
 	plugin.Entry
 	id      string
-	content plugin.SizedReader
+	content datastore.Var
 }
 
 var _ fs.Node = (*file)(nil)
@@ -26,7 +27,7 @@ var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
 func newFile(e plugin.Entry, parent string) *file {
-	return &file{Entry: e, id: parent + "/" + e.Name()}
+	return &file{e, parent + "/" + e.Name(), datastore.NewVar(5 * time.Second)}
 }
 
 func (f *file) String() string {
@@ -40,19 +41,17 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	case plugin.File:
 		attr = item.Attr()
 	case plugin.Readable:
-		// TODO: this should be cached with a specific lifetime because fs.Node are almost never recreated.
-		if f.content == nil {
+		raw, err := f.content.Update(func() (interface{}, error) {
 			log.Infof("FUSE: [Attr,%v]: Recomputing the file's size attr", f)
-			sizedReader, err := item.Open(ctx)
-			if err != nil {
-				log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
-				return err
-			}
-
-			f.content = sizedReader
+			return item.Open(ctx)
+		})
+		if err != nil {
+			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+			return err
 		}
+		content := raw.(plugin.SizedReader)
 
-		size := f.content.Size()
+		size := content.Size()
 		if size < 0 {
 			err := fmt.Errorf("Returned a negative value for the size: %v", size)
 			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
@@ -93,19 +92,18 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry.(plugin.Readable); ok {
-		if f.content == nil {
+		raw, err := f.content.Update(func() (interface{}, error) {
 			log.Infof("FUSE: [Open,%v]: Recomputing the file contents", f)
-			sizedReader, err := readable.Open(ctx)
-			if err != nil {
-				log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
-				return nil, err
-			}
-
-			f.content = sizedReader
+			return readable.Open(ctx)
+		})
+		if err != nil {
+			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
+			return nil, err
 		}
+		content := raw.(plugin.SizedReader)
 
 		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
-		return &fileHandle{r: f.content, id: f.String()}, nil
+		return &fileHandle{r: content, id: f.String()}, nil
 	}
 	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
 	return nil, fuse.ENOTSUP

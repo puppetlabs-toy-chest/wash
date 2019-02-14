@@ -9,7 +9,6 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/plugin"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -80,7 +79,7 @@ func (f *Root) Name() string {
 // Root presents the root of the filesystem.
 func (f *Root) Root() (fs.Node, error) {
 	log.Infof("Entering root of filesystem")
-	return &dir{f, ""}, nil
+	return newDir(f, ""), nil
 }
 
 // LS lists all clients as directories.
