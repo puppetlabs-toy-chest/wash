@@ -1,4 +1,4 @@
-package plugin
+package os
 
 import (
 	"bufio"
@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // StatCmd returns the command required to stat all the files in a directory.
@@ -24,8 +26,8 @@ func StatCmd(path string) []string {
 }
 
 // StatParse parses a single line of the output of StatCmd into Attrbutes and a name.
-func StatParse(line string) (Attributes, string, error) {
-	var attr Attributes
+func StatParse(line string) (plugin.Attributes, string, error) {
+	var attr plugin.Attributes
 	segments := strings.SplitN(line, " ", 6)
 	if len(segments) != 6 {
 		return attr, "", fmt.Errorf("Stat did not return 6 components: %v", line)
@@ -72,13 +74,16 @@ func StatParse(line string) (Attributes, string, error) {
 	return attr, segments[5], nil
 }
 
+// A DirMap is a map of directory names to a map of their children and the children's attributes.
+type DirMap = map[string]map[string]plugin.Attributes
+
 // StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
 // file paths, and maps each directory to a map of files in that directory and their attributes.
-func StatParseAll(output io.Reader, base string) (map[string]map[string]Attributes, error) {
+func StatParseAll(output io.Reader, base string) (DirMap, error) {
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
-	attrs := map[string]map[string]Attributes{"": make(map[string]Attributes)}
+	attrs := DirMap{"": make(map[string]plugin.Attributes)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {
@@ -90,7 +95,7 @@ func StatParseAll(output io.Reader, base string) (map[string]map[string]Attribut
 			relative := strings.TrimPrefix(fullpath, base)
 			// Create an entry for each directory.
 			if attr.Mode.IsDir() {
-				attrs[relative] = make(map[string]Attributes)
+				attrs[relative] = make(map[string]plugin.Attributes)
 			}
 
 			// Add each entry to its parent's listing.

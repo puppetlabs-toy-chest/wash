@@ -3,18 +3,22 @@ package fuse
 import (
 	"context"
 	"os"
+	"strings"
+	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	log "github.com/sirupsen/logrus"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
+	log "github.com/sirupsen/logrus"
 )
 
 // ==== FUSE Directory Interface ====
 
 type dir struct {
 	plugin.Entry
-	id string
+	id       string
+	children datastore.Var
 }
 
 var _ fs.Node = (*dir)(nil)
@@ -22,7 +26,8 @@ var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
 func newDir(e plugin.Entry, parent string) *dir {
-	return &dir{e, parent + "/" + e.Name()}
+	id := strings.TrimSuffix(parent, "/") + "/" + strings.TrimPrefix(e.Name(), "/")
+	return &dir{e, id, datastore.NewVar(5 * time.Second)}
 }
 
 func (d *dir) String() string {
@@ -61,23 +66,20 @@ func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 	return nil
 }
 
-func prefetch(entry plugin.Entry) {
-	switch v := entry.(type) {
-	case plugin.Group:
-		go func() { v.LS(context.Background()) }()
-	default:
-		log.Debugf("FUSE: Not sure how to prefetch for %v", v)
-	}
-}
-
-func (d *dir) get(ctx context.Context) (entries []plugin.Entry, err error) {
+func (d *dir) get(ctx context.Context) ([]plugin.Entry, error) {
+	// Cache get requests. FUSE often lists the contents then immediately calls find on individual entries.
 	switch v := d.Entry.(type) {
 	case plugin.Group:
-		entries, err = v.LS(ctx)
+		data, err := d.children.Update(func() (interface{}, error) {
+			return v.LS(ctx)
+		})
+		if err != nil {
+			return nil, err
+		}
+		return data.([]plugin.Entry), nil
 	default:
-		err = fuse.ENOENT
+		return []plugin.Entry{}, fuse.ENOENT
 	}
-	return entries, err
 }
 
 // Lookup searches a directory for children.
@@ -91,9 +93,10 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	for _, entry := range entries {
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d.String(), entry.Name())
-			prefetch(entry)
 			switch v := entry.(type) {
 			case plugin.Group:
+				// Prefetch directory entries into the cache
+				go func() { d.get(context.Background()) }()
 				return newDir(v, d.String()), nil
 			default:
 				return newFile(v, d.String()), nil

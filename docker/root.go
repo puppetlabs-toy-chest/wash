@@ -16,7 +16,6 @@ import (
 
 // Root of the Docker plugin
 type Root struct {
-	plugin.EntryBase
 	client    *client.Client
 	resources []plugin.Entry
 }
@@ -27,15 +26,19 @@ func (r *Root) Init() error {
 	if err != nil {
 		return err
 	}
-
-	r.EntryBase = plugin.NewEntry("docker")
 	r.client = dockerCli
 
 	r.resources = []plugin.Entry{
 		&containers{EntryBase: plugin.NewEntry("containers"), client: r.client},
+		&volumes{EntryBase: plugin.NewEntry("volumes"), client: r.client},
 	}
 
 	return nil
+}
+
+// Name returns 'docker'
+func (r *Root) Name() string {
+	return "docker"
 }
 
 // LS lists the types of resources the Docker plugin exposes.
@@ -85,12 +88,7 @@ func (c *container) Metadata(ctx context.Context) (map[string]interface{}, error
 		return nil, err
 	}
 
-	var metadata map[string]interface{}
-	if err := json.Unmarshal(raw, &metadata); err != nil {
-		return nil, err
-	}
-
-	return metadata, nil
+	return plugin.ToMetadata(raw), nil
 }
 
 // Attr

@@ -7,7 +7,6 @@ A cloud-native shell for bringing remote infrastructure to your terminal.
 This prototype is built as a FUSE filesystem. It currently supports
 - viewing running containers and volumes in Docker (found from the local socket or via DOCKER environment variables)
 - viewing running containers and persistent volume claims in Kubernetes (uses contexts from `~/.kube/config`)
-- viewing metadata for Google Pub/Sub, Dataflow, and BigQuery (requires gcloud login and possibly setting `GOOGLE_APPLICATION_CREDENTIALS` as described in https://developers.google.com/accounts/docs/application-default-credentials)
 
 Mount the filesystem with
 ```
@@ -22,7 +21,8 @@ Operations that work:
 - `vim`
 - `tail [-f]`
 - `stat` (kind of, information's not very useful)
-- `xattr` and a new command `meta`
+- `xattr`
+- a new `meta` command
 
 > Requires golang 1.11+.
 

@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"time"
-
-	"bazil.org/fuse/fs"
 )
 
 // ==== Wash Protocols and Resources ====
@@ -81,17 +79,15 @@ type Attributes struct {
 	Valid time.Duration
 }
 
+// SizeUnknown can be used to denote that the size is unknown and should be queried from content.
+const SizeUnknown = ^uint64(0)
+
 // Protocols is the list of supported protocols for Wash
 const (
 	MetadataCommand = "metadata"
 	ListCommand     = "list"
 	ReadCommand     = "read"
 )
-
-// ==== FUSE Adapters ====
-
-// Node represents a filesystem node
-type Node = fs.Node
 
 // The Registry contains the core filesystem data.
 // Plugins: maps plugin mount points to their implementations.

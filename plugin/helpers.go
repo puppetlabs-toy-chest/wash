@@ -19,22 +19,25 @@ func NewEntry(name string) EntryBase {
 	return EntryBase{name}
 }
 
-// JSONToJSONMap converts JSON to a map of its top-level keys to JSON serialized values.
-func JSONToJSONMap(inrec []byte) (map[string][]byte, error) {
-	var data map[string]interface{}
-	if err := json.Unmarshal(inrec, &data); err != nil {
-		return nil, err
-	}
-
+// ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
+// must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
+func ToMetadata(obj interface{}) map[string]interface{} {
 	var err error
-	d := make(map[string][]byte)
-	for k, v := range data {
-		d[k], err = json.Marshal(v)
-		if err != nil {
-			return nil, err
+	var inrec []byte
+	if arr, ok := obj.([]byte); ok {
+		inrec = arr
+	} else {
+		if inrec, err = json.Marshal(obj); err != nil {
+			// Internal error if we can't marshal an object
+			panic(err)
 		}
 	}
-	return d, nil
+	var meta map[string]interface{}
+	if err := json.Unmarshal(inrec, &meta); err != nil {
+		// Internal error if not a JSON object
+		panic(err)
+	}
+	return meta
 }
 
 // TrackTime helper is useful for timing functions.
