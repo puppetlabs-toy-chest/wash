@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // DefaultTimeout is the default timeout for prefetching
@@ -41,7 +41,7 @@ func JSONToJSONMap(inrec []byte) (map[string][]byte, error) {
 // Use with `defer plugin.TrackTime(time.Now(), "funcname")`.
 func TrackTime(start time.Time, name string) {
 	elapsed := time.Since(start)
-	log.Printf("%s took %s", name, elapsed)
+	log.Infof("%s took %s", name, elapsed)
 }
 
 // PrefetchOpen can be called to open a file for DefaultTimeout (if it supports Close).

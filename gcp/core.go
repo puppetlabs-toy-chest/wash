@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 	"golang.org/x/oauth2/google"
 	crm "google.golang.org/api/cloudresourcemanager/v1"

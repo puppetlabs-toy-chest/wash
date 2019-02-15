@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // StreamBuffer implements a streaming buffer that can be closed and re-opened.
@@ -73,7 +73,7 @@ func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan boo
 	var err error
 	b.input, err = cb()
 	if err != nil {
-		log.Printf("Buffer setup failed: %v", err)
+		log.Infof("Buffer setup failed: %v", err)
 		b.decr()
 		return
 	}
@@ -124,7 +124,7 @@ func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan boo
 			panic("buffer: readFrom returned negative count from Read")
 		}
 		writeIndex += bytesRead
-		log.Printf("Read %v [%v/%v]", b.name, writeIndex, capacity)
+		log.Infof("Read %v [%v/%v]", b.name, writeIndex, capacity)
 
 		newLen := writeIndex
 		if b.postProcessStream != nil {
@@ -147,7 +147,7 @@ func (b *StreamBuffer) Stream(cb func() (io.ReadCloser, error), confirm chan boo
 
 			break
 		} else if err != nil {
-			log.Printf("Read failed, perhaps connection or file was closed: %v", err)
+			log.Infof("Read failed, perhaps connection or file was closed: %v", err)
 			// If the connection was closed explicitly, clear data.
 			b.mux.Lock()
 			b.data = b.data[:0]

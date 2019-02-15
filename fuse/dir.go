@@ -6,7 +6,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -39,20 +39,20 @@ func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = os.ModeDir | 0550
 	}
 	applyAttr(a, &attr)
-	log.Printf("Attr[d] %v %v", d, a)
+	log.Infof("FUSE: Attr[d] %v %v", d, a)
 	return nil
 }
 
 // Listxattr lists extended attributes for the resource.
 func (d *dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Printf("Listxattr[d,pid=%v] %v", req.Pid, d)
+	log.Infof("FUSE: Listxattr[d,pid=%v] %v", req.Pid, d)
 	resp.Append("wash.id")
 	return nil
 }
 
 // Getxattr gets extended attributes for the resource.
 func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Printf("Getxattr[d,pid=%v] %v", req.Pid, d)
+	log.Infof("FUSE: Getxattr[d,pid=%v] %v", req.Pid, d)
 	switch req.Name {
 	case "wash.id":
 		resp.Xattr = []byte(d.String())
@@ -66,7 +66,7 @@ func prefetch(entry plugin.Entry) {
 	case plugin.Group:
 		go func() { v.LS(context.Background()) }()
 	default:
-		log.Debugf("Not sure how to prefetch for %v", v)
+		log.Debugf("FUSE: Not sure how to prefetch for %v", v)
 	}
 }
 
@@ -84,13 +84,13 @@ func (d *dir) get(ctx context.Context) (entries []plugin.Entry, err error) {
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	entries, err := d.get(ctx)
 	if err != nil {
-		log.Warnf("Error[Find,%v,%v]: %v", d, req.Name, err)
+		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
 		return nil, err
 	}
 
 	for _, entry := range entries {
 		if entry.Name() == req.Name {
-			log.Printf("Find[d,pid=%v] %v/%v", req.Pid, d.String(), entry.Name())
+			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d.String(), entry.Name())
 			prefetch(entry)
 			switch v := entry.(type) {
 			case plugin.Group:
@@ -107,11 +107,11 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	entries, err := d.get(ctx)
 	if err != nil {
-		log.Warnf("Error[List,%v]: %v", d, err)
+		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
 		return nil, err
 	}
 
-	log.Printf("List %v in %v", len(entries), d)
+	log.Infof("FUSE: List %v in %v", len(entries), d)
 
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {

@@ -8,8 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+	log "github.com/sirupsen/logrus"
 )
 
 // DOCKER ROOT

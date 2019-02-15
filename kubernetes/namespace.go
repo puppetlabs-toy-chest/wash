@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 )
 

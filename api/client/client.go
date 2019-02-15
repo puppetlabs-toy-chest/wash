@@ -111,7 +111,7 @@ func (c *DomainSocketClient) Metadata(path string) (JSON, error) {
 	return body, nil
 }
 
-// APIPathFromXattrs will take a path to an object within the wash filesystem,
+// APIKeyFromPath will take a path to an object within the wash filesystem,
 // and interrogate it to determine its path relative to the wash filesystem
 // root. This is stored in the extended attributes of every file in the wash fs.
 func APIKeyFromPath(fspath string) (string, error) {

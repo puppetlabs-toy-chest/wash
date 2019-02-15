@@ -25,7 +25,6 @@ func metaCommand() *cobra.Command {
 
 func metaMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
-	socket := config.Fields.Socket
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
@@ -33,7 +32,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	conn := client.ForUNIXSocket(socket)
+	conn := client.ForUNIXSocket(config.Socket)
 
 	metadata, err := conn.Metadata(apiPath)
 	if err != nil {

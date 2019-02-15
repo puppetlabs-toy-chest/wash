@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -109,7 +109,7 @@ func (cli *client) cachedPods(ctx context.Context, ns string) ([]string, error) 
 			if bits, err := json.Marshal(pd); err == nil {
 				cli.cache.Set(cli.Name()+"/"+pd.Namespace+"/pod/"+pd.Name, bits)
 			} else {
-				log.Printf("Unable to marshal pod %v: %v", pd, err)
+				log.Infof("Unable to marshal pod %v: %v", pd, err)
 			}
 		}
 		pods[allNamespace] = allpods

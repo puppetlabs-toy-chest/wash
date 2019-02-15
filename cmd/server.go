@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -12,10 +14,12 @@ import (
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/fuse"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func serverCommand() *cobra.Command {
@@ -26,8 +30,11 @@ func serverCommand() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	serverCmd.Flags().Bool("debug", false, "Enable debug output")
-	serverCmd.Flags().Bool("quiet", false, "Suppress operational logging and only log errors")
+	serverCmd.Flags().String("loglevel", "info", "Set the logging level")
+	viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel"))
+
+	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
+	viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile"))
 
 	serverCmd.RunE = toRunE(serverMain)
 
@@ -36,11 +43,17 @@ func serverCommand() *cobra.Command {
 
 func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := args[0]
-	socket := config.Fields.Socket
-	debug, _ := cmd.Flags().GetBool("debug")
-	quiet, _ := cmd.Flags().GetBool("quiet")
+	loglevel := viper.GetString("loglevel")
+	logfile := viper.GetString("logfile")
 
-	log.Init(debug, quiet)
+	logFH, err := initializeLogger(loglevel, logfile)
+	if err != nil {
+		fmt.Printf("Failed to initialize the logger: %v\n", err)
+		return exitCode{1}
+	}
+	if logFH != nil {
+		defer logFH.Close()
+	}
 
 	registry, err := initializePlugins()
 	if err != nil {
@@ -48,7 +61,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	apiServerStopCh, err := api.StartAPI(registry, socket)
+	apiServerStopCh, err := api.StartAPI(registry, config.Socket)
 	if err != nil {
 		log.Warnf("%v", err)
 		return exitCode{1}
@@ -62,7 +75,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		<-apiServerStopCh
 	}
 
-	fuseServerStopCh, err := fuse.ServeFuseFS(registry, mountpoint, debug)
+	fuseServerStopCh, err := fuse.ServeFuseFS(registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
 		log.Warnf("%v", err)
@@ -83,6 +96,48 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	<-fuseServerStopCh
 
 	return exitCode{0}
+}
+
+var levelMap = map[string]log.Level{
+	"warn":  log.WarnLevel,
+	"info":  log.InfoLevel,
+	"debug": log.DebugLevel,
+	"trace": log.TraceLevel,
+}
+
+func initializeLogger(levelStr string, logfile string) (*os.File, error) {
+	level, ok := levelMap[levelStr]
+	if !ok {
+		var allLevels []string
+		for level := range levelMap {
+			allLevels = append(allLevels, level)
+		}
+
+		err := fmt.Errorf(
+			"%v is not a valid level. Valid levels are %v",
+			level,
+			strings.Join(allLevels, ", "),
+		)
+
+		return nil, err
+	}
+
+	log.SetLevel(level)
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	var logFH *os.File
+	if logfile != "" {
+		logFH, err := os.Create(logfile)
+		if err != nil {
+			return nil, err
+		}
+
+		log.SetOutput(logFH)
+	}
+
+	return logFH, nil
 }
 
 type pluginInit struct {

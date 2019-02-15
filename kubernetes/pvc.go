@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -149,7 +149,7 @@ func waitForPod(podi typev1.PodInterface, pid string) error {
 				case corev1.PodFailed:
 					return errPodTerminated
 				case corev1.PodUnknown:
-					log.Printf("Unknown state for pod %v: %v", pid, e.Object)
+					log.Infof("Unknown state for pod %v: %v", pid, e.Object)
 				}
 			case watch.Error:
 				return fmt.Errorf("Pod %v errored: %v", pid, e.Object)
@@ -179,7 +179,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	}
 
 	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
-	log.Printf("Cache miss on %v", key)
+	log.Infof("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
 	podi := cli.CoreV1().Pods(cli.ns)
@@ -218,7 +218,7 @@ func (cli *pvc) cachedAttributes(ctx context.Context) (map[string]plugin.Attribu
 	for dir, attrmap := range attrs {
 		key := cli.baseID() + dir + "/list"
 		if err = cli.cache.SetAny(key, attrmap, datastore.Slow); err != nil {
-			log.Printf("Failed to cache %v: %v", key, err)
+			log.Infof("Failed to cache %v: %v", key, err)
 		}
 	}
 	cli.updated = time.Now()
@@ -234,12 +234,12 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	}
 
 	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
-	log.Printf("Cache miss on %v", key)
+	log.Infof("Cache miss on %v", key)
 
 	// Create a container that mounts a pvc and waits. Use it to download a file.
 	podi := cli.CoreV1().Pods(cli.ns)
 	pid, err := cli.createPod(podi, []string{"cat", mountpoint + cli.path})
-	log.Printf("Reading from: %v", mountpoint+cli.path)
+	log.Infof("Reading from: %v", mountpoint+cli.path)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (cli *pvc) cachedContent(ctx context.Context) (plugin.IFileBuffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Read: %v", bits)
+	log.Infof("Read: %v", bits)
 
 	if podErr == errPodTerminated {
 		return nil, errors.New(string(bits))
@@ -332,7 +332,7 @@ func (cli *client) cachedPvcs(ctx context.Context, ns string) ([]string, error) 
 			if bits, err := json.Marshal(pvc); err == nil {
 				cli.cache.Set(cli.Name()+"/"+pvc.Namespace+"/pvc/"+pvc.Name, bits)
 			} else {
-				log.Printf("Unable to marshal pvc %v: %v", pvc, err)
+				log.Infof("Unable to marshal pvc %v: %v", pvc, err)
 			}
 		}
 		pvcs[allNamespace] = allpvcs

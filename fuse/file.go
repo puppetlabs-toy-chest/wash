@@ -7,8 +7,9 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ==== FUSE file Interface ====
@@ -41,10 +42,10 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	case plugin.Readable:
 		// TODO: this should be cached with a specific lifetime because fs.Node are almost never recreated.
 		if f.content == nil {
-			log.Printf("[Attr,%v]: Recomputing the file's size attr", f)
+			log.Infof("FUSE: [Attr,%v]: Recomputing the file's size attr", f)
 			sizedReader, err := item.Open(ctx)
 			if err != nil {
-				log.Warnf("Error[Attr,%v]: %v", f, err)
+				log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
 				return err
 			}
 
@@ -54,7 +55,7 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 		size := f.content.Size()
 		if size < 0 {
 			err := fmt.Errorf("Returned a negative value for the size: %v", size)
-			log.Warnf("Error[Attr,%v]: %v", f, err)
+			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
 			return err
 		}
 
@@ -65,20 +66,20 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr.Mode = 0440
 	}
 	applyAttr(a, &attr)
-	log.Printf("Attr[f] %v %v", f, a)
+	log.Infof("FUSE: Attr[f] %v %v", f, a)
 	return nil
 }
 
 // Listxattr lists extended attributes for the resource.
 func (f *file) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Printf("Listxattr[f,pid=%v] %v", req.Pid, f)
+	log.Infof("FUSE: Listxattr[f,pid=%v] %v", req.Pid, f)
 	resp.Append("wash.id")
 	return nil
 }
 
 // Getxattr gets extended attributes for the resource.
 func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Printf("Getxattr[f,pid=%v] %v", req.Pid, f)
+	log.Infof("FUSE: Getxattr[f,pid=%v] %v", req.Pid, f)
 	switch req.Name {
 	case "wash.id":
 		resp.Xattr = []byte(f.String())
@@ -90,23 +91,23 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	log.Printf("Opening[pid=%v] %v", req.Pid, f)
+	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry.(plugin.Readable); ok {
 		if f.content == nil {
-			log.Printf("[Open,%v]: Recomputing the file contents", f)
+			log.Infof("FUSE: [Open,%v]: Recomputing the file contents", f)
 			sizedReader, err := readable.Open(ctx)
 			if err != nil {
-				log.Warnf("Error[Open,%v]: %v", f, err)
+				log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 				return nil, err
 			}
 
 			f.content = sizedReader
 		}
 
-		log.Printf("Opened[pid=%v] %v", req.Pid, f)
+		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
 		return &fileHandle{r: f.content, id: f.String()}, nil
 	}
-	log.Warnf("Error[Open,%v]: cannot open this entry", f)
+	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
 	return nil, fuse.ENOTSUP
 }
 
@@ -121,7 +122,7 @@ var _ = fs.HandleReader(fileHandle{})
 
 // Release closes the open file.
 func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	log.Printf("Release[pid=%v] %v", req.Pid, fh.id)
+	log.Infof("FUSE: Release[pid=%v] %v", req.Pid, fh.id)
 	if closer, ok := fh.r.(io.Closer); ok {
 		return closer.Close()
 	}
@@ -135,7 +136,7 @@ func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 	if err == io.EOF {
 		err = nil
 	}
-	log.Printf("Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
+	log.Infof("FUSE: Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
 	resp.Data = buf[:n]
 	return err
 }

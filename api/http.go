@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type key int
@@ -21,11 +22,11 @@ const pluginRegistryKey key = iota
 
 // StartAPI starts the api.
 func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Context, error) {
-	log.Printf("API: started")
+	log.Infof("API: started")
 
 	if _, err := os.Stat(socketPath); err == nil {
 		// Socket already exists, so nuke it and recreate it
-		log.Printf("API: Cleaning up old socket")
+		log.Infof("API: Cleaning up old socket")
 		if err := os.Remove(socketPath); err != nil {
 			log.Warnf("API: %v", err)
 			return nil, err
@@ -68,7 +69,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 			log.Warnf("API: %v", err)
 		}
 
-		log.Printf("API: Server was shut down")
+		log.Infof("API: Server was shut down")
 	}()
 
 	stopCh := make(chan context.Context)
@@ -76,7 +77,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 		defer close(stopCh)
 		ctx := <-stopCh
 
-		log.Printf("API: Shutting down the server")
+		log.Infof("API: Shutting down the server")
 		err := httpServer.Shutdown(ctx)
 		if err != nil {
 			log.Warnf("API: Shutdown failed: %v", err)
