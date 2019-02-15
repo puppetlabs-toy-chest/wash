@@ -33,6 +33,9 @@ func serverCommand() *cobra.Command {
 	serverCmd.Flags().String("loglevel", "info", "Set the logging level")
 	viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel"))
 
+	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
+	viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile"))
+
 	serverCmd.RunE = toRunE(serverMain)
 
 	return serverCmd
@@ -41,8 +44,16 @@ func serverCommand() *cobra.Command {
 func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := args[0]
 	loglevel := viper.GetString("loglevel")
+	logfile := viper.GetString("logfile")
 
-	initializeLogger(loglevel)
+	logFH, err := initializeLogger(loglevel, logfile)
+	if err != nil {
+		fmt.Printf("Failed to initialize the logger: %v", err)
+		return exitCode{1}
+	}
+	if logFH != nil {
+		defer logFH.Close()
+	}
 
 	registry, err := initializePlugins()
 	if err != nil {
@@ -94,7 +105,7 @@ var levelMap = map[string]log.Level{
 	"trace": log.TraceLevel,
 }
 
-func initializeLogger(levelStr string) {
+func initializeLogger(levelStr string, logfile string) (*os.File, error) {
 	level, ok := levelMap[levelStr]
 	if !ok {
 		var allLevels []string
@@ -113,6 +124,18 @@ func initializeLogger(levelStr string) {
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
 	})
+
+	var logFH *os.File
+	if logfile != "" {
+		logFH, err := os.Create(logfile)
+		if err != nil {
+			return nil, err
+		}
+
+		log.SetOutput(logFH)
+	}
+
+	return logFH, nil
 }
 
 type pluginInit struct {
