@@ -34,7 +34,7 @@ type Group interface {
 // Root is the root object of a plugin.
 type Root interface {
 	Group
-	Init() error
+	Init(name string) error
 }
 
 // Execable is an entry that can have a command run on it.

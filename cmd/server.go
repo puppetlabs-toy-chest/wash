@@ -14,6 +14,7 @@ import (
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/fuse"
+	"github.com/puppetlabs/wash/kubernetes"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -150,9 +151,10 @@ func initializePlugins() (*plugin.Registry, error) {
 	plugins := make(map[string]plugin.Root)
 
 	plugins["docker"] = &docker.Root{}
+	plugins["kubernetes"] = &kubernetes.Root{}
 
-	for _, plugin := range plugins {
-		if err := plugin.Init(); err != nil {
+	for name, plugin := range plugins {
+		if err := plugin.Init(name); err != nil {
 			return nil, err
 		}
 	}

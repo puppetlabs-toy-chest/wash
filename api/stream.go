@@ -40,6 +40,14 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 	// Ensure every write is a flush, and do an initial flush to send the header.
 	wf := &streamableResponseWriter{f}
 	f.Flush()
+
+	if closer, ok := rdr.(io.Closer); ok {
+		// If a ReadCloser, ensure it's closed when the context is cancelled.
+		go func() {
+			<-r.Context().Done()
+			closer.Close()
+		}()
+	}
 	if _, err := io.Copy(wf, rdr); err != nil {
 		// Common for copy to error when the caller closes the connection.
 		log.Debugf("Errored streaming response for entry %v: %v", path, err)

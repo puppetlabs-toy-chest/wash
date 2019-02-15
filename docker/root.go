@@ -22,13 +22,13 @@ type Root struct {
 }
 
 // Init for root
-func (r *Root) Init() error {
+func (r *Root) Init(name string) error {
+	r.EntryBase = plugin.NewEntry(name)
+
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
-
-	r.EntryBase = plugin.NewEntry("docker")
 	r.client = dockerCli
 
 	r.resources = []plugin.Entry{
