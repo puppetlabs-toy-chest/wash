@@ -86,12 +86,7 @@ func (c *container) Metadata(ctx context.Context) (map[string]interface{}, error
 		return nil, err
 	}
 
-	var metadata map[string]interface{}
-	if err := json.Unmarshal(raw, &metadata); err != nil {
-		return nil, err
-	}
-
-	return metadata, nil
+	return plugin.ToMetadata(raw), nil
 }
 
 // Attr

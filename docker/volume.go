@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"time"
@@ -41,15 +40,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		meta:      datastore.NewVar(5 * time.Second),
 		list:      datastore.NewVar(30 * time.Second),
 	}
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	var metadata map[string]interface{}
-	if err := json.Unmarshal(raw, &metadata); err != nil {
-		return nil, err
-	}
-	vol.meta.Set(metadata)
+	vol.meta.Set(plugin.ToMetadata(v))
 	return vol, nil
 }
 
@@ -59,11 +50,7 @@ func (v *volume) Metadata(ctx context.Context) (map[string]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		var metadata map[string]interface{}
-		if err := json.Unmarshal(raw, &metadata); err != nil {
-			return nil, err
-		}
-		return metadata, nil
+		return plugin.ToMetadata(raw), nil
 	})
 	if err != nil {
 		return nil, err

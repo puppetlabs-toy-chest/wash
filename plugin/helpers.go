@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -16,6 +17,27 @@ var DefaultTimeout = 10 * time.Second
 // NewEntry creates a new named entry
 func NewEntry(name string) EntryBase {
 	return EntryBase{name}
+}
+
+// ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
+// must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
+func ToMetadata(obj interface{}) map[string]interface{} {
+	var err error
+	var inrec []byte
+	if arr, ok := obj.([]byte); ok {
+		inrec = arr
+	} else {
+		if inrec, err = json.Marshal(obj); err != nil {
+			// Internal error if we can't marshal an object
+			panic(err)
+		}
+	}
+	var meta map[string]interface{}
+	if err := json.Unmarshal(inrec, &meta); err != nil {
+		// Internal error if not a JSON object
+		panic(err)
+	}
+	return meta
 }
 
 // TrackTime helper is useful for timing functions.
