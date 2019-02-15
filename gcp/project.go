@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -68,11 +68,11 @@ func (cli *project) Xattr(ctx context.Context) (map[string][]byte, error) {
 }
 
 func (cli *project) closeServices(ctx context.Context) {
-	log.Printf("Closing services for project %v", cli)
+	log.Infof("Closing services for project %v", cli)
 	for name, svc := range cli.clients {
 		err := svc.close(ctx)
 		if err != nil {
-			log.Printf("Unable to close service %v in project %v: %v", name, cli.name, err)
+			log.Infof("Unable to close service %v in project %v: %v", name, cli.name, err)
 		}
 	}
 }

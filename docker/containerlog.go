@@ -8,8 +8,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type containerLogFile struct {
@@ -23,7 +24,7 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	if err == nil {
 		return meta.Config.Tty
 	}
-	log.Printf("Error reading info for container %v: %v", clf.containerName, err)
+	log.Infof("Error reading info for container %v: %v", clf.containerName, err)
 	// Assume true so we don't try to process output if there was an error.
 	return true
 }

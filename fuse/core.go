@@ -23,17 +23,17 @@ type Root struct {
 func getIDs() (uint32, uint32) {
 	me, err := user.Current()
 	if err != nil {
-		log.Printf("Unable to fetch user: %v", err)
+		log.Infof("Unable to fetch user: %v", err)
 		return 0, 0
 	}
 	uid, err := strconv.ParseUint(me.Uid, 10, 32)
 	if err != nil {
-		log.Printf("Unable to parse uid: %v", err)
+		log.Infof("Unable to parse uid: %v", err)
 		return 0, 0
 	}
 	gid, err := strconv.ParseUint(me.Gid, 10, 32)
 	if err != nil {
-		log.Printf("Unable to parse gid: %v", err)
+		log.Infof("Unable to parse gid: %v", err)
 		return 0, 0
 	}
 	return uint32(uid), uint32(gid)
@@ -79,7 +79,7 @@ func (f *Root) Name() string {
 
 // Root presents the root of the filesystem.
 func (f *Root) Root() (fs.Node, error) {
-	log.Printf("Entering root of filesystem")
+	log.Infof("Entering root of filesystem")
 	return &dir{f, ""}, nil
 }
 
@@ -100,7 +100,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 		}
 	}
 
-	log.Printf("FUSE: Mounting at %v", mountpoint)
+	log.Infof("FUSE: Mounting at %v", mountpoint)
 	fuseConn, err := fuse.Mount(mountpoint)
 	if err != nil {
 		return nil, err
@@ -113,11 +113,11 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 		defer func() {
 			err := fuseConn.Close()
 			if err != nil {
-				log.Printf("FUSE: Error closing the connection: %v", err)
+				log.Infof("FUSE: Error closing the connection: %v", err)
 			}
 		}()
 
-		log.Printf("FUSE: Serving filesystem")
+		log.Infof("FUSE: Serving filesystem")
 		if err := fs.Serve(fuseConn, &Root{Plugins: filesys.Plugins}); err != nil {
 			log.Warnf("FUSE: fs.Serve errored with: %v", err)
 		}
@@ -127,7 +127,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 		if err := fuseConn.MountError; err != nil {
 			log.Warnf("FUSE: Mount process errored with: %v", err)
 		}
-		log.Printf("FUSE: Server was shut down")
+		log.Infof("FUSE: Server was shut down")
 	}()
 
 	// Clean-up
@@ -136,9 +136,9 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 		defer close(stopCh)
 		<-stopCh
 
-		log.Printf("FUSE: Shutting down the server")
+		log.Infof("FUSE: Shutting down the server")
 
-		log.Printf("FUSE: Unmounting %v", mountpoint)
+		log.Infof("FUSE: Unmounting %v", mountpoint)
 		if err := fuse.Unmount(mountpoint); err != nil {
 			log.Warnf("FUSE: Failed to unmount %v: %v", mountpoint, err.Error())
 			return

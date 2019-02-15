@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/plugin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -156,7 +156,7 @@ func (cli *client) cachedNamespaces(ctx context.Context) ([]string, error) {
 	return cli.cache.CachedStrings(cli.Name(), func() ([]string, error) {
 		nsList, err := cli.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
-			log.Printf("Error loading namespaces, using default namespace: %v", err)
+			log.Infof("Error loading namespaces, using default namespace: %v", err)
 			return []string{cli.defaultns}, nil
 		}
 

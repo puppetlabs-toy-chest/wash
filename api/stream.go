@@ -5,8 +5,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {

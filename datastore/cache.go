@@ -9,7 +9,7 @@ import (
 
 	"github.com/allegro/bigcache"
 	"github.com/hashicorp/vault/helper/locksutil"
-	"github.com/puppetlabs/wash/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // TTL is a selection of cache TTLs supported by the library: Slow and Fast.
@@ -138,7 +138,7 @@ func (cache *MemCache) CachedMarshalable(key string, obj Marshalable, cb func() 
 	}
 
 	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
-	log.Printf("Cache miss on %v", key)
+	log.Infof("Cache miss on %v", key)
 	obj, err = cb()
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func (cache *MemCache) CachedJSON(key string, cb func() ([]byte, error)) ([]byte
 	}
 
 	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
-	log.Printf("Cache miss on %v", key)
+	log.Infof("Cache miss on %v", key)
 	entry, err = cb()
 	if err != nil {
 		return nil, err
@@ -191,7 +191,7 @@ func (cache *MemCache) CachedStrings(key string, cb func() ([]string, error)) ([
 	}
 
 	// Cache misses should be rarer, so always print them. Frequent messages are a sign of problems.
-	log.Printf("Cache miss on %v", key)
+	log.Infof("Cache miss on %v", key)
 	strings, err := cb()
 	if err != nil {
 		return nil, err
