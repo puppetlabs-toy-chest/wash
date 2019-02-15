@@ -18,6 +18,7 @@ func newNamespace(name string, c *k8s.Clientset) *namespace {
 	ns := &namespace{EntryBase: plugin.NewEntry(name), client: c}
 	ns.resourcetypes = []plugin.Entry{
 		&pods{plugin.NewEntry("pods"), c, name},
+		&pvcs{plugin.NewEntry("persistentvolumeclaims"), c, name},
 	}
 	return ns
 }
