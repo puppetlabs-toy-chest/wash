@@ -89,9 +89,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 	return stopCh, nil
 }
 
-func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
-	vars := mux.Vars(r)
-	path := vars["path"]
+func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, error) {
 	if path == "" {
 		panic("path should never be empty")
 	}
@@ -104,19 +102,18 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, error) {
 	segments = segments[1:]
 
 	// Get the registry from context (added by registry middleware).
-	ctx := r.Context()
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
 	root, ok := registry.Plugins[pluginName]
 	if !ok {
-		return nil, path, fmt.Errorf("Plugin %v does not exist", pluginName)
+		return nil, fmt.Errorf("Plugin %v does not exist", pluginName)
 	}
 
 	entry, err := plugin.FindEntryByPath(ctx, root, segments)
 	if err != nil {
-		return nil, path, fmt.Errorf("Entry not found: %v", err)
+		return nil, fmt.Errorf("Entry not found: %v", err)
 	}
 
-	return entry, path, nil
+	return entry, nil
 }
 
 func supportedCommands(entry plugin.Entry) []string {
@@ -138,7 +135,10 @@ func supportedCommands(entry plugin.Entry) []string {
 }
 
 func listHandler(w http.ResponseWriter, r *http.Request) {
-	entry, path, err := getEntryFromRequest(r)
+	path := mux.Vars(r)["path"]
+	log.Infof("API: List %v", path)
+
+	entry, err := getEntryFromPath(r.Context(), path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -186,7 +186,10 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func metadataHandler(w http.ResponseWriter, r *http.Request) {
-	entry, path, err := getEntryFromRequest(r)
+	path := mux.Vars(r)["path"]
+	log.Infof("API: Metadata %v", path)
+
+	entry, err := getEntryFromPath(r.Context(), path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -216,7 +219,10 @@ func metadataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func readHandler(w http.ResponseWriter, r *http.Request) {
-	entry, path, err := getEntryFromRequest(r)
+	path := mux.Vars(r)["path"]
+	log.Infof("API: Read %v", path)
+
+	entry, err := getEntryFromPath(r.Context(), path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
