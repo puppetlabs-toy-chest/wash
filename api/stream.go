@@ -5,13 +5,17 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
-	entry, path, err := getEntryFromRequest(r)
+	path := mux.Vars(r)["path"]
+	log.Infof("API: Stream %v", path)
+
+	entry, err := getEntryFromPath(r.Context(), path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
