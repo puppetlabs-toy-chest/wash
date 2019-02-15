@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/datastore"
+	"github.com/puppetlabs/wash/os"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -69,7 +70,7 @@ func (v *volume) Attr() plugin.Attributes {
 func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 	data, err := v.list.Update(func() (interface{}, error) {
 		// Create a container that mounts a volume and inspects it. Run it and capture the output.
-		cid, err := v.createContainer(ctx, plugin.StatCmd(mountpoint))
+		cid, err := v.createContainer(ctx, os.StatCmd(mountpoint))
 		if err != nil {
 			return nil, err
 		}
@@ -111,20 +112,20 @@ func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 			return nil, errors.New(string(bytes))
 		}
 
-		return plugin.StatParseAll(output, mountpoint)
+		return os.StatParseAll(output, mountpoint)
 	})
 	if err != nil {
 		return nil, err
 	}
-	dirs := data.(plugin.DirMap)
+	dirs := data.(os.DirMap)
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode.IsDir() {
-			entries = append(entries, plugin.NewVolumeDir(name, attr, v.getContentCB(), "/"+name, dirs))
+			entries = append(entries, os.NewVolumeDir(name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
-			entries = append(entries, plugin.NewVolumeFile(name, attr, v.getContentCB(), "/"+name))
+			entries = append(entries, os.NewVolumeFile(name, attr, v.getContentCB(), "/"+name))
 		}
 	}
 	return entries, nil
@@ -152,7 +153,7 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	return created.ID, nil
 }
 
-func (v *volume) getContentCB() plugin.ContentCB {
+func (v *volume) getContentCB() os.ContentCB {
 	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		// Create a container that mounts a volume and waits. Use it to download a file.
 		cid, err := v.createContainer(ctx, []string{"sleep", "60"})

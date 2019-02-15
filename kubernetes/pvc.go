@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
+	"github.com/puppetlabs/wash/os"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -68,7 +69,7 @@ func (v *pvc) Attr() plugin.Attributes {
 func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
 	data, err := v.list.Update(func() (interface{}, error) {
 		// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-		pid, err := v.createPod(plugin.StatCmd(mountpoint))
+		pid, err := v.createPod(os.StatCmd(mountpoint))
 		if err != nil {
 			return nil, err
 		}
@@ -95,20 +96,20 @@ func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
 			return nil, errors.New(string(bytes))
 		}
 
-		return plugin.StatParseAll(output, mountpoint)
+		return os.StatParseAll(output, mountpoint)
 	})
 	if err != nil {
 		return nil, err
 	}
-	dirs := data.(plugin.DirMap)
+	dirs := data.(os.DirMap)
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode.IsDir() {
-			entries = append(entries, plugin.NewVolumeDir(name, attr, v.getContentCB(), "/"+name, dirs))
+			entries = append(entries, os.NewVolumeDir(name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
-			entries = append(entries, plugin.NewVolumeFile(name, attr, v.getContentCB(), "/"+name))
+			entries = append(entries, os.NewVolumeFile(name, attr, v.getContentCB(), "/"+name))
 		}
 	}
 	return entries, nil
@@ -190,7 +191,7 @@ func (v *pvc) waitForPod(pid string) error {
 	}
 }
 
-func (v *pvc) getContentCB() plugin.ContentCB {
+func (v *pvc) getContentCB() os.ContentCB {
 	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		// Create a container that mounts a pvc and waits. Use it to download a file.
 		pid, err := v.createPod([]string{"cat", mountpoint + path})
