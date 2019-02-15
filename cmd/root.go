@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -32,6 +34,9 @@ func toRunE(main commandMain) runE {
 
 func rootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
+		// TODO: Set this to "" when we're ready to ship so that
+		// when we alias our custom commands, someone typing in
+		// e.g. `meta --help` will not see `wash meta` in the usage
 		Use: "wash",
 		// Need to set these so that Cobra will not output the usage +
 		// error object when Execute() returns an error, which will always
@@ -52,12 +57,17 @@ func rootCommand() *cobra.Command {
 func Execute() int {
 	err := rootCommand().Execute()
 	if err == nil {
-		panic("The command did not return a valid exit code")
+		// This can happen if the user invokes `wash` without any
+		// arguments, or if they invoke a help command.
+		return 0
 	}
 
 	exitCode, ok := err.(exitCode)
 	if !ok {
-		panic("The command returned an error object instead of an exit code")
+		// err is something Cobra-related, like e.g. a malformed
+		// flag. Print the error, then return.
+		fmt.Printf("Error: %v\n", err)
+		return 1
 	}
 
 	return exitCode.value

@@ -20,10 +20,10 @@ import (
 
 func serverCommand() *cobra.Command {
 	serverCmd := &cobra.Command{
-		Use:   "server",
+		Use:   "server <mountpoint>",
 		Short: "Sets up the Wash API and FUSE servers",
 		Long:  "Initializes all of the plugins, then sets up the Wash API and FUSE servers",
-		Args:  cobra.MaximumNArgs(0),
+		Args:  cobra.MinimumNArgs(1),
 	}
 
 	serverCmd.Flags().Bool("debug", false, "Enable debug output")
@@ -35,7 +35,7 @@ func serverCommand() *cobra.Command {
 }
 
 func serverMain(cmd *cobra.Command, args []string) exitCode {
-	mountpoint := config.Fields.Mountpoint
+	mountpoint := args[0]
 	socket := config.Fields.Socket
 	debug, _ := cmd.Flags().GetBool("debug")
 	quiet, _ := cmd.Flags().GetBool("quiet")

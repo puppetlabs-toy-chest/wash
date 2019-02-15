@@ -34,6 +34,10 @@ type LSItem struct {
 	} `json:"attributes"`
 }
 
+// JSON represents a generic JSON object, which right now is just a byte
+// array
+type JSON []byte
+
 // ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
 // domain socket.
 func ForUNIXSocket(pathToSocket string) DomainSocketClient {
@@ -83,7 +87,7 @@ func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
 }
 
 // Metadata gets the metadata of the resource located at "path".
-func (c *DomainSocketClient) Metadata(path string) ([]byte, error) {
+func (c *DomainSocketClient) Metadata(path string) (JSON, error) {
 	url := fmt.Sprintf("/fs/metadata%s", path)
 	response, err := c.callResponse(url)
 	if err != nil {

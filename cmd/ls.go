@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -16,9 +17,9 @@ import (
 
 func lsCommand() *cobra.Command {
 	lsCmd := &cobra.Command{
-		Use:   "ls <file>",
-		Short: "Lists the resources at the indicated path",
-		Args:  cobra.MinimumNArgs(1),
+		Use:   "ls [file]",
+		Short: "Lists the resources at the indicated path.",
+		Args:  cobra.MaximumNArgs(1),
 	}
 
 	lsCmd.RunE = toRunE(lsMain)
@@ -89,7 +90,19 @@ func formatTabularListing(ls []client.LSItem) string {
 }
 
 func lsMain(cmd *cobra.Command, args []string) exitCode {
-	path := args[0]
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Print(err)
+			return exitCode{1}
+		}
+
+		path = cwd
+	}
+
 	socket := config.Fields.Socket
 
 	apiPath, err := client.APIKeyFromPath(path)
