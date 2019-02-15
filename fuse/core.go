@@ -94,10 +94,8 @@ func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.
 func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error) {
-	if log.GetLevel() >= log.TraceLevel {
-		fuse.Debug = func(msg interface{}) {
-			log.Tracef("FUSE: %v", msg)
-		}
+	fuse.Debug = func(msg interface{}) {
+		log.Tracef("FUSE: %v", msg)
 	}
 
 	log.Infof("FUSE: Mounting at %v", mountpoint)

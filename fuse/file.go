@@ -91,7 +91,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
-	log.Infof("Opening[pid=%v] %v", req.Pid, f)
+	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry.(plugin.Readable); ok {
 		if f.content == nil {
 			log.Infof("FUSE: [Open,%v]: Recomputing the file contents", f)
