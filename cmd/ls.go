@@ -1,26 +1,30 @@
-package main
+package cmd
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/InVisionApp/tabular"
+	"github.com/spf13/cobra"
 
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/config"
 )
 
-var progName = filepath.Base(os.Args[0])
+func lsCommand() *cobra.Command {
+	lsCmd := &cobra.Command{
+		Use:   "ls [file]",
+		Short: "Lists the resources at the indicated path.",
+		Args:  cobra.MaximumNArgs(1),
+	}
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "%s Lists the resources at the indicated path\n", progName)
-	fmt.Fprintf(os.Stderr, "Usage: %s FILE\n", progName)
-	flag.PrintDefaults()
+	lsCmd.RunE = toRunE(lsMain)
+
+	return lsCmd
 }
 
 func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) string) string {
@@ -85,27 +89,36 @@ func formatTabularListing(ls []client.LSItem) string {
 	return out
 }
 
-func main() {
-	flag.Usage = usage
-	flag.Parse()
+func lsMain(cmd *cobra.Command, args []string) exitCode {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Print(err)
+			return exitCode{1}
+		}
 
-	if flag.NArg() != 1 {
-		usage()
-		os.Exit(2)
+		path = cwd
 	}
 
-	path := flag.Arg(0)
+	socket := config.Fields.Socket
+
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
-	conn := client.ForUNIXSocket("/tmp/wash-api.sock")
+	conn := client.ForUNIXSocket(socket)
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
 	fmt.Print(formatTabularListing(ls))
+	return exitCode{0}
 }

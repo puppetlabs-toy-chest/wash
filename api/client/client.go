@@ -34,6 +34,10 @@ type LSItem struct {
 	} `json:"attributes"`
 }
 
+// JSON represents a generic JSON object, which right now is just a byte
+// array
+type JSON []byte
+
 // ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
 // domain socket.
 func ForUNIXSocket(pathToSocket string) DomainSocketClient {
@@ -80,6 +84,31 @@ func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
 	}
 
 	return ls, nil
+}
+
+// Metadata gets the metadata of the resource located at "path".
+func (c *DomainSocketClient) Metadata(path string) (JSON, error) {
+	url := fmt.Sprintf("/fs/metadata%s", path)
+	response, err := c.callResponse(url)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		// Generate a real error object for this
+		log.Printf("Status: %v, Body: %v", response.StatusCode, string(body))
+		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, path, string(body))
+	}
+
+	return body, nil
 }
 
 // APIPathFromXattrs will take a path to an object within the wash filesystem,
