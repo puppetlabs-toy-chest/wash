@@ -47,19 +47,20 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 			return item.Open(ctx)
 		})
 		if err != nil {
-			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
-			return err
-		}
-		content := raw.(plugin.SizedReader)
+			log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
+			attr.Size = 0
+		} else {
+			content := raw.(plugin.SizedReader)
 
-		size := content.Size()
-		if size < 0 {
-			err := fmt.Errorf("Returned a negative value for the size: %v", size)
-			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
-			return err
-		}
+			size := content.Size()
+			if size < 0 {
+				err := fmt.Errorf("Returned a negative value for the size: %v", size)
+				log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+				return err
+			}
 
-		attr.Size = uint64(size)
+			attr.Size = uint64(size)
+		}
 	}
 
 	if attr.Mode == 0 {
