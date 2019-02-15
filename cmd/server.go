@@ -48,7 +48,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	logFH, err := initializeLogger(loglevel, logfile)
 	if err != nil {
-		fmt.Printf("Failed to initialize the logger: %v", err)
+		fmt.Printf("Failed to initialize the logger: %v\n", err)
 		return exitCode{1}
 	}
 	if logFH != nil {
@@ -113,11 +113,13 @@ func initializeLogger(levelStr string, logfile string) (*os.File, error) {
 			allLevels = append(allLevels, level)
 		}
 
-		panic(fmt.Sprintf(
+		err := fmt.Errorf(
 			"%v is not a valid level. Valid levels are %v",
 			level,
-			strings.Join(allLevels, ", ")),
+			strings.Join(allLevels, ", "),
 		)
+
+		return nil, err
 	}
 
 	log.SetLevel(level)
