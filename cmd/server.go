@@ -149,14 +149,14 @@ type pluginInit struct {
 
 func initializePlugins() (*plugin.Registry, error) {
 	plugins := make(map[string]plugin.Root)
-
-	plugins["docker"] = &docker.Root{}
-	plugins["kubernetes"] = &kubernetes.Root{}
-
-	for name, plugin := range plugins {
-		if err := plugin.Init(name); err != nil {
+	for _, plugin := range []plugin.Root{
+		&docker.Root{},
+		&kubernetes.Root{},
+	} {
+		if err := plugin.Init(); err != nil {
 			return nil, err
 		}
+		plugins[plugin.Name()] = plugin
 	}
 
 	if len(plugins) == 0 {

@@ -16,15 +16,12 @@ import (
 
 // Root of the Docker plugin
 type Root struct {
-	plugin.EntryBase
 	client    *client.Client
 	resources []plugin.Entry
 }
 
 // Init for root
-func (r *Root) Init(name string) error {
-	r.EntryBase = plugin.NewEntry(name)
-
+func (r *Root) Init() error {
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
@@ -37,6 +34,11 @@ func (r *Root) Init(name string) error {
 	}
 
 	return nil
+}
+
+// Name returns 'docker'
+func (r *Root) Name() string {
+	return "docker"
 }
 
 // LS lists the types of resources the Docker plugin exposes.
