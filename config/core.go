@@ -6,17 +6,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Contains all the keys for Wash's config
+// Contains all the keys for Wash's shared config
 const (
 	SocketKey = "socket"
 )
 
-type config struct {
-	Socket string
-}
-
-// Fields contains the fields of Wash's config
-var Fields config
+// Socket is the path to the Wash server's UNIX
+// socket
+var Socket string
 
 // Load Wash's config.
 func Load() error {
@@ -32,9 +29,8 @@ func Load() error {
 	// TODO: Add any additional config files, then make sure to
 	// invoke viper.ReadInConfig() to read-in their values
 
-	// Load the config
-	Fields = config{}
-	Fields.Socket = viper.GetString(SocketKey)
+	// Load the shared config
+	Socket = viper.GetString(SocketKey)
 
 	return nil
 }

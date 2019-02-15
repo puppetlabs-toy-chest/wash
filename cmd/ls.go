@@ -103,15 +103,13 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 		path = cwd
 	}
 
-	socket := config.Fields.Socket
-
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
 		log.Print(err)
 		return exitCode{1}
 	}
 
-	conn := client.ForUNIXSocket(socket)
+	conn := client.ForUNIXSocket(config.Socket)
 
 	ls, err := conn.List(apiPath)
 	if err != nil {

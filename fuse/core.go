@@ -8,8 +8,9 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/log"
 	"github.com/puppetlabs/wash/plugin"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var startTime = time.Now()
@@ -92,10 +93,10 @@ func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
 }
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.
-func ServeFuseFS(filesys *plugin.Registry, mountpoint string, debug bool) (chan bool, error) {
-	if debug {
+func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error) {
+	if log.GetLevel() >= log.TraceLevel {
 		fuse.Debug = func(msg interface{}) {
-			log.Debugf("%v", msg)
+			log.Tracef("FUSE: %v", msg)
 		}
 	}
 
