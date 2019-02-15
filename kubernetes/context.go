@@ -16,17 +16,20 @@ type k8context struct {
 }
 
 func (c *k8context) LS(ctx context.Context) ([]plugin.Entry, error) {
-	nsList, err := c.client.CoreV1().Namespaces().List(metav1.ListOptions{})
+	nsi := c.client.CoreV1().Namespaces()
+	nsList, err := nsi.List(metav1.ListOptions{})
 	if err != nil {
 		log.Printf("Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
-		return []plugin.Entry{newNamespace(c.defaultns, c.client)}, nil
+		ns, err := nsi.Get(c.defaultns, metav1.GetOptions{})
+		if err != nil {
+			log.Debugf("Error loading default namespace, metadata will not be available: %v", err)
+		}
+		return []plugin.Entry{newNamespace(c.defaultns, ns, c.client)}, nil
 	}
 
 	namespaces := make([]plugin.Entry, len(nsList.Items))
 	for i, ns := range nsList.Items {
-		namespaces[i] = newNamespace(ns.Name, c.client)
+		namespaces[i] = newNamespace(ns.Name, &ns, c.client)
 	}
 	return namespaces, nil
 }
-
-// TODO: implement Metadata
