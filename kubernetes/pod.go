@@ -49,8 +49,9 @@ func (p *pod) Metadata(ctx context.Context) (map[string]interface{}, error) {
 func (p *pod) Attr() plugin.Attributes {
 	return plugin.Attributes{
 		Ctime: p.startTime,
-		Mtime: p.startTime,
+		Mtime: time.Now(),
 		Atime: p.startTime,
+		Size:  plugin.SizeUnknown,
 	}
 }
 

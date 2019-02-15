@@ -36,11 +36,12 @@ func (f *file) String() string {
 
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	var attr plugin.Attributes
-	switch item := f.Entry.(type) {
-	case plugin.File:
+	attr := plugin.Attributes{Size: plugin.SizeUnknown}
+	if item, ok := f.Entry.(plugin.File); ok {
 		attr = item.Attr()
-	case plugin.Readable:
+	}
+
+	if item, ok := f.Entry.(plugin.Readable); attr.Size == plugin.SizeUnknown && ok {
 		raw, err := f.content.Update(func() (interface{}, error) {
 			log.Infof("FUSE: [Attr,%v]: Recomputing the file's size attr", f)
 			return item.Open(ctx)
