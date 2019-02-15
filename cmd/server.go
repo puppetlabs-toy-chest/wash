@@ -29,12 +29,12 @@ func serverCommand() *cobra.Command {
 	serverCmd.Flags().Bool("debug", false, "Enable debug output")
 	serverCmd.Flags().Bool("quiet", false, "Suppress operational logging and only log errors")
 
-	serverCmd.Run = serverMain
+	serverCmd.RunE = toRunE(serverMain)
 
 	return serverCmd
 }
 
-func serverMain(cmd *cobra.Command, args []string) {
+func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := config.Fields.Mountpoint
 	socket := config.Fields.Socket
 	debug, _ := cmd.Flags().GetBool("debug")
@@ -45,13 +45,13 @@ func serverMain(cmd *cobra.Command, args []string) {
 	registry, err := initializePlugins()
 	if err != nil {
 		log.Warnf("%v", err)
-		os.Exit(1)
+		return exitCode{1}
 	}
 
 	apiServerStopCh, err := api.StartAPI(registry, socket)
 	if err != nil {
 		log.Warnf("%v", err)
-		os.Exit(1)
+		return exitCode{1}
 	}
 	stopAPIServer := func() {
 		// Shutdown the API server; wait for the shutdown to finish
@@ -66,7 +66,7 @@ func serverMain(cmd *cobra.Command, args []string) {
 	if err != nil {
 		stopAPIServer()
 		log.Warnf("%v", err)
-		os.Exit(1)
+		return exitCode{1}
 	}
 
 	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
@@ -81,6 +81,8 @@ func serverMain(cmd *cobra.Command, args []string) {
 	// Shutdown the FUSE server; wait for the shutdown to finish
 	fuseServerStopCh <- true
 	<-fuseServerStopCh
+
+	return exitCode{0}
 }
 
 type pluginInit struct {

@@ -21,7 +21,7 @@ func lsCommand() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	lsCmd.Run = lsMain
+	lsCmd.RunE = toRunE(lsMain)
 
 	return lsCmd
 }
@@ -88,21 +88,24 @@ func formatTabularListing(ls []client.LSItem) string {
 	return out
 }
 
-func lsMain(cmd *cobra.Command, args []string) {
+func lsMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 	socket := config.Fields.Socket
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
 	conn := client.ForUNIXSocket(socket)
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
 	fmt.Print(formatTabularListing(ls))
+	return exitCode{0}
 }

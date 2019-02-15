@@ -18,29 +18,33 @@ func metaCommand() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	metaCmd.Run = metaMain
+	metaCmd.RunE = toRunE(metaMain)
 
 	return metaCmd
 }
 
-func metaMain(cmd *cobra.Command, args []string) {
+func metaMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 	socket := config.Fields.Socket
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
 	conn := client.ForUNIXSocket(socket)
 
 	metadata, err := conn.Metadata(apiPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return exitCode{1}
 	}
 
 	var prettyMetadata bytes.Buffer
 	json.Indent(&prettyMetadata, metadata, "", "  ")
 
 	prettyMetadata.WriteTo(os.Stdout)
+
+	return exitCode{0}
 }

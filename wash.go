@@ -15,5 +15,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd.RootCommand().Execute()
+	os.Exit(cmd.Execute())
 }
