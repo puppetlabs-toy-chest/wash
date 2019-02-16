@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"flag"
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
@@ -65,6 +66,10 @@ func InitCache() {
 
 func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (interface{}, error)) (interface{}, error) {
 	if cache == nil {
+		// Skip cache operations when we're testing.
+		if flag.Lookup("test.v") != nil {
+			return generateValue()
+		}
 		panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
 	}
 
