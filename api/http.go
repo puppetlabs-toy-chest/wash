@@ -20,6 +20,22 @@ type key int
 
 const pluginRegistryKey key = iota
 
+type handler func(http.ResponseWriter, *http.Request) *errorResponse
+
+func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := handle(w, r); err != nil {
+		w.WriteHeader(err.statusCode)
+
+		// NOTE: Do not set these headers in the middleware because not
+		// all API calls are guaranteed to return JSON responses (e.g. like
+		// stream and read)
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+
+		fmt.Fprintln(w, err.Error())
+	}
+}
+
 // StartAPI starts the api.
 func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Context, error) {
 	log.Infof("API: started")
@@ -50,10 +66,10 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 
 	r := mux.NewRouter()
 
-	r.HandleFunc("/fs/list/{path:.+}", listHandler)
-	r.HandleFunc("/fs/metadata/{path:.+}", metadataHandler)
-	r.HandleFunc("/fs/read/{path:.+}", readHandler)
-	r.HandleFunc("/fs/stream/{path:.+}", streamHandler)
+	r.Handle("/fs/list/{path:.+}", listHandler)
+	r.Handle("/fs/metadata/{path:.+}", metadataHandler)
+	r.Handle("/fs/read/{path:.+}", readHandler)
+	r.Handle("/fs/stream/{path:.+}", streamHandler)
 
 	r.Use(addPluginRegistryMiddleware)
 
@@ -89,7 +105,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 	return stopCh, nil
 }
 
-func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, error) {
+func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorResponse) {
 	if path == "" {
 		panic("path should never be empty")
 	}
@@ -105,61 +121,40 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, error) {
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
 	root, ok := registry.Plugins[pluginName]
 	if !ok {
-		return nil, fmt.Errorf("Plugin %v does not exist", pluginName)
+		return nil, pluginDoesNotExistResponse(pluginName)
 	}
 
 	entry, err := plugin.FindEntryByPath(ctx, root, segments)
 	if err != nil {
-		return nil, fmt.Errorf("Entry not found: %v", err)
+		return nil, entryNotFoundResponse(path, err.Error())
 	}
 
 	return entry, nil
 }
 
-func supportedCommands(entry plugin.Entry) []string {
-	commands := make([]string, 0)
-
-	if _, ok := entry.(plugin.Group); ok {
-		commands = append(commands, plugin.ListCommand)
-	}
-
-	if _, ok := entry.(plugin.Resource); ok {
-		commands = append(commands, plugin.MetadataCommand)
-	}
-
-	if _, ok := entry.(plugin.Readable); ok {
-		commands = append(commands, plugin.ReadCommand)
-	}
-
-	return commands
-}
-
-func listHandler(w http.ResponseWriter, r *http.Request) {
+var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	path := mux.Vars(r)["path"]
 	log.Infof("API: List %v", path)
 
-	entry, err := getEntryFromPath(r.Context(), path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+	entry, errResp := getEntryFromPath(r.Context(), path)
+	if errResp != nil {
+		return errResp
 	}
 
 	group, ok := entry.(plugin.Group)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Entry %v does not support the list command", path), http.StatusNotFound)
-		return
+		return unsupportedActionResponse(path, listAction)
 	}
 
 	entries, err := group.LS(r.Context())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not list the entries for %v: %v", path, err), http.StatusInternalServerError)
-		return
+		return erroredActionResponse(path, listAction, err.Error())
 	}
 
 	info := func(entry plugin.Entry) map[string]interface{} {
 		result := map[string]interface{}{
-			"name":     entry.Name(),
-			"commands": supportedCommands(entry),
+			"name":    entry.Name(),
+			"actions": supportedActionsOf(entry),
 		}
 
 		if file, ok := entry.(plugin.File); ok {
@@ -180,67 +175,59 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		http.Error(w, fmt.Sprintf("Could not marshal list results for %v: %v", path, err), http.StatusInternalServerError)
-		return
+		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
+
+	return nil
 }
 
-func metadataHandler(w http.ResponseWriter, r *http.Request) {
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	path := mux.Vars(r)["path"]
 	log.Infof("API: Metadata %v", path)
 
-	entry, err := getEntryFromPath(r.Context(), path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+	entry, errResp := getEntryFromPath(r.Context(), path)
+	if errResp != nil {
+		return errResp
 	}
 
 	resource, ok := entry.(plugin.Resource)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Entry %v does not support the metadata command", path), http.StatusNotFound)
-		return
+		return unsupportedActionResponse(path, metadataAction)
 	}
 
 	metadata, err := resource.Metadata(r.Context())
 
-	// TODO: Definitely figure out the error handling at some
-	// point
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not get metadata for %v: %v\n", path, err), http.StatusInternalServerError)
-		return
+		return erroredActionResponse(path, metadataAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(metadata); err != nil {
-		http.Error(w, fmt.Sprintf("Could not marshal metadata for %v: %v\n", path, err), http.StatusInternalServerError)
-		return
+		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))
 	}
+
+	return nil
 }
 
-func readHandler(w http.ResponseWriter, r *http.Request) {
+var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	path := mux.Vars(r)["path"]
 	log.Infof("API: Read %v", path)
 
-	entry, err := getEntryFromPath(r.Context(), path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+	entry, errResp := getEntryFromPath(r.Context(), path)
+	if errResp != nil {
+		return errResp
 	}
 
 	readable, ok := entry.(plugin.Readable)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Entry %v does not support the read command", path), http.StatusNotFound)
-		return
+		return unsupportedActionResponse(path, readAction)
 	}
 
 	content, err := readable.Open(r.Context())
 
-	// TODO: Definitely figure out the error handling at some
-	// point
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not read %v: %v\n", path, err), http.StatusInternalServerError)
-		return
+		return erroredActionResponse(path, readAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -249,4 +236,6 @@ func readHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 	}
+
+	return nil
 }

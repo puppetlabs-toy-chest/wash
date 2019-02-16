@@ -51,7 +51,7 @@ func formatTabularListing(ls []client.LSItem) string {
 		return e.Name
 	}))
 	verbsWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
-		return strings.Join(e.Commands, ", ")
+		return strings.Join(e.Actions, ", ")
 	}))
 	tab.Col("size", "NAME", nameWidth+2)
 	tab.Col("ctime", "CREATED", 19+2)
@@ -75,11 +75,11 @@ func formatTabularListing(ls []client.LSItem) string {
 			}
 		}
 
-		cmds := entry.Commands
-		sort.Strings(cmds)
-		verbs := strings.Join(cmds, ", ")
+		actions := entry.Actions
+		sort.Strings(actions)
+		verbs := strings.Join(actions, ", ")
 
-		isDir := cmds[sort.SearchStrings(cmds, "list")] == "list"
+		isDir := actions[sort.SearchStrings(actions, "list")] == "list"
 		if isDir {
 			name += "/"
 		}
@@ -105,7 +105,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		log.Print(err)
+		writeError(err)
 		return exitCode{1}
 	}
 
@@ -113,7 +113,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		log.Print(err)
+		writeError(err)
 		return exitCode{1}
 	}
 

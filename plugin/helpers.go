@@ -59,6 +59,17 @@ func PrefetchOpen(file Readable) {
 	}
 }
 
+// ErrEntryDoesNotExist is an error indicating that the entry specified
+// by the given path does not exist in the given group
+type ErrEntryDoesNotExist struct {
+	group Group
+	path  string
+}
+
+func (e ErrEntryDoesNotExist) Error() string {
+	return fmt.Sprintf("The %v entry does not exist in the %v group", e.path, e.group.Name())
+}
+
 // FindEntryByName finds an entry by name within the given group
 func FindEntryByName(ctx context.Context, group Group, name string) (Entry, error) {
 	entries, err := group.LS(ctx)
@@ -72,27 +83,43 @@ func FindEntryByName(ctx context.Context, group Group, name string) (Entry, erro
 		}
 	}
 
-	return nil, fmt.Errorf("Could not find entry %v in group %v", name, group.Name())
+	return nil, ErrEntryDoesNotExist{group, name}
+}
+
+// ErrInvalidEntryPath is an error indicating an invalid entry path
+type ErrInvalidEntryPath struct {
+	path   string
+	reason string
+}
+
+func (e ErrInvalidEntryPath) Error() string {
+	return fmt.Sprintf("%v is an invalid entry path: %v", e.path, e.reason)
 }
 
 // FindEntryByPath finds an entry in the group from a given path
-func FindEntryByPath(ctx context.Context, group Group, segments []string) (Entry, error) {
+func FindEntryByPath(ctx context.Context, startGroup Group, segments []string) (Entry, error) {
 	var curEntry Entry
-	curEntry = group
+	curEntry = startGroup
 
+	visitedSegments := make([]string, 0, cap(segments))
 	for _, segment := range segments {
-		switch group := curEntry.(type) {
+		switch curGroup := curEntry.(type) {
 		case Group:
-			entry, err := FindEntryByName(ctx, group, segment)
+			entry, err := FindEntryByName(ctx, curGroup, segment)
+			visitedSegments = append(visitedSegments, segment)
+
 			if err != nil {
+				if _, ok := err.(ErrEntryDoesNotExist); ok {
+					err = ErrEntryDoesNotExist{startGroup, strings.Join(visitedSegments, "/")}
+				}
+
 				return nil, err
 			}
 
 			curEntry = entry
 		default:
-			// TODO: Make this return a structured error. This would let us distinguish
-			// between different cases (e.g. Not Found vs. IO error vs. Malformed path)
-			return nil, fmt.Errorf("Segment %v of path %v is not a Group", curEntry.Name(), strings.Join(segments, "/"))
+			reason := fmt.Sprintf("The entry %v is not a group", strings.Join(visitedSegments, "/"))
+			return nil, ErrInvalidEntryPath{strings.Join(segments, "/"), reason}
 		}
 	}
 

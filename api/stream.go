@@ -11,33 +11,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func streamHandler(w http.ResponseWriter, r *http.Request) {
+var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	path := mux.Vars(r)["path"]
 	log.Infof("API: Stream %v", path)
 
-	entry, err := getEntryFromPath(r.Context(), path)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+	entry, errResp := getEntryFromPath(r.Context(), path)
+	if errResp != nil {
+		return errResp
 	}
 
 	pipe, ok := entry.(plugin.Pipe)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Entry %v does not support the stream command", path), http.StatusNotFound)
-		return
-	}
-
-	rdr, err := pipe.Stream(r.Context())
-
-	// TODO: Definitely figure out the error handling at some point
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Could not stream %v: %v\n", path, err), http.StatusInternalServerError)
-		return
+		return unsupportedActionResponse(path, streamAction)
 	}
 
 	f, ok := w.(flushableWriter)
 	if !ok {
-		http.Error(w, fmt.Sprintf("Could not stream %v, response handler does not support flushing", path), http.StatusInternalServerError)
+		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
+	}
+
+	rdr, err := pipe.Stream(r.Context())
+
+	if err != nil {
+		return erroredActionResponse(path, streamAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -56,6 +52,8 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		// Common for copy to error when the caller closes the connection.
 		log.Debugf("Errored streaming response for entry %v: %v", path, err)
 	}
+
+	return nil
 }
 
 // Inspired by Docker's WriteFlusher: https://github.com/moby/moby/blob/17.05.x/pkg/ioutils/writeflusher.go

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,11 @@ func toRunE(main commandMain) runE {
 	return func(cmd *cobra.Command, args []string) error {
 		return main(cmd, args)
 	}
+}
+
+// TODO: Move this to a cmd/util/helpers.go file?
+func writeError(err error) {
+	os.Stderr.Write([]byte(err.Error() + "\n"))
 }
 
 func rootCommand() *cobra.Command {

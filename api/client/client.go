@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/puppetlabs/wash/api"
+
 	"github.com/pkg/xattr"
 )
 
@@ -22,7 +24,7 @@ var domainSocketBaseURL = "http://localhost"
 // LSItem represents a single entry from the result of issuing a wash "list"
 // request.
 type LSItem struct {
-	Commands   []string `json:"commands"`
+	Actions    []string `json:"actions"`
 	Name       string   `json:"name"`
 	Attributes struct {
 		Atime string `json:"Atime"`
@@ -33,10 +35,6 @@ type LSItem struct {
 		Valid int    `json:"Valid"`
 	} `json:"attributes"`
 }
-
-// JSON represents a generic JSON object, which right now is just a byte
-// array
-type JSON []byte
 
 // ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
 // domain socket.
@@ -51,64 +49,59 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
-func (c *DomainSocketClient) callResponse(path string) (*http.Response, error) {
-	url := fmt.Sprintf("%s%s", domainSocketBaseURL, path)
-	return c.Get(url)
-}
-
-// List lists the resources located at "path".
-func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
-	url := fmt.Sprintf("/fs/list%s", path)
-	response, err := c.callResponse(url)
+func (c *DomainSocketClient) performRequest(endpoint string, result interface{}) error {
+	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
+	response, err := c.Get(url)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return err
 	}
 
 	defer response.Body.Close()
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return err
 	}
 
 	if response.StatusCode != http.StatusOK {
-		// Generate a real error object for this
-		log.Printf("Status: %v, Body: %v", response.StatusCode, string(body))
-		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, path, string(body))
+		var errorObj api.ErrorObj
+		if err := json.Unmarshal(body, &errorObj); err != nil {
+			return fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, endpoint, string(body))
+		}
+
+		return &errorObj
 	}
 
+	if err := json.Unmarshal(body, result); err != nil {
+		return fmt.Errorf("Non-JSON body at %v: %v", endpoint, string(body))
+	}
+
+	return nil
+}
+
+// List lists the resources located at "path".
+func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
+	endpoint := fmt.Sprintf("/fs/list%s", path)
+
 	var ls []LSItem
-	if err := json.Unmarshal(body, &ls); err != nil {
-		return nil, fmt.Errorf("Non-JSON body at %v: %v", path, string(body))
+	if err := c.performRequest(endpoint, &ls); err != nil {
+		return nil, err
 	}
 
 	return ls, nil
 }
 
 // Metadata gets the metadata of the resource located at "path".
-func (c *DomainSocketClient) Metadata(path string) (JSON, error) {
-	url := fmt.Sprintf("/fs/metadata%s", path)
-	response, err := c.callResponse(url)
-	if err != nil {
-		log.Println(err)
+func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, error) {
+	endpoint := fmt.Sprintf("/fs/metadata%s", path)
+
+	var metadata map[string]interface{}
+	if err := c.performRequest(endpoint, &metadata); err != nil {
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		// Generate a real error object for this
-		log.Printf("Status: %v, Body: %v", response.StatusCode, string(body))
-		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, path, string(body))
-	}
-
-	return body, nil
+	return metadata, nil
 }
 
 // APIKeyFromPath will take a path to an object within the wash filesystem,
