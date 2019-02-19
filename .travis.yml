@@ -1,7 +1,7 @@
 language: go
 cache:
   directories:
-  - $HOME/.go
+  - $GOPATH/pkg/mod
 services:
 - docker
 
