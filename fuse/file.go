@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,8 +15,7 @@ import (
 
 type file struct {
 	plugin.Entry
-	id      string
-	content datastore.Var
+	id string
 }
 
 var _ fs.Node = (*file)(nil)
@@ -27,7 +24,7 @@ var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
 func newFile(e plugin.Entry, parent string) *file {
-	return &file{e, parent + "/" + e.Name(), datastore.NewVar(5 * time.Second)}
+	return &file{e, parent + "/" + e.Name()}
 }
 
 func (f *file) String() string {
@@ -41,17 +38,12 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 		attr = item.Attr()
 	}
 
-	if item, ok := f.Entry.(plugin.Readable); attr.Size == plugin.SizeUnknown && ok {
-		raw, err := f.content.Update(func() (interface{}, error) {
-			log.Infof("FUSE: [Attr,%v]: Recomputing the file's size attr", f)
-			return item.Open(ctx)
-		})
+	if readable, ok := f.Entry.(plugin.Readable); attr.Size == plugin.SizeUnknown && ok {
+		content, err := plugin.CachedOpen(readable, f.id, ctx)
 		if err != nil {
 			log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
 			attr.Size = 0
 		} else {
-			content := raw.(plugin.SizedReader)
-
 			size := content.Size()
 			if size < 0 {
 				err := fmt.Errorf("Returned a negative value for the size: %v", size)
@@ -94,15 +86,11 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry.(plugin.Readable); ok {
-		raw, err := f.content.Update(func() (interface{}, error) {
-			log.Infof("FUSE: [Open,%v]: Recomputing the file contents", f)
-			return readable.Open(ctx)
-		})
+		content, err := plugin.CachedOpen(readable, f.id, ctx)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 			return nil, err
 		}
-		content := raw.(plugin.SizedReader)
 
 		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
 		return &fileHandle{r: content, id: f.String()}, nil

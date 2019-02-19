@@ -62,6 +62,8 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
+	plugin.InitCache()
+
 	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
 	if err != nil {
 		log.Warnf("%v", err)

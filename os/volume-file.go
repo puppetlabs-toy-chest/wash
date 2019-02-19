@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -17,18 +16,19 @@ type VolumeFile struct {
 	attr      plugin.Attributes
 	contentcb ContentCB
 	path      string
-	content   datastore.Var
 }
 
 // NewVolumeFile creates a VolumeFile.
 func NewVolumeFile(name string, attr plugin.Attributes, cb ContentCB, path string) *VolumeFile {
-	return &VolumeFile{
+	vf := &VolumeFile{
 		EntryBase: plugin.NewEntry(name),
 		attr:      attr,
 		contentcb: cb,
 		path:      path,
-		content:   datastore.NewVar(30 * time.Second),
 	}
+	vf.CacheConfig().SetTTLOf(plugin.Open, 30*time.Second)
+
+	return vf
 }
 
 // Attr returns the attributes of the file.
@@ -38,11 +38,5 @@ func (v *VolumeFile) Attr() plugin.Attributes {
 
 // Open returns the content of the file as a SizedReader.
 func (v *VolumeFile) Open(ctx context.Context) (plugin.SizedReader, error) {
-	data, err := v.content.Update(func() (interface{}, error) {
-		return v.contentcb(ctx, v.path)
-	})
-	if err != nil {
-		return nil, err
-	}
-	return data.(plugin.SizedReader), nil
+	return v.contentcb(ctx, v.path)
 }

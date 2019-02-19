@@ -10,13 +10,22 @@ import (
 // ==== Wash Protocols and Resources ====
 
 // Entry is a basic named resource type
-type Entry interface{ Name() string }
+type Entry interface {
+	Name() string
+	CacheConfig() *CacheConfig
+}
 
 // EntryBase implements Entry, making it easy to create new entries
-type EntryBase struct{ name string }
+type EntryBase struct {
+	name        string
+	cacheConfig *CacheConfig
+}
 
 // Name returns the entry's name.
 func (e *EntryBase) Name() string { return e.name }
+
+// CacheConfig returns the entry's cache config
+func (e *EntryBase) CacheConfig() *CacheConfig { return e.cacheConfig }
 
 // Resource is an entry that has metadata.
 type Resource interface {
@@ -39,6 +48,7 @@ type Root interface {
 
 // Execable is an entry that can have a command run on it.
 type Execable interface {
+	Entry
 	Exec(context.Context, string) (io.Reader, error)
 }
 
@@ -50,6 +60,7 @@ type File interface {
 
 // Pipe is an entry that returns a stream of updates.
 type Pipe interface {
+	Entry
 	Stream(context.Context) (io.Reader, error)
 }
 
@@ -61,11 +72,13 @@ type SizedReader interface {
 
 // Readable is an entry that has a fixed amount of content we can read.
 type Readable interface {
+	Entry
 	Open(context.Context) (SizedReader, error)
 }
 
 // Writable is an entry that we can write new data to.
 type Writable interface {
+	Entry
 	Save(context.Context, io.Reader) error
 }
 

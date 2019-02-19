@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +17,6 @@ type pod struct {
 	plugin.EntryBase
 	podi      typedv1.PodInterface
 	startTime time.Time
-	meta      datastore.Var
 }
 
 func newPod(pi typedv1.PodInterface, p *corev1.Pod) *pod {
@@ -26,24 +24,18 @@ func newPod(pi typedv1.PodInterface, p *corev1.Pod) *pod {
 		EntryBase: plugin.NewEntry(p.Name),
 		podi:      pi,
 		startTime: p.CreationTimestamp.Time,
-		meta:      datastore.NewVar(5 * time.Second),
 	}
-	pd.meta.Set(plugin.ToMetadata(p))
+
 	return pd
 }
 
 func (p *pod) Metadata(ctx context.Context) (map[string]interface{}, error) {
-	meta, err := p.meta.Update(func() (interface{}, error) {
-		pd, err := p.podi.Get(p.Name(), metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		return plugin.ToMetadata(pd), nil
-	})
+	pd, err := p.podi.Get(p.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return meta.(map[string]interface{}), nil
+
+	return plugin.ToMetadata(pd), nil
 }
 
 func (p *pod) Attr() plugin.Attributes {
