@@ -104,7 +104,7 @@ func CachedOpen(r Readable, id string, ctx context.Context) (SizedReader, error)
 }
 
 // CachedMetadata caches a Resource object's Metadata method
-func CachedMetadata(r Resource, id string, ctx context.Context) (map[string]interface{}, error) {
+func CachedMetadata(r Resource, id string, ctx context.Context) (MetadataMap, error) {
 	cachedMetadata, err := cachedOpHelper(Metadata, r, id, func() (interface{}, error) {
 		return r.Metadata(ctx)
 	})
@@ -113,5 +113,5 @@ func CachedMetadata(r Resource, id string, ctx context.Context) (map[string]inte
 		return nil, err
 	}
 
-	return cachedMetadata.(map[string]interface{}), nil
+	return cachedMetadata.(MetadataMap), nil
 }

@@ -42,7 +42,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	return vol, nil
 }
 
-func (v *volume) Metadata(ctx context.Context) (map[string]interface{}, error) {
+func (v *volume) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
 	if err != nil {
 		return nil, err

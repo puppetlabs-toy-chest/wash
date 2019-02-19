@@ -17,7 +17,7 @@ type container struct {
 }
 
 // Metadata
-func (c *container) Metadata(ctx context.Context) (map[string]interface{}, error) {
+func (c *container) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	// Use raw to also get the container size.
 	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.Name(), true)
 	if err != nil {

@@ -17,7 +17,7 @@ func NewEntry(name string) EntryBase {
 
 // ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
 // must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
-func ToMetadata(obj interface{}) map[string]interface{} {
+func ToMetadata(obj interface{}) MetadataMap {
 	var err error
 	var inrec []byte
 	if arr, ok := obj.([]byte); ok {
@@ -28,7 +28,7 @@ func ToMetadata(obj interface{}) map[string]interface{} {
 			panic(err)
 		}
 	}
-	var meta map[string]interface{}
+	var meta MetadataMap
 	if err := json.Unmarshal(inrec, &meta); err != nil {
 		// Internal error if not a JSON object
 		panic(err)

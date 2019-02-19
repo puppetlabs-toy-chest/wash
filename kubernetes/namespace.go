@@ -30,9 +30,9 @@ func (n *namespace) LS(ctx context.Context) ([]plugin.Entry, error) {
 	return n.resourcetypes, nil
 }
 
-func (n *namespace) Metadata(ctx context.Context) (map[string]interface{}, error) {
+func (n *namespace) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	if n.metadata != nil {
 		return plugin.ToMetadata(n.metadata), nil
 	}
-	return map[string]interface{}{}, nil
+	return plugin.MetadataMap{}, nil
 }

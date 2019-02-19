@@ -40,7 +40,7 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 	return vol
 }
 
-func (v *pvc) Metadata(ctx context.Context) (map[string]interface{}, error) {
+func (v *pvc) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
