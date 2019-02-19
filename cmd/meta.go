@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"bytes"
 	"encoding/json"
-	"log"
 	"os"
 
 	"github.com/puppetlabs/wash/api/client"
@@ -28,7 +26,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		log.Print(err)
+		writeError(err)
 		return exitCode{1}
 	}
 
@@ -36,14 +34,18 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	metadata, err := conn.Metadata(apiPath)
 	if err != nil {
-		log.Print(err)
+		writeError(err)
 		return exitCode{1}
 	}
 
-	var prettyMetadata bytes.Buffer
-	json.Indent(&prettyMetadata, metadata, "", "  ")
+	prettyMetadata, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		writeError(err)
+		return exitCode{1}
+	}
+	prettyMetadata = append(prettyMetadata, byte('\n'))
 
-	prettyMetadata.WriteTo(os.Stdout)
+	os.Stdout.Write(prettyMetadata)
 
 	return exitCode{0}
 }
