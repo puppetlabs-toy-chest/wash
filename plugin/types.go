@@ -53,6 +53,7 @@ type ExecOptions struct{}
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
+	// TODO: exit codes? Multiplexing stdout/stderr?
 	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (io.Reader, error)
 }
 

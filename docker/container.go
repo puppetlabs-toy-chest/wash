@@ -2,8 +2,10 @@ package docker
 
 import (
 	"context"
+	"io"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -39,4 +41,46 @@ func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
 		&containerMetadata{plugin.NewEntry("metadata.json"), c},
 		&containerLogFile{plugin.NewEntry("log"), c.Name(), c.client},
 	}, nil
+}
+
+type ExecOutput struct {
+	io.Reader
+	hr *types.HijackedResponse
+}
+
+func (r *ExecOutput) Close() error {
+	r.hr.Close()
+	return nil
+}
+
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (io.Reader, error) {
+	command := append([]string{cmd}, args...)
+	created, err := c.client.ContainerExecCreate(
+		ctx,
+		c.Name(),
+		types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.client.ContainerExecAttach(ctx, created.ID, types.ExecStartCheck{})
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: Need this in order to get the right exit code (to start the actual
+	// exec process)
+	err = c.client.ContainerExecStart(ctx, created.ID, types.ExecStartCheck{})
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.client.ContainerExecInspect(ctx, created.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecOutput{resp.Reader, &resp}, nil
 }

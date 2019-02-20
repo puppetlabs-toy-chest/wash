@@ -45,6 +45,8 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return badRequestResponse(r.URL.Path, err.Error())
 	}
 
+	// TODO: This and the stream endpoint have some shared code for streaming
+	// responses. That should be moved to a separate helper at some point.
 	f, ok := w.(flushableWriter)
 	if !ok {
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
