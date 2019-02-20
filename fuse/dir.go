@@ -4,11 +4,9 @@ import (
 	"context"
 	"os"
 	"strings"
-	"time"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,8 +15,7 @@ import (
 
 type dir struct {
 	plugin.Entry
-	id       string
-	children datastore.Var
+	id string
 }
 
 var _ fs.Node = (*dir)(nil)
@@ -27,7 +24,7 @@ var _ = fs.HandleReadDirAller(&dir{})
 
 func newDir(e plugin.Entry, parent string) *dir {
 	id := strings.TrimSuffix(parent, "/") + "/" + strings.TrimPrefix(e.Name(), "/")
-	return &dir{e, id, datastore.NewVar(5 * time.Second)}
+	return &dir{e, id}
 }
 
 func (d *dir) String() string {
@@ -66,17 +63,11 @@ func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 	return nil
 }
 
-func (d *dir) get(ctx context.Context) ([]plugin.Entry, error) {
-	// Cache get requests. FUSE often lists the contents then immediately calls find on individual entries.
+func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
+	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
 	switch v := d.Entry.(type) {
 	case plugin.Group:
-		data, err := d.children.Update(func() (interface{}, error) {
-			return v.LS(ctx)
-		})
-		if err != nil {
-			return nil, err
-		}
-		return data.([]plugin.Entry), nil
+		return plugin.CachedLS(v, d.id, ctx)
 	default:
 		return []plugin.Entry{}, fuse.ENOENT
 	}
@@ -84,7 +75,7 @@ func (d *dir) get(ctx context.Context) ([]plugin.Entry, error) {
 
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	entries, err := d.get(ctx)
+	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
 		return nil, err
@@ -96,7 +87,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			switch v := entry.(type) {
 			case plugin.Group:
 				// Prefetch directory entries into the cache
-				go func() { d.get(context.Background()) }()
+				go func() { d.children(context.Background()) }()
 				return newDir(v, d.String()), nil
 			default:
 				return newFile(v, d.String()), nil
@@ -108,7 +99,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 // ReadDirAll lists all children of the directory.
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	entries, err := d.get(ctx)
+	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
 		return nil, err

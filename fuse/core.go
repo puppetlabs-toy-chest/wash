@@ -16,7 +16,21 @@ var startTime = time.Now()
 
 // Root represents the root of the FUSE filesystem
 type Root struct {
-	Plugins map[string]plugin.Root
+	plugin.EntryBase
+	plugins []plugin.Entry
+}
+
+func newRoot(plugins map[string]plugin.Root) Root {
+	root := Root{}
+	root.EntryBase = plugin.NewEntry("/")
+	root.CacheConfig().TurnOffCaching()
+
+	root.plugins = make([]plugin.Entry, 0, len(plugins))
+	for _, v := range plugins {
+		root.plugins = append(root.plugins, v)
+	}
+
+	return root
 }
 
 func getIDs() (uint32, uint32) {
@@ -72,23 +86,19 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 }
 
 // Name returns '/', the name for the filesystem root.
-func (f *Root) Name() string {
+func (r *Root) Name() string {
 	return "/"
 }
 
 // Root presents the root of the filesystem.
-func (f *Root) Root() (fs.Node, error) {
+func (r *Root) Root() (fs.Node, error) {
 	log.Infof("Entering root of filesystem")
-	return newDir(f, ""), nil
+	return newDir(r, ""), nil
 }
 
 // LS lists all clients as directories.
-func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
-	keys := make([]plugin.Entry, 0, len(f.Plugins))
-	for _, v := range f.Plugins {
-		keys = append(keys, v)
-	}
-	return keys, nil
+func (r *Root) LS(_ context.Context) ([]plugin.Entry, error) {
+	return r.plugins, nil
 }
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.
@@ -121,7 +131,9 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 		}()
 
 		log.Infof("FUSE: Serving filesystem")
-		if err := fs.Serve(fuseConn, &Root{Plugins: filesys.Plugins}); err != nil {
+
+		root := newRoot(filesys.Plugins)
+		if err := fs.Serve(fuseConn, &root); err != nil {
 			log.Warnf("FUSE: fs.Serve errored with: %v", err)
 		}
 

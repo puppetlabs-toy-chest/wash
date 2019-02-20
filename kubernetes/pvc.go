@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/os"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
@@ -23,8 +22,6 @@ type pvc struct {
 	pvci      typedv1.PersistentVolumeClaimInterface
 	podi      typedv1.PodInterface
 	startTime time.Time
-	meta      datastore.Var
-	list      datastore.Var
 }
 
 const mountpoint = "/mnt"
@@ -37,25 +34,19 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		pvci:      pi,
 		podi:      pd,
 		startTime: p.CreationTimestamp.Time,
-		meta:      datastore.NewVar(5 * time.Second),
-		list:      datastore.NewVar(30 * time.Second),
 	}
-	vol.meta.Set(plugin.ToMetadata(p))
+	vol.CacheConfig().SetTTLOf(plugin.LS, 30*time.Second)
+
 	return vol
 }
 
 func (v *pvc) Metadata(ctx context.Context) (map[string]interface{}, error) {
-	val, err := v.meta.Update(func() (interface{}, error) {
-		obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		return plugin.ToMetadata(obj), nil
-	})
+	obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return val.(map[string]interface{}), nil
+
+	return plugin.ToMetadata(obj), nil
 }
 
 func (v *pvc) Attr() plugin.Attributes {
@@ -67,41 +58,38 @@ func (v *pvc) Attr() plugin.Attributes {
 }
 
 func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
-	data, err := v.list.Update(func() (interface{}, error) {
-		// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-		pid, err := v.createPod(os.StatCmd(mountpoint))
-		if err != nil {
-			return nil, err
-		}
-		defer v.podi.Delete(pid, &metav1.DeleteOptions{})
-
-		log.Debugf("Waiting for pod %v", pid)
-		// Start watching for new events related to the pod we created.
-		if err = v.waitForPod(pid); err != nil && err != errPodTerminated {
-			return nil, err
-		}
-
-		log.Debugf("Gathering logs for %v", pid)
-		output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-		if lerr != nil {
-			return nil, lerr
-		}
-		defer output.Close()
-
-		if err == errPodTerminated {
-			bytes, err := ioutil.ReadAll(output)
-			if err != nil {
-				return nil, err
-			}
-			return nil, errors.New(string(bytes))
-		}
-
-		return os.StatParseAll(output, mountpoint)
-	})
+	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
+	pid, err := v.createPod(os.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
-	dirs := data.(os.DirMap)
+	defer v.podi.Delete(pid, &metav1.DeleteOptions{})
+
+	log.Debugf("Waiting for pod %v", pid)
+	// Start watching for new events related to the pod we created.
+	if err = v.waitForPod(pid); err != nil && err != errPodTerminated {
+		return nil, err
+	}
+
+	log.Debugf("Gathering logs for %v", pid)
+	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if lerr != nil {
+		return nil, lerr
+	}
+	defer output.Close()
+
+	if err == errPodTerminated {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(string(bytes))
+	}
+
+	dirs, err := os.StatParseAll(output, mountpoint)
+	if err != nil {
+		return nil, err
+	}
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))

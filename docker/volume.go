@@ -13,7 +13,6 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/os"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
@@ -23,8 +22,6 @@ type volume struct {
 	plugin.EntryBase
 	client    *client.Client
 	startTime time.Time
-	meta      datastore.Var
-	list      datastore.Var
 }
 
 const mountpoint = "/mnt"
@@ -34,29 +31,23 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	vol := &volume{
 		EntryBase: plugin.NewEntry(v.Name),
 		client:    c,
 		startTime: startTime,
-		meta:      datastore.NewVar(5 * time.Second),
-		list:      datastore.NewVar(30 * time.Second),
 	}
-	vol.meta.Set(plugin.ToMetadata(v))
+	vol.CacheConfig().SetTTLOf(plugin.LS, 30*time.Second)
+
 	return vol, nil
 }
 
 func (v *volume) Metadata(ctx context.Context) (map[string]interface{}, error) {
-	val, err := v.meta.Update(func() (interface{}, error) {
-		_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
-		if err != nil {
-			return nil, err
-		}
-		return plugin.ToMetadata(raw), nil
-	})
+	_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
 	if err != nil {
 		return nil, err
 	}
-	return val.(map[string]interface{}), nil
+	return plugin.ToMetadata(raw), nil
 }
 
 func (v *volume) Attr() plugin.Attributes {
@@ -68,56 +59,53 @@ func (v *volume) Attr() plugin.Attributes {
 }
 
 func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
-	data, err := v.list.Update(func() (interface{}, error) {
-		// Create a container that mounts a volume and inspects it. Run it and capture the output.
-		cid, err := v.createContainer(ctx, os.StatCmd(mountpoint))
-		if err != nil {
-			return nil, err
-		}
-		defer v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-
-		log.Debugf("Starting container %v", cid)
-		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-			return nil, err
-		}
-
-		log.Debugf("Waiting for container %v", cid)
-		waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-		var statusCode int64
-		select {
-		case err := <-errC:
-			return nil, err
-		case result := <-waitC:
-			statusCode = result.StatusCode
-			log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-		}
-
-		opts := types.ContainerLogsOptions{ShowStdout: true}
-		if statusCode != 0 {
-			opts.ShowStderr = true
-		}
-
-		log.Debugf("Gathering logs for %v", cid)
-		output, err := v.client.ContainerLogs(ctx, cid, opts)
-		if err != nil {
-			return nil, err
-		}
-		defer output.Close()
-
-		if statusCode != 0 {
-			bytes, err := ioutil.ReadAll(output)
-			if err != nil {
-				return nil, err
-			}
-			return nil, errors.New(string(bytes))
-		}
-
-		return os.StatParseAll(output, mountpoint)
-	})
+	// Create a container that mounts a volume and inspects it. Run it and capture the output.
+	cid, err := v.createContainer(ctx, os.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
-	dirs := data.(os.DirMap)
+	defer v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+
+	log.Debugf("Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+
+	log.Debugf("Waiting for container %v", cid)
+	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+	var statusCode int64
+	select {
+	case err := <-errC:
+		return nil, err
+	case result := <-waitC:
+		statusCode = result.StatusCode
+		log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+	}
+
+	opts := types.ContainerLogsOptions{ShowStdout: true}
+	if statusCode != 0 {
+		opts.ShowStderr = true
+	}
+
+	log.Debugf("Gathering logs for %v", cid)
+	output, err := v.client.ContainerLogs(ctx, cid, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer output.Close()
+
+	if statusCode != 0 {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(string(bytes))
+	}
+
+	dirs, err := os.StatParseAll(output, mountpoint)
+	if err != nil {
+		return nil, err
+	}
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))

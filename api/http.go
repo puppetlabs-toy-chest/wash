@@ -111,6 +111,52 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 	return stopCh, serverStoppedCh, nil
 }
 
+func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
+	path := strings.Join(segments, "/")
+
+	curEntry := root
+	curEntryID := "/" + root.Name()
+
+	visitedSegments := make([]string, 0, cap(segments))
+	for _, segment := range segments {
+		switch curGroup := curEntry.(type) {
+		case plugin.Group:
+			// Get the entries via. LS()
+			entries, err := plugin.CachedLS(curGroup, curEntryID, ctx)
+			if err != nil {
+				return nil, entryNotFoundResponse(path, err.Error())
+			}
+
+			// Search for the specific entry
+			var found bool
+			for _, entry := range entries {
+				if entry.Name() == segment {
+					found = true
+
+					curEntry = entry
+					curEntryID += "/" + segment
+					visitedSegments = append(visitedSegments, segment)
+
+					break
+				}
+			}
+			if !found {
+				reason := fmt.Sprintf("The %v entry does not exist", segment)
+				if len(visitedSegments) != 0 {
+					reason += fmt.Sprintf(" the %v group", strings.Join(visitedSegments, "/"))
+				}
+
+				return nil, entryNotFoundResponse(path, reason)
+			}
+		default:
+			reason := fmt.Sprintf("The entry %v is not a group", strings.Join(visitedSegments, "/"))
+			return nil, entryNotFoundResponse(path, reason)
+		}
+	}
+
+	return curEntry, nil
+}
+
 func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorResponse) {
 	if path == "" {
 		panic("path should never be empty")
@@ -130,12 +176,11 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 		return nil, pluginDoesNotExistResponse(pluginName)
 	}
 
-	entry, err := plugin.FindEntryByPath(ctx, root, segments)
-	if err != nil {
-		return nil, entryNotFoundResponse(path, err.Error())
-	}
+	return findEntry(ctx, root, segments)
+}
 
-	return entry, nil
+func toID(path string) string {
+	return "/" + strings.TrimSuffix(path, "/")
 }
 
 var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
@@ -152,7 +197,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, listAction)
 	}
 
-	entries, err := group.LS(r.Context())
+	entries, err := plugin.CachedLS(group, toID(path), r.Context())
 	if err != nil {
 		return erroredActionResponse(path, listAction, err.Error())
 	}
@@ -203,7 +248,7 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 		return unsupportedActionResponse(path, metadataAction)
 	}
 
-	metadata, err := resource.Metadata(r.Context())
+	metadata, err := plugin.CachedMetadata(resource, toID(path), r.Context())
 
 	if err != nil {
 		return erroredActionResponse(path, metadataAction, err.Error())
@@ -232,7 +277,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, readAction)
 	}
 
-	content, err := readable.Open(r.Context())
+	content, err := plugin.CachedOpen(readable, toID(path), r.Context())
 
 	if err != nil {
 		return erroredActionResponse(path, readAction, err.Error())
