@@ -36,8 +36,14 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// StartAPI starts the api.
-func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Context, error) {
+// StartAPI starts the api. It returns three values:
+//   1. A channel to initiate the shutdown (stopCh). stopCh accepts a Context object
+//      that is used to cancel a stalled shutdown.
+//
+//   2. A read-only channel that signals whether the server was shutdown.
+//
+//   3. An error object
+func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Context, <-chan struct{}, error) {
 	log.Infof("API: started")
 
 	if _, err := os.Stat(socketPath); err == nil {
@@ -45,14 +51,14 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 		log.Infof("API: Cleaning up old socket")
 		if err := os.Remove(socketPath); err != nil {
 			log.Warnf("API: %v", err)
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	server, err := net.Listen("unix", socketPath)
 	if err != nil {
 		log.Warnf("API: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	addPluginRegistryMiddleware := func(next http.Handler) http.Handler {
@@ -102,7 +108,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan context.Contex
 		<-serverStoppedCh
 	}()
 
-	return stopCh, nil
+	return stopCh, serverStoppedCh, nil
 }
 
 func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorResponse) {

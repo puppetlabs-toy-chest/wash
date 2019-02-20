@@ -62,7 +62,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	apiServerStopCh, err := api.StartAPI(registry, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
 	if err != nil {
 		log.Warnf("%v", err)
 		return exitCode{1}
@@ -73,14 +73,19 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		apiShutdownCtx, cancelFunc := context.WithDeadline(context.Background(), apiShutdownDeadline)
 		defer cancelFunc()
 		apiServerStopCh <- apiShutdownCtx
-		<-apiServerStopCh
+		<-apiServerStoppedCh
 	}
 
-	fuseServerStopCh, err := fuse.ServeFuseFS(registry, mountpoint)
+	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
 		log.Warnf("%v", err)
 		return exitCode{1}
+	}
+	stopFUSEServer := func() {
+		// Shutdown the FUSE server; wait for the shutdown to finish
+		fuseServerStopCh <- true
+		<-fuseServerStoppedCh
 	}
 
 	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
@@ -88,13 +93,18 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, syscall.SIGINT)
 
-	<-sigCh
-
-	stopAPIServer()
-
-	// Shutdown the FUSE server; wait for the shutdown to finish
-	fuseServerStopCh <- true
-	<-fuseServerStopCh
+	select {
+	case <-sigCh:
+		stopAPIServer()
+		stopFUSEServer()
+	case <-fuseServerStoppedCh:
+		// This code-path is possible if the FUSE server prematurely shuts down, which
+		// can happen if the user unmounts the mountpoint while the server's running.
+		stopAPIServer()
+	case <-apiServerStoppedCh:
+		// This code-path is possible if the API server prematurely shuts down
+		stopFUSEServer()
+	}
 
 	return exitCode{0}
 }
