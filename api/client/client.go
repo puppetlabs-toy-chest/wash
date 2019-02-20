@@ -30,9 +30,9 @@ type LSItem struct {
 		Atime string `json:"Atime"`
 		Mtime string `json:"Mtime"`
 		Ctime string `json:"Ctime"`
-		Mode  int    `json:"Mode"`
-		Size  int    `json:"Size"`
-		Valid int    `json:"Valid"`
+		Mode  uint   `json:"Mode"`
+		Size  uint   `json:"Size"`
+		Valid uint   `json:"Valid"`
 	} `json:"attributes"`
 }
 
