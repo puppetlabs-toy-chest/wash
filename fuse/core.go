@@ -92,7 +92,13 @@ func (f *Root) LS(_ context.Context) ([]plugin.Entry, error) {
 }
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.
-func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error) {
+// It returns three values:
+//   1. A channel to initiate the shutdown (stopCh).
+//
+//   2. A read-only channel that signals whether the server was shutdown
+//
+//   3. An error object
+func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-chan struct{}, error) {
 	fuse.Debug = func(msg interface{}) {
 		log.Tracef("FUSE: %v", msg)
 	}
@@ -100,7 +106,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 	log.Infof("FUSE: Mounting at %v", mountpoint)
 	fuseConn, err := fuse.Mount(mountpoint)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Start the FUSE server
@@ -145,5 +151,5 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan bool, error)
 		<-fuseServerStoppedCh
 	}()
 
-	return stopCh, nil
+	return stopCh, fuseServerStoppedCh, nil
 }
