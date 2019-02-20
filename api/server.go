@@ -2,9 +2,7 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -181,114 +179,4 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 
 func toID(path string) string {
 	return "/" + strings.TrimSuffix(path, "/")
-}
-
-var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	path := mux.Vars(r)["path"]
-	log.Infof("API: List %v", path)
-
-	entry, errResp := getEntryFromPath(r.Context(), path)
-	if errResp != nil {
-		return errResp
-	}
-
-	group, ok := entry.(plugin.Group)
-	if !ok {
-		return unsupportedActionResponse(path, listAction)
-	}
-
-	entries, err := plugin.CachedLS(group, toID(path), r.Context())
-	if err != nil {
-		return erroredActionResponse(path, listAction, err.Error())
-	}
-
-	info := func(entry plugin.Entry) map[string]interface{} {
-		result := map[string]interface{}{
-			"name":    entry.Name(),
-			"actions": supportedActionsOf(entry),
-		}
-
-		// TODO: use the FUSE logic for filling Attr. Not doing it yet because it overlaps
-		// with in-progress caching work.
-		if file, ok := entry.(plugin.File); ok {
-			result["attributes"] = file.Attr()
-		}
-
-		return result
-	}
-
-	result := make([]map[string]interface{}, len(entries)+1)
-	result[0] = info(group)
-	result[0]["name"] = "."
-
-	for i, entry := range entries {
-		result[i+1] = info(entry)
-	}
-
-	w.WriteHeader(http.StatusOK)
-	jsonEncoder := json.NewEncoder(w)
-	if err = jsonEncoder.Encode(result); err != nil {
-		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
-	}
-
-	return nil
-}
-
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Metadata %v", path)
-
-	entry, errResp := getEntryFromPath(r.Context(), path)
-	if errResp != nil {
-		return errResp
-	}
-
-	resource, ok := entry.(plugin.Resource)
-	if !ok {
-		return unsupportedActionResponse(path, metadataAction)
-	}
-
-	metadata, err := plugin.CachedMetadata(resource, toID(path), r.Context())
-
-	if err != nil {
-		return erroredActionResponse(path, metadataAction, err.Error())
-	}
-
-	w.WriteHeader(http.StatusOK)
-	jsonEncoder := json.NewEncoder(w)
-	if err = jsonEncoder.Encode(metadata); err != nil {
-		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))
-	}
-
-	return nil
-}
-
-var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Read %v", path)
-
-	entry, errResp := getEntryFromPath(r.Context(), path)
-	if errResp != nil {
-		return errResp
-	}
-
-	readable, ok := entry.(plugin.Readable)
-	if !ok {
-		return unsupportedActionResponse(path, readAction)
-	}
-
-	content, err := plugin.CachedOpen(readable, toID(path), r.Context())
-
-	if err != nil {
-		return erroredActionResponse(path, readAction, err.Error())
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if rdr, ok := content.(io.Reader); ok {
-		io.Copy(w, rdr)
-	} else {
-		io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
-	}
-
-	return nil
 }
