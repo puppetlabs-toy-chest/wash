@@ -9,11 +9,14 @@ import (
 
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
 
+// ErrorFields represents the fields of an ErrorObj
+type ErrorFields = map[string]interface{}
+
 // ErrorObj represents an API error object
 type ErrorObj struct {
-	Kind   string                 `json:"kind"`
-	Msg    string                 `json:"msg"`
-	Fields map[string]interface{} `json:"fields"`
+	Kind   string      `json:"kind"`
+	Msg    string      `json:"msg"`
+	Fields ErrorFields `json:"fields"`
 }
 
 func (e *ErrorObj) Error() string {
@@ -26,7 +29,7 @@ func (e *ErrorObj) Error() string {
 	return string(jsonBytes)
 }
 
-func newAPIErrorObj(kind string, message string, fields map[string]interface{}) ErrorObj {
+func newAPIErrorObj(kind string, message string, fields ErrorFields) ErrorObj {
 	return ErrorObj{
 		Kind:   "puppetlabs.wash/" + kind,
 		Msg:    message,
@@ -51,16 +54,14 @@ func unknownErrorResponse(err error) *errorResponse {
 	body := newAPIErrorObj(
 		"unknown-error",
 		err.Error(),
-		make(map[string]interface{}),
+		ErrorFields{},
 	)
 
 	return &errorResponse{statusCode, body}
 }
 
 func entryNotFoundResponse(path string, reason string) *errorResponse {
-	fields := map[string]interface{}{
-		"path": path,
-	}
+	fields := ErrorFields{"path": path}
 
 	statusCode := http.StatusNotFound
 	body := newAPIErrorObj(
@@ -73,9 +74,7 @@ func entryNotFoundResponse(path string, reason string) *errorResponse {
 }
 
 func pluginDoesNotExistResponse(plugin string) *errorResponse {
-	fields := map[string]interface{}{
-		"plugin": plugin,
-	}
+	fields := ErrorFields{"plugin": plugin}
 
 	statusCode := http.StatusNotFound
 	body := newAPIErrorObj(
@@ -88,7 +87,7 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 }
 
 func unsupportedActionResponse(path string, action *action) *errorResponse {
-	fields := map[string]interface{}{
+	fields := ErrorFields{
 		"path":   path,
 		"action": action,
 	}
@@ -105,7 +104,7 @@ func unsupportedActionResponse(path string, action *action) *errorResponse {
 }
 
 func erroredActionResponse(path string, action *action, reason string) *errorResponse {
-	fields := map[string]interface{}{
+	fields := ErrorFields{
 		"path":   path,
 		"action": action.Name,
 	}
@@ -121,7 +120,7 @@ func erroredActionResponse(path string, action *action, reason string) *errorRes
 }
 
 func httpMethodNotSupported(method string, path string, supported []string) *errorResponse {
-	fields := map[string]interface{}{
+	fields := ErrorFields{
 		"method":    method,
 		"path":      path,
 		"supported": supported,
