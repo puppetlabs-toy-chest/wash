@@ -10,10 +10,10 @@ This prototype is built as a FUSE filesystem. It currently supports
 
 Mount the filesystem with
 ```
-go run wash.go mnt
+go run wash.go server mnt
 ```
 
-In another shell navigate it at `mnt`. When done `umount mnt`.
+In another shell, navigate it at `mnt`. When done, `cd` out of `mnt`, then run `umount mnt`.
 
 Operations that work:
 - `ls`
@@ -21,8 +21,15 @@ Operations that work:
 - `vim`
 - `tail [-f]`
 - `stat` (kind of, information's not very useful)
-- `xattr`
-- a new `meta` command
+
+Wash also comes with some custom commands you can run. These are:
+- `wash ls <path>` (a custom `ls` command that displays the name, creation time, and available actions on a remote resource)
+- `wash meta <path>` (outputs a remote resource's metadata as JSON)
+
+Currently, these commands can only be run in the project directory. Thus, if you'd like to view the metadata of a Docker container, you'd need to do
+```
+go run wash.go meta mnt/docker/containers/<container_name>
+```
 
 > Requires golang 1.11+.
 
@@ -31,32 +38,6 @@ Operations that work:
 Obtain FUSE for OSX [here](https://osxfuse.github.io/).
 
 Add your mount directory to Spotlight's list of excluded directories to avoid heavy load.
-
-### Container
-
-You can also use it as a container.
-
-Build the container with
-```
-docker build . -t wash
-```
-
-Run with
-```
-docker run --rm --name wash --device /dev/fuse --cap-add SYS_ADMIN wash
-```
-
-If you want to be able to access Docker instances from your local Docker runtime add
-```
--v /var/run/docker.sock:/var/run/docker.sock
-```
-
-To pull in your local config add `-v $HOME:/root`. Additionally add `-v $HOME:$HOME` if you use symlinks with any of your config.
-
-Then start a shell and explore with
-```
-docker exec -it wash sh
-```
 
 ## Principles
 - Multiple ways to get data, but consistent language within the tool. i.e. may search for a database by saying type is 'db' or 'database', but the tool will always refer to them by 'database'.
