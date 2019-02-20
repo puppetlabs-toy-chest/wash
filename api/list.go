@@ -11,6 +11,10 @@ import (
 )
 
 var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+	if r.Method != http.MethodGet {
+		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodGet})
+	}
+
 	path := mux.Vars(r)["path"]
 	log.Infof("API: List %v", path)
 

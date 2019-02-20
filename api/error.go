@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
@@ -117,4 +118,20 @@ func erroredActionResponse(path string, action *action, reason string) *errorRes
 	)
 
 	return &errorResponse{statusCode, body}
+}
+
+func httpMethodNotSupported(method string, path string, supported []string) *errorResponse {
+	fields := map[string]interface{}{
+		"method":    method,
+		"path":      path,
+		"supported": supported,
+	}
+
+	body := newAPIErrorObj(
+		"http-method-not-supported",
+		fmt.Sprintf("The %v method is not supported for %v, supported methods are: %v", method, path, strings.Join(supported, ", ")),
+		fields,
+	)
+
+	return &errorResponse{http.StatusNotFound, body}
 }
