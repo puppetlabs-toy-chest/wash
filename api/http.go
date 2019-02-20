@@ -157,6 +157,8 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 			"actions": supportedActionsOf(entry),
 		}
 
+		// TODO: use the FUSE logic for filling Attr. Not doing it yet because it overlaps
+		// with in-progress caching work.
 		if file, ok := entry.(plugin.File); ok {
 			result["attributes"] = file.Attr()
 		}
