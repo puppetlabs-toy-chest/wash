@@ -103,6 +103,16 @@ func unsupportedActionResponse(path string, action *action) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
+func badRequestResponse(path string, reason string) *errorResponse {
+	fields := ErrorFields{"path": path}
+	body := newAPIErrorObj(
+		"bad-request",
+		fmt.Sprintf("Bad request on %v: %v", path, reason),
+		fields,
+	)
+	return &errorResponse{http.StatusBadRequest, body}
+}
+
 func erroredActionResponse(path string, action *action, reason string) *errorResponse {
 	fields := ErrorFields{
 		"path":   path,

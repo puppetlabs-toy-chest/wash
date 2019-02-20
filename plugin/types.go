@@ -46,10 +46,14 @@ type Root interface {
 	Init() error
 }
 
+// ExecOptions is a struct we can add new features to that must be serializable to JSON.
+// Examples of potential features: user, privileged, tty, map of environment variables, string of stdin, timeout.
+type ExecOptions struct{}
+
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
-	Exec(context.Context, string) (io.Reader, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (io.Reader, error)
 }
 
 // File is an entry that specifies filesystem attributes.

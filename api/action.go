@@ -35,12 +35,14 @@ var metadataAction = newAction("metadata", (*plugin.Resource)(nil))
 var listAction = newAction("list", (*plugin.Group)(nil))
 var readAction = newAction("read", (*plugin.Readable)(nil))
 var streamAction = newAction("stream", (*plugin.Pipe)(nil))
+var execAction = newAction("exec", (*plugin.Execable)(nil))
 
 var allActions = []*action{
 	metadataAction,
 	listAction,
 	readAction,
 	streamAction,
+	execAction,
 }
 
 func supportedActionsOf(entry plugin.Entry) []string {
