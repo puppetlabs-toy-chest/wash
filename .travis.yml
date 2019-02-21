@@ -1,19 +1,16 @@
 language: go
+go: stable
 cache:
   directories:
   - $GOPATH/pkg/mod
 services:
 - docker
-
 env:
   global:
   - GO111MODULE=on
-matrix:
+jobs:
   include:
-  - go: 1.11.x
-    env: COMMAND='go test -v ./...'
-  - go: master
-    env: COMMAND='go test -v ./...'
-  - env: COMMAND='docker build .'
-
-script: $COMMAND
+  - name: Test with Go stable
+  - name: Build Docker container
+    install: skip
+    script: docker build .
