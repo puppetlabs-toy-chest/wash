@@ -7,37 +7,29 @@ import (
 	"github.com/puppetlabs/wash/datastore"
 )
 
-// TODO: If space becomes an issue, we can make this an
-// int8, and CacheConfig#ttl a []time.Duration so that
-// the ops can be used to index into the array.
-type cachedOp string
+type cachedOp int8
 
 const (
-	// LS represents the string name of Group#LS
-	LS cachedOp = "LS"
-	// Open represents the string name of Readable#Open
-	Open cachedOp = "Open"
-	// Metadata represents the string name of Metadata#Open
-	Metadata cachedOp = "Metadata"
+	// LS represents Group#LS
+	LS cachedOp = iota
+	// Open represents Readable#Open
+	Open
+	// Metadata represents Resource#Metadata
+	Metadata
 )
 
-var allCachedOps = []cachedOp{
-	LS,
-	Open,
-	Metadata,
-}
+var cachedOpToNameMap = [3]string{"LS", "Open", "Metadata"}
 
 // CacheConfig represents an entry's cache configuration
 type CacheConfig struct {
-	ttl map[cachedOp]time.Duration
+	ttl [3]time.Duration
 }
 
 func newCacheConfig() *CacheConfig {
 	config := &CacheConfig{}
-	config.ttl = make(map[cachedOp]time.Duration)
 
-	for _, op := range allCachedOps {
-		config.SetTTLOf(op, 5*time.Second)
+	for op := range config.ttl {
+		config.SetTTLOf(cachedOp(op), 5*time.Second)
 	}
 
 	return config
@@ -59,8 +51,8 @@ func (config *CacheConfig) TurnOffCachingFor(op cachedOp) {
 
 // TurnOffCaching turns off caching for all ops
 func (config *CacheConfig) TurnOffCaching() {
-	for _, op := range allCachedOps {
-		config.TurnOffCachingFor(op)
+	for op := range config.ttl {
+		config.TurnOffCachingFor(cachedOp(op))
 	}
 }
 
@@ -81,7 +73,8 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 		return generateValue()
 	}
 
-	return cache.GetOrUpdate(string(op)+"::"+id, ttl, generateValue)
+	opName := cachedOpToNameMap[op]
+	return cache.GetOrUpdate(opName+"::"+id, ttl, generateValue)
 }
 
 // CachedLS caches a Group object's LS method
