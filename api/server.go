@@ -142,7 +142,7 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 			if !found {
 				reason := fmt.Sprintf("The %v entry does not exist", segment)
 				if len(visitedSegments) != 0 {
-					reason += fmt.Sprintf(" the %v group", strings.Join(visitedSegments, "/"))
+					reason += fmt.Sprintf(" in the %v group", strings.Join(visitedSegments, "/"))
 				}
 
 				return nil, entryNotFoundResponse(path, reason)

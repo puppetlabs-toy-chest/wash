@@ -25,7 +25,7 @@ func StatCmd(path string) []string {
 	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", ";"}
 }
 
-// StatParse parses a single line of the output of StatCmd into Attrbutes and a name.
+// StatParse parses a single line of the output of StatCmd into Attributes and a name.
 func StatParse(line string) (plugin.Attributes, string, error) {
 	var attr plugin.Attributes
 	segments := strings.SplitN(line, " ", 6)

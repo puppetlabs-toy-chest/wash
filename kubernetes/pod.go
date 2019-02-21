@@ -29,7 +29,7 @@ func newPod(pi typedv1.PodInterface, p *corev1.Pod) *pod {
 	return pd
 }
 
-func (p *pod) Metadata(ctx context.Context) (map[string]interface{}, error) {
+func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	pd, err := p.podi.Get(p.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err

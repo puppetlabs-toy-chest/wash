@@ -27,10 +27,13 @@ func (e *EntryBase) Name() string { return e.name }
 // CacheConfig returns the entry's cache config
 func (e *EntryBase) CacheConfig() *CacheConfig { return e.cacheConfig }
 
+// MetadataMap maps keys to arbitrary structured data.
+type MetadataMap = map[string]interface{}
+
 // Resource is an entry that has metadata.
 type Resource interface {
 	Entry
-	Metadata(context.Context) (map[string]interface{}, error)
+	Metadata(context.Context) (MetadataMap, error)
 }
 
 // Group is an entry that can list its contents, an array of entries.
