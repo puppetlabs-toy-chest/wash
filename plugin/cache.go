@@ -95,7 +95,10 @@ func CachedLS(g Group, id string, ctx context.Context) ([]Entry, error) {
 	return cachedEntries.([]Entry), nil
 }
 
-// CachedOpen caches a Readable object's Open method
+// CachedOpen caches a Readable object's Open method.
+// When using the reader returned by this method, use idempotent read operations
+// such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
+// reader will change it and make subsequent uses of the cached reader invalid.
 func CachedOpen(r Readable, id string, ctx context.Context) (SizedReader, error) {
 	cachedContent, err := cachedOpHelper(Open, r, id, func() (interface{}, error) {
 		return r.Open(ctx)

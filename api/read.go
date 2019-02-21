@@ -34,10 +34,12 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	w.WriteHeader(http.StatusOK)
-	if rdr, ok := content.(io.Reader); ok {
-		io.Copy(w, rdr)
-	} else {
-		io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
+	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
+	if n != content.Size() {
+		log.Warnf("Read incomplete %v/%v", n, content.Size())
+	}
+	if err != nil {
+		return erroredActionResponse(path, readAction, err.Error())
 	}
 
 	return nil
