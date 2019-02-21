@@ -42,10 +42,9 @@ func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) stri
 
 func formatTabularListing(ls []client.LSItem) string {
 	var out string
-	var tab tabular.Table
 
 	// Setup the output table
-	tab = tabular.New()
+	tab := tabular.New()
 	nameWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
 		return e.Name
 	}))

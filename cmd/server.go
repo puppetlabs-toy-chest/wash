@@ -93,7 +93,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
 	// server and unmounting the FS.
-	sigCh := make(chan os.Signal)
+	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT)
 
 	select {
@@ -152,12 +152,6 @@ func initializeLogger(levelStr string, logfile string) (*os.File, error) {
 	}
 
 	return logFH, nil
-}
-
-type pluginInit struct {
-	name   string
-	plugin plugin.Entry
-	err    error
 }
 
 func initializePlugins() (*plugin.Registry, error) {

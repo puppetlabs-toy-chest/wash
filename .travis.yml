@@ -10,11 +10,15 @@ env:
   - GO111MODULE=on
 jobs:
   include:
-  - name: Test with Go stable
-  - name: Lint with errcheck
-    script:
+  - name: Test Go stable
+  - name: Lint errcheck, staticcheck
+    before_script:
     - go get -v github.com/kisielk/errcheck
+    - sudo curl -L https://github.com/dominikh/go-tools/releases/download/2019.1/staticcheck_linux_amd64 -o /usr/bin/staticcheck
+    - sudo chmod +x /usr/bin/staticcheck
+    script:
     - errcheck ./...
+    - staticcheck ./...
   - name: Build Docker container
     install: skip
     script: docker build .
