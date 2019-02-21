@@ -27,7 +27,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, readAction)
 	}
 
-	content, err := plugin.CachedOpen(readable, toID(path), r.Context())
+	content, err := plugin.CachedOpen(r.Context(), readable, toID(path))
 
 	if err != nil {
 		return erroredActionResponse(path, readAction, err.Error())

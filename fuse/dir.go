@@ -67,7 +67,7 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
 	switch v := d.Entry.(type) {
 	case plugin.Group:
-		return plugin.CachedLS(v, d.id, ctx)
+		return plugin.CachedLS(ctx, v, d.id)
 	default:
 		return []plugin.Entry{}, fuse.ENOENT
 	}

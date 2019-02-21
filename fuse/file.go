@@ -39,7 +39,7 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	}
 
 	if readable, ok := f.Entry.(plugin.Readable); attr.Size == plugin.SizeUnknown && ok {
-		content, err := plugin.CachedOpen(readable, f.id, ctx)
+		content, err := plugin.CachedOpen(ctx, readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
 			attr.Size = 0
@@ -86,7 +86,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry.(plugin.Readable); ok {
-		content, err := plugin.CachedOpen(readable, f.id, ctx)
+		content, err := plugin.CachedOpen(ctx, readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 			return nil, err

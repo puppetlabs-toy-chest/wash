@@ -11,13 +11,14 @@ env:
 jobs:
   include:
   - name: Test Go stable
-  - name: Lint errcheck, staticcheck
+  - name: Lint errcheck, golint, staticcheck
     before_script:
-    - go get -v github.com/kisielk/errcheck
+    - go get -v github.com/kisielk/errcheck golang.org/x/lint/golint
     - sudo curl -L https://github.com/dominikh/go-tools/releases/download/2019.1/staticcheck_linux_amd64 -o /usr/bin/staticcheck
     - sudo chmod +x /usr/bin/staticcheck
     script:
     - errcheck ./...
+    - golint ./...
     - staticcheck ./...
   - name: Build Docker container
     install: skip

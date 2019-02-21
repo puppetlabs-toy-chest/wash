@@ -19,7 +19,7 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 		switch curGroup := curEntry.(type) {
 		case plugin.Group:
 			// Get the entries via. LS()
-			entries, err := plugin.CachedLS(curGroup, curEntryID, ctx)
+			entries, err := plugin.CachedLS(ctx, curGroup, curEntryID)
 			if err != nil {
 				return nil, entryNotFoundResponse(path, err.Error())
 			}

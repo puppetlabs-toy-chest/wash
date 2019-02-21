@@ -83,7 +83,7 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 }
 
 // CachedLS caches a Group object's LS method
-func CachedLS(g Group, id string, ctx context.Context) ([]Entry, error) {
+func CachedLS(ctx context.Context, g Group, id string) ([]Entry, error) {
 	cachedEntries, err := cachedOpHelper(LS, g, id, func() (interface{}, error) {
 		return g.LS(ctx)
 	})
@@ -99,7 +99,7 @@ func CachedLS(g Group, id string, ctx context.Context) ([]Entry, error) {
 // When using the reader returned by this method, use idempotent read operations
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
-func CachedOpen(r Readable, id string, ctx context.Context) (SizedReader, error) {
+func CachedOpen(ctx context.Context, r Readable, id string) (SizedReader, error) {
 	cachedContent, err := cachedOpHelper(Open, r, id, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
@@ -112,7 +112,7 @@ func CachedOpen(r Readable, id string, ctx context.Context) (SizedReader, error)
 }
 
 // CachedMetadata caches a Resource object's Metadata method
-func CachedMetadata(r Resource, id string, ctx context.Context) (MetadataMap, error) {
+func CachedMetadata(ctx context.Context, r Resource, id string) (MetadataMap, error) {
 	cachedMetadata, err := cachedOpHelper(Metadata, r, id, func() (interface{}, error) {
 		return r.Metadata(ctx)
 	})

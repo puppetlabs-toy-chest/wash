@@ -43,12 +43,12 @@ func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
 	}, nil
 }
 
-type ExecOutput struct {
+type execOutput struct {
 	io.Reader
 	hr *types.HijackedResponse
 }
 
-func (r *ExecOutput) Close() error {
+func (r *execOutput) Close() error {
 	r.hr.Close()
 	return nil
 }
@@ -82,5 +82,5 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return nil, err
 	}
 
-	return &ExecOutput{resp.Reader, &resp}, nil
+	return &execOutput{resp.Reader, &resp}, nil
 }

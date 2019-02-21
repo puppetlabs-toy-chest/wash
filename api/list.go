@@ -28,7 +28,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, listAction)
 	}
 
-	entries, err := plugin.CachedLS(group, toID(path), r.Context())
+	entries, err := plugin.CachedLS(r.Context(), group, toID(path))
 	if err != nil {
 		return erroredActionResponse(path, listAction, err.Error())
 	}
