@@ -1,19 +1,15 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 
+	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/cmd"
 	"github.com/puppetlabs/wash/config"
 )
 
 func main() {
-	if err := config.Load(); err != nil {
-		log.Fatal(fmt.Sprintf("Failed to load Wash's config: %v", err))
-		os.Exit(1)
-	}
+	errz.Fatal(config.Load(), "Failed to load Wash's config")
 
 	os.Exit(cmd.Execute())
 }

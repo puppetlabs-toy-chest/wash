@@ -27,17 +27,19 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, readAction)
 	}
 
-	content, err := plugin.CachedOpen(readable, toID(path), r.Context())
+	content, err := plugin.CachedOpen(r.Context(), readable, toID(path))
 
 	if err != nil {
 		return erroredActionResponse(path, readAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
-	if rdr, ok := content.(io.Reader); ok {
-		io.Copy(w, rdr)
-	} else {
-		io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
+	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
+	if n != content.Size() {
+		log.Warnf("Read incomplete %v/%v", n, content.Size())
+	}
+	if err != nil {
+		return erroredActionResponse(path, readAction, err.Error())
 	}
 
 	return nil

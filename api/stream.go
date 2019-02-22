@@ -49,7 +49,7 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		// If a ReadCloser, ensure it's closed when the context is cancelled.
 		go func() {
 			<-r.Context().Done()
-			closer.Close()
+			plugin.LogErr(closer.Close(), "Error closing Stream() stream")
 		}()
 	}
 	if _, err := io.Copy(wf, rdr); err != nil {

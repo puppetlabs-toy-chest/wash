@@ -64,7 +64,7 @@ func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+	defer func() { plugin.LogErr(v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})) }()
 
 	log.Debugf("Starting container %v", cid)
 	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
@@ -92,7 +92,7 @@ func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer output.Close()
+	defer func() { plugin.LogErr(output.Close()) }()
 
 	if statusCode != 0 {
 		bytes, err := ioutil.ReadAll(output)
@@ -148,20 +148,20 @@ func (v *volume) getContentCB() os.ContentCB {
 		if err != nil {
 			return nil, err
 		}
-		defer v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		defer func() { plugin.LogErr(v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})) }()
 
 		log.Debugf("Starting container %v", cid)
 		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 			return nil, err
 		}
-		defer v.client.ContainerKill(ctx, cid, "SIGKILL")
+		defer func() { plugin.LogErr(v.client.ContainerKill(ctx, cid, "SIGKILL")) }()
 
 		// Download file, then kill container.
 		rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
 		if err != nil {
 			return nil, err
 		}
-		defer rdr.Close()
+		defer func() { plugin.LogErr(rdr.Close()) }()
 
 		tarReader := tar.NewReader(rdr)
 		// Only expect one file.

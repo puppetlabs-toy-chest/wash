@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -43,10 +42,9 @@ func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) stri
 
 func formatTabularListing(ls []client.LSItem) string {
 	var out string
-	var tab tabular.Table
 
 	// Setup the output table
-	tab = tabular.New()
+	tab := tabular.New()
 	nameWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
 		return e.Name
 	}))
@@ -96,7 +94,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Print(err)
+			fmt.Fprintln(os.Stderr, err)
 			return exitCode{1}
 		}
 
@@ -105,7 +103,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		writeError(err)
+		fmt.Fprintln(os.Stderr, err)
 		return exitCode{1}
 	}
 
@@ -113,7 +111,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		writeError(err)
+		fmt.Fprintln(os.Stderr, err)
 		return exitCode{1}
 	}
 

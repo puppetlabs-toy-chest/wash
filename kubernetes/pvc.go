@@ -63,7 +63,7 @@ func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer v.podi.Delete(pid, &metav1.DeleteOptions{})
+	defer func() { plugin.LogErr(v.podi.Delete(pid, &metav1.DeleteOptions{})) }()
 
 	log.Debugf("Waiting for pod %v", pid)
 	// Start watching for new events related to the pod we created.
@@ -76,7 +76,7 @@ func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
 	if lerr != nil {
 		return nil, lerr
 	}
-	defer output.Close()
+	defer func() { plugin.LogErr(output.Close()) }()
 
 	if err == errPodTerminated {
 		bytes, err := ioutil.ReadAll(output)
@@ -187,7 +187,7 @@ func (v *pvc) getContentCB() os.ContentCB {
 		if err != nil {
 			return nil, err
 		}
-		defer v.podi.Delete(pid, &metav1.DeleteOptions{})
+		defer func() { plugin.LogErr(v.podi.Delete(pid, &metav1.DeleteOptions{})) }()
 
 		log.Debugf("Waiting for pod %v", pid)
 		// Start watching for new events related to the pod we created.
@@ -201,7 +201,7 @@ func (v *pvc) getContentCB() os.ContentCB {
 		if err != nil {
 			return nil, err
 		}
-		defer output.Close()
+		defer func() { plugin.LogErr(output.Close()) }()
 
 		bits, err := ioutil.ReadAll(output)
 		if err != nil {

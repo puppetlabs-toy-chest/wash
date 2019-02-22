@@ -1,19 +1,25 @@
 language: go
+go: stable
 cache:
   directories:
   - $GOPATH/pkg/mod
 services:
 - docker
-
 env:
   global:
   - GO111MODULE=on
-matrix:
+jobs:
   include:
-  - go: 1.11.x
-    env: COMMAND='go test -v ./...'
-  - go: master
-    env: COMMAND='go test -v ./...'
-  - env: COMMAND='docker build .'
-
-script: $COMMAND
+  - name: Test Go stable
+  - name: Lint errcheck, golint, staticcheck
+    before_script:
+    - go get -v github.com/kisielk/errcheck golang.org/x/lint/golint
+    - sudo curl -L https://github.com/dominikh/go-tools/releases/download/2019.1/staticcheck_linux_amd64 -o /usr/bin/staticcheck
+    - sudo chmod +x /usr/bin/staticcheck
+    script:
+    - errcheck ./...
+    - golint ./...
+    - staticcheck ./...
+  - name: Build Docker container
+    install: skip
+    script: docker build .
