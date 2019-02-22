@@ -46,7 +46,7 @@ func (r *Root) Init() error {
 		if err != nil {
 			return err
 		}
-		contexts = append(contexts, &k8context{plugin.NewEntry(name), clientset, defaultns})
+		contexts = append(contexts, &k8context{plugin.NewEntry(name), clientset, cfg, defaultns})
 	}
 	r.contexts = contexts
 
