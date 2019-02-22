@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/plugin"
 
@@ -175,43 +174,22 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	objQueue := make(chan *streamedJSONRespObj)
 
 	var stdoutDone <-chan struct{}
-	var stderrDone <-chan struct{}
-
-	if result.HasStderr {
-		stdoutR, stdoutW := io.Pipe()
+	if result.Stdout != nil {
 		stdoutDone = streamCommandOutput(
 			ctx,
 			objQueue,
 			"stdout",
-			stdoutR,
+			result.Stdout,
 		)
+	}
 
-		stderrR, stderrW := io.Pipe()
+	var stderrDone <-chan struct{}
+	if result.Stderr != nil {
 		stderrDone = streamCommandOutput(
 			ctx,
 			objQueue,
 			"stderr",
-			stderrR,
-		)
-
-		go func() {
-			defer stdoutW.Close()
-			defer stderrW.Close()
-
-			// TODO: Probably need to figure out the stream's ordering here.
-			// Should this be something plugin authors tell us? Is it sane to
-			// always assume this is true?
-			if _, err := stdcopy.StdCopy(stdoutW, stderrW, result.OutputStream); err != nil {
-				log.Debugf("Errored while writing output: %v", err)
-			}
-		}()
-	} else {
-		// The OutputStream does not include Stderr
-		stdoutDone = streamCommandOutput(
-			ctx,
-			objQueue,
-			"stdout",
-			result.OutputStream,
+			result.Stderr,
 		)
 	}
 

@@ -55,9 +55,9 @@ type ExecOptions struct{}
 
 // ExecResult is a struct that contains the result of invoking Execable#exec.
 type ExecResult struct {
-	OutputStream io.Reader
-	HasStderr    bool
-	ExitCodeCB   func() (int, error)
+	Stdout     io.Reader
+	Stderr     io.Reader
+	ExitCodeCB func() (int, error)
 }
 
 // Execable is an entry that can have a command run on it.

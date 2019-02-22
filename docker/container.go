@@ -3,11 +3,14 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/puppetlabs/wash/plugin"
+	log "github.com/sirupsen/logrus"
 )
 
 type container struct {
@@ -67,8 +70,23 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 
 	// TODO: Problem with separating stdout and stderr via. HasStderr are concurrency issues
 	execResult := &plugin.ExecResult{}
-	execResult.OutputStream = resp.Reader
-	execResult.HasStderr = true
+
+	// TODO: Add datastore.SyncPipe(). Use that to return these objects
+	stdoutR, stdoutW := io.Pipe()
+	stderrR, stderrW := io.Pipe()
+	go func() {
+		defer stdoutW.Close()
+		defer stderrW.Close()
+
+		// TODO: Figure out how to handle the error here. Should we let the caller
+		// pass-us back a channel indicating the status of the write operations?
+		if _, err := stdcopy.StdCopy(stdoutW, stderrW, resp.Reader); err != nil {
+			log.Debugf("Errored while writing output: %v", err)
+		}
+	}()
+
+	execResult.Stdout = stdoutR
+	execResult.Stderr = stderrR
 	execResult.ExitCodeCB = func() (int, error) {
 		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
 		if err != nil {
