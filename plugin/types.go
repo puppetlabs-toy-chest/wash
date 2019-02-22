@@ -59,11 +59,25 @@ type Root interface {
 // Examples of potential features: user, privileged, tty, map of environment variables, string of stdin, timeout.
 type ExecOptions struct{}
 
+// ExecOutputChunk is a struct containing a chunk of the Exec'ed cmd's output.
+type ExecOutputChunk struct {
+	StreamID  int8
+	Timestamp time.Time
+	Data      string
+	Err       error
+}
+
+// ExecResult is a struct that contains the result of invoking Execable#exec.
+// Any of these fields can be nil.
+type ExecResult struct {
+	OutputCh   <-chan ExecOutputChunk
+	ExitCodeCB func() (int, error)
+}
+
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
-	// TODO: exit codes? Multiplexing stdout/stderr?
-	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (io.Reader, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
 }
 
 // File is an entry that specifies filesystem attributes.

@@ -29,18 +29,26 @@ func (e *ErrorObj) Error() string {
 	return string(jsonBytes)
 }
 
-func newAPIErrorObj(kind string, message string, fields ErrorFields) ErrorObj {
-	return ErrorObj{
+func newErrorObj(kind string, message string, fields ErrorFields) *ErrorObj {
+	return &ErrorObj{
 		Kind:   "puppetlabs.wash/" + kind,
 		Msg:    message,
 		Fields: fields,
 	}
 }
 
+func newUnknownErrorObj(err error) *ErrorObj {
+	return newErrorObj("unknown-error", err.Error(), ErrorFields{})
+}
+
+func newStreamingErrorObj(reason string) *ErrorObj {
+	return newErrorObj("streaming-error", reason, ErrorFields{})
+}
+
 // ErrorResponse represents an error response
 type errorResponse struct {
 	statusCode int
-	body       ErrorObj
+	body       *ErrorObj
 }
 
 func (e *errorResponse) Error() string {
@@ -51,11 +59,7 @@ func (e *errorResponse) Error() string {
 
 func unknownErrorResponse(err error) *errorResponse {
 	statusCode := http.StatusInternalServerError
-	body := newAPIErrorObj(
-		"unknown-error",
-		err.Error(),
-		ErrorFields{},
-	)
+	body := newUnknownErrorObj(err)
 
 	return &errorResponse{statusCode, body}
 }
@@ -64,7 +68,7 @@ func entryNotFoundResponse(path string, reason string) *errorResponse {
 	fields := ErrorFields{"path": path}
 
 	statusCode := http.StatusNotFound
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"entry-not-found",
 		fmt.Sprintf("Could not find entry %v: %v", path, reason),
 		fields,
@@ -77,7 +81,7 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 	fields := ErrorFields{"plugin": plugin}
 
 	statusCode := http.StatusNotFound
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"plugin-does-not-exist",
 		fmt.Sprintf("Plugin %v does not exist", plugin),
 		fields,
@@ -94,7 +98,7 @@ func unsupportedActionResponse(path string, action *action) *errorResponse {
 
 	statusCode := http.StatusNotFound
 	msg := fmt.Sprintf("Entry %v does not support the %v action: It does not implement the %v protocol", path, action.Name, action.Protocol)
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"unsupported-action",
 		msg,
 		fields,
@@ -105,7 +109,7 @@ func unsupportedActionResponse(path string, action *action) *errorResponse {
 
 func badRequestResponse(path string, reason string) *errorResponse {
 	fields := ErrorFields{"path": path}
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"bad-request",
 		fmt.Sprintf("Bad request on %v: %v", path, reason),
 		fields,
@@ -120,7 +124,7 @@ func erroredActionResponse(path string, action *action, reason string) *errorRes
 	}
 
 	statusCode := http.StatusInternalServerError
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"errored-action",
 		fmt.Sprintf("The %v action errored on %v: %v", action.Name, path, reason),
 		fields,
@@ -136,7 +140,7 @@ func httpMethodNotSupported(method string, path string, supported []string) *err
 		"supported": supported,
 	}
 
-	body := newAPIErrorObj(
+	body := newErrorObj(
 		"http-method-not-supported",
 		fmt.Sprintf("The %v method is not supported for %v, supported methods are: %v", method, path, strings.Join(supported, ", ")),
 		fields,
