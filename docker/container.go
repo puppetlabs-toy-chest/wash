@@ -2,7 +2,7 @@ package docker
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -43,17 +43,7 @@ func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
 	}, nil
 }
 
-type execOutput struct {
-	io.Reader
-	hr *types.HijackedResponse
-}
-
-func (r *execOutput) Close() error {
-	r.hr.Close()
-	return nil
-}
-
-func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (io.Reader, error) {
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecResult, error) {
 	command := append([]string{cmd}, args...)
 	created, err := c.client.ContainerExecCreate(
 		ctx,
@@ -70,17 +60,27 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return nil, err
 	}
 
-	// NOTE: Need this in order to get the right exit code (to start the actual
-	// exec process)
 	err = c.client.ContainerExecStart(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = c.client.ContainerExecInspect(ctx, created.ID)
-	if err != nil {
-		return nil, err
+	// TODO: Problem with separating stdout and stderr via. HasStderr are concurrency issues
+	execResult := &plugin.ExecResult{}
+	execResult.OutputStream = resp.Reader
+	execResult.HasStderr = true
+	execResult.ExitCodeCB = func() (int, error) {
+		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
+		if err != nil {
+			return 0, err
+		}
+
+		if resp.Running {
+			return 0, fmt.Errorf("The command was marked as 'Running' even though the OutputStream reached EOF")
+		}
+
+		return resp.ExitCode, nil
 	}
 
-	return &execOutput{resp.Reader, &resp}, nil
+	return execResult, nil
 }

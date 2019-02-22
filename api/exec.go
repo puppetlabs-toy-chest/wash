@@ -1,16 +1,112 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
 )
+
+func streamCommandOutput(
+	ctx context.Context,
+	respStreamer chan<- *streamedJSONRespObj,
+	streamName string,
+	stream io.Reader,
+) <-chan struct{} {
+	doneCh := make(chan struct{})
+
+	go func() {
+		defer close(doneCh)
+		defer func() {
+			if closer, ok := stream.(io.Closer); ok {
+				closer.Close()
+			}
+		}()
+
+		buf := make([]byte, 4096, 4096)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				n, err := stream.Read(buf)
+				timestamp := time.Now()
+
+				if n < 0 {
+					log.Debugf("Negative value returned when streaming %v: %v", streamName, err)
+					return
+				}
+
+				if err != nil && err != io.EOF {
+					log.Debugf("Errored streaming %v: %v", streamName, err)
+					return
+				}
+				// n >= 0, err == nil or io.EOF
+
+				if n == 0 {
+					return
+				}
+				// n > 0, err == nil or io.EOF
+
+				respStreamer <- newStreamedJSONRespObj(streamName, timestamp, string(buf[:n]))
+
+				if err == io.EOF {
+					return
+				}
+			}
+		}
+	}()
+
+	return doneCh
+}
+
+func streamExitCode(
+	ctx context.Context,
+	respStreamer chan<- *streamedJSONRespObj,
+	stdoutDone <-chan struct{},
+	stderrDone <-chan struct{},
+	exitCodeCB func() (int, error),
+) <-chan struct{} {
+	doneCh := make(chan struct{})
+
+	go func() {
+		defer close(doneCh)
+
+		// Wait for the context to be cancelled, or for the output streams to
+		// reach EOF/error
+		select {
+		case <-ctx.Done():
+			return
+		case <-stdoutDone:
+			if stderrDone != nil {
+				select {
+				case <-ctx.Done():
+					return
+				case <-stderrDone:
+				}
+			}
+
+			exitCode, err := exitCodeCB()
+			timestamp := time.Now()
+			if err != nil {
+				log.Warnf("Could not get the exit code: %v", err)
+				return
+			}
+
+			respStreamer <- newStreamedJSONRespObj("exitCode", timestamp, exitCode)
+		}
+	}()
+
+	return doneCh
+}
 
 type execBody struct {
 	Cmd  string             `json:"cmd"`
@@ -18,6 +114,23 @@ type execBody struct {
 	Opts plugin.ExecOptions `json:"opts"`
 }
 
+// TODO:
+//   * Make streaming optional?  Making it optional would give us the benefit
+//     of being able to separate stdout + stderr _and_ capture the order the streams
+//     were printed in.
+//		   * Running a bunch of execs in parallel would still work as-is, we'd just need
+//		     to lump stdout + stderr together
+//		   		* ^ Would be good to add an option to ExecOptions to turn off stderr/only return
+//           	  a single stream
+//
+//   * Start adding events? If we're streaming JSON, events would probably be useful,
+//     especially if an error happens.
+//
+//   * Introduce a Timestamped Reader? This is a reader that also returns the timestamp
+//     of when the data was read.
+//         * No way to do this in Docker
+//
+//
 var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	if r.Method != http.MethodPost {
 		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodPost})
@@ -26,7 +139,9 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	path := mux.Vars(r)["path"]
 	log.Infof("API: Exec %v", path)
 
-	entry, errResp := getEntryFromPath(r.Context(), path)
+	ctx := r.Context()
+
+	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {
 		return errResp
 	}
@@ -47,32 +162,79 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 
 	// TODO: This and the stream endpoint have some shared code for streaming
 	// responses. That should be moved to a separate helper at some point.
-	f, ok := w.(flushableWriter)
+	fw, ok := w.(flushableWriter)
 	if !ok {
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	rdr, err := exec.Exec(r.Context(), body.Cmd, body.Args, body.Opts)
+	result, err := exec.Exec(ctx, body.Cmd, body.Args, body.Opts)
 	if err != nil {
 		return erroredActionResponse(path, execAction, err.Error())
 	}
 
-	w.WriteHeader(http.StatusOK)
-	// Ensure every write is a flush, and do an initial flush to send the header.
-	wf := &streamableResponseWriter{f}
-	f.Flush()
+	objQueue := make(chan *streamedJSONRespObj)
 
-	if closer, ok := rdr.(io.Closer); ok {
-		// If a ReadCloser, ensure it's closed when the context is cancelled.
+	var stdoutDone <-chan struct{}
+	var stderrDone <-chan struct{}
+
+	if result.HasStderr {
+		stdoutR, stdoutW := io.Pipe()
+		stdoutDone = streamCommandOutput(
+			ctx,
+			objQueue,
+			"stdout",
+			stdoutR,
+		)
+
+		stderrR, stderrW := io.Pipe()
+		stderrDone = streamCommandOutput(
+			ctx,
+			objQueue,
+			"stderr",
+			stderrR,
+		)
+
 		go func() {
-			<-r.Context().Done()
-			plugin.LogErr(closer.Close(), "Error closing Exec() stream")
+			defer stdoutW.Close()
+			defer stderrW.Close()
+
+			// TODO: Probably need to figure out the stream's ordering here.
+			// Should this be something plugin authors tell us? Is it sane to
+			// always assume this is true?
+			if _, err := stdcopy.StdCopy(stdoutW, stderrW, result.OutputStream); err != nil {
+				log.Debugf("Errored while writing output: %v", err)
+			}
 		}()
+	} else {
+		// The OutputStream does not include Stderr
+		stdoutDone = streamCommandOutput(
+			ctx,
+			objQueue,
+			"stdout",
+			result.OutputStream,
+		)
 	}
-	if _, err := io.Copy(wf, rdr); err != nil {
-		// Common for copy to error when the caller closes the connection.
-		log.Debugf("Errored streaming response for entry %v: %v", path, err)
-	}
+
+	go func() {
+		exitCodeDone := streamExitCode(
+			ctx,
+			objQueue,
+			stdoutDone,
+			stderrDone,
+			result.ExitCodeCB,
+		)
+		<-exitCodeDone
+		close(objQueue)
+	}()
+
+	w.WriteHeader(http.StatusOK)
+	fw.Flush()
+
+	streamJSONResponse(
+		ctx,
+		objQueue,
+		&streamableResponseWriter{fw},
+	)
 
 	return nil
 }

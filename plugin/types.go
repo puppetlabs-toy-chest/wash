@@ -53,11 +53,18 @@ type Root interface {
 // Examples of potential features: user, privileged, tty, map of environment variables, string of stdin, timeout.
 type ExecOptions struct{}
 
+// ExecResult is a struct that contains the result of invoking Execable#exec.
+type ExecResult struct {
+	OutputStream io.Reader
+	HasStderr    bool
+	ExitCodeCB   func() (int, error)
+}
+
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
 	// TODO: exit codes? Multiplexing stdout/stderr?
-	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (io.Reader, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (*ExecResult, error)
 }
 
 // File is an entry that specifies filesystem attributes.
