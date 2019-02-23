@@ -10,19 +10,25 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 type pod struct {
 	plugin.EntryBase
-	podi      typedv1.PodInterface
+	client    *k8s.Clientset
+	config    *rest.Config
+	ns        string
 	startTime time.Time
 }
 
-func newPod(pi typedv1.PodInterface, p *corev1.Pod) *pod {
+func newPod(client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) *pod {
 	pd := &pod{
 		EntryBase: plugin.NewEntry(p.Name),
-		podi:      pi,
+		client:    client,
+		config:    config,
+		ns:        ns,
 		startTime: p.CreationTimestamp.Time,
 	}
 
@@ -30,7 +36,7 @@ func newPod(pi typedv1.PodInterface, p *corev1.Pod) *pod {
 }
 
 func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
-	pd, err := p.podi.Get(p.Name(), metav1.GetOptions{})
+	pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +54,7 @@ func (p *pod) Attr() plugin.Attributes {
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
-	req := p.podi.GetLogs(p.Name(), &corev1.PodLogOptions{})
+	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
 	rdr, err := req.Stream()
 	if err != nil {
 		return nil, err
@@ -64,6 +70,36 @@ func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 
 func (p *pod) Stream(ctx context.Context) (io.Reader, error) {
 	var tailLines int64 = 10
-	req := p.podi.GetLogs(p.Name(), &corev1.PodLogOptions{Follow: true, TailLines: &tailLines})
+	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{Follow: true, TailLines: &tailLines})
 	return req.Stream()
+}
+
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (io.Reader, error) {
+	execRequest := p.client.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(p.Name()).
+		Namespace(p.ns).
+		SubResource("exec").
+		Param("stdout", "true").
+		Param("stderr", "true").
+		Param("command", cmd)
+
+	for _, arg := range args {
+		execRequest = execRequest.Param("command", arg)
+	}
+
+	exec, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
+	if err != nil {
+		return nil, err
+	}
+
+	r, w := io.Pipe()
+	go func() {
+		plugin.LogErr(exec.Stream(remotecommand.StreamOptions{
+			Stdout: w,
+			Stderr: w,
+		}))
+		plugin.LogErr(w.Close())
+	}()
+	return r, nil
 }
