@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/puppetlabs/wash/exec"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
@@ -14,6 +15,7 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	k8exec "k8s.io/client-go/util/exec"
 )
 
 type pod struct {
@@ -93,22 +95,29 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
 	if err != nil {
-		return execResult, err
+		return execResult, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
 	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
+	exitcode := 0
 	go func() {
-		err := executor.Stream(remotecommand.StreamOptions{
+		err = executor.Stream(remotecommand.StreamOptions{
 			Stdout: stdout,
 			Stderr: stderr,
 		})
+		if exerr, ok := err.(k8exec.ExitError); ok {
+			exitcode = exerr.ExitStatus()
+			err = nil
+		}
 
 		stdout.CloseWithError(err)
 		stderr.CloseWithError(err)
 	}()
 
-	// TODO: exit
 	execResult.OutputCh = outputCh
+	execResult.ExitCodeCB = func() (int, error) {
+		return exitcode, nil
+	}
 
 	return execResult, nil
 }
