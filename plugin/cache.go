@@ -75,7 +75,12 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 		panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
 	}
 
-	config := entry.CacheConfig()
+	cached, ok := entry.(Cached)
+	if !ok {
+		return generateValue()
+	}
+
+	config := cached.CacheConfig()
 	if config == nil {
 		config = &defaultConfig
 	}

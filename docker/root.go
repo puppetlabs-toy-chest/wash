@@ -11,25 +11,22 @@ import (
 
 // Root of the Docker plugin
 type Root struct {
-	plugin.EntryBase
-	client    *client.Client
 	resources []plugin.Entry
 }
 
+// Name returns 'docker'
+func (r *Root) Name() string { return "docker" }
+
 // Init for root
 func (r *Root) Init() error {
-	r.EntryBase = plugin.NewEntry("docker")
-	r.CacheConfig().TurnOffCaching()
-
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err
 	}
-	r.client = dockerCli
 
 	r.resources = []plugin.Entry{
-		&containers{EntryBase: plugin.NewEntry("containers"), client: r.client},
-		&volumes{EntryBase: plugin.NewEntry("volumes"), client: r.client},
+		&containers{EntryBase: plugin.NewEntry("containers"), client: dockerCli},
+		&volumes{EntryBase: plugin.NewEntry("volumes"), client: dockerCli},
 	}
 
 	return nil

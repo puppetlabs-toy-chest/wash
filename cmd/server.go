@@ -160,6 +160,7 @@ func initializePlugins() (*plugin.Registry, error) {
 		&docker.Root{},
 		&kubernetes.Root{},
 	} {
+		log.Infof("Loading %v plugin", plugin.Name())
 		if err := plugin.Init(); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
 			log.Warnf("%v plugin failed to load: %+v", plugin.Name(), err)

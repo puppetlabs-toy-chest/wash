@@ -12,6 +12,11 @@ import (
 // Entry is a basic named resource type.
 type Entry interface {
 	Name() string
+}
+
+// Cached is a resource that expects its method invocations to be cached.
+// If CacheConfig() returns nil, a default config will be used.
+type Cached interface {
 	CacheConfig() *CacheConfig
 }
 
