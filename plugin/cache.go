@@ -58,10 +58,12 @@ func (config *CacheConfig) TurnOffCaching() {
 }
 
 var cache *datastore.MemCache
+var defaultConfig CacheConfig
 
 // InitCache initializes the cache
 func InitCache() {
 	cache = datastore.NewMemCache()
+	defaultConfig = *newCacheConfig()
 }
 
 func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (interface{}, error)) (interface{}, error) {
@@ -73,7 +75,12 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 		panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
 	}
 
-	ttl := entry.CacheConfig().getTTLOf(op)
+	config := entry.CacheConfig()
+	if config == nil {
+		config = &defaultConfig
+	}
+
+	ttl := config.getTTLOf(op)
 	if ttl < 0 {
 		return generateValue()
 	}
