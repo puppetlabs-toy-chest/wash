@@ -1,4 +1,4 @@
-package os
+package volume
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 
 func TestVolumeFile(t *testing.T) {
 	now := time.Now()
-	vf := NewVolumeFile("mine", plugin.Attributes{Ctime: now}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
+	vf := NewFile("mine", plugin.Attributes{Ctime: now}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		assert.Equal(t, "my path", path)
 		return strings.NewReader("hello"), nil
 	}, "my path")
@@ -31,7 +31,7 @@ func TestVolumeFile(t *testing.T) {
 }
 
 func TestVolumeFileErr(t *testing.T) {
-	vf := NewVolumeFile("mine", plugin.Attributes{}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
+	vf := NewFile("mine", plugin.Attributes{}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		return nil, errors.New("fail")
 	}, "my path")
 

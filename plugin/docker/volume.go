@@ -13,8 +13,8 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/os"
 	"github.com/puppetlabs/wash/plugin"
+	vol "github.com/puppetlabs/wash/volume"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -60,7 +60,7 @@ func (v *volume) Attr() plugin.Attributes {
 
 func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cid, err := v.createContainer(ctx, os.StatCmd(mountpoint))
+	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, errors.New(string(bytes))
 	}
 
-	dirs, err := os.StatParseAll(output, mountpoint)
+	dirs, err := vol.StatParseAll(output, mountpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -111,9 +111,9 @@ func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode.IsDir() {
-			entries = append(entries, os.NewVolumeDir(name, attr, v.getContentCB(), "/"+name, dirs))
+			entries = append(entries, vol.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
-			entries = append(entries, os.NewVolumeFile(name, attr, v.getContentCB(), "/"+name))
+			entries = append(entries, vol.NewFile(name, attr, v.getContentCB(), "/"+name))
 		}
 	}
 	return entries, nil
@@ -141,7 +141,7 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	return created.ID, nil
 }
 
-func (v *volume) getContentCB() os.ContentCB {
+func (v *volume) getContentCB() vol.ContentCB {
 	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		// Create a container that mounts a volume and waits. Use it to download a file.
 		cid, err := v.createContainer(ctx, []string{"sleep", "60"})

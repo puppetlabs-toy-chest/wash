@@ -13,10 +13,10 @@ import (
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/config"
-	"github.com/puppetlabs/wash/docker"
 	"github.com/puppetlabs/wash/fuse"
-	"github.com/puppetlabs/wash/kubernetes"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/docker"
+	"github.com/puppetlabs/wash/plugin/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 
