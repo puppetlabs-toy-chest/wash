@@ -94,7 +94,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
 	// server and unmounting the FS.
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
 	case <-sigCh:
