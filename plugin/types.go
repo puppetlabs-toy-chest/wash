@@ -112,12 +112,12 @@ type Writable interface {
 
 // Attributes of resources.
 type Attributes struct {
-	Atime time.Time
-	Mtime time.Time
-	Ctime time.Time
-	Mode  os.FileMode
-	Size  uint64
-	Valid time.Duration
+	Atime time.Time     `json:"Atime"`
+	Mtime time.Time     `json:"Mtime"`
+	Ctime time.Time     `json:"Ctime"`
+	Mode  os.FileMode   `json:"Mode"`
+	Size  uint64        `json:"Size"`
+	Valid time.Duration `json:"Valid"`
 }
 
 // SizeUnknown can be used to denote that the size is unknown and should be queried from content.

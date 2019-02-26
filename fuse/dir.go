@@ -2,7 +2,6 @@ package fuse
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"bazil.org/fuse"
@@ -14,8 +13,8 @@ import (
 // ==== FUSE Directory Interface ====
 
 type dir struct {
-	plugin.Entry
-	id string
+	entry plugin.Entry
+	id    string
 }
 
 var _ fs.Node = (*dir)(nil)
@@ -27,45 +26,32 @@ func newDir(e plugin.Entry, parent string) *dir {
 	return &dir{e, id}
 }
 
+func (d *dir) Entry() plugin.Entry {
+	return d.entry
+}
+
 func (d *dir) String() string {
 	return d.id
 }
 
 // Attr returns the attributes of a directory.
 func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	var attr plugin.Attributes
-	if file, ok := d.Entry.(plugin.File); ok {
-		attr = file.Attr()
-	}
-	if attr.Mode == 0 {
-		attr.Mode = os.ModeDir | 0550
-	}
-	applyAttr(a, &attr)
-	log.Infof("FUSE: Attr[d] %v %v", d, a)
-	return nil
+	return attr(ctx, d, a)
 }
 
 // Listxattr lists extended attributes for the resource.
 func (d *dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Infof("FUSE: Listxattr[d,pid=%v] %v", req.Pid, d)
-	resp.Append("wash.id")
-	return nil
+	return listxattr(ctx, d, req, resp)
 }
 
 // Getxattr gets extended attributes for the resource.
 func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Infof("FUSE: Getxattr[d,pid=%v] %v", req.Pid, d)
-	switch req.Name {
-	case "wash.id":
-		resp.Xattr = []byte(d.String())
-	}
-
-	return nil
+	return getxattr(ctx, d, req, resp)
 }
 
 func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
-	switch v := d.Entry.(type) {
+	switch v := d.Entry().(type) {
 	case plugin.Group:
 		return plugin.CachedLS(ctx, v, d.id)
 	default:

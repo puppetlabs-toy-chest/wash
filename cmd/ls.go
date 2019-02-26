@@ -10,6 +10,7 @@ import (
 	"github.com/InVisionApp/tabular"
 	"github.com/spf13/cobra"
 
+	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/config"
 )
@@ -26,7 +27,7 @@ func lsCommand() *cobra.Command {
 	return lsCmd
 }
 
-func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) string) string {
+func longestFieldFromListing(ls []api.ListEntry, lookup func(api.ListEntry) string) string {
 	max := 0
 	var match string
 	for _, entry := range ls {
@@ -40,15 +41,15 @@ func longestFieldFromListing(ls []client.LSItem, lookup func(client.LSItem) stri
 	return match
 }
 
-func formatTabularListing(ls []client.LSItem) string {
+func formatTabularListing(ls []api.ListEntry) string {
 	var out string
 
 	// Setup the output table
 	tab := tabular.New()
-	nameWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
+	nameWidth := len(longestFieldFromListing(ls, func(e api.ListEntry) string {
 		return e.Name
 	}))
-	verbsWidth := len(longestFieldFromListing(ls, func(e client.LSItem) string {
+	verbsWidth := len(longestFieldFromListing(ls, func(e api.ListEntry) string {
 		return strings.Join(e.Actions, ", ")
 	}))
 	tab.Col("size", "NAME", nameWidth+2)
@@ -62,15 +63,12 @@ func formatTabularListing(ls []client.LSItem) string {
 		name := entry.Name
 
 		ctime := entry.Attributes.Ctime
-		if ctime == "" {
-			ctime = "<unknown>"
+
+		var ctimeStr string
+		if ctime.IsZero() {
+			ctimeStr = "<unknown>"
 		} else {
-			t, err := time.Parse("2006-01-02T15:04:05-07:00", ctime)
-			if err != nil {
-				ctime = fmt.Sprintf("<raw:%s>", err)
-			} else {
-				ctime = t.Format(time.RFC822)
-			}
+			ctimeStr = ctime.Format(time.RFC822)
 		}
 
 		actions := entry.Actions
@@ -82,7 +80,7 @@ func formatTabularListing(ls []client.LSItem) string {
 			name += "/"
 		}
 
-		out += fmt.Sprintf(table.Format, name, ctime, verbs)
+		out += fmt.Sprintf(table.Format, name, ctimeStr, verbs)
 	}
 	return out
 }
@@ -115,6 +113,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
+	// TODO: Handle individual ListEntry errors
 	fmt.Print(formatTabularListing(ls))
 	return exitCode{0}
 }

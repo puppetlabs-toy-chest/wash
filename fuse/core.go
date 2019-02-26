@@ -16,14 +16,11 @@ var startTime = time.Now()
 
 // Root represents the root of the FUSE filesystem
 type Root struct {
-	plugin.EntryBase
 	plugins []plugin.Entry
 }
 
 func newRoot(plugins map[string]plugin.Root) Root {
 	root := Root{}
-	root.EntryBase = plugin.NewEntry("/")
-	root.CacheConfig().TurnOffCaching()
 
 	root.plugins = make([]plugin.Entry, 0, len(plugins))
 	for _, v := range plugins {
@@ -31,6 +28,22 @@ func newRoot(plugins map[string]plugin.Root) Root {
 	}
 
 	return root
+}
+
+// Name returns '/', the name for the filesystem root.
+func (r *Root) Name() string {
+	return "/"
+}
+
+// Root presents the root of the filesystem.
+func (r *Root) Root() (fs.Node, error) {
+	log.Infof("Entering root of filesystem")
+	return newDir(r, ""), nil
+}
+
+// LS lists all clients as directories.
+func (r *Root) LS(_ context.Context) ([]plugin.Entry, error) {
+	return r.plugins, nil
 }
 
 func getIDs() (uint32, uint32) {
@@ -54,6 +67,19 @@ func getIDs() (uint32, uint32) {
 
 var uid, gid = getIDs()
 
+type fuseNode interface {
+	Entry() plugin.Entry
+	String() string
+}
+
+func ftype(f fuseNode) string {
+	if _, ok := f.(*dir); ok {
+		return "d"
+	} else {
+		return "f"
+	}
+}
+
 // Applies attributes where non-default, and sets defaults otherwise.
 func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 	a.Valid = 1 * time.Second
@@ -66,17 +92,16 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 	a.Mode = attr.Mode
 	a.Size = attr.Size
 
-	var zero time.Time
 	a.Mtime = startTime
-	if attr.Mtime != zero {
+	if !attr.Mtime.IsZero() {
 		a.Mtime = attr.Mtime
 	}
 	a.Atime = startTime
-	if attr.Atime != zero {
+	if !attr.Atime.IsZero() {
 		a.Atime = attr.Atime
 	}
 	a.Ctime = startTime
-	if attr.Ctime != zero {
+	if !attr.Ctime.IsZero() {
 		a.Ctime = attr.Ctime
 	}
 	a.Crtime = startTime
@@ -85,20 +110,36 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 	a.Gid = gid
 }
 
-// Name returns '/', the name for the filesystem root.
-func (r *Root) Name() string {
-	return "/"
+func attr(ctx context.Context, f fuseNode, a *fuse.Attr) error {
+	attr := plugin.Attributes{}
+
+	err := plugin.FillAttr(ctx, f.Entry(), f.String(), &attr)
+	if _, ok := err.(plugin.ErrCouldNotDetermineSizeAttr); ok {
+		log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
+	} else if err != nil {
+		log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+		return err
+	}
+
+	applyAttr(a, &attr)
+	log.Infof("FUSE: Attr[%v] %v %v", ftype(f), f, a)
+	return nil
 }
 
-// Root presents the root of the filesystem.
-func (r *Root) Root() (fs.Node, error) {
-	log.Infof("Entering root of filesystem")
-	return newDir(r, ""), nil
+func listxattr(ctx context.Context, f fuseNode, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	log.Infof("FUSE: Listxattr[%v,pid=%v] %v", ftype(f), req.Pid, f)
+	resp.Append("wash.id")
+	return nil
 }
 
-// LS lists all clients as directories.
-func (r *Root) LS(_ context.Context) ([]plugin.Entry, error) {
-	return r.plugins, nil
+func getxattr(ctx context.Context, f fuseNode, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	log.Infof("FUSE: Getxattr[%v,pid=%v] %v", ftype(f), req.Pid, f)
+	switch req.Name {
+	case "wash.id":
+		resp.Xattr = []byte(f.String())
+	}
+
+	return nil
 }
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.

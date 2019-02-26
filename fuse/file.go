@@ -2,7 +2,6 @@ package fuse
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"bazil.org/fuse"
@@ -14,8 +13,8 @@ import (
 // ==== FUSE file Interface ====
 
 type file struct {
-	plugin.Entry
-	id string
+	entry plugin.Entry
+	id    string
 }
 
 var _ fs.Node = (*file)(nil)
@@ -27,65 +26,34 @@ func newFile(e plugin.Entry, parent string) *file {
 	return &file{e, parent + "/" + e.Name()}
 }
 
+func (f *file) Entry() plugin.Entry {
+	return f.entry
+}
+
 func (f *file) String() string {
 	return f.id
 }
 
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	attr := plugin.Attributes{Size: plugin.SizeUnknown}
-	if item, ok := f.Entry.(plugin.File); ok {
-		attr = item.Attr()
-	}
-
-	if readable, ok := f.Entry.(plugin.Readable); attr.Size == plugin.SizeUnknown && ok {
-		content, err := plugin.CachedOpen(ctx, readable, f.id)
-		if err != nil {
-			log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
-			attr.Size = 0
-		} else {
-			size := content.Size()
-			if size < 0 {
-				err := fmt.Errorf("Returned a negative value for the size: %v", size)
-				log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
-				return err
-			}
-
-			attr.Size = uint64(size)
-		}
-	}
-
-	if attr.Mode == 0 {
-		attr.Mode = 0440
-	}
-	applyAttr(a, &attr)
-	log.Infof("FUSE: Attr[f] %v %v", f, a)
-	return nil
+	return attr(ctx, f, a)
 }
 
 // Listxattr lists extended attributes for the resource.
 func (f *file) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Infof("FUSE: Listxattr[f,pid=%v] %v", req.Pid, f)
-	resp.Append("wash.id")
-	return nil
+	return listxattr(ctx, f, req, resp)
 }
 
 // Getxattr gets extended attributes for the resource.
 func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Infof("FUSE: Getxattr[f,pid=%v] %v", req.Pid, f)
-	switch req.Name {
-	case "wash.id":
-		resp.Xattr = []byte(f.String())
-	}
-
-	return nil
+	return getxattr(ctx, f, req, resp)
 }
 
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
-	if readable, ok := f.Entry.(plugin.Readable); ok {
+	if readable, ok := f.Entry().(plugin.Readable); ok {
 		content, err := plugin.CachedOpen(ctx, readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
