@@ -2,11 +2,13 @@ package docker
 
 import (
 	"context"
-	"io"
+	"fmt"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/puppetlabs/wash/exec"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -43,44 +45,51 @@ func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
 	}, nil
 }
 
-type execOutput struct {
-	io.Reader
-	hr *types.HijackedResponse
-}
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
+	execResult := plugin.ExecResult{}
 
-func (r *execOutput) Close() error {
-	r.hr.Close()
-	return nil
-}
-
-func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (io.Reader, error) {
 	command := append([]string{cmd}, args...)
 	created, err := c.client.ContainerExecCreate(
 		ctx,
 		c.Name(),
 		types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true},
 	)
-
 	if err != nil {
-		return nil, err
+		return execResult, err
 	}
 
 	resp, err := c.client.ContainerExecAttach(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
-		return nil, err
+		return execResult, err
 	}
 
-	// NOTE: Need this in order to get the right exit code (to start the actual
-	// exec process)
 	err = c.client.ContainerExecStart(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
-		return nil, err
+		return execResult, err
 	}
 
-	_, err = c.client.ContainerExecInspect(ctx, created.ID)
-	if err != nil {
-		return nil, err
+	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
+	go func() {
+		defer resp.Close()
+
+		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
+		stdout.CloseWithError(err)
+		stderr.CloseWithError(err)
+	}()
+
+	execResult.OutputCh = outputCh
+	execResult.ExitCodeCB = func() (int, error) {
+		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
+		if err != nil {
+			return 0, err
+		}
+
+		if resp.Running {
+			return 0, fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF")
+		}
+
+		return resp.ExitCode, nil
 	}
 
-	return &execOutput{resp.Reader, &resp}, nil
+	return execResult, nil
 }

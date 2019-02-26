@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/puppetlabs/wash/exec"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -74,7 +75,7 @@ func (p *pod) Stream(ctx context.Context) (io.Reader, error) {
 	return req.Stream()
 }
 
-func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (io.Reader, error) {
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
 	execRequest := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.Name()).
@@ -88,18 +89,26 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("command", arg)
 	}
 
-	exec, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
+	execResult := plugin.ExecResult{}
+
+	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
 	if err != nil {
-		return nil, err
+		return execResult, err
 	}
 
-	r, w := io.Pipe()
+	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
 	go func() {
-		plugin.LogErr(exec.Stream(remotecommand.StreamOptions{
-			Stdout: w,
-			Stderr: w,
-		}))
-		plugin.LogErr(w.Close())
+		err := executor.Stream(remotecommand.StreamOptions{
+			Stdout: stdout,
+			Stderr: stderr,
+		})
+
+		stdout.CloseWithError(err)
+		stderr.CloseWithError(err)
 	}()
-	return r, nil
+
+	// TODO: exit
+	execResult.OutputCh = outputCh
+
+	return execResult, nil
 }
