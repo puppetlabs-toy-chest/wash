@@ -1,7 +1,10 @@
 package plugin
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -52,4 +55,58 @@ func LogErr(err error, msgs ...string) {
 		}
 		log.Printf("%+v", err)
 	}
+}
+
+// ErrNegativeSizeAttr indicates that a negative value for the
+// size attribute was returned
+type ErrNegativeSizeAttr struct {
+	size int64
+}
+
+func (e ErrNegativeSizeAttr) Error() string {
+	return fmt.Sprintf("returned a negative value for the size: %v", e.size)
+}
+
+// ErrCouldNotDetermineSizeAttr indicates that the size attribute
+// could not be determined
+type ErrCouldNotDetermineSizeAttr struct {
+	reason string
+}
+
+func (e ErrCouldNotDetermineSizeAttr) Error() string {
+	return fmt.Sprintf("could not determine the size attribute: %v", e.reason)
+}
+
+// FillAttr fills the given attributes struct with the entry's attributes.
+func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes) error {
+	attr.Size = SizeUnknown
+	if item, ok := entry.(File); ok {
+		(*attr) = item.Attr()
+	}
+
+	var err error
+	if readable, ok := entry.(Readable); attr.Size == SizeUnknown && ok {
+		content, openErr := CachedOpen(ctx, readable, entryID)
+		if openErr != nil {
+			err = ErrCouldNotDetermineSizeAttr{openErr.Error()}
+			attr.Size = 0
+		} else {
+			size := content.Size()
+			if size < 0 {
+				return ErrNegativeSizeAttr{size}
+			}
+
+			attr.Size = uint64(size)
+		}
+	}
+
+	if attr.Mode == 0 {
+		if _, ok := entry.(Group); ok {
+			attr.Mode = os.ModeDir | 0550
+		} else {
+			attr.Mode = 0440
+		}
+	}
+
+	return err
 }

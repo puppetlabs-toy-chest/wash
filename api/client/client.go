@@ -22,21 +22,6 @@ type DomainSocketClient struct {
 
 var domainSocketBaseURL = "http://localhost"
 
-// LSItem represents a single entry from the result of issuing a wash "list"
-// request.
-type LSItem struct {
-	Actions    []string `json:"actions"`
-	Name       string   `json:"name"`
-	Attributes struct {
-		Atime string `json:"Atime"`
-		Mtime string `json:"Mtime"`
-		Ctime string `json:"Ctime"`
-		Mode  uint   `json:"Mode"`
-		Size  uint   `json:"Size"`
-		Valid uint   `json:"Valid"`
-	} `json:"attributes"`
-}
-
 // ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
 // domain socket.
 func ForUNIXSocket(pathToSocket string) DomainSocketClient {
@@ -82,10 +67,10 @@ func (c *DomainSocketClient) performRequest(endpoint string, result interface{})
 }
 
 // List lists the resources located at "path".
-func (c *DomainSocketClient) List(path string) ([]LSItem, error) {
+func (c *DomainSocketClient) List(path string) ([]api.ListEntry, error) {
 	endpoint := fmt.Sprintf("/fs/list%s", path)
 
-	var ls []LSItem
+	var ls []api.ListEntry
 	if err := c.performRequest(endpoint, &ls); err != nil {
 		return nil, err
 	}
