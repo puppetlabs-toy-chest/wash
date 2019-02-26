@@ -13,7 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type execBody struct {
+// ExecBody encapsulates the payload for a call to a plugin's Exec function
+type ExecBody struct {
 	Cmd  string             `json:"cmd"`
 	Args []string           `json:"args"`
 	Opts plugin.ExecOptions `json:"opts"`
@@ -115,7 +116,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return badRequestResponse(r.URL.Path, "Please send a JSON request body")
 	}
 
-	var body execBody
+	var body ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return badRequestResponse(r.URL.Path, err.Error())
 	}
