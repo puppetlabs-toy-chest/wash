@@ -82,9 +82,8 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	exec, ok := entry.(plugin.Execable)
-	if !ok {
-		return unsupportedActionResponse(path, execAction)
+	if !plugin.ExecAction.IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ExecAction)
 	}
 
 	if r.Body == nil {
@@ -105,9 +104,9 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
-	result, err := exec.Exec(ctx, body.Cmd, body.Args, opts)
+	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
-		return erroredActionResponse(path, execAction, err.Error())
+		return erroredActionResponse(path, plugin.ExecAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)

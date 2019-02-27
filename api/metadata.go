@@ -23,15 +23,14 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 		return errResp
 	}
 
-	resource, ok := entry.(plugin.Resource)
-	if !ok {
-		return unsupportedActionResponse(path, metadataAction)
+	if !plugin.MetadataAction.IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.MetadataAction)
 	}
 
-	metadata, err := plugin.CachedMetadata(r.Context(), resource, toID(path))
+	metadata, err := plugin.CachedMetadata(r.Context(), entry.(plugin.Resource), toID(path))
 
 	if err != nil {
-		return erroredActionResponse(path, metadataAction, err.Error())
+		return erroredActionResponse(path, plugin.MetadataAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)

@@ -24,9 +24,8 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return errResp
 	}
 
-	pipe, ok := entry.(plugin.Pipe)
-	if !ok {
-		return unsupportedActionResponse(path, streamAction)
+	if !plugin.StreamAction.IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.StreamAction)
 	}
 
 	f, ok := w.(flushableWriter)
@@ -34,10 +33,10 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	rdr, err := pipe.Stream(r.Context())
+	rdr, err := entry.(plugin.Pipe).Stream(r.Context())
 
 	if err != nil {
-		return erroredActionResponse(path, streamAction, err.Error())
+		return erroredActionResponse(path, plugin.StreamAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)

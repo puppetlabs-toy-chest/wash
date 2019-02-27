@@ -23,6 +23,8 @@ var cachedOpToNameMap = [3]string{"LS", "Open", "Metadata"}
 
 // CacheConfig represents an entry's cache configuration
 type CacheConfig struct {
+	// TODO: Unravel TTL and just list the ops. If we need to add anything else,
+	// we'll add it later.
 	ttl [3]time.Duration
 }
 
