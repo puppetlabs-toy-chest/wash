@@ -31,8 +31,6 @@ func printPackets(pkts <-chan api.ExecPacket) int {
 	for pkt := range pkts {
 		switch pktType := pkt.TypeField; pktType {
 		case api.Exitcode:
-			// TODO: Clean up deserialization. Right now, exit codes are
-			// JSON-deserialized as float64's
 			exit = int(pkt.Data.(float64))
 		case api.Stdout:
 			fmt.Print(pkt.Data)
