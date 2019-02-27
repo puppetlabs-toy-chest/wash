@@ -1,0 +1,8 @@
+name: kubernetes2
+enum: [pod, persistentvolumeclaims]
+#list: kubectl api-resources --verbs=list -o name
+proto:
+  list: kubectl get {{.Label}} -o json
+  post: '{{range $i, $elem := .items}} {{$elem.metadata.name}} {{end}}'
+  proto:
+    metadata: kubectl get {{.Parent.Name}}/{{.Label}} -o json

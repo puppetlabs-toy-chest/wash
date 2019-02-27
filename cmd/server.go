@@ -15,6 +15,7 @@ import (
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/data"
 	"github.com/puppetlabs/wash/plugin/docker"
 	"github.com/puppetlabs/wash/plugin/kubernetes"
 
@@ -38,6 +39,9 @@ func serverCommand() *cobra.Command {
 	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
 	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
 
+	serverCmd.Flags().StringSlice("plugin", nil, "Specify files to load that define additional plugins")
+	errz.Fatal(viper.BindPFlag("plugin", serverCmd.Flags().Lookup("plugin")))
+
 	serverCmd.RunE = toRunE(serverMain)
 
 	return serverCmd
@@ -47,6 +51,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := args[0]
 	loglevel := viper.GetString("loglevel")
 	logfile := viper.GetString("logfile")
+	additionalPlugins := viper.GetStringSlice("plugin")
 
 	logFH, err := initializeLogger(loglevel, logfile)
 	if err != nil {
@@ -57,7 +62,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		defer func() { plugin.LogErr(logFH.Close()) }()
 	}
 
-	registry, err := initializePlugins()
+	registry, err := initializePlugins(additionalPlugins)
 	if err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -154,7 +159,7 @@ func initializeLogger(levelStr string, logfile string) (*os.File, error) {
 	return logFH, nil
 }
 
-func initializePlugins() (*plugin.Registry, error) {
+func initializePlugins(additionalPlugins []string) (*plugin.Registry, error) {
 	plugins := make(map[string]plugin.Root)
 	for _, plugin := range []plugin.Root{
 		&docker.Root{},
@@ -164,6 +169,18 @@ func initializePlugins() (*plugin.Registry, error) {
 		if err := plugin.Init(); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
 			log.Warnf("%v plugin failed to load: %+v", plugin.Name(), err)
+		} else {
+			plugins[plugin.Name()] = plugin
+		}
+	}
+
+	for _, path := range additionalPlugins {
+		log.Infof("Loading plugin from %v", path)
+		plugin, err := data.NewRoot(path)
+		if err != nil {
+			log.Warnf("failed to load plugin from %v: %+v", path, err)
+		} else if plugin.Name() == "" {
+			log.Warnf("failed to load plugin from %v: plugin name was empty", path)
 		} else {
 			plugins[plugin.Name()] = plugin
 		}
