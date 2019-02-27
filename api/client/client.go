@@ -1,9 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -88,6 +90,64 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 	}
 
 	return metadata, nil
+}
+
+// Exec invokes the given command + args on the resource located at "path".
+//
+// The resulting channel contains events, ordered as we receive them from the
+// server. The channel will be closed when there are no more events.
+func (c *DomainSocketClient) Exec(path string, command string, args []string) (<-chan api.ExecPacket, error) {
+	endpoint := fmt.Sprintf("/fs/exec%s", path)
+	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
+
+	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
+	// utility functions.
+
+	payload := api.ExecBody{Cmd: command, Args: args}
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.Post(url, "application/json", bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		var errorObj api.ErrorObj
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &errorObj); err != nil {
+			return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, endpoint, string(body))
+		}
+
+		return nil, &errorObj
+	}
+
+	readJSONFromBody := func(rdr io.ReadCloser, ch chan<- api.ExecPacket) {
+		defer func() { errz.Log(rdr.Close()) }()
+		decoder := json.NewDecoder(rdr)
+		for {
+			var pkt api.ExecPacket
+			if err := decoder.Decode(&pkt); err == io.EOF {
+				close(ch)
+				return
+			} else if err != nil {
+				log.Println(err)
+				close(ch)
+				return
+			} else {
+				ch <- pkt
+			}
+		}
+	}
+
+	events := make(chan api.ExecPacket, 1)
+	go readJSONFromBody(response.Body, events)
+	return events, nil
 }
 
 // APIKeyFromPath will take a path to an object within the wash filesystem,

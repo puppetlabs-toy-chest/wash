@@ -49,6 +49,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(metaCommand())
 	rootCmd.AddCommand(lsCommand())
+	rootCmd.AddCommand(execCommand())
 
 	return rootCmd
 }
