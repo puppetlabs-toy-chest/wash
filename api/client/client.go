@@ -115,6 +115,9 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string) (<
 	endpoint := fmt.Sprintf("/fs/exec%s", path)
 	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
 
+	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
+	// utility functions.
+
 	payload := api.ExecBody{Cmd: command, Args: args}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {

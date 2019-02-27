@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
@@ -27,30 +26,22 @@ func execCommand() *cobra.Command {
 	return execCmd
 }
 
-var sigil = map[api.ExecPacketType]string{
-	api.Stdout:   "out",
-	api.Stderr:   "err",
-	api.Exitcode: "wrn",
-}
-
-func formatOutputLine(event api.ExecPacket) string {
-	format := `[%s] [%s] %s` + "\n"
-	tstamp := event.Timestamp.Local().Format("15:04:05.00")
-	sig := sigil[event.TypeField]
-
-	if event.TypeField == api.Exitcode {
-		line := fmt.Sprintf("Process exited with: %v", event.Data)
-		return fmt.Sprintf(format, tstamp, sig, line)
+func printPackets(pkts <-chan api.ExecPacket) int {
+	exit := 0
+	for pkt := range pkts {
+		switch pktType := pkt.TypeField; pktType {
+		case api.Exitcode:
+			// TODO: Clean up deserialization. Right now, exit codes are
+			// JSON-deserialized as float64's
+			exit = int(pkt.Data.(float64))
+		case api.Stdout:
+			fmt.Print(pkt.Data)
+		case api.Stderr:
+			fmt.Fprint(os.Stderr, pkt.Data)
+		}
 	}
 
-	line := fmt.Sprintf("%s", event.Data)
-	line = strings.TrimSuffix(line, "\n")
-	var output string
-	for _, l := range strings.Split(line, "\n") {
-		output += fmt.Sprintf(format, tstamp, sig, l)
-	}
-
-	return output
+	return exit
 }
 
 func execMain(cmd *cobra.Command, args []string) exitCode {
@@ -76,9 +67,6 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	for event := range ch {
-		fmt.Print(formatOutputLine(event))
-	}
-
-	return exitCode{0}
+	code := printPackets(ch)
+	return exitCode{code}
 }
