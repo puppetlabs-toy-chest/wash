@@ -11,10 +11,6 @@ import (
 )
 
 func execCommand() *cobra.Command {
-	// TODO: Figure out how to stop cobra argument parsing past a point, to allow
-	// for pass-through of args to the remote command.
-	// e.g. "uname -a" should pass along the "-a", not freak out Cobra, which normally
-	// assumes that the "-a" should apply to "wash exec"
 	execCmd := &cobra.Command{
 		Use:   "exec path command arg arg arg...",
 		Short: "Executes the given command on the indicated target",
@@ -22,6 +18,10 @@ func execCommand() *cobra.Command {
 	}
 
 	execCmd.RunE = toRunE(execMain)
+
+	// Don't interpret any flags after the first positional argument. Those should
+	// instead get interpreted by this command as normal args, not flags.
+	execCmd.Flags().SetInterspersed(false)
 
 	return execCmd
 }
