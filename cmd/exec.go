@@ -59,7 +59,7 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	ch, err := conn.Exec(apiPath, command, commandArgs)
+	ch, err := conn.Exec(apiPath, command, commandArgs, api.ExecOptions{})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return exitCode{1}

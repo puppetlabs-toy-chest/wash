@@ -13,11 +13,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ExecOptions are options that can be passed as part of an Exec call.
+type ExecOptions = plugin.ExecOptions
+
 // ExecBody encapsulates the payload for a call to a plugin's Exec function
 type ExecBody struct {
-	Cmd  string             `json:"cmd"`
-	Args []string           `json:"args"`
-	Opts plugin.ExecOptions `json:"opts"`
+	Cmd  string      `json:"cmd"`
+	Args []string    `json:"args"`
+	Opts ExecOptions `json:"opts"`
 }
 
 // ExecPacketType identifies the packet type.
