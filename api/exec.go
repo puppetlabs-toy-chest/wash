@@ -34,6 +34,8 @@ const (
 )
 
 // ExecPacket is a single packet of results from an exec.
+// If TypeField is Stdout or Stderr, Data will be a string.
+// If TypeField is Exitcode, Data will be an int (or float64 if deserialized from JSON).
 type ExecPacket struct {
 	TypeField ExecPacketType `json:"type"`
 	Timestamp time.Time      `json:"timestamp"`

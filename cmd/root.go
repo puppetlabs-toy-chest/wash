@@ -50,6 +50,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(metaCommand())
 	rootCmd.AddCommand(lsCommand())
 	rootCmd.AddCommand(execCommand())
+	rootCmd.AddCommand(psCommand())
 
 	return rootCmd
 }
