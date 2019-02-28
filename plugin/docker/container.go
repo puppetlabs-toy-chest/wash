@@ -63,11 +63,6 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return execResult, err
 	}
 
-	err = c.client.ContainerExecStart(ctx, created.ID, types.ExecStartCheck{})
-	if err != nil {
-		return execResult, err
-	}
-
 	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
 	go func() {
 		defer resp.Close()
