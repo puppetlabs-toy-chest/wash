@@ -16,7 +16,7 @@ type Dir struct {
 	dirs      DirMap
 }
 
-// NewVolumeDir creates a VolumeDir.
+// NewDir creates a Dir populated from dirs.
 func NewDir(name string, attr plugin.Attributes, cb ContentCB, path string, dirs DirMap) *Dir {
 	return &Dir{EntryBase: plugin.NewEntry(name), attr: attr, contentcb: cb, path: path, dirs: dirs}
 }

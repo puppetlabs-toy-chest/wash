@@ -75,9 +75,8 @@ type fuseNode interface {
 func ftype(f fuseNode) string {
 	if _, ok := f.(*dir); ok {
 		return "d"
-	} else {
-		return "f"
 	}
+	return "f"
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
