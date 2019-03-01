@@ -42,17 +42,22 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, generateValue 
 	value, found := cache.instance.Get(key)
 	if found {
 		log.Tracef("Cache hit on %v", key)
+		if err, ok := value.(error); ok {
+			return nil, err
+		}
 		return value, nil
 	}
 
 	// Cache misses should be rarer, so print them as debug messages.
 	log.Debugf("Cache miss on %v", key)
 	value, err := generateValue()
+	// Cache error responses as well. These are often authentication or availability failures
+	// and we don't want to continually query the API on failures.
 	if err != nil {
+		cache.instance.Set(key, err, ttl)
 		return nil, err
 	}
 
 	cache.instance.Set(key, value, ttl)
-
 	return value, nil
 }
