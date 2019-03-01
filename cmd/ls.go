@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/InVisionApp/tabular"
 	"github.com/spf13/cobra"
 
 	"github.com/puppetlabs/wash/api"
@@ -27,62 +26,34 @@ func lsCommand() *cobra.Command {
 	return lsCmd
 }
 
-func longestFieldFromListing(ls []api.ListEntry, lookup func(api.ListEntry) string) string {
-	max := 0
-	var match string
-	for _, entry := range ls {
-		s := lookup(entry)
-		l := len(s)
-		if l > max {
-			max = l
-			match = s
-		}
+func formatListEntries(ls []api.ListEntry) string {
+	headers := []columnHeader{
+		{"size", "NAME"},
+		{"ctime", "CREATED"},
+		{"verbs", "ACTIONS"},
 	}
-	return match
-}
-
-func formatTabularListing(ls []api.ListEntry) string {
-	var out string
-
-	// Setup the output table
-	tab := tabular.New()
-	nameWidth := len(longestFieldFromListing(ls, func(e api.ListEntry) string {
-		return e.Name
-	}))
-	verbsWidth := len(longestFieldFromListing(ls, func(e api.ListEntry) string {
-		return strings.Join(e.Actions, ", ")
-	}))
-	tab.Col("size", "NAME", nameWidth+2)
-	tab.Col("ctime", "CREATED", 19+2)
-	tab.Col("verbs", "ACTIONS", verbsWidth+2)
-
-	table := tab.Parse("*")
-	out += fmt.Sprintln(table.Header)
-
-	for _, entry := range ls {
-		name := entry.Name
-
-		ctime := entry.Attributes.Ctime
-
+	table := make([][]string, len(ls))
+	for i, entry := range ls {
 		var ctimeStr string
-		if ctime.IsZero() {
+		if entry.Attributes.Ctime.IsZero() {
 			ctimeStr = "<unknown>"
 		} else {
-			ctimeStr = ctime.Format(time.RFC822)
+			ctimeStr = entry.Attributes.Ctime.Format(time.RFC822)
 		}
 
 		actions := entry.Actions
 		sort.Strings(actions)
 		verbs := strings.Join(actions, ", ")
 
+		name := entry.Name
 		isDir := actions[sort.SearchStrings(actions, "list")] == "list"
 		if isDir {
 			name += "/"
 		}
 
-		out += fmt.Sprintf(table.Format, name, ctimeStr, verbs)
+		table[i] = []string{name, ctimeStr, verbs}
 	}
-	return out
+	return formatTabularListing(headers, table)
 }
 
 func lsMain(cmd *cobra.Command, args []string) exitCode {
@@ -114,6 +85,6 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	// TODO: Handle individual ListEntry errors
-	fmt.Print(formatTabularListing(ls))
+	fmt.Print(formatListEntries(ls))
 	return exitCode{0}
 }
