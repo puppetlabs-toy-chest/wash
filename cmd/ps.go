@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -25,7 +27,7 @@ func psCommand() *cobra.Command {
 	return psCmd
 }
 
-func output(ch <-chan api.ExecPacket) (string, bool) {
+func output(ch <-chan api.ExecPacket) (string, error) {
 	exit := 0
 	var stdout, stderr string
 	for pkt := range ch {
@@ -40,9 +42,9 @@ func output(ch <-chan api.ExecPacket) (string, bool) {
 	}
 
 	if exit != 0 {
-		return fmt.Sprintf("ps exited %v\n%v", exit, stdout+stderr), false
+		return "", fmt.Errorf("ps exited %v\n%v", exit, stdout+stderr)
 	}
-	return stdout, true
+	return stdout, nil
 }
 
 // Get the list of processes separately from iterating over them. This avoids including'find' as
@@ -63,10 +65,17 @@ done
 // Assume _SC_CLK_TCK is 100Hz for now. Can maybe get with 'getconf CLK_TCK'.
 const clockTick = 100
 
-func parsePS(line string) string {
+type psresult struct {
+	node    string
+	pid     int
+	active  time.Duration
+	command string
+}
+
+func parsePS(line string) (psresult, error) {
 	tokens := strings.Split(strings.TrimSpace(line), "\t")
 	if len(tokens) != 3 {
-		panic(fmt.Sprintf("Should have 3 tokens from listing cmdline, stat, statm: %v", tokens))
+		return psresult{}, fmt.Errorf("Line did not have 3 tokens: %v", tokens)
 	}
 	stat := string(tokens[1])
 	// statm := tokens[2]
@@ -84,31 +93,57 @@ func parsePS(line string) string {
 		&cminflt, &majflt, &cmajflt, &utime, &stime,
 	)
 	if err != nil {
-		panic(fmt.Sprintf("Failed parsing token %v of scan output: %v", n+1, err))
+		return psresult{}, fmt.Errorf("Failed to parse token %v of scan output: %v", n+1, err)
 	}
 
 	// statmf := ""
 	// n, err = fmt.Sscanf(statm, statmf)
 	activeTime := time.Duration((utime+stime)/clockTick) * time.Millisecond
-	return fmt.Sprintf("%v\t%v\t%v", pid, formatDuration(activeTime), command)
+	return psresult{pid: pid, active: activeTime, command: command}, nil
 }
 
-func parseLines(chunk string) string {
+func parseLines(node string, chunk string) []psresult {
 	scanner := bufio.NewScanner(strings.NewReader(chunk))
-	output := ""
+	var results []psresult
 	for scanner.Scan() {
-		output += parsePS(scanner.Text()) + "\n"
+		if result, err := parsePS(scanner.Text()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		} else {
+			result.node = node
+			results = append(results, result)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
-	return output
+	return results
 }
 
-type result struct {
-	id  string
-	out string
-	ok  bool
+func formatStats(stats []psresult) string {
+	headers := []columnHeader{
+		{"node", "NODE"},
+		{"pid", "PID"},
+		{"time", "TIME"},
+		{"cmd", "COMMAND"},
+	}
+	table := make([][]string, len(stats))
+	for i, st := range stats {
+		// Shorten path segments to probably-unique short strings, like `ku*s/do*p/de*t/pods/redis`.
+		segments := strings.Split(strings.Trim(st.node, "/"), "/")
+		for i, segment := range segments[:len(segments)-1] {
+			if len(segment) > 4 {
+				segments[i] = segment[:2] + "*" + segment[len(segment)-1:]
+			}
+		}
+
+		table[i] = []string{
+			strings.Join(segments, "/"),
+			strconv.FormatInt(int64(st.pid), 10),
+			formatDuration(st.active),
+			st.command,
+		}
+	}
+	return formatTabularListing(headers, table)
 }
 
 func psMain(cmd *cobra.Command, args []string) exitCode {
@@ -141,38 +176,35 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	// TODO: make this structured ps data.
-	results := make(chan result, len(keys))
+	var wg sync.WaitGroup
+	wg.Add(len(keys))
+	results := make(chan []psresult, len(keys))
 	for i, key := range keys {
 		go func(k string, idx int) {
+			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
 			if err != nil {
-				results <- result{k, err.Error() + "\n", false}
+				fmt.Fprintf(os.Stderr, "%v: %v\n", k, err)
+				results <- []psresult{}
 				return
 			}
-			out, ok := output(ch)
-			if ok {
-				results <- result{k, parseLines(out), true}
+			out, err := output(ch)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v: %v", k, err)
+				results <- []psresult{}
 			} else {
-				results <- result{k, out, false}
+				results <- parseLines(k, out)
 			}
 		}(key, i)
 	}
 
-	first := true
+	wg.Wait()
+
+	var stats []psresult
 	for range keys {
-		if !first {
-			fmt.Println()
-		}
-		first = false
-		r := <-results
-		fmt.Println(r.id)
-		if r.ok {
-			fmt.Print(r.out)
-		} else {
-			fmt.Fprint(os.Stderr, r.out)
-		}
+		stats = append(stats, <-results...)
 	}
 
+	fmt.Print(formatStats(stats))
 	return exitCode{0}
 }

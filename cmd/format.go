@@ -50,8 +50,12 @@ func formatTabularListing(headers []columnHeader, entries [][]string) string {
 	// Setup the output table
 	tab := tabular.New()
 	for i, column := range headers {
-		width := len(longestFieldFromColumn(entries, i))
-		tab.Col(column.shortName, column.fullName, width+2)
+		// Don't pad the last column
+		var width int
+		if i < len(headers)-1 {
+			width = len(longestFieldFromColumn(entries, i)) + 2
+		}
+		tab.Col(column.shortName, column.fullName, width)
 	}
 
 	table := tab.Parse("*")
