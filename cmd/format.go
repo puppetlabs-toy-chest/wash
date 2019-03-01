@@ -5,7 +5,15 @@ import (
 	"time"
 
 	"github.com/InVisionApp/tabular"
+	"github.com/fatih/color"
 )
+
+func eprintf(msg string, a ...interface{}) {
+	_, err := fmt.Fprintf(color.Error, color.RedString(msg), a...)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func formatDuration(dur time.Duration) string {
 	const Decisecond = 100 * time.Millisecond

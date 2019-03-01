@@ -63,7 +63,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintf("%v\n", err)
 			return exitCode{1}
 		}
 
@@ -72,7 +72,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 
@@ -80,7 +80,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 

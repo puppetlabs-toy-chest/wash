@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/config"
@@ -21,7 +20,7 @@ func metaCommand() *cobra.Command {
 
 	metaCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
 	if err := viper.BindPFlag("output", metaCmd.Flags().Lookup("output")); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 	}
 
 	metaCmd.RunE = toRunE(metaMain)
@@ -40,13 +39,13 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 	case "yaml":
 		marshaller = yaml.Marshal
 	default:
-		fmt.Fprintln(os.Stderr, "output must be either 'json' or 'yaml'")
+		eprintf("output must be either 'json' or 'yaml'\n")
 		return exitCode{1}
 	}
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 
@@ -54,13 +53,13 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	metadata, err := conn.Metadata(apiPath)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 
 	prettyMetadata, err := marshaller(metadata)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 

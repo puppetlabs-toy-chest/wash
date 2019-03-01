@@ -53,7 +53,7 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 
@@ -61,7 +61,7 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 
 	ch, err := conn.Exec(apiPath, command, commandArgs, api.ExecOptions{})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		eprintf("%v\n", err)
 		return exitCode{1}
 	}
 

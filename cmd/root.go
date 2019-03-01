@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +66,7 @@ func Execute() int {
 	if !ok {
 		// err is something Cobra-related, like e.g. a malformed
 		// flag. Print the error, then return.
-		fmt.Printf("Error: %v\n", err)
+		eprintf("Error: %v\n", err)
 		return 1
 	}
 

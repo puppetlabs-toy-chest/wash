@@ -50,7 +50,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	logFH, err := initializeLogger(loglevel, logfile)
 	if err != nil {
-		fmt.Printf("Failed to initialize the logger: %v\n", err)
+		eprintf("Failed to initialize the logger: %v\n", err)
 		return exitCode{1}
 	}
 	if logFH != nil {

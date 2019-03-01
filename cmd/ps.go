@@ -107,14 +107,14 @@ func parseLines(node string, chunk string) []psresult {
 	var results []psresult
 	for scanner.Scan() {
 		if result, err := parsePS(scanner.Text()); err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintf("%v\n", err)
 		} else {
 			result.node = node
 			results = append(results, result)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+		eprintf("reading standard input: %v", err)
 	}
 	return results
 }
@@ -153,7 +153,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			eprintf("%v\n", err)
 			return exitCode{1}
 		}
 
@@ -164,13 +164,13 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	for _, path := range paths {
 		apiKey, err := client.APIKeyFromPath(path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to get API key for %v: %v\n", path, err)
+			eprintf("Unable to get API key for %v: %v\n", path, err)
 		} else {
 			keys = append(keys, apiKey)
 		}
 	}
 	if len(keys) == 0 {
-		fmt.Fprintln(os.Stderr, "Error: no valid resources found")
+		eprintf("Error: no valid resources found\n")
 		return exitCode{1}
 	}
 
@@ -184,13 +184,13 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v: %v\n", k, err)
+				eprintf("%v: %v\n", k, err)
 				results <- []psresult{}
 				return
 			}
 			out, err := output(ch)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v: %v", k, err)
+				eprintf("%v: %v", k, err)
 				results <- []psresult{}
 			} else {
 				results <- parseLines(k, out)
