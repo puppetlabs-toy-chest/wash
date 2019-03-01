@@ -195,13 +195,10 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 		log.Infof("FUSE: Shutting down the server")
 
 		log.Infof("FUSE: Unmounting %v", mountpoint)
-		if err := fuse.Unmount(mountpoint); err != nil {
-			log.Warnf("FUSE: Failed to unmount %v: %v", mountpoint, err.Error())
-			return
+		if err = fuse.Unmount(mountpoint); err != nil {
+			log.Warnf("FUSE: Shutdown failed: %v", err.Error())
+			log.Warnf("FUSE: Manual cleanup required: umount %v", mountpoint)
 		}
-
-		// Wait for the FUSE server to shutdown.
-		<-fuseServerStoppedCh
 	}()
 
 	return stopCh, fuseServerStoppedCh, nil
