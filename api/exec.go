@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -14,7 +15,11 @@ import (
 )
 
 // ExecOptions are options that can be passed as part of an Exec call.
-type ExecOptions = plugin.ExecOptions
+// These are not identical to plugin.ExecOptions because initially the API only
+// supports receiving a string of input, not a reader.
+type ExecOptions struct {
+	Input string `json:"input"`
+}
 
 // ExecBody encapsulates the payload for a call to a plugin's Exec function
 type ExecBody struct {
@@ -131,7 +136,11 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	result, err := exec.Exec(ctx, body.Cmd, body.Args, body.Opts)
+	opts := plugin.ExecOptions{}
+	if body.Opts.Input != "" {
+		opts.Stdin = strings.NewReader(body.Opts.Input)
+	}
+	result, err := exec.Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
 		return erroredActionResponse(path, execAction, err.Error())
 	}

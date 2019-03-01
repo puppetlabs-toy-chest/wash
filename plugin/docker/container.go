@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -50,7 +51,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 
 	command := append([]string{cmd}, args...)
 	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true}
-	if opts.Input != "" {
+	if opts.Stdin != nil {
 		cfg.AttachStdin = true
 	}
 	created, err := c.client.ContainerExecCreate(ctx, c.Name(), cfg)
@@ -73,9 +74,9 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}()
 
 	var writeErr error
-	if opts.Input != "" {
+	if opts.Stdin != nil {
 		go func() {
-			_, writeErr = resp.Conn.Write([]byte(opts.Input))
+			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
 			plugin.LogErr(resp.CloseWrite())
 		}()
 	}

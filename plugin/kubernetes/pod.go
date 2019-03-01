@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -92,7 +91,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("command", arg)
 	}
 
-	if opts.Input != "" {
+	if opts.Stdin != nil {
 		execRequest = execRequest.Param("stdin", "true")
 	}
 
@@ -106,10 +105,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
 	exitcode := 0
 	go func() {
-		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr}
-		if opts.Input != "" {
-			streamOpts.Stdin = strings.NewReader(opts.Input)
-		}
+		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}
 		err = executor.Stream(streamOpts)
 		if exerr, ok := err.(k8exec.ExitError); ok {
 			exitcode = exerr.ExitStatus()

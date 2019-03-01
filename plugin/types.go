@@ -58,7 +58,7 @@ type Root interface {
 // ExecOptions is a struct we can add new features to that must be serializable to JSON.
 // Examples of potential features: user, privileged, tty, map of environment variables, string of stdin, timeout.
 type ExecOptions struct {
-	Input string
+	Stdin io.Reader
 }
 
 // ExecOutputChunk is a struct containing a chunk of the Exec'ed cmd's output.
