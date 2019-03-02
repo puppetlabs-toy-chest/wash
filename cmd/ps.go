@@ -177,24 +177,27 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
+	results := make(map[string][]psresult)
+	// Prepulate the map so it doesn't change size while all the goroutines are adding data.
+	for _, key := range keys {
+		results[key] = []psresult{}
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(keys))
-	results := make(chan []psresult, len(keys))
 	for i, key := range keys {
 		go func(k string, idx int) {
 			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
 			if err != nil {
 				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
-				results <- []psresult{}
 				return
 			}
 			out, err := collectOutput(ch)
 			if err != nil {
 				cmdutil.ErrPrintf("errored on %v: %v", k, err)
-				results <- []psresult{}
 			} else {
-				results <- parseLines(k, out)
+				results[k] = parseLines(k, out)
 			}
 		}(key, i)
 	}
@@ -202,8 +205,8 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	wg.Wait()
 
 	var stats []psresult
-	for range keys {
-		stats = append(stats, <-results...)
+	for _, key := range keys {
+		stats = append(stats, results[key]...)
 	}
 
 	fmt.Print(formatStats(stats))
