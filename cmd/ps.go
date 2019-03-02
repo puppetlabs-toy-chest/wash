@@ -19,7 +19,7 @@ import (
 
 func psCommand() *cobra.Command {
 	psCmd := &cobra.Command{
-		Use:   "ps [file...]",
+		Use:   "ps [node...]",
 		Short: "Lists the processes running on the indicated compute instances.",
 	}
 
@@ -28,7 +28,7 @@ func psCommand() *cobra.Command {
 	return psCmd
 }
 
-func output(ch <-chan api.ExecPacket) (string, error) {
+func collectOutput(ch <-chan api.ExecPacket) (string, error) {
 	exit := 0
 	var stdout, stderr string
 	for pkt := range ch {
@@ -73,7 +73,7 @@ type psresult struct {
 	command string
 }
 
-func parsePS(line string) (psresult, error) {
+func parseEntry(line string) (psresult, error) {
 	tokens := strings.Split(strings.TrimSpace(line), "\t")
 	if len(tokens) != 3 {
 		return psresult{}, fmt.Errorf("Line did not have 3 tokens: %v", tokens)
@@ -107,7 +107,7 @@ func parseLines(node string, chunk string) []psresult {
 	scanner := bufio.NewScanner(strings.NewReader(chunk))
 	var results []psresult
 	for scanner.Scan() {
-		if result, err := parsePS(scanner.Text()); err != nil {
+		if result, err := parseEntry(scanner.Text()); err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
 		} else {
 			result.node = node
@@ -171,7 +171,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 		}
 	}
 	if len(keys) == 0 {
-		cmdutil.ErrPrintf("Error: no valid resources found\n")
+		cmdutil.ErrPrintf("Error: no valid nodes found\n")
 		return exitCode{1}
 	}
 
@@ -185,13 +185,13 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
 			if err != nil {
-				cmdutil.ErrPrintf("%v: %v\n", k, err)
+				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
 				results <- []psresult{}
 				return
 			}
-			out, err := output(ch)
+			out, err := collectOutput(ch)
 			if err != nil {
-				cmdutil.ErrPrintf("%v: %v", k, err)
+				cmdutil.ErrPrintf("errored on %v: %v", k, err)
 				results <- []psresult{}
 			} else {
 				results <- parseLines(k, out)
