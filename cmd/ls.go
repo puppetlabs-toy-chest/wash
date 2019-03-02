@@ -11,6 +11,7 @@ import (
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 )
 
@@ -27,7 +28,7 @@ func lsCommand() *cobra.Command {
 }
 
 func formatListEntries(ls []api.ListEntry) string {
-	headers := []columnHeader{
+	headers := []cmdutil.ColumnHeader{
 		{"size", "NAME"},
 		{"ctime", "CREATED"},
 		{"verbs", "ACTIONS"},
@@ -53,7 +54,7 @@ func formatListEntries(ls []api.ListEntry) string {
 
 		table[i] = []string{name, ctimeStr, verbs}
 	}
-	return formatTabularListing(headers, table)
+	return cmdutil.FormatTable(headers, table)
 }
 
 func lsMain(cmd *cobra.Command, args []string) exitCode {
@@ -63,7 +64,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			eprintf("%v\n", err)
+			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}
 		}
 
@@ -72,7 +73,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		eprintf("%v\n", err)
+		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
@@ -80,7 +81,7 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 
 	ls, err := conn.List(apiPath)
 	if err != nil {
-		eprintf("%v\n", err)
+		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api"
+	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
@@ -50,7 +51,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	logFH, err := initializeLogger(loglevel, logfile)
 	if err != nil {
-		eprintf("Failed to initialize the logger: %v\n", err)
+		cmdutil.ErrPrintf("Failed to initialize the logger: %v\n", err)
 		return exitCode{1}
 	}
 	if logFH != nil {

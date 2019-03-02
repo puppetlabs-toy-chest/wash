@@ -13,6 +13,7 @@ import (
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 )
 
@@ -107,24 +108,24 @@ func parseLines(node string, chunk string) []psresult {
 	var results []psresult
 	for scanner.Scan() {
 		if result, err := parsePS(scanner.Text()); err != nil {
-			eprintf("%v\n", err)
+			cmdutil.ErrPrintf("%v\n", err)
 		} else {
 			result.node = node
 			results = append(results, result)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		eprintf("reading standard input: %v", err)
+		cmdutil.ErrPrintf("reading standard input: %v", err)
 	}
 	return results
 }
 
 func formatStats(stats []psresult) string {
-	headers := []columnHeader{
-		{"node", "NODE"},
-		{"pid", "PID"},
-		{"time", "TIME"},
-		{"cmd", "COMMAND"},
+	headers := []cmdutil.ColumnHeader{
+		{ShortName: "node", FullName: "NODE"},
+		{ShortName: "pid", FullName: "PID"},
+		{ShortName: "time", FullName: "TIME"},
+		{ShortName: "cmd", FullName: "COMMAND"},
 	}
 	table := make([][]string, len(stats))
 	for i, st := range stats {
@@ -139,11 +140,11 @@ func formatStats(stats []psresult) string {
 		table[i] = []string{
 			strings.Join(segments, "/"),
 			strconv.FormatInt(int64(st.pid), 10),
-			formatDuration(st.active),
+			cmdutil.FormatDuration(st.active),
 			st.command,
 		}
 	}
-	return formatTabularListing(headers, table)
+	return cmdutil.FormatTable(headers, table)
 }
 
 func psMain(cmd *cobra.Command, args []string) exitCode {
@@ -153,7 +154,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
-			eprintf("%v\n", err)
+			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}
 		}
 
@@ -164,13 +165,13 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	for _, path := range paths {
 		apiKey, err := client.APIKeyFromPath(path)
 		if err != nil {
-			eprintf("Unable to get API key for %v: %v\n", path, err)
+			cmdutil.ErrPrintf("Unable to get API key for %v: %v\n", path, err)
 		} else {
 			keys = append(keys, apiKey)
 		}
 	}
 	if len(keys) == 0 {
-		eprintf("Error: no valid resources found\n")
+		cmdutil.ErrPrintf("Error: no valid resources found\n")
 		return exitCode{1}
 	}
 
@@ -184,13 +185,13 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
 			if err != nil {
-				eprintf("%v: %v\n", k, err)
+				cmdutil.ErrPrintf("%v: %v\n", k, err)
 				results <- []psresult{}
 				return
 			}
 			out, err := output(ch)
 			if err != nil {
-				eprintf("%v: %v", k, err)
+				cmdutil.ErrPrintf("%v: %v", k, err)
 				results <- []psresult{}
 			} else {
 				results <- parseLines(k, out)
