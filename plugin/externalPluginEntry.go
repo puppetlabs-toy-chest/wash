@@ -97,16 +97,6 @@ type ExternalPluginEntry struct {
 	attr             Attributes
 }
 
-func (e *ExternalPluginEntry) supportsAction(a *Action) bool {
-	for _, action := range e.supportedActions {
-		if action == a.Name {
-			return true
-		}
-	}
-
-	return false
-}
-
 // Name returns the entry's name
 func (e *ExternalPluginEntry) Name() string {
 	return e.name
@@ -169,10 +159,12 @@ func (e *ExternalPluginEntry) Metadata(context.Context) (MetadataMap, error) {
 	return metadata, nil
 }
 
+// Attr returns the entry's filesystem attributes
 func (e *ExternalPluginEntry) Attr() Attributes {
 	return e.attr
 }
 
+// Stream streams the entry's content
 func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
 		e.script.Path,
@@ -256,7 +248,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 				LogErr(stderrR.Close())
 			}()
 
-			buf := make([]byte, 4096, 4096)
+			buf := make([]byte, 4096)
 			for {
 				_, err := stderrR.Read(buf)
 				if err != nil {

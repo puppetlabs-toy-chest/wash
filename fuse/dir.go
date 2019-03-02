@@ -53,9 +53,9 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction.IsSupportedOn(d.Entry()) {
 		return plugin.CachedLS(ctx, d.Entry().(plugin.Group), d.id)
-	} else {
-		return []plugin.Entry{}, fuse.ENOENT
 	}
+
+	return []plugin.Entry{}, fuse.ENOENT
 }
 
 // Lookup searches a directory for children.
@@ -73,9 +73,9 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 				// Prefetch directory entries into the cache
 				go func() { _, err := d.children(context.Background()); plugin.LogErr(err) }()
 				return newDir(entry, d.String()), nil
-			} else {
-				return newFile(entry, d.String()), nil
 			}
+
+			return newFile(entry, d.String()), nil
 		}
 	}
 	return nil, fuse.ENOENT

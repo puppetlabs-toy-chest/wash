@@ -1,5 +1,6 @@
 package plugin
 
+// Action represents a Wash action.
 type Action struct {
 	Name     string `json:"name"`
 	Protocol string `json:"protocol"`
@@ -12,6 +13,8 @@ func newAction(name string, protocol string) Action {
 	}
 }
 
+// IsSupportedOn returns true if the action's supported
+// on the specified entry, false otherwise.
 func (a Action) IsSupportedOn(entry Entry) bool {
 	for _, action := range SupportedActionsOf(entry) {
 		if a.Name == action {
@@ -22,12 +25,23 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 	return false
 }
 
+// MetadataAction represents the metadata action
 var MetadataAction = newAction("metadata", "Resource")
+
+// ListAction represents the list action
 var ListAction = newAction("list", "Group")
+
+// ReadAction represents the read action
 var ReadAction = newAction("read", "Readable")
+
+// StreamAction represents the stream action
 var StreamAction = newAction("stream", "Pipe")
+
+// ExecAction represents the exec action
 var ExecAction = newAction("exec", "Execable")
 
+// SupportedActionsOf returns all of the given
+// entry's supported actions.
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
 	case *ExternalPluginRoot:
