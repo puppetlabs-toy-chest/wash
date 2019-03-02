@@ -72,7 +72,7 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
-func unsupportedActionResponse(path string, a *plugin.Action) *errorResponse {
+func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,
 		"action": a,
@@ -99,7 +99,7 @@ func badRequestResponse(path string, reason string) *errorResponse {
 	return &errorResponse{http.StatusBadRequest, body}
 }
 
-func erroredActionResponse(path string, a *plugin.Action, reason string) *errorResponse {
+func erroredActionResponse(path string, a plugin.Action, reason string) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,
 		"action": a.Name,

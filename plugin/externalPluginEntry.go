@@ -249,8 +249,22 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 			return nil, fmt.Errorf("failed to read the header: %v", err)
 		}
 
-		// Otherwise, close the stderr pipe and start streaming.
-		LogErr(stderrR.Close())
+		// Keep reading from stderr so that the streaming isn't
+		// blocked when its buffer is full.
+		go func() {
+			defer func() {
+				LogErr(stderrR.Close())
+			}()
+
+			buf := make([]byte, 4096, 4096)
+			for {
+				_, err := stderrR.Read(buf)
+				if err != nil {
+					break
+				}
+			}
+		}()
+
 		return stdoutR, nil
 	case <-timer:
 		defer waitForCommandToFinish()

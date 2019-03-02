@@ -54,7 +54,6 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	logfile := viper.GetString("logfile")
 	externalPluginsPath := viper.GetString("external-plugins")
 
-	// Load the logger
 	logFH, err := loadLogger(loglevel, logfile)
 	if err != nil {
 		cmdutil.ErrPrintf("Failed to load the logger: %v\n", err)
@@ -64,20 +63,17 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		defer func() { plugin.LogErr(logFH.Close()) }()
 	}
 
-	// Load the plugins
 	var registry plugin.Registry
 	registry.Plugins = make(map[string]plugin.Root)
 	loadInternalPlugins(&registry)
 	loadExternalPlugins(&registry, externalPluginsPath)
 	if len(registry.Plugins) == 0 {
-		log.Warnf("No plugins loaded")
+		log.Warn("No plugins loaded")
 		return exitCode{1}
 	}
 
-	// Initialize the cache
 	plugin.InitCache()
 
-	// Load the API server
 	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(&registry, config.Socket)
 	if err != nil {
 		log.Warn(err)
@@ -92,7 +88,6 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		<-apiServerStoppedCh
 	}
 
-	// Load the FUSE server
 	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(&registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
@@ -179,10 +174,10 @@ func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
 }
 
 func loadInternalPlugins(registry *plugin.Registry) {
-	log.Infof("Loading internal plugins")
+	log.Info("Loading internal plugins")
 	loadPlugin(registry, "docker", &docker.Root{})
 	loadPlugin(registry, "kubernetes", &kubernetes.Root{})
-	log.Infof("Finished loading the internal plugins")
+	log.Info("Finished loading internal plugins")
 }
 
 func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) {
@@ -213,5 +208,5 @@ func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) 
 		loadPlugin(registry, p.Name, root)
 	}
 
-	log.Infof("Finished loading the external plugins")
+	log.Infof("Finished loading external plugins")
 }

@@ -1,55 +1,32 @@
 package plugin
 
-import (
-	"reflect"
-)
-
 type Action struct {
 	Name     string `json:"name"`
 	Protocol string `json:"protocol"`
-	// Make sure this is an unexported field
-	// so that the JSON encoder does not accidentally
-	// marshal it
-	protocolTypeObj reflect.Type
 }
 
-func newAction(name string, protocol interface{}) *Action {
-	action := &Action{
-		Name:            name,
-		protocolTypeObj: reflect.TypeOf(protocol).Elem(),
-	}
-	action.Protocol = action.protocolTypeObj.Name()
-
-	return action
-}
-
-// TODO: Could optimize this at some point
-func (a *Action) IsSupportedOn(entry Entry) bool {
-	switch t := entry.(type) {
-	case *ExternalPluginRoot:
-		return t.supportsAction(a)
-	case *ExternalPluginEntry:
-		return t.supportsAction(a)
-	default:
-		return reflect.TypeOf(entry).Implements(a.protocolTypeObj)
+func newAction(name string, protocol string) Action {
+	return Action{
+		Name:     name,
+		Protocol: protocol,
 	}
 }
 
-// The(*Resource)(nil) trick was adapted from
-// https://stackoverflow.com/a/7855298
-var MetadataAction = newAction("metadata", (*Resource)(nil))
-var ListAction = newAction("list", (*Group)(nil))
-var ReadAction = newAction("read", (*Readable)(nil))
-var StreamAction = newAction("stream", (*Pipe)(nil))
-var ExecAction = newAction("exec", (*Execable)(nil))
+func (a Action) IsSupportedOn(entry Entry) bool {
+	for _, action := range SupportedActionsOf(entry) {
+		if a.Name == action {
+			return true
+		}
+	}
 
-var allActions = []*Action{
-	MetadataAction,
-	ListAction,
-	ReadAction,
-	StreamAction,
-	ExecAction,
+	return false
 }
+
+var MetadataAction = newAction("metadata", "Resource")
+var ListAction = newAction("list", "Group")
+var ReadAction = newAction("read", "Readable")
+var StreamAction = newAction("stream", "Pipe")
+var ExecAction = newAction("exec", "Execable")
 
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
@@ -59,10 +36,24 @@ func SupportedActionsOf(entry Entry) []string {
 		return t.supportedActions
 	default:
 		actions := make([]string, 0)
-		for _, action := range allActions {
-			if action.IsSupportedOn(entry) {
-				actions = append(actions, action.Name)
-			}
+
+		// We could use reflection to simplify this. In fact, a previous version
+		// of the code did do that. The reason we removed it was b/c type assertion's
+		// a lot faster, and the resulting code isn't that bad, if a little verbose.
+		if _, ok := entry.(Resource); ok {
+			actions = append(actions, MetadataAction.Name)
+		}
+		if _, ok := entry.(Group); ok {
+			actions = append(actions, ListAction.Name)
+		}
+		if _, ok := entry.(Readable); ok {
+			actions = append(actions, ReadAction.Name)
+		}
+		if _, ok := entry.(Pipe); ok {
+			actions = append(actions, StreamAction.Name)
+		}
+		if _, ok := entry.(Execable); ok {
+			actions = append(actions, ExecAction.Name)
 		}
 
 		return actions
