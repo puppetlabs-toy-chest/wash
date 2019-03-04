@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +49,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(metaCommand())
 	rootCmd.AddCommand(lsCommand())
 	rootCmd.AddCommand(execCommand())
+	rootCmd.AddCommand(psCommand())
 
 	return rootCmd
 }
@@ -67,7 +67,7 @@ func Execute() int {
 	if !ok {
 		// err is something Cobra-related, like e.g. a malformed
 		// flag. Print the error, then return.
-		fmt.Printf("Error: %v\n", err)
+		cmdutil.ErrPrintf("Error: %v\n", err)
 		return 1
 	}
 

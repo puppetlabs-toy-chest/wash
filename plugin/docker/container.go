@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -49,11 +50,11 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	execResult := plugin.ExecResult{}
 
 	command := append([]string{cmd}, args...)
-	created, err := c.client.ContainerExecCreate(
-		ctx,
-		c.Name(),
-		types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true},
-	)
+	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true}
+	if opts.Stdin != nil {
+		cfg.AttachStdin = true
+	}
+	created, err := c.client.ContainerExecCreate(ctx, c.Name(), cfg)
 	if err != nil {
 		return execResult, err
 	}
@@ -72,8 +73,20 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		stderr.CloseWithError(err)
 	}()
 
+	var writeErr error
+	if opts.Stdin != nil {
+		go func() {
+			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
+			plugin.LogErr(resp.CloseWrite())
+		}()
+	}
+
 	execResult.OutputCh = outputCh
 	execResult.ExitCodeCB = func() (int, error) {
+		if writeErr != nil {
+			return 0, err
+		}
+
 		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
 		if err != nil {
 			return 0, err

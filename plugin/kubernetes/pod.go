@@ -91,6 +91,10 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("command", arg)
 	}
 
+	if opts.Stdin != nil {
+		execRequest = execRequest.Param("stdin", "true")
+	}
+
 	execResult := plugin.ExecResult{}
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
@@ -101,10 +105,8 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
 	exitcode := 0
 	go func() {
-		err = executor.Stream(remotecommand.StreamOptions{
-			Stdout: stdout,
-			Stderr: stderr,
-		})
+		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}
+		err = executor.Stream(streamOpts)
 		if exerr, ok := err.(k8exec.ExitError); ok {
 			exitcode = exerr.ExitStatus()
 			err = nil

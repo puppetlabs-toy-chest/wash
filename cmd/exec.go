@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
 )
@@ -53,15 +54,15 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 
 	apiPath, err := client.APIKeyFromPath(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	ch, err := conn.Exec(apiPath, command, commandArgs)
+	ch, err := conn.Exec(apiPath, command, commandArgs, api.ExecOptions{})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 

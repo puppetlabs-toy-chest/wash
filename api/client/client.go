@@ -96,14 +96,14 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 //
 // The resulting channel contains events, ordered as we receive them from the
 // server. The channel will be closed when there are no more events.
-func (c *DomainSocketClient) Exec(path string, command string, args []string) (<-chan api.ExecPacket, error) {
+func (c *DomainSocketClient) Exec(path string, command string, args []string, opts api.ExecOptions) (<-chan api.ExecPacket, error) {
 	endpoint := fmt.Sprintf("/fs/exec%s", path)
 	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
 
 	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
 	// utility functions.
 
-	payload := api.ExecBody{Cmd: command, Args: args}
+	payload := api.ExecBody{Cmd: command, Args: args, Opts: opts}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
