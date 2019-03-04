@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -116,7 +117,13 @@ func (e *ExternalPluginEntry) LS(context.Context) ([]Entry, error) {
 
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		return nil, err
+		log.Debugf(
+			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
+			strings.TrimSpace(string(stdout)),
+			"[{\"name\":\"<name_of_first_entry>\",\"supported_actions\":[\"list\"]},{\"name\":\"<name_of_second_entry>\",\"supported_actions\":[\"list\"]}]",
+		)
+
+		return nil, fmt.Errorf("could not decode the entries from stdout: %v", err)
 	}
 
 	entries := make([]Entry, len(decodedEntries))
@@ -153,7 +160,13 @@ func (e *ExternalPluginEntry) Metadata(context.Context) (MetadataMap, error) {
 
 	var metadata MetadataMap
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		return nil, err
+		log.Debugf(
+			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
+			strings.TrimSpace(string(stdout)),
+			"{\"key1\":\"value1\",\"key2\":\"value2\"}",
+		)
+
+		return nil, fmt.Errorf("could not decode the metadata from stdout: %v", err)
 	}
 
 	return metadata, nil
