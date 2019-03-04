@@ -11,15 +11,10 @@ env:
 jobs:
   include:
   - name: Test Go stable
-  - name: Lint errcheck, golint, staticcheck
+  - name: Lint with golangci-lint
     before_script:
-    - go get -v github.com/kisielk/errcheck golang.org/x/lint/golint
-    - sudo curl -L https://github.com/dominikh/go-tools/releases/download/2019.1/staticcheck_linux_amd64 -o /usr/bin/staticcheck
-    - sudo chmod +x /usr/bin/staticcheck
-    script:
-    - errcheck ./...
-    - golint -set_exit_status ./...
-    - staticcheck ./...
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
+    script: golangci-lint run -v
   - name: Build Docker container
     install: skip
     script: docker build .

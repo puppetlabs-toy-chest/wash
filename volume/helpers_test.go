@@ -50,20 +50,20 @@ func TestStatParse(t *testing.T) {
 		Size:  0,
 	}, attr)
 
-	attr, _, err = StatParse("stat: failed")
+	_, _, err = StatParse("stat: failed")
 	assert.Equal(t, errors.New("Stat did not return 6 components: stat: failed"), err)
 
-	attr, _, err = StatParse("-1 1550611510 1550611448 1550611448 41ed mnt/path")
+	_, _, err = StatParse("-1 1550611510 1550611448 1550611448 41ed mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Equal(t, &strconv.NumError{Func: "ParseUint", Num: "-1", Err: strconv.ErrSyntax}, err)
 	}
 
-	attr, _, err = StatParse("0 2019-01-01 2019-01-01 2019-01-01 41ed mnt/path")
+	_, _, err = StatParse("0 2019-01-01 2019-01-01 2019-01-01 41ed mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Equal(t, &strconv.NumError{Func: "ParseInt", Num: "2019-01-01", Err: strconv.ErrSyntax}, err)
 	}
 
-	attr, _, err = StatParse("96 1550611510 1550611448 1550611448 zebra mnt/path")
+	_, _, err = StatParse("96 1550611510 1550611448 1550611448 zebra mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Equal(t, &strconv.NumError{Func: "ParseUint", Num: "zebra", Err: strconv.ErrSyntax}, err)
 	}
