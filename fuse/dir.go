@@ -64,7 +64,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
-		return nil, err
+		return nil, fuse.ENOENT
 	}
 
 	for _, entry := range entries {
