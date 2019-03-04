@@ -29,9 +29,9 @@ func lsCommand() *cobra.Command {
 
 func formatListEntries(ls []api.ListEntry) string {
 	headers := []cmdutil.ColumnHeader{
-		{"size", "NAME"},
-		{"ctime", "CREATED"},
-		{"verbs", "ACTIONS"},
+		{ShortName: "size", FullName: "NAME"},
+		{ShortName: "ctime", FullName: "CREATED"},
+		{ShortName: "verbs", FullName: "ACTIONS"},
 	}
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
