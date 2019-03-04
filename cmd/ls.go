@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 )
@@ -27,7 +27,7 @@ func lsCommand() *cobra.Command {
 	return lsCmd
 }
 
-func formatListEntries(ls []api.ListEntry) string {
+func formatListEntries(ls []apitypes.ListEntry) string {
 	headers := []cmdutil.ColumnHeader{
 		{ShortName: "size", FullName: "NAME"},
 		{ShortName: "ctime", FullName: "CREATED"},

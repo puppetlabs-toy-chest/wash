@@ -6,22 +6,10 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
-
-// ListEntry represents a single entry from the result of issuing a wash "list"
-// request.
-//
-// TODO: We should put all the API-specific types in a separate package so that
-// clients do not have to import everything in api only to use a small subset
-// of its functionality (the response types).
-type ListEntry struct {
-	Actions    []string             `json:"actions"`
-	Name       string               `json:"name"`
-	Attributes plugin.Attributes    `json:"attributes"`
-	Errors     map[string]*ErrorObj `json:"errors"`
-}
 
 var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	if r.Method != http.MethodGet {
@@ -47,11 +35,11 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return erroredActionResponse(path, listAction, err.Error())
 	}
 
-	info := func(entry plugin.Entry, entryID string) ListEntry {
-		result := ListEntry{
+	info := func(entry plugin.Entry, entryID string) apitypes.ListEntry {
+		result := apitypes.ListEntry{
 			Name:    entry.Name(),
 			Actions: supportedActionsOf(entry),
-			Errors:  make(map[string]*ErrorObj),
+			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 
 		err := plugin.FillAttr(r.Context(), entry, entryID, &result.Attributes)
@@ -62,7 +50,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return result
 	}
 
-	result := make([]ListEntry, len(entries)+1)
+	result := make([]apitypes.ListEntry, len(entries)+1)
 	result[0] = info(group, groupID)
 	result[0].Name = "."
 

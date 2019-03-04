@@ -9,50 +9,15 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// ExecOptions are options that can be passed as part of an Exec call.
-// These are not identical to plugin.ExecOptions because initially the API only
-// supports receiving a string of input, not a reader.
-type ExecOptions struct {
-	Input string `json:"input"`
-}
-
-// ExecBody encapsulates the payload for a call to a plugin's Exec function
-type ExecBody struct {
-	Cmd  string      `json:"cmd"`
-	Args []string    `json:"args"`
-	Opts ExecOptions `json:"opts"`
-}
-
-// ExecPacketType identifies the packet type.
-type ExecPacketType = string
-
-// Enumerates packet types.
-const (
-	Stdout   ExecPacketType = "stdout"
-	Stderr   ExecPacketType = "stderr"
-	Exitcode ExecPacketType = "exitcode"
-)
-
-// ExecPacket is a single packet of results from an exec.
-// If TypeField is Stdout or Stderr, Data will be a string.
-// If TypeField is Exitcode, Data will be an int (or float64 if deserialized from JSON).
-type ExecPacket struct {
-	TypeField ExecPacketType `json:"type"`
-	Timestamp time.Time      `json:"timestamp"`
-	Data      interface{}    `json:"data"`
-	Err       *ErrorObj      `json:"error"`
-}
-
-func newExecPacket(typeField ExecPacketType, timestamp time.Time) *ExecPacket {
-	return &ExecPacket{TypeField: typeField, Timestamp: timestamp}
-}
-
-func (p *ExecPacket) send(ctx context.Context, w *json.Encoder) {
+// Send serializes an ExecPacket via the provided json encoder.
+// Skips if the provided context has been cancelled.
+func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	select {
 	case <-ctx.Done():
 		// Don't send anything if the context's finished. Otherwise, the Encode
@@ -64,7 +29,7 @@ func (p *ExecPacket) send(ctx context.Context, w *json.Encoder) {
 	}
 }
 
-var outputStreamNames = [2]string{Stdout, Stderr}
+var outputStreamNames = [2]string{apitypes.Stdout, apitypes.Stderr}
 
 func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.ExecOutputChunk) {
 	if outputCh == nil {
@@ -74,14 +39,14 @@ func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.E
 	for chunk := range outputCh {
 		stream := outputStreamNames[chunk.StreamID]
 
-		packet := newExecPacket(stream, chunk.Timestamp)
+		packet := apitypes.ExecPacket{TypeField: stream, Timestamp: chunk.Timestamp}
 		if err := chunk.Err; err != nil {
 			packet.Err = newStreamingErrorObj(err.Error())
 		} else {
 			packet.Data = chunk.Data
 		}
 
-		packet.send(ctx, w)
+		sendPacket(ctx, w, &packet)
 	}
 }
 
@@ -90,7 +55,7 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 		return
 	}
 
-	packet := newExecPacket(Exitcode, time.Now())
+	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
 
 	exitCode, err := exitCodeCB()
 	if err != nil {
@@ -99,7 +64,7 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 		packet.Data = exitCode
 	}
 
-	packet.send(ctx, w)
+	sendPacket(ctx, w, &packet)
 }
 
 var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
@@ -126,7 +91,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return badRequestResponse(r.URL.Path, "Please send a JSON request body")
 	}
 
-	var body ExecBody
+	var body apitypes.ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return badRequestResponse(r.URL.Path, err.Error())
 	}
