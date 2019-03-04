@@ -25,11 +25,19 @@ type decodedAttributes struct {
 	Valid time.Duration `json:"Valid"`
 }
 
+func unixSecondsToTimeAttr(seconds int64) time.Time {
+	if seconds <= 0 {
+		return time.Time{}
+	}
+
+	return time.Unix(seconds, 0)
+}
+
 func (a decodedAttributes) toAttributes() Attributes {
 	return Attributes{
-		Atime: time.Unix(a.Atime, 0),
-		Mtime: time.Unix(a.Mtime, 0),
-		Ctime: time.Unix(a.Ctime, 0),
+		Atime: unixSecondsToTimeAttr(a.Atime),
+		Mtime: unixSecondsToTimeAttr(a.Mtime),
+		Ctime: unixSecondsToTimeAttr(a.Ctime),
 		Mode:  a.Mode,
 		Size:  a.Size,
 		Valid: a.Valid,
