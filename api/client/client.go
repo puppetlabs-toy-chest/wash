@@ -12,7 +12,7 @@ import (
 	"net/http"
 
 	"github.com/Benchkram/errz"
-	"github.com/puppetlabs/wash/api"
+	apitypes "github.com/puppetlabs/wash/api/types"
 
 	"github.com/pkg/xattr"
 )
@@ -53,7 +53,7 @@ func (c *DomainSocketClient) performRequest(endpoint string, result interface{})
 	}
 
 	if response.StatusCode != http.StatusOK {
-		var errorObj api.ErrorObj
+		var errorObj apitypes.ErrorObj
 		if err := json.Unmarshal(body, &errorObj); err != nil {
 			return fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, endpoint, string(body))
 		}
@@ -69,10 +69,10 @@ func (c *DomainSocketClient) performRequest(endpoint string, result interface{})
 }
 
 // List lists the resources located at "path".
-func (c *DomainSocketClient) List(path string) ([]api.ListEntry, error) {
+func (c *DomainSocketClient) List(path string) ([]apitypes.ListEntry, error) {
 	endpoint := fmt.Sprintf("/fs/list%s", path)
 
-	var ls []api.ListEntry
+	var ls []apitypes.ListEntry
 	if err := c.performRequest(endpoint, &ls); err != nil {
 		return nil, err
 	}
@@ -96,14 +96,14 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 //
 // The resulting channel contains events, ordered as we receive them from the
 // server. The channel will be closed when there are no more events.
-func (c *DomainSocketClient) Exec(path string, command string, args []string, opts api.ExecOptions) (<-chan api.ExecPacket, error) {
+func (c *DomainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
 	endpoint := fmt.Sprintf("/fs/exec%s", path)
 	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
 
 	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
 	// utility functions.
 
-	payload := api.ExecBody{Cmd: command, Args: args, Opts: opts}
+	payload := apitypes.ExecBody{Cmd: command, Args: args, Opts: opts}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 	}
 
 	if response.StatusCode != http.StatusOK {
-		var errorObj api.ErrorObj
+		var errorObj apitypes.ErrorObj
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			return nil, err
@@ -127,11 +127,11 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 		return nil, &errorObj
 	}
 
-	readJSONFromBody := func(rdr io.ReadCloser, ch chan<- api.ExecPacket) {
+	readJSONFromBody := func(rdr io.ReadCloser, ch chan<- apitypes.ExecPacket) {
 		defer func() { errz.Log(rdr.Close()) }()
 		decoder := json.NewDecoder(rdr)
 		for {
-			var pkt api.ExecPacket
+			var pkt apitypes.ExecPacket
 			if err := decoder.Decode(&pkt); err == io.EOF {
 				close(ch)
 				return
@@ -145,7 +145,7 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 		}
 	}
 
-	events := make(chan api.ExecPacket, 1)
+	events := make(chan apitypes.ExecPacket, 1)
 	go readJSONFromBody(response.Body, events)
 	return events, nil
 }

@@ -11,8 +11,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 )
@@ -28,16 +28,16 @@ func psCommand() *cobra.Command {
 	return psCmd
 }
 
-func collectOutput(ch <-chan api.ExecPacket) (string, error) {
+func collectOutput(ch <-chan apitypes.ExecPacket) (string, error) {
 	exit := 0
 	var stdout, stderr string
 	for pkt := range ch {
 		switch pktType := pkt.TypeField; pktType {
-		case api.Exitcode:
+		case apitypes.Exitcode:
 			exit = int(pkt.Data.(float64))
-		case api.Stdout:
+		case apitypes.Stdout:
 			stdout += pkt.Data.(string)
-		case api.Stderr:
+		case apitypes.Stderr:
 			stderr += pkt.Data.(string)
 		}
 	}
@@ -188,7 +188,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 	for i, key := range keys {
 		go func(k string, idx int) {
 			defer wg.Done()
-			ch, err := conn.Exec(k, "sh", []string{}, api.ExecOptions{Input: psScript})
+			ch, err := conn.Exec(k, "sh", []string{}, apitypes.ExecOptions{Input: psScript})
 			if err != nil {
 				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
 				return

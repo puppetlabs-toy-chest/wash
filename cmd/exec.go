@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/api/client"
-	"github.com/puppetlabs/wash/cmd/util"
+	apitypes "github.com/puppetlabs/wash/api/types"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
 )
@@ -27,15 +27,15 @@ func execCommand() *cobra.Command {
 	return execCmd
 }
 
-func printPackets(pkts <-chan api.ExecPacket) int {
+func printPackets(pkts <-chan apitypes.ExecPacket) int {
 	exit := 0
 	for pkt := range pkts {
 		switch pktType := pkt.TypeField; pktType {
-		case api.Exitcode:
+		case apitypes.Exitcode:
 			exit = int(pkt.Data.(float64))
-		case api.Stdout:
+		case apitypes.Stdout:
 			fmt.Print(pkt.Data)
-		case api.Stderr:
+		case apitypes.Stderr:
 			fmt.Fprint(os.Stderr, pkt.Data)
 		}
 	}
@@ -60,7 +60,7 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	ch, err := conn.Exec(apiPath, command, commandArgs, api.ExecOptions{})
+	ch, err := conn.Exec(apiPath, command, commandArgs, apitypes.ExecOptions{})
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}

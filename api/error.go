@@ -1,54 +1,35 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+
+	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
 
-// ErrorFields represents the fields of an ErrorObj
-type ErrorFields = map[string]interface{}
-
-// ErrorObj represents an API error object
-type ErrorObj struct {
-	Kind   string      `json:"kind"`
-	Msg    string      `json:"msg"`
-	Fields ErrorFields `json:"fields"`
-}
-
-func (e *ErrorObj) Error() string {
-	jsonBytes, err := json.Marshal(e)
-	if err != nil {
-		// We should never hit this code-path, but better safe than sorry
-		return fmt.Sprintf("Kind: %v, Msg: %v, Fields: %v", e.Kind, e.Msg, e.Fields)
-	}
-
-	return string(jsonBytes)
-}
-
-func newErrorObj(kind string, message string, fields ErrorFields) *ErrorObj {
-	return &ErrorObj{
+func newErrorObj(kind string, message string, fields apitypes.ErrorFields) *apitypes.ErrorObj {
+	return &apitypes.ErrorObj{
 		Kind:   "puppetlabs.wash/" + kind,
 		Msg:    message,
 		Fields: fields,
 	}
 }
 
-func newUnknownErrorObj(err error) *ErrorObj {
-	return newErrorObj("unknown-error", err.Error(), ErrorFields{})
+func newUnknownErrorObj(err error) *apitypes.ErrorObj {
+	return newErrorObj("unknown-error", err.Error(), apitypes.ErrorFields{})
 }
 
-func newStreamingErrorObj(reason string) *ErrorObj {
-	return newErrorObj("streaming-error", reason, ErrorFields{})
+func newStreamingErrorObj(reason string) *apitypes.ErrorObj {
+	return newErrorObj("streaming-error", reason, apitypes.ErrorFields{})
 }
 
 // ErrorResponse represents an error response
 type errorResponse struct {
 	statusCode int
-	body       *ErrorObj
+	body       *apitypes.ErrorObj
 }
 
 func (e *errorResponse) Error() string {
@@ -65,7 +46,7 @@ func unknownErrorResponse(err error) *errorResponse {
 }
 
 func entryNotFoundResponse(path string, reason string) *errorResponse {
-	fields := ErrorFields{"path": path}
+	fields := apitypes.ErrorFields{"path": path}
 
 	statusCode := http.StatusNotFound
 	body := newErrorObj(
@@ -78,7 +59,7 @@ func entryNotFoundResponse(path string, reason string) *errorResponse {
 }
 
 func pluginDoesNotExistResponse(plugin string) *errorResponse {
-	fields := ErrorFields{"plugin": plugin}
+	fields := apitypes.ErrorFields{"plugin": plugin}
 
 	statusCode := http.StatusNotFound
 	body := newErrorObj(
@@ -91,7 +72,7 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 }
 
 func unsupportedActionResponse(path string, action *action) *errorResponse {
-	fields := ErrorFields{
+	fields := apitypes.ErrorFields{
 		"path":   path,
 		"action": action,
 	}
@@ -108,7 +89,7 @@ func unsupportedActionResponse(path string, action *action) *errorResponse {
 }
 
 func badRequestResponse(path string, reason string) *errorResponse {
-	fields := ErrorFields{"path": path}
+	fields := apitypes.ErrorFields{"path": path}
 	body := newErrorObj(
 		"bad-request",
 		fmt.Sprintf("Bad request on %v: %v", path, reason),
@@ -118,7 +99,7 @@ func badRequestResponse(path string, reason string) *errorResponse {
 }
 
 func erroredActionResponse(path string, action *action, reason string) *errorResponse {
-	fields := ErrorFields{
+	fields := apitypes.ErrorFields{
 		"path":   path,
 		"action": action.Name,
 	}
@@ -134,7 +115,7 @@ func erroredActionResponse(path string, action *action, reason string) *errorRes
 }
 
 func httpMethodNotSupported(method string, path string, supported []string) *errorResponse {
-	fields := ErrorFields{
+	fields := apitypes.ErrorFields{
 		"method":    method,
 		"path":      path,
 		"supported": supported,
