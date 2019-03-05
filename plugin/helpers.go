@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Benchkram/errz"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,17 +46,6 @@ func ToMetadata(obj interface{}) MetadataMap {
 func TrackTime(start time.Time, name string) {
 	elapsed := time.Since(start)
 	log.Infof("%s took %s", name, elapsed)
-}
-
-// LogErr logs an error + context directly to console or file. Uses logrus instead of
-// golang's log library.
-func LogErr(err error, msgs ...string) {
-	if err != nil {
-		for _, msg := range msgs {
-			err = errors.Wrap(err, msg)
-		}
-		log.Printf("%+v", err)
-	}
 }
 
 // ErrNegativeSizeAttr indicates that a negative value for the
