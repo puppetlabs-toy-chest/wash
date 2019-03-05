@@ -91,7 +91,7 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 	}
 
 	opName := cachedOpToNameMap[op]
-	return cache.GetOrUpdate(opName+"::"+id, ttl, generateValue)
+	return cache.GetOrUpdate(opName+"::"+id, ttl, false, generateValue)
 }
 
 // CachedList caches a Group object's List method

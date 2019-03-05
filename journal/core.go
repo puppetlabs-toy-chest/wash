@@ -11,6 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO: Would perform better if we retrieved from cache once when creating a NamedJournal and
+// kept that one active until the NamedJournal is no longer in use.
 var std = datastore.NewMemCacheWithEvicted(closeFile)
 var cachedir = func() string {
 	cdir, err := os.UserCacheDir()
@@ -28,7 +30,7 @@ func journaldir() string {
 // Log creates a new journal for 'id' if needed, then appends the message to that journal.
 // Logs are journaled in the user's cache directory under `wash/journal/ID.log`.
 func Log(id string, msg string) {
-	obj, err := std.GetOrUpdate(id, expires, func() (interface{}, error) {
+	obj, err := std.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := journaldir()
 		if err := os.MkdirAll(jdir, 0750); err != nil {
 			return nil, err

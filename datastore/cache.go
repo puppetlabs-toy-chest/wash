@@ -45,7 +45,8 @@ func (cache *MemCache) lockForKey(key string) *locksutil.LockEntry {
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
-func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, generateValue func() (interface{}, error)) (interface{}, error) {
+// If resetTTLOnHit is true, will reset the cache expiration for the entry.
+func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
 	l := cache.lockForKey(key)
 	l.Lock()
 	defer l.Unlock()
@@ -53,6 +54,10 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, generateValue 
 	value, found := cache.instance.Get(key)
 	if found {
 		log.Tracef("Cache hit on %v", key)
+		if resetTTLOnHit {
+			// Update last-access time
+			cache.instance.Set(key, value, ttl)
+		}
 		if err, ok := value.(error); ok {
 			return nil, err
 		}
