@@ -14,6 +14,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -42,7 +43,7 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 }
 
 func (c *DomainSocketClient) performRequest(endpoint string, result interface{}) error {
-	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
+	url := fmt.Sprintf("%s%s?%s=%d", domainSocketBaseURL, endpoint, apitypes.JournalID, os.Getpid())
 	response, err := c.Get(url)
 	if err != nil {
 		log.Println(err)
@@ -102,7 +103,7 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 // server. The channel will be closed when there are no more events.
 func (c *DomainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
 	endpoint := fmt.Sprintf("/fs/exec%s", path)
-	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
+	url := fmt.Sprintf("%s%s?%s=%d", domainSocketBaseURL, endpoint, apitypes.JournalID, os.Getpid())
 
 	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
 	// utility functions.
