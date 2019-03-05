@@ -39,7 +39,8 @@ func (d *dir) String() string {
 
 // Attr returns the attributes of a directory.
 func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	return attr(context.WithValue(ctx, plugin.Journal, journal.NamedJournal{ID: "TODO"}), d, a)
+	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
+	return attr(context.WithValue(ctx, plugin.Journal, journal.NamedJournal{}), d, a)
 }
 
 // Listxattr lists extended attributes for the resource.
@@ -93,7 +94,8 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 // ReadDirAll lists all children of the directory.
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	jnl := journal.NamedJournal{ID: "TODO"}
+	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like ReadDirAll.
+	jnl := journal.NamedJournal{}
 	jnl.Log(fmt.Sprintf("FUSE: List %v", d))
 
 	entries, err := d.children(context.WithValue(ctx, plugin.Journal, jnl))
