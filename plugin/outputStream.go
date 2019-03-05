@@ -1,11 +1,9 @@
-package exec
+package plugin
 
 import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/puppetlabs/wash/plugin"
 )
 
 const (
@@ -20,16 +18,16 @@ type OutputStream struct {
 	ctx        context.Context
 	sentCtxErr bool
 	id         int8
-	ch         chan plugin.ExecOutputChunk
+	ch         chan ExecOutputChunk
 	closer     *multiCloser
 }
 
 func (s *OutputStream) sendData(data string) {
-	s.ch <- plugin.ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Data: data}
+	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Data: data}
 }
 
 func (s *OutputStream) sendError(err error) {
-	s.ch <- plugin.ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Err: err}
+	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Err: err}
 }
 
 func (s *OutputStream) Write(data []byte) (int, error) {
@@ -64,7 +62,7 @@ func (s *OutputStream) CloseWithError(err error) {
 
 type multiCloser struct {
 	mux       sync.Mutex
-	ch        chan plugin.ExecOutputChunk
+	ch        chan ExecOutputChunk
 	countdown int
 }
 
@@ -77,14 +75,14 @@ func (c *multiCloser) Close() {
 	c.mux.Unlock()
 }
 
-// CreateOutputStreams creates a pair of writers representing stdout
+// CreateExecOutputStreams creates a pair of writers representing stdout
 // and stderr. They are used to transfer chunks of the Exec'ed cmd's
 // output in the order they're received by the corresponding API. The
 // writers maintain the ordering by writing to a channel.
 //
 // This method returns outputCh, stdout, and stderr, respectively.
-func CreateOutputStreams(ctx context.Context) (<-chan plugin.ExecOutputChunk, *OutputStream, *OutputStream) {
-	outputCh := make(chan plugin.ExecOutputChunk)
+func CreateExecOutputStreams(ctx context.Context) (<-chan ExecOutputChunk, *OutputStream, *OutputStream) {
+	outputCh := make(chan ExecOutputChunk)
 	closer := &multiCloser{ch: outputCh, countdown: 2}
 
 	stdout := &OutputStream{ctx: ctx, id: StdoutID, ch: outputCh, closer: closer}

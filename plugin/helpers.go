@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -123,6 +124,10 @@ func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes
 
 // CreateCommand creates a cmd object encapsulating the given cmd and its args.
 // It returns the cmd object + its stdout and stderr pipes.
+//
+// TODO: Maybe useful to create our own Command object that wraps *exec.Cmd.
+// This way, we can extend it. For example, we could add a method that returns the
+// full command string, which would be useful for logging.
 func CreateCommand(cmd string, args ...string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
 	cmdObj := exec.Command(cmd, args...)
 
@@ -137,4 +142,26 @@ func CreateCommand(cmd string, args ...string) (*exec.Cmd, io.ReadCloser, io.Rea
 	}
 
 	return cmdObj, stdout, stderr, nil
+}
+
+// ExitCodeFromErr attempts to get the exit-code from the passed-in
+// error object. If successful, it returns the exit-code. Otherwise,
+// it returns the passed-in error object as the error.
+func ExitCodeFromErr(err error) (int, error) {
+	if err == nil {
+		return 0, nil
+	}
+
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		return 0, err
+	}
+
+	// For some reason, exitErr.ExitCode() results in a "no field or method"
+	// compiler error on some machines. Other variants like
+	// exitErr.ProcessState.ExitCode() also don't work. Thus, we use the method
+	// described in https://stackoverflow.com/questions/10385551/get-exit-code-go
+	// to get the exit code.
+	ws := exitErr.Sys().(syscall.WaitStatus)
+	return ws.ExitStatus(), nil
 }

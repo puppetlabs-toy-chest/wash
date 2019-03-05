@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -34,11 +33,8 @@ func (s ExternalPluginScript) InvokeAndWait(args ...string) ([]byte, error) {
 
 	err := cmd.Run()
 
-	exitCode := 0
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		ws := exitErr.Sys().(syscall.WaitStatus)
-		exitCode = ws.ExitStatus()
-	} else if err != nil {
+	exitCode, err := ExitCodeFromErr(err)
+	if err != nil {
 		return nil, err
 	}
 

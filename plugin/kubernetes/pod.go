@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/puppetlabs/wash/exec"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -102,7 +101,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		return execResult, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
-	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
+	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	exitcode := 0
 	go func() {
 		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}

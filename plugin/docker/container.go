@@ -9,7 +9,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/puppetlabs/wash/exec"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -64,7 +63,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return execResult, err
 	}
 
-	outputCh, stdout, stderr := exec.CreateOutputStreams(ctx)
+	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	go func() {
 		defer resp.Close()
 
