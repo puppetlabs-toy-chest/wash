@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,11 +27,12 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 }
 
 func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
-	log.Debugf("Listing %v resource types in %v", len(n.resourcetypes), n)
+	plugin.Log(ctx, "Listing resource types for namespace %v: %v", n.Name(), n.resourcetypes)
 	return n.resourcetypes, nil
 }
 
 func (n *namespace) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+	plugin.Log(ctx, "Metadata for namespace %v: %+v", n.Name(), n.metadata)
 	if n.metadata != nil {
 		return plugin.ToMetadata(n.metadata), nil
 	}

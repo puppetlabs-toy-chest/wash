@@ -10,7 +10,6 @@ import (
 
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/volume"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -45,6 +44,7 @@ func (v *pvc) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	if err != nil {
 		return nil, err
 	}
+	plugin.Log(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
 
 	return plugin.ToMetadata(obj), nil
 }
@@ -63,20 +63,24 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { plugin.LogErr(v.podi.Delete(pid, &metav1.DeleteOptions{})) }()
+	defer func() {
+		plugin.Log(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+	}()
 
-	log.Debugf("Waiting for pod %v", pid)
+	plugin.Log(ctx, "Waiting for pod %v to start", pid)
 	// Start watching for new events related to the pod we created.
-	if err = v.waitForPod(pid); err != nil && err != errPodTerminated {
+	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
 		return nil, err
 	}
 
-	log.Debugf("Gathering logs for %v", pid)
+	plugin.Log(ctx, "Gathering log for %v", pid)
 	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 	if lerr != nil {
 		return nil, lerr
 	}
-	defer func() { plugin.LogErr(output.Close()) }()
+	defer func() {
+		plugin.Log(ctx, "Closed log for %v: %v", pid, output.Close())
+	}()
 
 	if err == errPodTerminated {
 		bytes, err := ioutil.ReadAll(output)
@@ -90,6 +94,7 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
+	plugin.Log(ctx, "Files found in persistent volume claim %v: %+v", v.Name(), dirs)
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
@@ -145,7 +150,7 @@ func (v *pvc) createPod(cmd []string) (string, error) {
 	return created.Name, nil
 }
 
-func (v *pvc) waitForPod(pid string) error {
+func (v *pvc) waitForPod(ctx context.Context, pid string) error {
 	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
 	watcher, err := v.podi.Watch(watchOpts)
 	if err != nil {
@@ -168,7 +173,7 @@ func (v *pvc) waitForPod(pid string) error {
 				case corev1.PodFailed:
 					return errPodTerminated
 				case corev1.PodUnknown:
-					log.Infof("Unknown state for pod %v: %v", pid, e.Object)
+					plugin.Log(ctx, "Unknown state for pod %v: %v", pid, e.Object)
 				}
 			case watch.Error:
 				return fmt.Errorf("Pod %v errored: %v", pid, e.Object)
@@ -183,31 +188,35 @@ func (v *pvc) getContentCB() volume.ContentCB {
 	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		// Create a container that mounts a pvc and waits. Use it to download a file.
 		pid, err := v.createPod([]string{"cat", mountpoint + path})
-		log.Debugf("Reading from: %v", mountpoint+path)
+		plugin.Log(ctx, "Reading from: %v", mountpoint+path)
 		if err != nil {
 			return nil, err
 		}
-		defer func() { plugin.LogErr(v.podi.Delete(pid, &metav1.DeleteOptions{})) }()
+		defer func() {
+			plugin.Log(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+		}()
 
-		log.Debugf("Waiting for pod %v", pid)
+		plugin.Log(ctx, "Waiting for pod %v", pid)
 		// Start watching for new events related to the pod we created.
-		if err = v.waitForPod(pid); err != nil && err != errPodTerminated {
+		if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
 			return nil, err
 		}
 		podErr := err
 
-		log.Debugf("Gathering logs for %v", pid)
+		plugin.Log(ctx, "Gathering log for %v", pid)
 		output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 		if err != nil {
 			return nil, err
 		}
-		defer func() { plugin.LogErr(output.Close()) }()
+		defer func() {
+			plugin.Log(ctx, "Closed log for %v: %v", pid, output.Close())
+		}()
 
 		bits, err := ioutil.ReadAll(output)
 		if err != nil {
 			return nil, err
 		}
-		log.Debugf("Read: %v", bits)
+		plugin.Log(ctx, "Read: %v", bits)
 
 		if podErr == errPodTerminated {
 			return nil, errors.New(string(bits))
