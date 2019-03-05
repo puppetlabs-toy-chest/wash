@@ -151,7 +151,7 @@ func (e *ExternalPluginEntry) List(context.Context) ([]Entry, error) {
 
 // Open returns the entry's content
 func (e *ExternalPluginEntry) Open(context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait("open", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait("read", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
