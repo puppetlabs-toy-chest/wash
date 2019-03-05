@@ -7,7 +7,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
 type containers struct {
@@ -22,7 +21,7 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	log.Debugf("Listing %v containers in %v", len(containers), cs)
+	plugin.Log(ctx, "Listing %v containers in %v", len(containers), cs)
 	keys := make([]plugin.Entry, len(containers))
 	for i, inst := range containers {
 		keys[i] = &container{

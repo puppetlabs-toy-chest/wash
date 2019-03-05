@@ -9,8 +9,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/puppetlabs/wash/plugin"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type containerLogFile struct {
@@ -24,7 +22,7 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	if err == nil {
 		return meta.Config.Tty
 	}
-	log.Infof("Error reading info for container %v: %v", clf.containerName, err)
+	plugin.Log(ctx, "Error reading info for container %v: %v", clf.containerName, err)
 	// Assume true so we don't try to process output if there was an error.
 	return true
 }
@@ -48,7 +46,7 @@ func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, erro
 			return nil, err
 		}
 	}
-	log.Debugf("Read %v bytes of %v log", n, clf.containerName)
+	plugin.Log(ctx, "Read %v bytes of %v log", n, clf.containerName)
 
 	return bytes.NewReader(buf.Bytes()), nil
 }
@@ -67,9 +65,9 @@ func (clf *containerLogFile) Stream(ctx context.Context) (io.Reader, error) {
 	r, w := io.Pipe()
 	go func() {
 		if _, err = stdcopy.StdCopy(w, w, rdr); err != nil {
-			log.Debugf("Errored reading container %v: %v", clf.containerName, err)
+			plugin.Log(ctx, "Errored reading container %v: %v", clf.containerName, err)
 		}
-		plugin.LogErr(w.Close())
+		plugin.Log(ctx, "Closing write pipe: %v", w.Close())
 	}()
 	return r, nil
 }

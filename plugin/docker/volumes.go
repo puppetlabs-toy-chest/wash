@@ -6,7 +6,6 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
 type volumes struct {
@@ -21,7 +20,7 @@ func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	log.Debugf("Listing %v volumes in %v", len(volumes.Volumes), vs)
+	plugin.Log(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
 	keys := make([]plugin.Entry, len(volumes.Volumes))
 	for i, inst := range volumes.Volumes {
 		if keys[i], err = newVolume(vs.client, inst); err != nil {

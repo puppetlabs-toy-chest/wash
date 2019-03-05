@@ -15,7 +15,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/plugin"
 	vol "github.com/puppetlabs/wash/volume"
-	log "github.com/sirupsen/logrus"
 )
 
 type volume struct {
@@ -64,14 +63,17 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { plugin.LogErr(v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})) }()
+	defer func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		plugin.Log(ctx, "Deleted container %v: %v", cid, err)
+	}()
 
-	log.Debugf("Starting container %v", cid)
+	plugin.Log(ctx, "Starting container %v", cid)
 	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
 
-	log.Debugf("Waiting for container %v", cid)
+	plugin.Log(ctx, "Waiting for container %v", cid)
 	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
 	var statusCode int64
 	select {
@@ -79,7 +81,7 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	case result := <-waitC:
 		statusCode = result.StatusCode
-		log.Debugf("Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+		plugin.Log(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
 	}
 
 	opts := types.ContainerLogsOptions{ShowStdout: true}
@@ -87,12 +89,14 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		opts.ShowStderr = true
 	}
 
-	log.Debugf("Gathering logs for %v", cid)
+	plugin.Log(ctx, "Gathering log for %v", cid)
 	output, err := v.client.ContainerLogs(ctx, cid, opts)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { plugin.LogErr(output.Close()) }()
+	defer func() {
+		plugin.Log(ctx, "Closed log for %v: %v", cid, output.Close())
+	}()
 
 	if statusCode != 0 {
 		bytes, err := ioutil.ReadAll(output)
@@ -136,7 +140,7 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 		return "", err
 	}
 	for _, warn := range created.Warnings {
-		log.Debugf("Warning creating %v: %v", created.ID, warn)
+		plugin.Log(ctx, "Warning creating %v: %v", created.ID, warn)
 	}
 	return created.ID, nil
 }
@@ -148,20 +152,28 @@ func (v *volume) getContentCB() vol.ContentCB {
 		if err != nil {
 			return nil, err
 		}
-		defer func() { plugin.LogErr(v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})) }()
+		defer func() {
+			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+			plugin.Log(ctx, "Deleted temporary container %v: %v", cid, err)
+		}()
 
-		log.Debugf("Starting container %v", cid)
+		plugin.Log(ctx, "Starting container %v", cid)
 		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 			return nil, err
 		}
-		defer func() { plugin.LogErr(v.client.ContainerKill(ctx, cid, "SIGKILL")) }()
+		defer func() {
+			err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+			plugin.Log(ctx, "Stopped temporary container %v: %v", cid, err)
+		}()
 
 		// Download file, then kill container.
 		rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
 		if err != nil {
 			return nil, err
 		}
-		defer func() { plugin.LogErr(rdr.Close()) }()
+		defer func() {
+			plugin.Log(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
+		}()
 
 		tarReader := tar.NewReader(rdr)
 		// Only expect one file.
