@@ -2,10 +2,13 @@ package fuse
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"strconv"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,7 +39,8 @@ func (f *file) String() string {
 
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	return attr(ctx, f, a)
+	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
+	return attr(context.WithValue(ctx, plugin.Journal, journal.NamedJournal{}), f, a)
 }
 
 // Listxattr lists extended attributes for the resource.
@@ -51,19 +55,25 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
+	jnl := journal.NamedJournal{ID: strconv.FormatUint(uint64(req.Pid), 10)}
+	jnl.Log(fmt.Sprintf("FUSE: Open %v", f))
+
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry().(plugin.Readable); ok {
-		content, err := plugin.CachedOpen(ctx, readable, f.id)
+		content, err := plugin.CachedOpen(context.WithValue(ctx, plugin.Journal, jnl), readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
+			jnl.Log(fmt.Sprintf("FUSE: Open %v errored: %v", f, err))
 			return nil, err
 		}
 
 		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
+		jnl.Log(fmt.Sprintf("FUSE: Opened %v", f))
 		return &fileHandle{r: content, id: f.String()}, nil
 	}
 	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
+	jnl.Log(fmt.Sprintf("FUSE: Open unsupported on %v", f))
 	return nil, fuse.ENOTSUP
 }
 

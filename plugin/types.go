@@ -9,6 +9,15 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
+// Key is used to type keys for looking up context values.
+type Key int
+
+// When context is passed into a function, it's initialized with additional values that
+// can be used by the function. These are keys for those values.
+const (
+	Journal Key = iota
+)
+
 // Entry is a basic named resource type.
 type Entry interface {
 	Name() string
