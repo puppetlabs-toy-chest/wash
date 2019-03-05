@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -80,13 +82,21 @@ func (e ErrCouldNotDetermineSizeAttr) Error() string {
 // FillAttr fills the given attributes struct with the entry's attributes.
 func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes) error {
 	attr.Size = SizeUnknown
+
 	if item, ok := entry.(File); ok {
-		(*attr) = item.Attr()
+		attrRet := item.Attr()
+
+		// We need the zero-value check for external plugin entries,
+		// b/c the ExternalPluginEntry class has Attr() implemented,
+		// but not all external plugin entries have attributes.
+		if attrRet != (Attributes{}) {
+			(*attr) = attrRet
+		}
 	}
 
 	var err error
-	if readable, ok := entry.(Readable); attr.Size == SizeUnknown && ok {
-		content, openErr := CachedOpen(ctx, readable, entryID)
+	if ReadAction.IsSupportedOn(entry) && attr.Size == SizeUnknown {
+		content, openErr := CachedOpen(ctx, entry.(Readable), entryID)
 		if openErr != nil {
 			err = ErrCouldNotDetermineSizeAttr{openErr.Error()}
 			attr.Size = 0
@@ -101,7 +111,7 @@ func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes
 	}
 
 	if attr.Mode == 0 {
-		if _, ok := entry.(Group); ok {
+		if ListAction.IsSupportedOn(entry) {
 			attr.Mode = os.ModeDir | 0550
 		} else {
 			attr.Mode = 0440
@@ -109,4 +119,22 @@ func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes
 	}
 
 	return err
+}
+
+// CreateCommand creates a cmd object encapsulating the given cmd and its args.
+// It returns the cmd object + its stdout and stderr pipes.
+func CreateCommand(cmd string, args ...string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
+	cmdObj := exec.Command(cmd, args...)
+
+	stdout, err := cmdObj.StdoutPipe()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	stderr, err := cmdObj.StderrPipe()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return cmdObj, stdout, stderr, nil
 }

@@ -24,21 +24,21 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	group, ok := entry.(plugin.Group)
-	if !ok {
-		return unsupportedActionResponse(path, listAction)
+	if !plugin.ListAction.IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ListAction)
 	}
 
+	group := entry.(plugin.Group)
 	groupID := toID(path)
 	entries, err := plugin.CachedLS(r.Context(), group, groupID)
 	if err != nil {
-		return erroredActionResponse(path, listAction, err.Error())
+		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
 	info := func(entry plugin.Entry, entryID string) apitypes.ListEntry {
 		result := apitypes.ListEntry{
 			Name:    entry.Name(),
-			Actions: supportedActionsOf(entry),
+			Actions: plugin.SupportedActionsOf(entry),
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 

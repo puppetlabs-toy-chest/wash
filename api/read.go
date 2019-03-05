@@ -22,15 +22,14 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	readable, ok := entry.(plugin.Readable)
-	if !ok {
-		return unsupportedActionResponse(path, readAction)
+	if !plugin.ReadAction.IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ReadAction)
 	}
 
-	content, err := plugin.CachedOpen(r.Context(), readable, toID(path))
+	content, err := plugin.CachedOpen(r.Context(), entry.(plugin.Readable), toID(path))
 
 	if err != nil {
-		return erroredActionResponse(path, readAction, err.Error())
+		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -39,7 +38,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		log.Warnf("Read incomplete %v/%v", n, content.Size())
 	}
 	if err != nil {
-		return erroredActionResponse(path, readAction, err.Error())
+		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
 
 	return nil

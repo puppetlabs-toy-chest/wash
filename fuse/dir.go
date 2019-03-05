@@ -51,12 +51,11 @@ func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 
 func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
-	switch v := d.Entry().(type) {
-	case plugin.Group:
-		return plugin.CachedLS(ctx, v, d.id)
-	default:
-		return []plugin.Entry{}, fuse.ENOENT
+	if plugin.ListAction.IsSupportedOn(d.Entry()) {
+		return plugin.CachedLS(ctx, d.Entry().(plugin.Group), d.id)
 	}
+
+	return []plugin.Entry{}, fuse.ENOENT
 }
 
 // Lookup searches a directory for children.
@@ -70,14 +69,13 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	for _, entry := range entries {
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d.String(), entry.Name())
-			switch v := entry.(type) {
-			case plugin.Group:
+			if plugin.ListAction.IsSupportedOn(entry) {
 				// Prefetch directory entries into the cache
 				go func() { _, err := d.children(context.Background()); plugin.LogErr(err) }()
-				return newDir(v, d.String()), nil
-			default:
-				return newFile(v, d.String()), nil
+				return newDir(entry, d.String()), nil
 			}
+
+			return newFile(entry, d.String()), nil
 		}
 	}
 	return nil, fuse.ENOENT
@@ -97,8 +95,7 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	for i, entry := range entries {
 		var de fuse.Dirent
 		de.Name = entry.Name()
-		switch entry.(type) {
-		case plugin.Group:
+		if plugin.ListAction.IsSupportedOn(d.Entry()) {
 			de.Type = fuse.DT_Dir
 		}
 		res[i] = de

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,9 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api"
-	"github.com/puppetlabs/wash/cmd/util"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
@@ -39,6 +40,9 @@ func serverCommand() *cobra.Command {
 	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
 	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
 
+	serverCmd.Flags().String("external-plugins", "plugins.yaml", "Specify the file to load any external plugins")
+	errz.Fatal(viper.BindPFlag("external-plugins", serverCmd.Flags().Lookup("external-plugins")))
+
 	serverCmd.RunE = toRunE(serverMain)
 
 	return serverCmd
@@ -48,25 +52,29 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := args[0]
 	loglevel := viper.GetString("loglevel")
 	logfile := viper.GetString("logfile")
+	externalPluginsPath := viper.GetString("external-plugins")
 
-	logFH, err := initializeLogger(loglevel, logfile)
+	logFH, err := loadLogger(loglevel, logfile)
 	if err != nil {
-		cmdutil.ErrPrintf("Failed to initialize the logger: %v\n", err)
+		cmdutil.ErrPrintf("Failed to load the logger: %v\n", err)
 		return exitCode{1}
 	}
 	if logFH != nil {
 		defer func() { plugin.LogErr(logFH.Close()) }()
 	}
 
-	registry, err := initializePlugins()
-	if err != nil {
-		log.Warn(err)
+	var registry plugin.Registry
+	registry.Plugins = make(map[string]plugin.Root)
+	loadInternalPlugins(&registry)
+	loadExternalPlugins(&registry, externalPluginsPath)
+	if len(registry.Plugins) == 0 {
+		log.Warn("No plugins loaded")
 		return exitCode{1}
 	}
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(&registry, config.Socket)
 	if err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -80,7 +88,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		<-apiServerStoppedCh
 	}
 
-	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(registry, mountpoint)
+	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(&registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
 		log.Warn(err)
@@ -120,7 +128,7 @@ var levelMap = map[string]log.Level{
 	"trace": log.TraceLevel,
 }
 
-func initializeLogger(levelStr string, logfile string) (*os.File, error) {
+func loadLogger(levelStr string, logfile string) (*os.File, error) {
 	level, ok := levelMap[levelStr]
 	if !ok {
 		var allLevels []string
@@ -155,24 +163,50 @@ func initializeLogger(levelStr string, logfile string) (*os.File, error) {
 	return logFH, nil
 }
 
-func initializePlugins() (*plugin.Registry, error) {
-	plugins := make(map[string]plugin.Root)
-	for _, plugin := range []plugin.Root{
-		&docker.Root{},
-		&kubernetes.Root{},
-	} {
-		log.Infof("Loading %v plugin", plugin.Name())
-		if err := plugin.Init(); err != nil {
-			// %+v is a convention used by some errors to print additional context such as a stack trace
-			log.Warnf("%v plugin failed to load: %+v", plugin.Name(), err)
-		} else {
-			plugins[plugin.Name()] = plugin
-		}
+func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
+	log.Infof("Loading %v", name)
+	if err := root.Init(); err != nil {
+		// %+v is a convention used by some errors to print additional context such as a stack trace
+		log.Warnf("%v failed to load: %+v", name, err)
+	} else {
+		registry.Plugins[name] = root
+	}
+}
+
+func loadInternalPlugins(registry *plugin.Registry) {
+	log.Info("Loading internal plugins")
+	loadPlugin(registry, "docker", &docker.Root{})
+	loadPlugin(registry, "kubernetes", &kubernetes.Root{})
+	log.Info("Finished loading internal plugins")
+}
+
+func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) {
+	logError := func(err error) {
+		log.Warnf("Failed to load external plugins: %v\n", err)
 	}
 
-	if len(plugins) == 0 {
-		return nil, errors.New("No plugins loaded")
+	log.Infof("Loading external plugins")
+
+	externalPluginsFH, err := os.Open(externalPluginsPath)
+	if err != nil {
+		logError(err)
+		return
+	}
+	defer func() {
+		plugin.LogErr(externalPluginsFH.Close())
+	}()
+
+	d := yaml.NewDecoder(externalPluginsFH)
+	var externalPlugins []plugin.ExternalPluginSpec
+	if err := d.Decode(&externalPlugins); err != nil {
+		logError(err)
+		return
 	}
 
-	return &plugin.Registry{Plugins: plugins}, nil
+	for _, p := range externalPlugins {
+		root := plugin.NewExternalPluginRoot(p)
+		loadPlugin(registry, p.Name, root)
+	}
+
+	log.Infof("Finished loading external plugins")
 }

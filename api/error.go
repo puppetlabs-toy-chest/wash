@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
@@ -71,14 +72,14 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
-func unsupportedActionResponse(path string, action *action) *errorResponse {
+func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,
-		"action": action,
+		"action": a,
 	}
 
 	statusCode := http.StatusNotFound
-	msg := fmt.Sprintf("Entry %v does not support the %v action: It does not implement the %v protocol", path, action.Name, action.Protocol)
+	msg := fmt.Sprintf("Entry %v does not support the %v action: It does not implement the %v protocol", path, a.Name, a.Protocol)
 	body := newErrorObj(
 		"unsupported-action",
 		msg,
@@ -98,16 +99,16 @@ func badRequestResponse(path string, reason string) *errorResponse {
 	return &errorResponse{http.StatusBadRequest, body}
 }
 
-func erroredActionResponse(path string, action *action, reason string) *errorResponse {
+func erroredActionResponse(path string, a plugin.Action, reason string) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,
-		"action": action.Name,
+		"action": a.Name,
 	}
 
 	statusCode := http.StatusInternalServerError
 	body := newErrorObj(
 		"errored-action",
-		fmt.Sprintf("The %v action errored on %v: %v", action.Name, path, reason),
+		fmt.Sprintf("The %v action errored on %v: %v", a.Name, path, reason),
 		fields,
 	)
 
