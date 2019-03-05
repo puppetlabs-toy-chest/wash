@@ -32,7 +32,7 @@ func NewExternalPluginRoot(plugin ExternalPluginSpec) *ExternalPluginRoot {
 func (r *ExternalPluginRoot) Init() error {
 	script := r.script
 
-	stdout, err := r.script.InvokeAndWait("init")
+	stdout, err := r.script.InvokeAndWait(context.Background(), "init")
 	if err != nil {
 		return err
 	}

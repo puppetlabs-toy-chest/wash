@@ -11,8 +11,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type decodedAttributes struct {
@@ -117,15 +115,16 @@ func (e *ExternalPluginEntry) CacheConfig() *CacheConfig {
 }
 
 // List lists the entry's children, if it has any.
-func (e *ExternalPluginEntry) List(context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait("list", e.washPath, e.state)
+func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
+	stdout, err := e.script.InvokeAndWait(ctx, "ls", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
 
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		log.Debugf(
+		Log(
+			ctx,
 			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
 			"[{\"name\":\"<name_of_first_entry>\",\"supported_actions\":[\"list\"]},{\"name\":\"<name_of_second_entry>\",\"supported_actions\":[\"list\"]}]",
@@ -150,8 +149,8 @@ func (e *ExternalPluginEntry) List(context.Context) ([]Entry, error) {
 }
 
 // Open returns the entry's content
-func (e *ExternalPluginEntry) Open(context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait("read", e.washPath, e.state)
+func (e *ExternalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
+	stdout, err := e.script.InvokeAndWait(ctx, "read", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -160,15 +159,16 @@ func (e *ExternalPluginEntry) Open(context.Context) (SizedReader, error) {
 }
 
 // Metadata displays the resource's metadata
-func (e *ExternalPluginEntry) Metadata(context.Context) (MetadataMap, error) {
-	stdout, err := e.script.InvokeAndWait("metadata", e.washPath, e.state)
+func (e *ExternalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
+	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
 
 	var metadata MetadataMap
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		log.Debugf(
+		Log(
+			ctx,
 			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
 			"{\"key1\":\"value1\",\"key2\":\"value2\"}",
@@ -200,10 +200,10 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 
 	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path, "stream", e.washPath, e.state)
 
-	log.Debugf("Starting command: %v", cmdStr)
+	Log(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
-		LogErr(stdoutR.Close())
-		LogErr(stderrR.Close())
+		Log(ctx, "Closed command stdout: %v", stdoutR.Close())
+		Log(ctx, "Closed command stderr: %v", stderrR.Close())
 		return nil, err
 	}
 
@@ -239,10 +239,10 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	// whether we should kill the command or not. Should we
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
-		log.Debugf("Waiting for command: %v", cmdStr)
+		Log(ctx, "Waiting for command: %v", cmdStr)
 		_, err := ExitCodeFromErr(cmd.Wait())
 		if err != nil {
-			log.Debugf("Failed waiting for command: %v", err)
+			Log(ctx, "Failed waiting for command: %v", err)
 		}
 	}
 
@@ -265,7 +265,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		// blocked when its buffer is full.
 		go func() {
 			defer func() {
-				LogErr(stderrR.Close())
+				Log(ctx, "Closed stream stderr: %v", stderrR.Close())
 			}()
 
 			buf := make([]byte, 4096)
@@ -331,12 +331,7 @@ func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj.Stderr = stderr
 
 	// Start the command
-	cmdStr := fmt.Sprintf(
-		"%v %v",
-		cmdObj.Path,
-		strings.Join(cmdObj.Args, " "),
-	)
-	log.Debugf("Starting command: %v", cmdStr)
+	Log(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
 	if err := cmdObj.Start(); err != nil {
 		stdout.Close()
 		stderr.Close()
