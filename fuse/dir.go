@@ -77,10 +77,14 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
 			if plugin.ListAction.IsSupportedOn(entry) {
+				childdir := newDir(entry, d.String())
+				jnl.Log("FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
-				go func() { _, err := d.children(context.Background()); plugin.LogErr(err) }()
-				jnl.Log("FUSE: Found directory %v/%v", d, entry.Name())
-				return newDir(entry, d.String()), nil
+				go func() {
+					_, err := childdir.children(context.WithValue(context.Background(), plugin.Journal, jnl))
+					jnl.Log("FUSE: Prefetching children of %v complete: %v", childdir, err)
+				}()
+				return childdir, nil
 			}
 
 			jnl.Log("FUSE: Found file %v/%v", d, entry.Name())
