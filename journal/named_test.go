@@ -28,7 +28,7 @@ func TestUnknownName(t *testing.T) {
 
 	nj := NamedJournal{}
 	// Log to a journal
-	nj.Log("hello there")
+	nj.Log("hello %v", "there")
 
 	bits, err := ioutil.ReadFile(filepath.Join(journaldir(), "dead-letter-office.log"))
 	if assert.Nil(t, err) {

@@ -6,10 +6,10 @@ type NamedJournal struct {
 }
 
 // Log writes to the named journal.
-func (n NamedJournal) Log(msg string) {
+func (n NamedJournal) Log(msg string, a ...interface{}) {
 	id := n.ID
 	if n.ID == "" {
 		id = "dead-letter-office"
 	}
-	Log(id, msg)
+	Log(id, msg, a...)
 }

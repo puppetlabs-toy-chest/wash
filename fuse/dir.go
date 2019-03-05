@@ -2,7 +2,6 @@ package fuse
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -65,12 +64,12 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	jnl := journal.NamedJournal{ID: strconv.FormatUint(uint64(req.Pid), 10)}
-	jnl.Log(fmt.Sprintf("FUSE: Find %v in %v", req.Name, d))
+	jnl.Log("FUSE: Find %v in %v", req.Name, d)
 
 	entries, err := d.children(context.WithValue(ctx, plugin.Journal, jnl))
 	if err != nil {
 		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
-		jnl.Log(fmt.Sprintf("FUSE: Find %v in %v errored: %v", req.Name, d, err))
+		jnl.Log("FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
 
@@ -80,15 +79,15 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			if plugin.ListAction.IsSupportedOn(entry) {
 				// Prefetch directory entries into the cache
 				go func() { _, err := d.children(context.Background()); plugin.LogErr(err) }()
-				jnl.Log(fmt.Sprintf("FUSE: Found directory %v/%v", d, entry.Name()))
+				jnl.Log("FUSE: Found directory %v/%v", d, entry.Name())
 				return newDir(entry, d.String()), nil
 			}
 
-			jnl.Log(fmt.Sprintf("FUSE: Found file %v/%v", d, entry.Name()))
+			jnl.Log("FUSE: Found file %v/%v", d, entry.Name())
 			return newFile(entry, d.String()), nil
 		}
 	}
-	jnl.Log(fmt.Sprintf("FUSE: %v not found in %v", req.Name, d))
+	jnl.Log("FUSE: %v not found in %v", req.Name, d)
 	return nil, fuse.ENOENT
 }
 
@@ -96,12 +95,12 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like ReadDirAll.
 	jnl := journal.NamedJournal{}
-	jnl.Log(fmt.Sprintf("FUSE: List %v", d))
+	jnl.Log("FUSE: List %v", d)
 
 	entries, err := d.children(context.WithValue(ctx, plugin.Journal, jnl))
 	if err != nil {
 		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
-		jnl.Log(fmt.Sprintf("FUSE: List %v errored: %v", d, err))
+		jnl.Log("FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
 
@@ -116,6 +115,6 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		}
 		res[i] = de
 	}
-	jnl.Log(fmt.Sprintf("FUSE: Listed in %v: %+v", d, res))
+	jnl.Log("FUSE: Listed in %v: %+v", d, res)
 	return res, nil
 }

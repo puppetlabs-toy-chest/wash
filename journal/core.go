@@ -29,7 +29,7 @@ func journaldir() string {
 
 // Log creates a new journal for 'id' if needed, then appends the message to that journal.
 // Logs are journaled in the user's cache directory under `wash/journal/ID.log`.
-func Log(id string, msg string) {
+func Log(id string, msg string, a ...interface{}) {
 	obj, err := std.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := journaldir()
 		if err := os.MkdirAll(jdir, 0750); err != nil {
@@ -53,7 +53,7 @@ func Log(id string, msg string) {
 		log.Warnf("Error creating journal %v: %v", id, err)
 	}
 
-	obj.(*log.Logger).Print(msg)
+	obj.(*log.Logger).Printf(msg, a...)
 }
 
 type syncWriter struct {

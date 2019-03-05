@@ -47,7 +47,7 @@ func TestLogReused(t *testing.T) {
 
 	// Log twice
 	Log("2", "first write")
-	Log("2", "second write")
+	Log("2", "second %v", "write")
 
 	bits, err := ioutil.ReadFile(filepath.Join(journaldir(), "2.log"))
 	if assert.Nil(t, err) {
