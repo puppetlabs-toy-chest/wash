@@ -45,7 +45,7 @@ func (a decodedAttributes) toAttributes() Attributes {
 }
 
 type decodedCacheTTLs struct {
-	LS       time.Duration `json:"ls"`
+	List     time.Duration `json:"list"`
 	Open     time.Duration `json:"open"`
 	Metadata time.Duration `json:"metadata"`
 }
@@ -53,8 +53,8 @@ type decodedCacheTTLs struct {
 func (c decodedCacheTTLs) toCacheConfig() *CacheConfig {
 	config := newCacheConfig()
 
-	if c.LS != 0 {
-		config.SetTTLOf(LS, c.LS*time.Second)
+	if c.List != 0 {
+		config.SetTTLOf(List, c.List*time.Second)
 	}
 	if c.Open != 0 {
 		config.SetTTLOf(Open, c.Open*time.Second)
@@ -116,9 +116,9 @@ func (e *ExternalPluginEntry) CacheConfig() *CacheConfig {
 	return e.cacheConfig
 }
 
-// LS lists the entry's children, if it has any.
-func (e *ExternalPluginEntry) LS(context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait("ls", e.washPath, e.state)
+// List lists the entry's children, if it has any.
+func (e *ExternalPluginEntry) List(context.Context) ([]Entry, error) {
+	stdout, err := e.script.InvokeAndWait("list", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}

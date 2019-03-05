@@ -26,8 +26,8 @@ func (v *Dir) Attr() plugin.Attributes {
 	return v.attr
 }
 
-// LS lists the children of the directory.
-func (v *Dir) LS(ctx context.Context) ([]plugin.Entry, error) {
+// List lists the children of the directory.
+func (v *Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	root := v.dirs[v.path]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {

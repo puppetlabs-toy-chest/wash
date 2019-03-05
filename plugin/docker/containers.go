@@ -15,8 +15,8 @@ type containers struct {
 	client *client.Client
 }
 
-// LS
-func (cs *containers) LS(ctx context.Context) ([]plugin.Entry, error) {
+// List
+func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 	containers, err := cs.client.ContainerList(ctx, types.ContainerListOptions{})
 	if err != nil {
 		return nil, err

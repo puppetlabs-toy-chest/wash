@@ -50,9 +50,9 @@ func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 }
 
 func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
-	// Cache LS requests. FUSE often lists the contents then immediately calls find on individual entries.
+	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction.IsSupportedOn(d.Entry()) {
-		return plugin.CachedLS(ctx, d.Entry().(plugin.Group), d.id)
+		return plugin.CachedList(ctx, d.Entry().(plugin.Group), d.id)
 	}
 
 	return []plugin.Entry{}, fuse.ENOENT

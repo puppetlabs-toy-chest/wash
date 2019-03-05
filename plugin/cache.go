@@ -11,15 +11,15 @@ import (
 type cachedOp int8
 
 const (
-	// LS represents Group#LS
-	LS cachedOp = iota
+	// List represents Group#List
+	List cachedOp = iota
 	// Open represents Readable#Open
 	Open
 	// Metadata represents Resource#Metadata
 	Metadata
 )
 
-var cachedOpToNameMap = [3]string{"LS", "Open", "Metadata"}
+var cachedOpToNameMap = [3]string{"List", "Open", "Metadata"}
 
 // CacheConfig represents an entry's cache configuration
 type CacheConfig struct {
@@ -94,10 +94,10 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 	return cache.GetOrUpdate(opName+"::"+id, ttl, generateValue)
 }
 
-// CachedLS caches a Group object's LS method
-func CachedLS(ctx context.Context, g Group, id string) ([]Entry, error) {
-	cachedEntries, err := cachedOpHelper(LS, g, id, func() (interface{}, error) {
-		return g.LS(ctx)
+// CachedList caches a Group object's List method
+func CachedList(ctx context.Context, g Group, id string) ([]Entry, error) {
+	cachedEntries, err := cachedOpHelper(List, g, id, func() (interface{}, error) {
+		return g.List(ctx)
 	})
 
 	if err != nil {

@@ -30,7 +30,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 
 	group := entry.(plugin.Group)
 	groupID := toID(path)
-	entries, err := plugin.CachedLS(r.Context(), group, groupID)
+	entries, err := plugin.CachedList(r.Context(), group, groupID)
 	if err != nil {
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}

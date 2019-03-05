@@ -60,11 +60,11 @@ func (r *ExternalPluginRoot) Init() error {
 	return nil
 }
 
-// LS lists the root's entries.
+// List lists the root's entries.
 //
-// We need this b/c *ExternalPluginEntry#LS has a different receiver
+// We need this b/c *ExternalPluginEntry#List has a different receiver
 // (*ExternalPluginEntry) than *ExternalPluginRoot (i.e. b/c Go's
 // typechecker complains about it)
-func (r *ExternalPluginRoot) LS(ctx context.Context) ([]Entry, error) {
-	return r.ExternalPluginEntry.LS(ctx)
+func (r *ExternalPluginRoot) List(ctx context.Context) ([]Entry, error) {
+	return r.ExternalPluginEntry.List(ctx)
 }

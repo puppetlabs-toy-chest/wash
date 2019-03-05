@@ -13,7 +13,7 @@ type mockGroup struct {
 	entries []plugin.Entry
 }
 
-func (g *mockGroup) LS(context.Context) ([]plugin.Entry, error) {
+func (g *mockGroup) List(context.Context) ([]plugin.Entry, error) {
 	return g.entries, nil
 }
 

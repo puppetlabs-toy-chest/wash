@@ -35,7 +35,7 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		podi:      pd,
 		startTime: p.CreationTimestamp.Time,
 	}
-	vol.CacheConfig().SetTTLOf(plugin.LS, 30*time.Second)
+	vol.CacheConfig().SetTTLOf(plugin.List, 30*time.Second)
 
 	return vol
 }
@@ -57,7 +57,7 @@ func (v *pvc) Attr() plugin.Attributes {
 	}
 }
 
-func (v *pvc) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
 	pid, err := v.createPod(volume.StatCmd(mountpoint))
 	if err != nil {

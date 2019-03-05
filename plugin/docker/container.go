@@ -39,7 +39,7 @@ func (c *container) Attr() plugin.Attributes {
 	}
 }
 
-func (c *container) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	return []plugin.Entry{
 		&containerMetadata{plugin.NewEntry("metadata.json"), c},
 		&containerLogFile{plugin.NewEntry("log"), c.Name(), c.client},

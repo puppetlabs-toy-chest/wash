@@ -37,7 +37,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		client:    c,
 		startTime: startTime,
 	}
-	vol.CacheConfig().SetTTLOf(plugin.LS, 30*time.Second)
+	vol.CacheConfig().SetTTLOf(plugin.List, 30*time.Second)
 
 	return vol, nil
 }
@@ -58,7 +58,7 @@ func (v *volume) Attr() plugin.Attributes {
 	}
 }
 
-func (v *volume) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
 	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
 	if err != nil {

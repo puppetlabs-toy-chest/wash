@@ -61,7 +61,7 @@ func (r *Root) Init() error {
 	return nil
 }
 
-// LS returns available contexts.
-func (r *Root) LS(ctx context.Context) ([]plugin.Entry, error) {
+// List returns available contexts.
+func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	return r.contexts, nil
 }

@@ -27,7 +27,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 	return ns
 }
 
-func (n *namespace) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
 	log.Debugf("Listing %v resource types in %v", len(n.resourcetypes), n)
 	return n.resourcetypes, nil
 }

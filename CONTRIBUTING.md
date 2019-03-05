@@ -37,7 +37,7 @@ Create a new directory in [plugin](./plugin) for the plugin.
 Create an object that implements the `Root` profile, as in it has:
 - a `Name` method to determine the name of the plugin when mounted
 - an `Init` method that loads and validates credentials
-- an `LS` method that lists the first-level resources of the plugin
+- a `List` method that lists the first-level resources of the plugin
 
 ### Extending the plugin
 
