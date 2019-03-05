@@ -1,5 +1,9 @@
 package client
 
+// This package is named `client` instead of `apiclient` because a client
+// implies an API, so it is a bit redundant. However, because a client implies
+// an API, it makes sense to include this code in an api/client/ directory.
+
 import (
 	"bytes"
 	"context"
