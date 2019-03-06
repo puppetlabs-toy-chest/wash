@@ -46,10 +46,10 @@ func Record(id string, msg string, a ...interface{}) {
 			return nil, err
 		}
 
-		// Use a syncWriter to ensure each write is committed to the disk. The file is only guaranteed to
+		// Use a syncedFile to ensure each write is committed to the disk. The file is only guaranteed to
 		// be closed when it's evicted from the cache, which may not happen before shutdown.
 		l := log.New()
-		l.Out = &syncWriter{id: id, file: f}
+		l.Out = &syncedFile{id: id, file: f}
 		l.Level = log.TraceLevel
 		return l, nil
 	})
@@ -60,13 +60,13 @@ func Record(id string, msg string, a ...interface{}) {
 	obj.(*log.Logger).Printf(msg, a...)
 }
 
-type syncWriter struct {
+type syncedFile struct {
 	id   string
 	file *os.File
 }
 
 // Write syncs the data immediately after every write operation.
-func (sw *syncWriter) Write(b []byte) (n int, err error) {
+func (sw *syncedFile) Write(b []byte) (n int, err error) {
 	n, err = sw.file.Write(b)
 	if err := sw.file.Sync(); err != nil {
 		log.Warnf("Error syncing journal %v to disk: %v", sw.id, err)
@@ -74,7 +74,7 @@ func (sw *syncWriter) Write(b []byte) (n int, err error) {
 	return n, err
 }
 
-func (sw *syncWriter) Close() error {
+func (sw *syncedFile) Close() error {
 	return sw.file.Close()
 }
 
