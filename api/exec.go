@@ -41,7 +41,7 @@ func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.E
 
 		packet := apitypes.ExecPacket{TypeField: stream, Timestamp: chunk.Timestamp}
 		if err := chunk.Err; err != nil {
-			packet.Err = newStreamingErrorObj(err.Error())
+			packet.Err = newStreamingErrorObj(stream, err.Error())
 		} else {
 			packet.Data = chunk.Data
 		}
@@ -59,7 +59,7 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 
 	exitCode, err := exitCodeCB()
 	if err != nil {
-		packet.Err = newUnknownErrorObj(err)
+		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
 	} else {
 		packet.Data = exitCode
 	}

@@ -23,8 +23,12 @@ func newUnknownErrorObj(err error) *apitypes.ErrorObj {
 	return newErrorObj("unknown-error", err.Error(), apitypes.ErrorFields{})
 }
 
-func newStreamingErrorObj(reason string) *apitypes.ErrorObj {
-	return newErrorObj("streaming-error", reason, apitypes.ErrorFields{})
+func newStreamingErrorObj(stream string, reason string) *apitypes.ErrorObj {
+	return newErrorObj(
+		"streaming-error",
+		fmt.Sprintf("error streaming %v: %v", stream, reason),
+		apitypes.ErrorFields{"stream": stream},
+	)
 }
 
 // ErrorResponse represents an error response
