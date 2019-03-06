@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -50,7 +51,7 @@ func (r *Root) Init() error {
 	for name := range raw.Contexts {
 		ctx, err := createContext(raw, name, config.ConfigAccess())
 		if err != nil {
-			plugin.Record(context.Background(), "loading context %v failed: %+v", name, err)
+			journal.Record(context.Background(), "loading context %v failed: %+v", name, err)
 			continue
 		}
 		contexts = append(contexts, ctx)

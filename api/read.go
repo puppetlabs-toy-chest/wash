@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,26 +28,26 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ReadAction)
 	}
 
-	plugin.Record(ctx, "API: Read %v", path)
+	journal.Record(ctx, "API: Read %v", path)
 	content, err := plugin.CachedOpen(ctx, entry.(plugin.Readable), toID(path))
 
 	if err != nil {
-		plugin.Record(ctx, "API: Read %v errored: %v", path, err)
+		journal.Record(ctx, "API: Read %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
-	plugin.Record(ctx, "API: Reading %v", path)
+	journal.Record(ctx, "API: Reading %v", path)
 
 	w.WriteHeader(http.StatusOK)
 	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 	if n != content.Size() {
 		log.Warnf("Read incomplete %v/%v", n, content.Size())
-		plugin.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
+		journal.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
 	}
 	if err != nil {
-		plugin.Record(ctx, "API: Reading %v errored: %v", path, err)
+		journal.Record(ctx, "API: Reading %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
 
-	plugin.Record(ctx, "API: Reading %v complete", path)
+	journal.Record(ctx, "API: Reading %v complete", path)
 	return nil
 }

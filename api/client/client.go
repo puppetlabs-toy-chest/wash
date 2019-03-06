@@ -15,12 +15,11 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/journal"
 
-	"github.com/mitchellh/go-ps"
 	"github.com/pkg/xattr"
 )
 
@@ -51,14 +50,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) 
 		return nil, err
 	}
 
-	pid := os.Getpid()
-	journalid := strconv.FormatInt(int64(pid), 10)
-	// Include the executable name if we can find it.
-	proc, err := ps.FindProcess(pid)
-	if err == nil {
-		journalid += "-" + proc.Executable()
-	}
-	req.Header.Set(apitypes.JournalID, journalid)
+	req.Header.Set(apitypes.JournalIDHeader, journal.PIDToID(os.Getpid()))
 	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err

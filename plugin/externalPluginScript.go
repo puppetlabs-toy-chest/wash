@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/puppetlabs/wash/journal"
 )
 
 // ExternalPluginScript represents an external plugin's script
@@ -22,7 +24,7 @@ type ExternalPluginScript struct {
 // plugin authors in the top-level YAML file? Should it be a per-entry
 // thing?
 func (s ExternalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
-	Record(ctx, "Running command: %v %v", s.Path, strings.Join(args, " "))
+	journal.Record(ctx, "Running command: %v %v", s.Path, strings.Join(args, " "))
 
 	cmd := exec.Command(s.Path, args...)
 
@@ -41,7 +43,7 @@ func (s ExternalPluginScript) InvokeAndWait(ctx context.Context, args ...string)
 	stderr := stderrBuf.Bytes()
 	if exitCode == 0 {
 		if len(stderr) != 0 {
-			Record(ctx, "stderr: %v", string(stderr))
+			journal.Record(ctx, "stderr: %v", string(stderr))
 		}
 	} else {
 		// TODO: Wrap standard error into a structured Wash error

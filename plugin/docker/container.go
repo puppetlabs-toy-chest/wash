@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -68,7 +69,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		defer resp.Close()
 
 		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
-		plugin.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
+		journal.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
 		stdout.CloseWithError(err)
 		stderr.CloseWithError(err)
 	}()
@@ -77,7 +78,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	if opts.Stdin != nil {
 		go func() {
 			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
-			plugin.Record(ctx, "Closed execution response stream for %v: %v", c.Name(), writeErr)
+			journal.Record(ctx, "Closed execution response stream for %v: %v", c.Name(), writeErr)
 		}()
 	}
 
@@ -96,7 +97,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 			return 0, fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF")
 		}
 
-		plugin.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
+		journal.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
 		return resp.ExitCode, nil
 	}
 

@@ -1,6 +1,7 @@
 package journal
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,8 +12,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var std = datastore.NewMemCacheWithEvicted(closeFile)
-var journaldir = func() string {
+// KeyType is used to type keys for looking up context values.
+type KeyType int
+
+// Key is used to identify a Journal ID in a context.
+const Key KeyType = iota
+
+var journalCache = datastore.NewMemCacheWithEvicted(closeJournal)
+var journalDir = func() string {
 	cdir, err := os.UserCacheDir()
 	if err != nil {
 		panic("Unable to get user cache dir: " + err.Error())
@@ -23,18 +30,34 @@ var expires = 30 * time.Second
 
 // Dir gets the directory where journal entries are written.
 func Dir() string {
-	return journaldir
+	return journalDir
 }
 
 // SetDir sets the directory where journal entries are written.
 func SetDir(dir string) {
-	journaldir = dir
+	journalDir = dir
 }
 
-// Record creates a new journal for 'id' if needed, then appends the message to that journal.
+// Record creates writes a new entry to the journal identified by the ID at `journal.Key` in
+// the provided context. If no ID is registered, it instead sends to the server logs. If the
+// ID is an empty string, it uses the ID 'dead-letter-office'.
+//
+// Record creates a new journal for ID if needed, then appends the message to that journal.
 // Records are journaled in the user's cache directory under `wash/activity/ID.log`.
-func Record(id string, msg string, a ...interface{}) {
-	obj, err := std.GetOrUpdate(id, expires, true, func() (interface{}, error) {
+func Record(ctx context.Context, msg string, a ...interface{}) {
+	var id string
+	if jid, ok := ctx.Value(Key).(string); ok {
+		if jid == "" {
+			id = "dead-letter-office"
+		} else {
+			id = jid
+		}
+	} else {
+		log.Warnf(msg, a...)
+		return
+	}
+
+	obj, err := journalCache.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := Dir()
 		if err := os.MkdirAll(jdir, 0750); err != nil {
 			return nil, err
@@ -78,7 +101,7 @@ func (sw *syncedFile) Close() error {
 	return sw.file.Close()
 }
 
-func closeFile(id string, obj interface{}) {
+func closeJournal(id string, obj interface{}) {
 	logger, ok := obj.(*log.Logger)
 	if !ok {
 		// Should always be a logger.

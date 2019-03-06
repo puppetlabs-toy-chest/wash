@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -29,12 +30,12 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ListAction)
 	}
 
-	plugin.Record(ctx, "API: List %v", path)
+	journal.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
 	groupID := toID(path)
 	entries, err := plugin.CachedList(ctx, group, groupID)
 	if err != nil {
-		plugin.Record(ctx, "API: List %v errored: %v", path, err)
+		journal.Record(ctx, "API: List %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
@@ -60,15 +61,15 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	for i, entry := range entries {
 		result[i+1] = info(entry, groupID+"/"+entry.Name())
 	}
-	plugin.Record(ctx, "API: List %v %+v", path, result)
+	journal.Record(ctx, "API: List %v %+v", path, result)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		plugin.Record(ctx, "API: List marshalling %v errored: %v", path, err)
+		journal.Record(ctx, "API: List marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
 
-	plugin.Record(ctx, "API: List %v complete", path)
+	journal.Record(ctx, "API: List %v complete", path)
 	return nil
 }

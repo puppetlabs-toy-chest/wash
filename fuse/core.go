@@ -8,7 +8,6 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/mitchellh/go-ps"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -202,14 +201,4 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 	}()
 
 	return stopCh, fuseServerStoppedCh, nil
-}
-
-func makeJournalID(pid uint32) string {
-	journalid := strconv.FormatUint(uint64(pid), 10)
-	// Include the executable name if we can find it.
-	proc, err := ps.FindProcess(int(pid))
-	if err == nil {
-		journalid += "-" + proc.Executable()
-	}
-	return journalid
 }

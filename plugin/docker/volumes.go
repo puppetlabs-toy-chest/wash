@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -20,7 +21,7 @@ func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	plugin.Record(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
+	journal.Record(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
 	keys := make([]plugin.Entry, len(volumes.Volumes))
 	for i, inst := range volumes.Volumes {
 		if keys[i], err = newVolume(vs.client, inst); err != nil {

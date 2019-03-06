@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/puppetlabs/wash/journal"
 )
 
 // ExternalPluginSpec represents an external plugin's YAML specification.
@@ -38,7 +40,7 @@ func (r *ExternalPluginRoot) Init() error {
 
 	var decodedRoot decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
-		Record(
+		journal.Record(
 			ctx,
 			"could not decode the plugin root from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),

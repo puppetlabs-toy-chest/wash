@@ -1,6 +1,7 @@
 package journal
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,12 +13,12 @@ import (
 
 func TestRecord(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer std.Flush()
+	defer journalCache.Flush()
 
 	// Log to a journal
-	Record("42", "hello there")
+	Record(context.WithValue(context.Background(), Key, "1"), "hello there")
 
-	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "42.log"))
+	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "1.log"))
 	if assert.Nil(t, err) {
 		assert.Contains(t, string(bits), "hello there")
 	}
@@ -25,17 +26,18 @@ func TestRecord(t *testing.T) {
 
 func TestLogExpired(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer std.Flush()
+	defer journalCache.Flush()
 
 	// Ensure entries use a very short
 	expires = 1 * time.Millisecond
+	ctx := context.WithValue(context.Background(), Key, "2")
 
 	// Log twice, second after cache entry has expired
-	Record("1", "first write")
+	Record(ctx, "first write")
 	time.Sleep(1 * time.Millisecond)
-	Record("1", "second write")
+	Record(ctx, "second write")
 
-	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "1.log"))
+	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "2.log"))
 	if assert.Nil(t, err) {
 		assert.Regexp(t, "(?s)first write.*second write", string(bits))
 	}
@@ -43,15 +45,35 @@ func TestLogExpired(t *testing.T) {
 
 func TestLogReused(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer std.Flush()
+	defer journalCache.Flush()
+	ctx := context.WithValue(context.Background(), Key, "3")
 
 	// Log twice
-	Record("2", "first write")
-	Record("2", "second %v", "write")
+	Record(ctx, "first write")
+	Record(ctx, "second %v", "write")
 
-	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "2.log"))
+	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "3.log"))
 	if assert.Nil(t, err) {
 		assert.Regexp(t, "(?s)first write.*second write", string(bits))
+	}
+}
+
+func TestDeadLetterOffice(t *testing.T) {
+	Record(context.WithValue(context.Background(), Key, ""), "hello %v", "world")
+
+	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "dead-letter-office.log"))
+	if assert.Nil(t, err) {
+		assert.Contains(t, string(bits), "hello world")
+	}
+}
+
+func TestLogging(t *testing.T) {
+	Record(context.Background(), "nobody home")
+
+	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "dead-letter-office.log"))
+	// Could get an error if dead-letter-office does not exist.
+	if err == nil {
+		assert.NotContains(t, string(bits), "nobody home")
 	}
 }
 

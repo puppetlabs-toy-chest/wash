@@ -6,6 +6,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +38,7 @@ func (d *dir) String() string {
 // Attr returns the attributes of a directory.
 func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
 	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
-	return attr(context.WithValue(ctx, plugin.Journal, ""), d, a)
+	return attr(context.WithValue(ctx, journal.Key, ""), d, a)
 }
 
 // Listxattr lists extended attributes for the resource.
@@ -61,14 +62,14 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	jid := makeJournalID(req.Pid)
-	ctx = context.WithValue(ctx, plugin.Journal, jid)
-	plugin.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
+	jid := journal.PIDToID(int(req.Pid))
+	ctx = context.WithValue(ctx, journal.Key, jid)
+	journal.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
 
 	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
-		plugin.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
+		journal.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
 
@@ -77,33 +78,33 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
 			if plugin.ListAction.IsSupportedOn(entry) {
 				childdir := newDir(entry, d.String())
-				plugin.Record(ctx, "FUSE: Found directory %v", childdir)
+				journal.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
-					_, err := childdir.children(context.WithValue(context.Background(), plugin.Journal, jid))
-					plugin.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
+					_, err := childdir.children(context.WithValue(context.Background(), journal.Key, jid))
+					journal.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
 				}()
 				return childdir, nil
 			}
 
-			plugin.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
+			journal.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
 			return newFile(entry, d.String()), nil
 		}
 	}
-	plugin.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
+	journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
 	return nil, fuse.ENOENT
 }
 
 // ReadDirAll lists all children of the directory.
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like ReadDirAll.
-	ctx = context.WithValue(ctx, plugin.Journal, "")
-	plugin.Record(ctx, "FUSE: List %v", d)
+	ctx = context.WithValue(ctx, journal.Key, "")
+	journal.Record(ctx, "FUSE: List %v", d)
 
 	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
-		plugin.Record(ctx, "FUSE: List %v errored: %v", d, err)
+		journal.Record(ctx, "FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
 
@@ -118,6 +119,6 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		}
 		res[i] = de
 	}
-	plugin.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
+	journal.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
 	return res, nil
 }
