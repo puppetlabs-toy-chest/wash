@@ -46,7 +46,7 @@ type Resource interface {
 // It will be represented as a directory in the wash filesystem.
 type Group interface {
 	Entry
-	LS(context.Context) ([]Entry, error)
+	List(context.Context) ([]Entry, error)
 }
 
 // Root is the root object of a plugin.

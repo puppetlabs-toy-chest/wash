@@ -41,8 +41,8 @@ func (r *Root) Root() (fs.Node, error) {
 	return newDir(r, ""), nil
 }
 
-// LS lists all clients as directories.
-func (r *Root) LS(_ context.Context) ([]plugin.Entry, error) {
+// List lists all clients as directories.
+func (r *Root) List(_ context.Context) ([]plugin.Entry, error) {
 	return r.plugins, nil
 }
 

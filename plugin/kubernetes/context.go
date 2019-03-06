@@ -17,7 +17,7 @@ type k8context struct {
 	defaultns string
 }
 
-func (c *k8context) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 	nsi := c.client.CoreV1().Namespaces()
 	nsList, err := nsi.List(metav1.ListOptions{})
 	if err != nil {

@@ -23,7 +23,7 @@ func TestVolumeDir(t *testing.T) {
 
 	assert.NotNil(t, dmap[""]["path1"])
 	vd = NewDir("path", dmap[""]["path1"], contentcb, "/path1", dmap)
-	entries, err := vd.LS(context.Background())
+	entries, err := vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "a file", entries[0].Name())
@@ -33,7 +33,7 @@ func TestVolumeDir(t *testing.T) {
 
 	assert.NotNil(t, dmap[""]["path2"])
 	vd = NewDir("path", dmap[""]["path2"], contentcb, "/path2", dmap)
-	entries, err = vd.LS(context.Background())
+	entries, err = vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "dir", entries[0].Name())

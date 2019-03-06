@@ -14,8 +14,8 @@ type volumes struct {
 	client *client.Client
 }
 
-// LS
-func (vs *volumes) LS(ctx context.Context) ([]plugin.Entry, error) {
+// List
+func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
 	volumes, err := vs.client.VolumeList(ctx, filters.Args{})
 	if err != nil {
 		return nil, err

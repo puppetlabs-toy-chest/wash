@@ -16,7 +16,7 @@ type pods struct {
 	ns     string
 }
 
-func (ps *pods) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (ps *pods) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: identify whether we have permission to get logs for this namespace early, so
 	// we can return quickly for Attributes.
 	podList, err := ps.client.CoreV1().Pods(ps.ns).List(metav1.ListOptions{})

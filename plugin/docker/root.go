@@ -32,7 +32,7 @@ func (r *Root) Init() error {
 	return nil
 }
 
-// LS lists the types of resources the Docker plugin exposes.
-func (r *Root) LS(ctx context.Context) ([]plugin.Entry, error) {
+// List lists the types of resources the Docker plugin exposes.
+func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	return r.resources, nil
 }

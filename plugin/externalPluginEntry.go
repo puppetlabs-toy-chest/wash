@@ -45,7 +45,7 @@ func (a decodedAttributes) toAttributes() Attributes {
 }
 
 type decodedCacheTTLs struct {
-	LS       time.Duration `json:"ls"`
+	List     time.Duration `json:"list"`
 	Open     time.Duration `json:"open"`
 	Metadata time.Duration `json:"metadata"`
 }
@@ -53,8 +53,8 @@ type decodedCacheTTLs struct {
 func (c decodedCacheTTLs) toCacheConfig() *CacheConfig {
 	config := newCacheConfig()
 
-	if c.LS != 0 {
-		config.SetTTLOf(LS, c.LS*time.Second)
+	if c.List != 0 {
+		config.SetTTLOf(List, c.List*time.Second)
 	}
 	if c.Open != 0 {
 		config.SetTTLOf(Open, c.Open*time.Second)
@@ -116,9 +116,9 @@ func (e *ExternalPluginEntry) CacheConfig() *CacheConfig {
 	return e.cacheConfig
 }
 
-// LS lists the entry's children, if it has any.
-func (e *ExternalPluginEntry) LS(context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait("ls", e.washPath, e.state)
+// List lists the entry's children, if it has any.
+func (e *ExternalPluginEntry) List(context.Context) ([]Entry, error) {
+	stdout, err := e.script.InvokeAndWait("list", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (e *ExternalPluginEntry) LS(context.Context) ([]Entry, error) {
 
 // Open returns the entry's content
 func (e *ExternalPluginEntry) Open(context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait("open", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait("read", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -240,10 +240,9 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
 		log.Debugf("Waiting for command: %v", cmdStr)
-		if err := cmd.Wait(); err != nil {
-			if _, ok := err.(*exec.ExitError); !ok {
-				log.Debugf("Failed waiting for command: %v", err)
-			}
+		_, err := ExitCodeFromErr(cmd.Wait())
+		if err != nil {
+			log.Debugf("Failed waiting for command: %v", err)
 		}
 	}
 
@@ -306,4 +305,67 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	}
 }
 
-// TODO: Implement Exec for external plugins
+// Exec executes a command on the given entry
+func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error) {
+	execResult := ExecResult{}
+
+	// TODO: Figure out how to pass-in opts when we have entries
+	// besides Stdin. Could do something like
+	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
+	cmdObj := exec.Command(
+		e.script.Path,
+		append(
+			[]string{"exec", e.washPath, e.state, cmd},
+			args...,
+		)...,
+	)
+
+	// Set-up stdin
+	if opts.Stdin != nil {
+		cmdObj.Stdin = opts.Stdin
+	}
+
+	// Set-up the output streams
+	outputCh, stdout, stderr := CreateExecOutputStreams(ctx)
+	cmdObj.Stdout = stdout
+	cmdObj.Stderr = stderr
+
+	// Start the command
+	cmdStr := fmt.Sprintf(
+		"%v %v",
+		cmdObj.Path,
+		strings.Join(cmdObj.Args, " "),
+	)
+	log.Debugf("Starting command: %v", cmdStr)
+	if err := cmdObj.Start(); err != nil {
+		stdout.Close()
+		stderr.Close()
+		return execResult, err
+	}
+
+	// Wait for the command to finish
+	var exitCode int
+	var cmdWaitErr error
+	go func() {
+		ec, err := ExitCodeFromErr(cmdObj.Wait())
+		if err != nil {
+			cmdWaitErr = err
+		} else {
+			exitCode = ec
+		}
+
+		stdout.CloseWithError(err)
+		stderr.CloseWithError(err)
+	}()
+
+	execResult.OutputCh = outputCh
+	execResult.ExitCodeCB = func() (int, error) {
+		if cmdWaitErr != nil {
+			return 0, cmdWaitErr
+		}
+
+		return exitCode, nil
+	}
+
+	return execResult, nil
+}

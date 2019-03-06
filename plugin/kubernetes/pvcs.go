@@ -14,7 +14,7 @@ type pvcs struct {
 	ns     string
 }
 
-func (pv *pvcs) LS(ctx context.Context) ([]plugin.Entry, error) {
+func (pv *pvcs) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: identify whether we have permission to run pods for this namespace early, so
 	// we can return quickly on expensive commands.
 	pvcI := pv.client.CoreV1().PersistentVolumeClaims(pv.ns)
