@@ -17,7 +17,7 @@ var journaldir = func() string {
 	if err != nil {
 		panic("Unable to get user cache dir: " + err.Error())
 	}
-	return filepath.Join(cdir, "wash", "journal")
+	return filepath.Join(cdir, "wash", "activity")
 }()
 var expires = 30 * time.Second
 
@@ -32,7 +32,7 @@ func SetDir(dir string) {
 }
 
 // Record creates a new journal for 'id' if needed, then appends the message to that journal.
-// Records are journaled in the user's cache directory under `wash/journal/ID.log`.
+// Records are journaled in the user's cache directory under `wash/activity/ID.log`.
 func Record(id string, msg string, a ...interface{}) {
 	obj, err := std.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := Dir()
