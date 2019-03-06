@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -42,28 +43,47 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
-func (c *DomainSocketClient) performRequest(endpoint string, result interface{}) error {
-	url := fmt.Sprintf("%s%s?%s=%d", domainSocketBaseURL, endpoint, apitypes.JournalID, os.Getpid())
-	response, err := c.Get(url)
+func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) (io.ReadCloser, error) {
+	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		log.Println(err)
+		return nil, err
+	}
+	req.Header.Set(apitypes.JournalID, strconv.FormatUint(uint64(os.Getpid()), 10))
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return resp.Body, nil
+	}
+
+	var errorObj apitypes.ErrorObj
+	respBody, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(respBody, &errorObj); err != nil {
+		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", resp.StatusCode, endpoint, string(respBody))
+	}
+
+	return nil, &errorObj
+}
+
+func (c *DomainSocketClient) getRequest(endpoint string, result interface{}) error {
+	respBody, err := c.doRequest("GET", endpoint, nil)
+	if err != nil {
+		log.Printf("Error performing GET request: %v", err)
 		return err
 	}
 
-	defer func() { errz.Log(response.Body.Close()) }()
-	body, err := ioutil.ReadAll(response.Body)
+	defer func() { errz.Log(respBody.Close()) }()
+	body, err := ioutil.ReadAll(respBody)
 	if err != nil {
 		log.Println(err)
 		return err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		var errorObj apitypes.ErrorObj
-		if err := json.Unmarshal(body, &errorObj); err != nil {
-			return fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, endpoint, string(body))
-		}
-
-		return &errorObj
 	}
 
 	if err := json.Unmarshal(body, result); err != nil {
@@ -78,7 +98,7 @@ func (c *DomainSocketClient) List(path string) ([]apitypes.ListEntry, error) {
 	endpoint := fmt.Sprintf("/fs/list%s", path)
 
 	var ls []apitypes.ListEntry
-	if err := c.performRequest(endpoint, &ls); err != nil {
+	if err := c.getRequest(endpoint, &ls); err != nil {
 		return nil, err
 	}
 
@@ -90,7 +110,7 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 	endpoint := fmt.Sprintf("/fs/metadata%s", path)
 
 	var metadata map[string]interface{}
-	if err := c.performRequest(endpoint, &metadata); err != nil {
+	if err := c.getRequest(endpoint, &metadata); err != nil {
 		return nil, err
 	}
 
@@ -103,33 +123,16 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 // server. The channel will be closed when there are no more events.
 func (c *DomainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
 	endpoint := fmt.Sprintf("/fs/exec%s", path)
-	url := fmt.Sprintf("%s%s?%s=%d", domainSocketBaseURL, endpoint, apitypes.JournalID, os.Getpid())
-
-	// TODO: Extract out the handling of HTTP POST + JSON streaming into their own,
-	// utility functions.
-
 	payload := apitypes.ExecBody{Cmd: command, Args: args, Opts: opts}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	response, err := c.Post(url, "application/json", bytes.NewReader(jsonBody))
+	respBody, err := c.doRequest("POST", endpoint, bytes.NewReader(jsonBody))
 	if err != nil {
+		log.Printf("Error performing POST request: %v", err)
 		return nil, err
-	}
-
-	if response.StatusCode != http.StatusOK {
-		var errorObj apitypes.ErrorObj
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(body, &errorObj); err != nil {
-			return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", response.StatusCode, endpoint, string(body))
-		}
-
-		return nil, &errorObj
 	}
 
 	readJSONFromBody := func(rdr io.ReadCloser, ch chan<- apitypes.ExecPacket) {
@@ -151,7 +154,7 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 	}
 
 	events := make(chan apitypes.ExecPacket, 1)
-	go readJSONFromBody(response.Body, events)
+	go readJSONFromBody(respBody, events)
 	return events, nil
 }
 
