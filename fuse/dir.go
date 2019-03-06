@@ -2,7 +2,6 @@ package fuse
 
 import (
 	"context"
-	"strconv"
 	"strings"
 
 	"bazil.org/fuse"
@@ -62,7 +61,7 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	jid := strconv.FormatUint(uint64(req.Pid), 10)
+	jid := makeJournalID(req.Pid)
 	ctx = context.WithValue(ctx, plugin.Journal, jid)
 	plugin.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
 

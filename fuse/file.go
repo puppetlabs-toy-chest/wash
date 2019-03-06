@@ -3,7 +3,6 @@ package fuse
 import (
 	"context"
 	"io"
-	"strconv"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -53,7 +52,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	jid := strconv.FormatUint(uint64(req.Pid), 10)
+	jid := makeJournalID(req.Pid)
 	ctx = context.WithValue(ctx, plugin.Journal, jid)
 	plugin.Record(ctx, "FUSE: Open %v", f)
 

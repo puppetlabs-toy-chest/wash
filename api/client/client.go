@@ -20,6 +20,7 @@ import (
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
 
+	"github.com/mitchellh/go-ps"
 	"github.com/pkg/xattr"
 )
 
@@ -49,7 +50,15 @@ func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) 
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set(apitypes.JournalID, strconv.FormatUint(uint64(os.Getpid()), 10))
+
+	pid := os.Getpid()
+	journalid := strconv.FormatInt(int64(pid), 10)
+	// Include the executable name if we can find it.
+	proc, err := ps.FindProcess(pid)
+	if err == nil {
+		journalid += "-" + proc.Executable()
+	}
+	req.Header.Set(apitypes.JournalID, journalid)
 	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
