@@ -9,7 +9,6 @@ import (
 
 	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -65,7 +64,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 	addPluginRegistryAndJournalMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
-			newctx = context.WithValue(newctx, plugin.Journal, journal.NamedJournal{ID: r.Header.Get(apitypes.JournalID)})
+			newctx = context.WithValue(newctx, plugin.Journal, r.Header.Get(apitypes.JournalID))
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(w, r.WithContext(newctx))

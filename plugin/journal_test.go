@@ -2,34 +2,53 @@ package plugin
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/mock"
+	"github.com/puppetlabs/wash/journal"
+	"github.com/stretchr/testify/assert"
 )
 
-type testJournal struct {
-	mock.Mock
-}
-
-func (j *testJournal) Log(msg string, a ...interface{}) {
-	j.Called(msg, a)
-}
-
 func TestLog(t *testing.T) {
-	var j testJournal
 	msg := "hello"
-	var expected []interface{}
-	j.On("Log", msg, expected)
+	Log(context.WithValue(context.Background(), Journal, "42"), msg)
 
-	Log(context.WithValue(context.Background(), Journal, &j), msg)
-	j.AssertExpectations(t)
+	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "42.log"))
+	if assert.Nil(t, err) {
+		assert.Contains(t, string(bits), msg)
+	}
 }
 
-func TestLogWithArgs(t *testing.T) {
-	var j testJournal
-	msg, arg := "hello %v", "world"
-	j.On("Log", msg, []interface{}{arg})
+func TestDeadLetterOffice(t *testing.T) {
+	Log(context.WithValue(context.Background(), Journal, ""), "hello %v", "world")
 
-	Log(context.WithValue(context.Background(), Journal, &j), msg, arg)
-	j.AssertExpectations(t)
+	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "dead-letter-office.log"))
+	if assert.Nil(t, err) {
+		assert.Contains(t, string(bits), "hello world")
+	}
+}
+
+func TestLogging(t *testing.T) {
+	Log(context.Background(), "nobody home")
+
+	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "dead-letter-office.log"))
+	// Could get an error if dead-letter-office does not exist.
+	if err == nil {
+		assert.NotContains(t, string(bits), "nobody home")
+	}
+}
+
+func TestMain(m *testing.M) {
+	dir, err := ioutil.TempDir("", "plugin_tests")
+	if err != nil {
+		panic(err)
+	}
+	journal.SetDir(dir)
+
+	exitcode := m.Run()
+
+	os.RemoveAll(dir)
+	os.Exit(exitcode)
 }
