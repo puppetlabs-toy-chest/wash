@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/vault/helper/locksutil"
@@ -92,4 +93,20 @@ func (cache *MemCache) Flush() {
 		cache.instance.DeleteExpired()
 	}
 	cache.instance.Flush()
+}
+
+// Delete removes entries from the cache that match the provided regexp.
+func (cache *MemCache) Delete(matcher *regexp.Regexp) []string {
+	items := cache.instance.Items()
+	deleted := make([]string, 0, len(items))
+	for k := range items {
+		if matcher.MatchString(k) {
+			log.Infof("Deleting cache entry %v", k)
+			cache.instance.Delete(k)
+			deleted = append(deleted, k)
+		} else {
+			log.Infof("Skipping %v", k)
+		}
+	}
+	return deleted
 }
