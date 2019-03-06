@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ExternalPluginSpec represents an external plugin's YAML specification.
@@ -30,16 +28,18 @@ func NewExternalPluginRoot(plugin ExternalPluginSpec) *ExternalPluginRoot {
 
 // Init initializes the external plugin root
 func (r *ExternalPluginRoot) Init() error {
+	ctx := context.Background()
 	script := r.script
 
-	stdout, err := r.script.InvokeAndWait(context.Background(), "init")
+	stdout, err := r.script.InvokeAndWait(ctx, "init")
 	if err != nil {
 		return err
 	}
 
 	var decodedRoot decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
-		log.Debugf(
+		Record(
+			ctx,
 			"could not decode the plugin root from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
 			"{\"name\":\"<name_of_root_dir>\",\"supported_actions\":[\"list\"]}",

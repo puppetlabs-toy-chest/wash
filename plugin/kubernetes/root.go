@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -51,7 +50,7 @@ func (r *Root) Init() error {
 	for name := range raw.Contexts {
 		ctx, err := createContext(raw, name, config.ConfigAccess())
 		if err != nil {
-			log.Warnf("loading context %v failed: %+v", name, err)
+			plugin.Record(context.Background(), "loading context %v failed: %+v", name, err)
 			continue
 		}
 		contexts = append(contexts, ctx)
