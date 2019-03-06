@@ -31,9 +31,9 @@ func SetDir(dir string) {
 	journaldir = dir
 }
 
-// Log creates a new journal for 'id' if needed, then appends the message to that journal.
-// Logs are journaled in the user's cache directory under `wash/journal/ID.log`.
-func Log(id string, msg string, a ...interface{}) {
+// Record creates a new journal for 'id' if needed, then appends the message to that journal.
+// Records are journaled in the user's cache directory under `wash/journal/ID.log`.
+func Record(id string, msg string, a ...interface{}) {
 	obj, err := std.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := Dir()
 		if err := os.MkdirAll(jdir, 0750); err != nil {

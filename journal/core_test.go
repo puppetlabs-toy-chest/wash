@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLog(t *testing.T) {
+func TestRecord(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
 	defer std.Flush()
 
 	// Log to a journal
-	Log("42", "hello there")
+	Record("42", "hello there")
 
 	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "42.log"))
 	if assert.Nil(t, err) {
@@ -31,9 +31,9 @@ func TestLogExpired(t *testing.T) {
 	expires = 1 * time.Millisecond
 
 	// Log twice, second after cache entry has expired
-	Log("1", "first write")
+	Record("1", "first write")
 	time.Sleep(1 * time.Millisecond)
-	Log("1", "second write")
+	Record("1", "second write")
 
 	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "1.log"))
 	if assert.Nil(t, err) {
@@ -46,8 +46,8 @@ func TestLogReused(t *testing.T) {
 	defer std.Flush()
 
 	// Log twice
-	Log("2", "first write")
-	Log("2", "second %v", "write")
+	Record("2", "first write")
+	Record("2", "second %v", "write")
 
 	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "2.log"))
 	if assert.Nil(t, err) {

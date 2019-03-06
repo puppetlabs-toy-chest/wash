@@ -29,12 +29,12 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ListAction)
 	}
 
-	plugin.Log(ctx, "API: List %v", path)
+	plugin.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
 	groupID := toID(path)
 	entries, err := plugin.CachedList(ctx, group, groupID)
 	if err != nil {
-		plugin.Log(ctx, "API: List %v errored: %v", path, err)
+		plugin.Record(ctx, "API: List %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
@@ -60,15 +60,15 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	for i, entry := range entries {
 		result[i+1] = info(entry, groupID+"/"+entry.Name())
 	}
-	plugin.Log(ctx, "API: List %v %+v", path, result)
+	plugin.Record(ctx, "API: List %v %+v", path, result)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		plugin.Log(ctx, "API: List marshalling %v errored: %v", path, err)
+		plugin.Record(ctx, "API: List marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
 
-	plugin.Log(ctx, "API: List %v complete", path)
+	plugin.Record(ctx, "API: List %v complete", path)
 	return nil
 }

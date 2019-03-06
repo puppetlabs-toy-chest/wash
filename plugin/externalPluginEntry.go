@@ -123,7 +123,7 @@ func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		Log(
+		Record(
 			ctx,
 			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
@@ -167,7 +167,7 @@ func (e *ExternalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error)
 
 	var metadata MetadataMap
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		Log(
+		Record(
 			ctx,
 			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
@@ -200,10 +200,10 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 
 	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path, "stream", e.washPath, e.state)
 
-	Log(ctx, "Starting command: %v", cmdStr)
+	Record(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
-		Log(ctx, "Closed command stdout: %v", stdoutR.Close())
-		Log(ctx, "Closed command stderr: %v", stderrR.Close())
+		Record(ctx, "Closed command stdout: %v", stdoutR.Close())
+		Record(ctx, "Closed command stderr: %v", stderrR.Close())
 		return nil, err
 	}
 
@@ -239,10 +239,10 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	// whether we should kill the command or not. Should we
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
-		Log(ctx, "Waiting for command: %v", cmdStr)
+		Record(ctx, "Waiting for command: %v", cmdStr)
 		_, err := ExitCodeFromErr(cmd.Wait())
 		if err != nil {
-			Log(ctx, "Failed waiting for command: %v", err)
+			Record(ctx, "Failed waiting for command: %v", err)
 		}
 	}
 
@@ -265,7 +265,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		// blocked when its buffer is full.
 		go func() {
 			defer func() {
-				Log(ctx, "Closed stream stderr: %v", stderrR.Close())
+				Record(ctx, "Closed stream stderr: %v", stderrR.Close())
 			}()
 
 			buf := make([]byte, 4096)
@@ -331,7 +331,7 @@ func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj.Stderr = stderr
 
 	// Start the command
-	Log(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
+	Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
 	if err := cmdObj.Start(); err != nil {
 		stdout.Close()
 		stderr.Close()

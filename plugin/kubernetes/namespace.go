@@ -27,12 +27,12 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 }
 
 func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
-	plugin.Log(ctx, "Listing resource types for namespace %v: %v", n.Name(), n.resourcetypes)
+	plugin.Record(ctx, "Listing resource types for namespace %v: %v", n.Name(), n.resourcetypes)
 	return n.resourcetypes, nil
 }
 
 func (n *namespace) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
-	plugin.Log(ctx, "Metadata for namespace %v: %+v", n.Name(), n.metadata)
+	plugin.Record(ctx, "Metadata for namespace %v: %+v", n.Name(), n.metadata)
 	if n.metadata != nil {
 		return plugin.ToMetadata(n.metadata), nil
 	}

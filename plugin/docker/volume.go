@@ -65,15 +65,15 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	defer func() {
 		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		plugin.Log(ctx, "Deleted container %v: %v", cid, err)
+		plugin.Record(ctx, "Deleted container %v: %v", cid, err)
 	}()
 
-	plugin.Log(ctx, "Starting container %v", cid)
+	plugin.Record(ctx, "Starting container %v", cid)
 	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
 
-	plugin.Log(ctx, "Waiting for container %v", cid)
+	plugin.Record(ctx, "Waiting for container %v", cid)
 	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
 	var statusCode int64
 	select {
@@ -81,7 +81,7 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	case result := <-waitC:
 		statusCode = result.StatusCode
-		plugin.Log(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+		plugin.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
 	}
 
 	opts := types.ContainerLogsOptions{ShowStdout: true}
@@ -89,13 +89,13 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		opts.ShowStderr = true
 	}
 
-	plugin.Log(ctx, "Gathering log for %v", cid)
+	plugin.Record(ctx, "Gathering log for %v", cid)
 	output, err := v.client.ContainerLogs(ctx, cid, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		plugin.Log(ctx, "Closed log for %v: %v", cid, output.Close())
+		plugin.Record(ctx, "Closed log for %v: %v", cid, output.Close())
 	}()
 
 	if statusCode != 0 {
@@ -140,7 +140,7 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 		return "", err
 	}
 	for _, warn := range created.Warnings {
-		plugin.Log(ctx, "Warning creating %v: %v", created.ID, warn)
+		plugin.Record(ctx, "Warning creating %v: %v", created.ID, warn)
 	}
 	return created.ID, nil
 }
@@ -154,16 +154,16 @@ func (v *volume) getContentCB() vol.ContentCB {
 		}
 		defer func() {
 			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-			plugin.Log(ctx, "Deleted temporary container %v: %v", cid, err)
+			plugin.Record(ctx, "Deleted temporary container %v: %v", cid, err)
 		}()
 
-		plugin.Log(ctx, "Starting container %v", cid)
+		plugin.Record(ctx, "Starting container %v", cid)
 		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 			return nil, err
 		}
 		defer func() {
 			err := v.client.ContainerKill(ctx, cid, "SIGKILL")
-			plugin.Log(ctx, "Stopped temporary container %v: %v", cid, err)
+			plugin.Record(ctx, "Stopped temporary container %v: %v", cid, err)
 		}()
 
 		// Download file, then kill container.
@@ -172,7 +172,7 @@ func (v *volume) getContentCB() vol.ContentCB {
 			return nil, err
 		}
 		defer func() {
-			plugin.Log(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
+			plugin.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
 		}()
 
 		tarReader := tar.NewReader(rdr)

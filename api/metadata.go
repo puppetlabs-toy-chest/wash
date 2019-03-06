@@ -28,22 +28,22 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 		return unsupportedActionResponse(path, plugin.MetadataAction)
 	}
 
-	plugin.Log(ctx, "API: Metadata %v", path)
+	plugin.Record(ctx, "API: Metadata %v", path)
 	metadata, err := plugin.CachedMetadata(ctx, entry.(plugin.Resource), toID(path))
 
 	if err != nil {
-		plugin.Log(ctx, "API: Metadata %v errored: %v", path, err)
+		plugin.Record(ctx, "API: Metadata %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.MetadataAction, err.Error())
 	}
-	plugin.Log(ctx, "API: Metadata %v %+v", path, metadata)
+	plugin.Record(ctx, "API: Metadata %v %+v", path, metadata)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(metadata); err != nil {
-		plugin.Log(ctx, "API: Metadata marshalling %v errored: %v", path, err)
+		plugin.Record(ctx, "API: Metadata marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))
 	}
 
-	plugin.Log(ctx, "API: Metadata %v complete", path)
+	plugin.Record(ctx, "API: Metadata %v complete", path)
 	return nil
 }

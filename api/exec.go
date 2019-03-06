@@ -99,14 +99,14 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	plugin.Log(ctx, "API: Exec %v %+v", path, body)
+	plugin.Record(ctx, "API: Exec %v %+v", path, body)
 	opts := plugin.ExecOptions{}
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
 	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
-		plugin.Log(ctx, "API: Exec %v errored: %v", path, err)
+		plugin.Record(ctx, "API: Exec %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ExecAction, err.Error())
 	}
 
@@ -117,6 +117,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	streamOutput(ctx, enc, result.OutputCh)
 	streamExitCode(ctx, enc, result.ExitCodeCB)
 
-	plugin.Log(ctx, "API: Exec %v complete", path)
+	plugin.Record(ctx, "API: Exec %v complete", path)
 	return nil
 }

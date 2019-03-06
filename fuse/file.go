@@ -55,7 +55,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	jid := strconv.FormatUint(uint64(req.Pid), 10)
 	ctx = context.WithValue(ctx, plugin.Journal, jid)
-	plugin.Log(ctx, "FUSE: Open %v", f)
+	plugin.Record(ctx, "FUSE: Open %v", f)
 
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
@@ -63,16 +63,16 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		content, err := plugin.CachedOpen(ctx, readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
-			plugin.Log(ctx, "FUSE: Open %v errored: %v", f, err)
+			plugin.Record(ctx, "FUSE: Open %v errored: %v", f, err)
 			return nil, err
 		}
 
 		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
-		plugin.Log(ctx, "FUSE: Opened %v", f)
+		plugin.Record(ctx, "FUSE: Opened %v", f)
 		return &fileHandle{r: content, id: f.String()}, nil
 	}
 	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
-	plugin.Log(ctx, "FUSE: Open unsupported on %v", f)
+	plugin.Record(ctx, "FUSE: Open unsupported on %v", f)
 	return nil, fuse.ENOTSUP
 }
 

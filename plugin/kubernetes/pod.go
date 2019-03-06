@@ -42,7 +42,7 @@ func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		return nil, err
 	}
 
-	plugin.Log(ctx, "Metadata for pod %v: %+v", p.Name(), pd)
+	plugin.Record(ctx, "Metadata for pod %v: %+v", p.Name(), pd)
 	return plugin.ToMetadata(pd), nil
 }
 
@@ -66,7 +66,7 @@ func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 	if n, err = buf.ReadFrom(rdr); err != nil {
 		return nil, err
 	}
-	plugin.Log(ctx, "Read %v bytes of %v log", n, p.Name())
+	plugin.Record(ctx, "Read %v bytes of %v log", n, p.Name())
 	return bytes.NewReader(buf.Bytes()), nil
 }
 
@@ -106,7 +106,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	go func() {
 		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}
 		err = executor.Stream(streamOpts)
-		plugin.Log(ctx, "Exec on %v complete: %v", p.Name(), err)
+		plugin.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
 			exitcode = exerr.ExitStatus()
 			err = nil

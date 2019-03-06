@@ -64,12 +64,12 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
 	jid := strconv.FormatUint(uint64(req.Pid), 10)
 	ctx = context.WithValue(ctx, plugin.Journal, jid)
-	plugin.Log(ctx, "FUSE: Find %v in %v", req.Name, d)
+	plugin.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
 
 	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
-		plugin.Log(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
+		plugin.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
 
@@ -78,20 +78,20 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
 			if plugin.ListAction.IsSupportedOn(entry) {
 				childdir := newDir(entry, d.String())
-				plugin.Log(ctx, "FUSE: Found directory %v", childdir)
+				plugin.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
 					_, err := childdir.children(context.WithValue(context.Background(), plugin.Journal, jid))
-					plugin.Log(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
+					plugin.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
 				}()
 				return childdir, nil
 			}
 
-			plugin.Log(ctx, "FUSE: Found file %v/%v", d, entry.Name())
+			plugin.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
 			return newFile(entry, d.String()), nil
 		}
 	}
-	plugin.Log(ctx, "FUSE: %v not found in %v", req.Name, d)
+	plugin.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
 	return nil, fuse.ENOENT
 }
 
@@ -99,12 +99,12 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like ReadDirAll.
 	ctx = context.WithValue(ctx, plugin.Journal, "")
-	plugin.Log(ctx, "FUSE: List %v", d)
+	plugin.Record(ctx, "FUSE: List %v", d)
 
 	entries, err := d.children(ctx)
 	if err != nil {
 		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
-		plugin.Log(ctx, "FUSE: List %v errored: %v", d, err)
+		plugin.Record(ctx, "FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
 
@@ -119,6 +119,6 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		}
 		res[i] = de
 	}
-	plugin.Log(ctx, "FUSE: Listed in %v: %+v", d, res)
+	plugin.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
 	return res, nil
 }

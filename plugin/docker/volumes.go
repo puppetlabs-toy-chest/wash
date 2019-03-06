@@ -20,7 +20,7 @@ func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	plugin.Log(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
+	plugin.Record(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
 	keys := make([]plugin.Entry, len(volumes.Volumes))
 	for i, inst := range volumes.Volumes {
 		if keys[i], err = newVolume(vs.client, inst); err != nil {

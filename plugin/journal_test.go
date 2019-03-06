@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLog(t *testing.T) {
+func TestRecord(t *testing.T) {
 	msg := "hello"
-	Log(context.WithValue(context.Background(), Journal, "42"), msg)
+	Record(context.WithValue(context.Background(), Journal, "42"), msg)
 
 	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "42.log"))
 	if assert.Nil(t, err) {
@@ -22,7 +22,7 @@ func TestLog(t *testing.T) {
 }
 
 func TestDeadLetterOffice(t *testing.T) {
-	Log(context.WithValue(context.Background(), Journal, ""), "hello %v", "world")
+	Record(context.WithValue(context.Background(), Journal, ""), "hello %v", "world")
 
 	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "dead-letter-office.log"))
 	if assert.Nil(t, err) {
@@ -31,7 +31,7 @@ func TestDeadLetterOffice(t *testing.T) {
 }
 
 func TestLogging(t *testing.T) {
-	Log(context.Background(), "nobody home")
+	Record(context.Background(), "nobody home")
 
 	bits, err := ioutil.ReadFile(filepath.Join(journal.Dir(), "dead-letter-office.log"))
 	// Could get an error if dead-letter-office does not exist.
