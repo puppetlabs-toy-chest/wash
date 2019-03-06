@@ -6,6 +6,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,7 +37,8 @@ func (f *file) String() string {
 
 // Attr returns the attributes of a file.
 func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	return attr(ctx, f, a)
+	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
+	return attr(context.WithValue(ctx, journal.Key, ""), f, a)
 }
 
 // Listxattr lists extended attributes for the resource.
@@ -51,19 +53,25 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
+	journal.Record(ctx, "FUSE: Open %v", f)
+
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if readable, ok := f.Entry().(plugin.Readable); ok {
 		content, err := plugin.CachedOpen(ctx, readable, f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
+			journal.Record(ctx, "FUSE: Open %v errored: %v", f, err)
 			return nil, err
 		}
 
 		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
+		journal.Record(ctx, "FUSE: Opened %v", f)
 		return &fileHandle{r: content, id: f.String()}, nil
 	}
 	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
+	journal.Record(ctx, "FUSE: Open unsupported on %v", f)
 	return nil, fuse.ENOTSUP
 }
 
@@ -78,7 +86,10 @@ var _ = fs.HandleReader(fileHandle{})
 
 // Release closes the open file.
 func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
+
 	log.Infof("FUSE: Release[pid=%v] %v", req.Pid, fh.id)
+	journal.Record(ctx, "FUSE: Release %v", fh.id)
 	if closer, ok := fh.r.(io.Closer); ok {
 		return closer.Close()
 	}
@@ -87,12 +98,15 @@ func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 
 // Read fills a buffer with the requested amount of data from the file.
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
+
 	buf := make([]byte, req.Size)
 	n, err := fh.r.ReadAt(buf, req.Offset)
 	if err == io.EOF {
 		err = nil
 	}
 	log.Infof("FUSE: Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
+	journal.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", n, req.Size, req.Offset, fh.id, err)
 	resp.Data = buf[:n]
 	return err
 }

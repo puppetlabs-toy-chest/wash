@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -43,6 +43,7 @@ func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		return nil, err
 	}
 
+	journal.Record(ctx, "Metadata for pod %v: %+v", p.Name(), pd)
 	return plugin.ToMetadata(pd), nil
 }
 
@@ -66,7 +67,7 @@ func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 	if n, err = buf.ReadFrom(rdr); err != nil {
 		return nil, err
 	}
-	log.Debugf("Read %v bytes of %v log", n, p.Name())
+	journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
 	return bytes.NewReader(buf.Bytes()), nil
 }
 
@@ -106,6 +107,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	go func() {
 		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}
 		err = executor.Stream(streamOpts)
+		journal.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
 			exitcode = exerr.ExitStatus()
 			err = nil

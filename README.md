@@ -34,6 +34,8 @@ go run wash.go meta mnt/docker/containers/<container_name>
 
 The API server exposes advanced capabilities on resources; Swagger docs TODO.
 
+All operations will have their activity recorded to journals in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory will be `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
+
 > Requires golang 1.11+.
 
 ### macOS Setup

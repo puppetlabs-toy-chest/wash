@@ -60,7 +60,11 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	if logFH != nil {
-		defer func() { plugin.LogErr(logFH.Close()) }()
+		defer func() {
+			if err := logFH.Close(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error closing logger: %+v", err)
+			}
+		}()
 	}
 
 	var registry plugin.Registry
@@ -193,7 +197,9 @@ func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) 
 		return
 	}
 	defer func() {
-		plugin.LogErr(externalPluginsFH.Close())
+		if err := externalPluginsFH.Close(); err != nil {
+			log.Infof("Error closing %v: %+v", externalPluginsPath, err)
+		}
 	}()
 
 	d := yaml.NewDecoder(externalPluginsFH)

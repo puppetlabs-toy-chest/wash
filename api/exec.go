@@ -10,6 +10,7 @@ import (
 
 	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -76,7 +77,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	log.Infof("API: Exec %v", path)
 
 	ctx := r.Context()
-
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {
 		return errResp
@@ -100,12 +100,14 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
+	journal.Record(ctx, "API: Exec %v %+v", path, body)
 	opts := plugin.ExecOptions{}
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
 	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
+		journal.Record(ctx, "API: Exec %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ExecAction, err.Error())
 	}
 
@@ -116,5 +118,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	streamOutput(ctx, enc, result.OutputCh)
 	streamExitCode(ctx, enc, result.ExitCodeCB)
 
+	journal.Record(ctx, "API: Exec %v complete", path)
 	return nil
 }
