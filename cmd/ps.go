@@ -32,6 +32,10 @@ func collectOutput(ch <-chan apitypes.ExecPacket) (string, error) {
 	exit := 0
 	var stdout, stderr string
 	for pkt := range ch {
+		if pkt.Err != nil {
+			return "", pkt.Err
+		}
+
 		switch pktType := pkt.TypeField; pktType {
 		case apitypes.Exitcode:
 			exit = int(pkt.Data.(float64))
@@ -195,7 +199,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			}
 			out, err := collectOutput(ch)
 			if err != nil {
-				cmdutil.ErrPrintf("errored on %v: %v", k, err)
+				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
 			} else {
 				results[k] = parseLines(k, out)
 			}

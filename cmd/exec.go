@@ -27,9 +27,28 @@ func execCommand() *cobra.Command {
 	return execCmd
 }
 
-func printPackets(pkts <-chan apitypes.ExecPacket) int {
+func printPackets(pkts <-chan apitypes.ExecPacket) (int, error) {
 	exit := 0
+	foundErroredPacket := false
+
 	for pkt := range pkts {
+		if pkt.Err != nil {
+			if !foundErroredPacket {
+				// This is the first error we've encountered
+				cmdutil.ErrPrintf("The exec endpoint errored. All incoming data will be ignored, with only the errors printed.\n")
+				foundErroredPacket = true
+			}
+
+			cmdutil.ErrPrintf("%v\n", pkt.Err)
+		}
+
+		if foundErroredPacket {
+			// This case handles the (unlikely) possibility that one of stdout/stderr
+			// errors, while the other continues to send data. In that case, we want
+			// to ignore the sent data.
+			continue
+		}
+
 		switch pktType := pkt.TypeField; pktType {
 		case apitypes.Exitcode:
 			exit = int(pkt.Data.(float64))
@@ -40,7 +59,11 @@ func printPackets(pkts <-chan apitypes.ExecPacket) int {
 		}
 	}
 
-	return exit
+	if foundErroredPacket {
+		return 0, fmt.Errorf("the exec endpoint errored")
+	}
+
+	return exit, nil
 }
 
 func execMain(cmd *cobra.Command, args []string) exitCode {
@@ -66,6 +89,10 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	code := printPackets(ch)
+	code, err := printPackets(ch)
+	if err != nil {
+		return exitCode{1}
+	}
+
 	return exitCode{code}
 }
