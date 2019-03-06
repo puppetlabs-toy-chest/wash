@@ -36,7 +36,10 @@ func formatListEntries(ls []apitypes.ListEntry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var ctimeStr string
-		if entry.Attributes.Ctime.IsZero() {
+		if err, ok := entry.Errors["attributes"]; ok {
+			cmdutil.ErrPrintf("errored on %v: could not retrieve the attributes: %v\n", entry.Name, err)
+			ctimeStr = "<unknown>"
+		} else if entry.Attributes.Ctime.IsZero() {
 			ctimeStr = "<unknown>"
 		} else {
 			ctimeStr = entry.Attributes.Ctime.Format(time.RFC822)
@@ -85,7 +88,6 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	// TODO: Handle individual ListEntry errors
 	fmt.Print(formatListEntries(ls))
 	return exitCode{0}
 }
