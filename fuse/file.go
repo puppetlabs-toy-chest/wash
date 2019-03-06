@@ -53,8 +53,7 @@ func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fu
 
 // Open a file for reading.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
-	jid := journal.PIDToID(int(req.Pid))
-	ctx = context.WithValue(ctx, journal.Key, jid)
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
 	journal.Record(ctx, "FUSE: Open %v", f)
 
 	// Initiate content request and return a channel providing the results.
@@ -87,7 +86,10 @@ var _ = fs.HandleReader(fileHandle{})
 
 // Release closes the open file.
 func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
+
 	log.Infof("FUSE: Release[pid=%v] %v", req.Pid, fh.id)
+	journal.Record(ctx, "FUSE: Release %v", fh.id)
 	if closer, ok := fh.r.(io.Closer); ok {
 		return closer.Close()
 	}
@@ -96,12 +98,15 @@ func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 
 // Read fills a buffer with the requested amount of data from the file.
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
+
 	buf := make([]byte, req.Size)
 	n, err := fh.r.ReadAt(buf, req.Offset)
 	if err == io.EOF {
 		err = nil
 	}
 	log.Infof("FUSE: Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
+	journal.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", n, req.Size, req.Offset, fh.id, err)
 	resp.Data = buf[:n]
 	return err
 }

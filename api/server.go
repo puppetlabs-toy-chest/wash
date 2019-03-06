@@ -62,7 +62,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 		return nil, nil, err
 	}
 
-	addPluginRegistryAndJournalMiddleware := func(next http.Handler) http.Handler {
+	addPluginRegistryAndJournalIDMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
 			newctx = context.WithValue(newctx, journal.Key, r.Header.Get(apitypes.JournalIDHeader))
@@ -80,7 +80,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 	r.Handle("/fs/stream/{path:.+}", streamHandler)
 	r.Handle("/fs/exec/{path:.+}", execHandler)
 
-	r.Use(addPluginRegistryAndJournalMiddleware)
+	r.Use(addPluginRegistryAndJournalIDMiddleware)
 
 	httpServer := http.Server{Handler: r}
 
