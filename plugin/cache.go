@@ -3,6 +3,8 @@ package plugin
 import (
 	"context"
 	"flag"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
@@ -30,7 +32,7 @@ func newCacheConfig() *CacheConfig {
 	config := &CacheConfig{}
 
 	for op := range config.ttl {
-		config.SetTTLOf(cachedOp(op), 5*time.Second)
+		config.SetTTLOf(cachedOp(op), 15*time.Second)
 	}
 
 	return config
@@ -64,6 +66,22 @@ var defaultConfig CacheConfig
 func InitCache() {
 	cache = datastore.NewMemCache()
 	defaultConfig = *newCacheConfig()
+}
+
+// TeardownCache allows deleting the cache to support testing with and without caching.
+func TeardownCache() {
+	cache = nil
+}
+
+// ClearCacheFor removes entries from the cache that match or are children of the provided path.
+// If successful, returns an array of deleted keys.
+func ClearCacheFor(path string) ([]string, error) {
+	expr := "^[a-zA-Z]*::/" + strings.Trim(path, "/") + "($|/.*)"
+	rx, err := regexp.Compile(expr)
+	if err != nil {
+		return nil, err
+	}
+	return cache.Delete(rx), nil
 }
 
 func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (interface{}, error)) (interface{}, error) {
