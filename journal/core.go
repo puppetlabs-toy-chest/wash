@@ -38,8 +38,9 @@ func SetDir(dir string) {
 	journalDir = dir
 }
 
-// Record creates writes a new entry to the journal identified by the ID at `journal.Key` in
-// the provided context. If no ID is registered, it instead sends to the server logs. If the
+// Record writes a new entry to the journal identified by the ID at `journal.Key` in
+// the provided context. It also writes to the server logs at the debug level. If no ID
+// is registered, the entry is written to the server logs at the warning level. If the
 // ID is an empty string, it uses the ID 'dead-letter-office'.
 //
 // Record creates a new journal for ID if needed, then appends the message to that journal.
@@ -56,6 +57,8 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 		log.Warnf(msg, a...)
 		return
 	}
+
+	log.Debugf(msg, a...)
 
 	obj, err := journalCache.GetOrUpdate(id, expires, true, func() (interface{}, error) {
 		jdir := Dir()
