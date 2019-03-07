@@ -118,7 +118,7 @@ func (e *ExternalPluginEntry) CacheConfig() *CacheConfig {
 
 // List lists the entry's children, if it has any.
 func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "ls", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "list", e.washPath, e.state)
 	if err != nil {
 		return nil, err
 	}
