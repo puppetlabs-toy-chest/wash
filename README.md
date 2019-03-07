@@ -8,6 +8,8 @@ This prototype is built as a FUSE filesystem and API server. It currently suppor
 - viewing running containers and volumes in Docker (found from the local socket or via DOCKER environment variables)
 - viewing running containers and persistent volume claims in Kubernetes (uses contexts from `~/.kube/config`)
 
+> Requires golang 1.11+.
+
 Mount the filesystem and API server with
 ```
 go run wash.go server mnt
@@ -36,9 +38,9 @@ The API server exposes advanced capabilities on resources; Swagger docs TODO.
 
 All operations will have their activity recorded to journals in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory will be `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
 
-> Requires golang 1.11+.
-
 ### macOS Setup
+
+> If using iTerm2 and ZSH, we recommend installing [ZSH's iTerm2 shell integration](https://www.iterm2.com/documentation-shell-integration.html) to avoid [issue#84](https://github.com/puppetlabs/wash/issues/84).
 
 Obtain FUSE for OSX [here](https://osxfuse.github.io/).
 
