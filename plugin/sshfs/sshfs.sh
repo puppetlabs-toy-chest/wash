@@ -49,7 +49,6 @@ function print_entry_json() {
     attributes_json="{}"
   fi
 
-  # TODO: Include attributes for files
   local supported_actions_json=`to_json_array "${supported_actions}"`
 
   echo "{\
@@ -77,11 +76,14 @@ function print_file_json {
     supported_actions='"read" "stream"'
   fi
   
+  # TODO: Handle the mode separately. This is either a change
+  # in Wash, or something that the external plugins are responsible
+  # for.
+
   attributes_json=$(echo "{\
 \"Atime\":${atime},\
 \"Mtime\":${mtime},\
 \"Ctime\":${ctime},\
-\"Mode\":$(echo $((16#${mode}))),\
 \"Size\":${size}\
 }")
 
