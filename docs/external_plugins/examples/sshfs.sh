@@ -70,8 +70,14 @@ function print_file_json {
 
   name=`basename "${path}"`
 
+  intMode=$(echo $((16#${mode})))
   if [[ ${isDir} -eq 0 ]]; then
     supported_actions='"list"'
+
+    # Unfortunately, Wash doesn't handle symlinks well. Thus
+    # for now, we'll assume that sym-linked directories are
+    # regular directories.
+    intMode=$(echo $((${intMode} | 16384)))
   else
     supported_actions='"read" "stream"'
   fi
@@ -84,6 +90,7 @@ function print_file_json {
 \"Atime\":${atime},\
 \"Mtime\":${mtime},\
 \"Ctime\":${ctime},\
+\"Mode\":${intMode},\
 \"Size\":${size}\
 }")
 
