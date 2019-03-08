@@ -5,7 +5,12 @@ Wash shells out to the external plugin's script whenever it needs to invoke an a
 <plugin_script> <action> <path> <state> <args...>
 ```
 
-where `<action>` is the Wash action that's being invoked; `<path>` is the entry's filesystem path relative to Wash's mountpoint; `<state>` consists of the minimum amount of information required to reconstruct the entry inside the plugin; and `<args...>` are the arguments passed to the specific action.
+where
+
+* `<action>` is the Wash action that's being invoked
+* `<path>` is the entry's filesystem path relative to Wash's mountpoint
+* `<state>` consists of the minimum amount of information required to reconstruct the entry inside the plugin
+* `<args...>` are the arguments passed to the specific action.
 
 `<path>` and `<state>` can be a bit confusing. To understand them, we recommend reading the [Aside](#aside), and to look at the provided Bash + Ruby external plugin examples to see how they're used. **TODO: Link to these examples**
 
@@ -53,12 +58,12 @@ Below is an example JSON object showcasing all possible keys at once.
 }
 ```
 
-We see from `cache_ttls` that the result of `some_entry`'s `list` action will be cached for 30 seconds. We see from `attributes` that `some_entry` has some filesystem attributes that are defined (note that the mode is `0777`; `511` is its Base-10 representation). Finally, we see from `state` that `some_entry` has some state that Wash will pass-back in via. the `<state>` parameter whenever it invokes one of its supported actions. In this case, only `list` is supported, and `<state>` is a stringified JSON object containing the entry's class (`AWS::Profile`) in whatever language the plugin script was written in.
+We see from `cache_ttls` that the result of `some_entry`'s `list` action will be cached for 30 seconds. We see from `attributes` that `some_entry` has some filesystem attributes that are defined (note that the mode is `0777`; `511` is its Base-10 representation). Finally, we see from `state` that `some_entry` has some state that Wash will pass-back in via the `<state>` parameter whenever it invokes one of its supported actions. In this case, only `list` is supported, and `<state>` is a stringified JSON object containing the entry's class (`AWS::Profile`) in whatever language the plugin script was written in.
 
 The `init` action adopts the standard error conventions described in the [Errors](#errors) section.
 
 ## list
-The `list` action is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the `init` section (hence, `list` outputs an array of entries). Below is an example of valid output from the `list` action:
+The `list` action is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the `init` section (hence, `list` outputs an array of entries). Below is an example of valid output from the `list` action.
 
 ```
 [
@@ -91,6 +96,8 @@ The `list` action is invoked as `<plugin_script> list <path> <state>`. When `lis
 ]
 ```
 
+**NOTE:** Remember that the state displayed here is the same `<state>` parameter that will be passed in to other actions invoked on that entry. For example, if the `read` action is invoked on `LARGE_FILE.txt` via `<plugin_script> read <parent_path>/LARGE_FILE.txt <state>`, then the value of `LARGE_FILE.txt`'s `state` key will be passed-in for `<state>`.
+
 The `list` action adopts the standard error convention described in the [Errors](#errors) section.
 
 ## read
@@ -118,7 +125,7 @@ The `stream` action is invoked as `<plugin_script> stream <path> <state>`. When 
 The `stream` action adopts the standard error convention described in the [Errors](#errors) section.
 
 ## exec
-The `exec` action is invoked as `<plugin_script> exec <path> <state> <cmd> <args...>`. If the `Stdin` option is specified or included, then it is passed as stdin into the plugin script. When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
+The `exec` action is invoked as `<plugin_script> exec <path> <state> <cmd> <args...>`. If the `Stdin` option is specified in the `Exec` method's `ExecOptions` struct, then its content is passed-in as stdin into the plugin script. When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
 
 Because the `exec` action effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
@@ -151,4 +158,4 @@ For example, if `<entry> = myS3Bucket`, `<action> = list`, and `<args...>` is em
 
 You might be wondering why we don't just lump `<path>` and `<state>` together into `<entry>` so that the plugin script's usage becomes `<plugin_script> <action> <entry> <args...>`. There's several reasons. One, having the `<path>` is helpful for debugging purposes. You can directly see the acting entry in the logs, which frees you from having to figure that information out yourself. Two, it mirrors the API's structure of `/fs/<action>/<path>`. And three, sometimes the `<path>` is all you need to write your plugin script. While you could always print the `<path>` yourself and make that the `<state>` parameter for Wash to pass around, it can be annoying to have to constantly do that, especially when you're writing simple plugins. Thus, `<path>` is really more of a convenience. You should use `<path>` if that's what you need to write your plugin. Otherwise, if you're writing a more complicated plugin that needs to maintain some state (e.g. like the entry's class name and its constructor arguments), then use `<state>`. However, try to avoid using `<path>` and `<state>` together in the same plugin script, as doing so can make it hard to reason about your code. Use either `<path>` or `<state>`, but not both.
 
-**NOTE:** The `init` action is special. Its usage is `<plugin_script> init` -- there is no `<path>` or `<state`> so there is no `<entry>`. Thus, the OOP call of `<entry>.<action>(<args...>)` doesn't make sense for `init`. So how do you reason about it? Why do we have an `init` action? The answer is simple. Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry -- you just keep invoking the `list` action. Internal plugins specify their root via. a Go type. External plugins do not have this advantage. However, they still need some "way" to tell Wash what their root looks like in order for Wash to do anything meaningful with them. That "way" is the `init` action.
+**NOTE:** The `init` action is special. Its usage is `<plugin_script> init` -- there is no `<path>` or `<state`> so there is no `<entry>`. Thus, the OOP call of `<entry>.<action>(<args...>)` doesn't make sense for `init`. So how do you reason about it? Why do we have an `init` action? Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry by repeatedly invoking the `list` action. The `init` action is how you describe that 'root'.

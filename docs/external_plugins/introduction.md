@@ -19,4 +19,4 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
     ```
 4. Start the Wash server to see your plugin in action.
 
-**NOTE:** You can override the default `plugins.yaml` path via. the `external-plugins` flag. See `wash help server` for more information.
+**NOTE:** You can override the default `plugins.yaml` path via the `external-plugins` flag. See `wash help server` for more information.
