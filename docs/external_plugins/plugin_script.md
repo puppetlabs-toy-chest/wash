@@ -125,7 +125,7 @@ The `stream` action is invoked as `<plugin_script> stream <path> <state>`. When 
 The `stream` action adopts the standard error convention described in the [Errors](#errors) section.
 
 ## exec
-The `exec` action is invoked as `<plugin_script> exec <path> <state> <cmd> <args...>`. If the `Stdin` option is specified in the `Exec` method's `ExecOptions` struct, then its content is passed-in as stdin into the plugin script. When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
+The `exec` action is invoked as `<plugin_script> exec <path> <state> <cmd> <args...>`. If the `input` key is included as part of `opts` in a request to the `exec` endpoint, then its content is passed-in as stdin to the plugin script. When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
 
 Because the `exec` action effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
