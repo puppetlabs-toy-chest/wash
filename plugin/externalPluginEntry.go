@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ type decodedAttributes struct {
 	Atime int64         `json:"Atime"`
 	Mtime int64         `json:"Mtime"`
 	Ctime int64         `json:"Ctime"`
-	Mode  os.FileMode   `json:"Mode"`
+	Mode  uint64        `json:"Mode"`
 	Size  uint64        `json:"Size"`
 	Valid time.Duration `json:"Valid"`
 }
@@ -38,7 +37,7 @@ func (a decodedAttributes) toAttributes() Attributes {
 		Atime: unixSecondsToTimeAttr(a.Atime),
 		Mtime: unixSecondsToTimeAttr(a.Mtime),
 		Ctime: unixSecondsToTimeAttr(a.Ctime),
-		Mode:  a.Mode,
+		Mode:  ToFileMode(a.Mode),
 		Size:  a.Size,
 		Valid: a.Valid,
 	}

@@ -68,6 +68,36 @@ func (e ErrCouldNotDetermineSizeAttr) Error() string {
 	return fmt.Sprintf("could not determine the size attribute: %v", e.reason)
 }
 
+// ToFileMode converts a given mode into an os.FileMode object.
+// The mode can be either an integer or a string representing
+// an octal/hex/decimal number.
+func ToFileMode(mode uint64) os.FileMode {
+	fileMode := os.FileMode(mode & 0777)
+	if fileMode == 0 {
+		return fileMode
+	}
+
+	for bits, mod := range map[uint64]os.FileMode{
+		0140000: os.ModeSocket,
+		0120000: os.ModeSymlink,
+		// Skip file, absence of these implies a regular file.
+		0060000: os.ModeDevice,
+		0040000: os.ModeDir,
+		0020000: os.ModeCharDevice,
+		0010000: os.ModeNamedPipe,
+		0004000: os.ModeSetuid,
+		0002000: os.ModeSetgid,
+		0001000: os.ModeSticky,
+	} {
+		// Ensure exact match of all bits in the mask.
+		if mode&bits == bits {
+			fileMode |= mod
+		}
+	}
+
+	return fileMode
+}
+
 // FillAttr fills the given attributes struct with the entry's attributes.
 func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes) error {
 	attr.Size = SizeUnknown

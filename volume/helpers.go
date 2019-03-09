@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -51,25 +50,7 @@ func StatParse(line string) (plugin.Attributes, string, error) {
 	if err != nil {
 		return attr, "", err
 	}
-	// mode output of stat is not directly convertible to os.FileMode.
-	attr.Mode = os.FileMode(mode & 0777)
-	for bits, mod := range map[uint64]os.FileMode{
-		0140000: os.ModeSocket,
-		0120000: os.ModeSymlink,
-		// Skip file, absence of these implies a regular file.
-		0060000: os.ModeDevice,
-		0040000: os.ModeDir,
-		0020000: os.ModeCharDevice,
-		0010000: os.ModeNamedPipe,
-		0004000: os.ModeSetuid,
-		0002000: os.ModeSetgid,
-		0001000: os.ModeSticky,
-	} {
-		// Ensure exact match of all bits in the mask.
-		if mode&bits == bits {
-			attr.Mode |= mod
-		}
-	}
+	attr.Mode = plugin.ToFileMode(mode)
 
 	return attr, segments[5], nil
 }
