@@ -12,7 +12,7 @@ where
 * `<state>` consists of the minimum amount of information required to reconstruct the entry inside the plugin
 * `<args...>` are the arguments passed to the specific action.
 
-`<path>` and `<state>` can be a bit confusing. To understand them, we recommend reading the [Aside](#aside), and to look at the provided Bash + Ruby external plugin examples to see how they're used. **TODO: Link to these examples**
+`<path>` and `<state>` can be a bit confusing. To understand them, we recommend reading the [Aside](#aside), and to look at the provided [Bash](examples/sshfs.sh) + Ruby external plugin examples to see how they're used. **TODO: Link a Ruby example**
 
 The remaining sections describe all possible values of `<action>` that can be passed-in, including each action's calling and error conventions, and the expected results.
 
