@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/puppetlabs/wash/journal"
@@ -200,6 +201,39 @@ func (e *ExternalPluginEntry) Attr() Attributes {
 	return e.attr
 }
 
+type stdoutStreamer struct {
+	stdoutRdr io.ReadCloser
+	cmd       *exec.Cmd
+}
+
+func (s *stdoutStreamer) Read(p []byte) (int, error) {
+	return s.stdoutRdr.Read(p)
+}
+
+func (s *stdoutStreamer) Close() error {
+	var err error
+
+	if closeErr := s.stdoutRdr.Close(); closeErr != nil {
+		err = fmt.Errorf("error closing stdout: %v", closeErr)
+	}
+
+	if signalErr := s.cmd.Process.Signal(syscall.SIGTERM); signalErr != nil {
+		signalErr = fmt.Errorf(
+			"error sending SIGTERM to process with PID %v: %v",
+			s.cmd.Process.Pid,
+			signalErr,
+		)
+
+		if err != nil {
+			err = fmt.Errorf("%v; and %v", err, signalErr)
+		} else {
+			err = signalErr
+		}
+	}
+
+	return err
+}
+
 // Stream streams the entry's content
 func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
@@ -292,7 +326,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 			}
 		}()
 
-		return stdoutR, nil
+		return &stdoutStreamer{stdoutR, cmd}, nil
 	case <-timer:
 		defer waitForCommandToFinish()
 

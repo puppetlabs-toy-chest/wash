@@ -118,9 +118,7 @@ The `metadata` action is invoked as `<plugin_script> metadata <path> <state>`. W
 The `metadata` action adopts the standard error convention described in the [Errors](#errors) section.
 
 ## stream
-The `stream` action is invoked as `<plugin_script> stream <path> <state>`. When `stream` is invoked, the first line of the script's output must contain the `200` header. This header tells Wash that the entry's data is about to the streamed. After it outputs the header, the script must then output the entry's data.
-
-**TODO: Come up with a way to handle stream such that `tail -f` can be supported on external plugins. Once that's figured out, finish the rest of this section**
+The `stream` action is invoked as `<plugin_script> stream <path> <state>`. When `stream` is invoked, the first line of the script's output must contain the `200` header. This header tells Wash that the entry's data is about to the streamed. After it outputs the header, the script must then stream the entry's data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request. In the latter case, Wash will send the `SIGTERM` signal to the streaming process.
 
 The `stream` action adopts the standard error convention described in the [Errors](#errors) section.
 

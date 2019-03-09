@@ -182,9 +182,7 @@ function print_children {
   fi
 
   # Now print the last child
-  echo "${stat_output}"\
-     | tail -n1\
-     | print_file_json ${stat_output}
+  print_file_json `echo "${stat_output}" | tail -n1`
 
   echo "]"
 }
@@ -282,7 +280,12 @@ case "${action}" in
   # This way, Wash knows that we're about to stream some data.
   echo "200"
 
-  vm_exec "${vm}" "cat ${path}"
+  # We could also `cat` here, which is useful for large files.
+  # Instead, we choose `tail -f` to show that external plugins
+  # can implement their own `tail -f` like behavior. Don't worry,
+  # Wash will send the SIGTERM signal to our process when it no
+  # longer needs our streamed data.
+  vm_exec "${vm}" "tail -f ${path}"
   exit 0
 ;;
 *)
