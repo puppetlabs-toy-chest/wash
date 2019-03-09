@@ -58,8 +58,8 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
-	if readable, ok := f.Entry().(plugin.Readable); ok {
-		content, err := plugin.CachedOpen(ctx, readable, f.id)
+	if plugin.ReadAction.IsSupportedOn(f.Entry()) {
+		content, err := plugin.CachedOpen(ctx, f.Entry().(plugin.Readable), f.id)
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 			journal.Record(ctx, "FUSE: Open %v errored: %v", f, err)
