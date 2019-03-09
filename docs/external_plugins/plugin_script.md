@@ -33,7 +33,7 @@ This example shows the *minimum* amount of information required for Wash to cons
 You can include additional keys in the printed JSON object. These keys are:
 
 * `cache_ttls`. This specifies how many seconds each supported action's result should be cached (`ttl` is short for time to live).
-* `attributes`. This represents the entry's filesystem attributes, if any. These are the access time `Atime`, last modified time `Mtime`, creation time `Ctime`, mode `Mode`, and size `Size`. The individual time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
+* `attributes`. This represents the entry's filesystem attributes, if any. These are the access time `atime`, last modified time `mtime`, creation time `ctime`, mode `mode`, and size `size`. The individual time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
 * `state`. This corresponds to the `<state>` parameter in the plugin script's usage.
 
 Below is an example JSON object showcasing all possible keys at once.
@@ -48,11 +48,11 @@ Below is an example JSON object showcasing all possible keys at once.
     "list": 30
   },
   "attributes": {
-    "Atime": 1551942012,
-    "Mtime": 1551942012,
-    "Ctime": 1551942012,
-    "Mode": 511,
-    "Size": 15600
+    "atime": 1551942012,
+    "mtime": 1551942012,
+    "ctime": 1551942012,
+    "mode": 511,
+    "size": 15600
   },
   "state": "{\"klass\":\"AWS::Profile\"}"
 }

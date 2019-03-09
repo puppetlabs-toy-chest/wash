@@ -17,12 +17,12 @@ import (
 
 type decodedAttributes struct {
 	// Atime, Mtime, and Ctime are in Unix time
-	Atime int64         `json:"Atime"`
-	Mtime int64         `json:"Mtime"`
-	Ctime int64         `json:"Ctime"`
-	Mode  interface{}   `json:"Mode"`
-	Size  uint64        `json:"Size"`
-	Valid time.Duration `json:"Valid"`
+	Atime int64         `json:"atime"`
+	Mtime int64         `json:"mtime"`
+	Ctime int64         `json:"ctime"`
+	Mode  interface{}   `json:"mode"`
+	Size  uint64        `json:"size"`
+	Valid time.Duration `json:"valid"`
 }
 
 func unixSecondsToTimeAttr(seconds int64) time.Time {

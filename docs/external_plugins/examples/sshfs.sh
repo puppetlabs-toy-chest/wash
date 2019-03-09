@@ -123,11 +123,11 @@ function print_file_json {
   fi
 
   attributes_json=$(echo "{\
-\"Atime\":${atime},\
-\"Mtime\":${mtime},\
-\"Ctime\":${ctime},\
-\"Mode\":${intMode},\
-\"Size\":${size}\
+\"atime\":${atime},\
+\"mtime\":${mtime},\
+\"ctime\":${ctime},\
+\"mode\":${intMode},\
+\"size\":${size}\
 }")
 
   print_entry_json "${name}" "${supported_actions}" "${attributes_json}"
