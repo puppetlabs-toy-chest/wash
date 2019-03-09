@@ -46,11 +46,11 @@ func StatParse(line string) (plugin.Attributes, string, error) {
 		*target = time.Unix(epoch, 0)
 	}
 
-	mode, err := strconv.ParseUint(segments[4], 16, 32)
+	mode, err := plugin.ToFileMode(segments[4])
 	if err != nil {
 		return attr, "", err
 	}
-	attr.Mode = plugin.ToFileMode(mode)
+	attr.Mode = mode
 
 	return attr, segments[5], nil
 }

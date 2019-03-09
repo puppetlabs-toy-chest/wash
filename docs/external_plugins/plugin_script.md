@@ -33,7 +33,7 @@ This example shows the *minimum* amount of information required for Wash to cons
 You can include additional keys in the printed JSON object. These keys are:
 
 * `cache_ttls`. This specifies how many seconds each supported action's result should be cached (`ttl` is short for time to live).
-* `attributes`. This represents the entry's filesystem attributes, if any. These are the access time `Atime`, last modified time `Mtime`, creation time `Ctime`, mode `Mode`, and size `Size`. The individual time attributes are specified in Unix seconds. 
+* `attributes`. This represents the entry's filesystem attributes, if any. These are the access time `Atime`, last modified time `Mtime`, creation time `Ctime`, mode `Mode`, and size `Size`. The individual time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
 * `state`. This corresponds to the `<state>` parameter in the plugin script's usage.
 
 Below is an example JSON object showcasing all possible keys at once.

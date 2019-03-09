@@ -19,7 +19,7 @@ type decodedAttributes struct {
 	Atime int64         `json:"Atime"`
 	Mtime int64         `json:"Mtime"`
 	Ctime int64         `json:"Ctime"`
-	Mode  uint64        `json:"Mode"`
+	Mode  interface{}   `json:"Mode"`
 	Size  uint64        `json:"Size"`
 	Valid time.Duration `json:"Valid"`
 }
@@ -32,15 +32,24 @@ func unixSecondsToTimeAttr(seconds int64) time.Time {
 	return time.Unix(seconds, 0)
 }
 
-func (a decodedAttributes) toAttributes() Attributes {
-	return Attributes{
+func (a decodedAttributes) toAttributes() (Attributes, error) {
+	attr := Attributes{
 		Atime: unixSecondsToTimeAttr(a.Atime),
 		Mtime: unixSecondsToTimeAttr(a.Mtime),
 		Ctime: unixSecondsToTimeAttr(a.Ctime),
-		Mode:  ToFileMode(a.Mode),
 		Size:  a.Size,
 		Valid: a.Valid,
 	}
+
+	if a.Mode != nil {
+		mode, err := ToFileMode(a.Mode)
+		if err != nil {
+			return Attributes{}, err
+		}
+		attr.Mode = mode
+	}
+
+	return attr, nil
 }
 
 type decodedCacheTTLs struct {
@@ -82,11 +91,16 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 		return nil, fmt.Errorf("the entry's supported actions must be provided")
 	}
 
+	attr, err := e.Attributes.toAttributes()
+	if err != nil {
+		return nil, err
+	}
+
 	entry := &ExternalPluginEntry{
 		name:             e.Name,
 		supportedActions: e.SupportedActions,
 		state:            e.State,
-		attr:             e.Attributes.toAttributes(),
+		attr:             attr,
 		cacheConfig:      e.CacheTTLs.toCacheConfig(),
 	}
 	return entry, nil
