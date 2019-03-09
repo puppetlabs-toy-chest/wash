@@ -43,6 +43,14 @@ func (cache *MemCache) lockForKey(key string) *locksutil.LockEntry {
 	return locksutil.LockForKey(cache.locks, key)
 }
 
+func (cache *MemCache) set(key string, value interface{}, ttl time.Duration) {
+	if cache.hasEviction {
+		// Delete first to ensure eviction is handled.
+		cache.instance.Delete(key)
+	}
+	cache.instance.Set(key, value, ttl)
+}
+
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
@@ -57,7 +65,7 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit 
 		log.Tracef("Cache hit on %v", key)
 		if resetTTLOnHit {
 			// Update last-access time
-			cache.instance.Set(key, value, ttl)
+			cache.set(key, value, ttl)
 		}
 		if err, ok := value.(error); ok {
 			return nil, err
@@ -71,15 +79,15 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit 
 	// Cache error responses as well. These are often authentication or availability failures
 	// and we don't want to continually query the API on failures.
 	if err != nil {
-		cache.instance.Set(key, err, ttl)
+		cache.set(key, err, ttl)
 		return nil, err
 	}
 
-	cache.instance.Set(key, value, ttl)
+	cache.set(key, value, ttl)
 	return value, nil
 }
 
-// Flush deletes all items from the cache.
+// Flush deletes all items from the cache. Also resets cache capacity.
 // This operation is significantly slower when cache was created with NewMemCacheWithEvicted.
 func (cache *MemCache) Flush() {
 	if cache.hasEviction {
