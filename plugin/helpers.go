@@ -104,14 +104,10 @@ func parseMode(mode interface{}) (uint64, error) {
 func ToFileMode(mode interface{}) (os.FileMode, error) {
 	intMode, err := parseMode(mode)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 
 	fileMode := os.FileMode(intMode & 0777)
-	if fileMode == 0 {
-		return fileMode, nil
-	}
-
 	for bits, mod := range map[uint64]os.FileMode{
 		0140000: os.ModeSocket,
 		0120000: os.ModeSymlink,
