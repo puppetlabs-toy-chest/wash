@@ -3,10 +3,14 @@ package plugin
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestToMetadata(t *testing.T) {
+type HelpersTestSuite struct {
+	suite.Suite
+}
+
+func (suite *HelpersTestSuite) TestToMetadata() {
 	cases := []struct {
 		input    interface{}
 		expected MetadataMap
@@ -19,6 +23,10 @@ func TestToMetadata(t *testing.T) {
 	}
 	for _, c := range cases {
 		actual := ToMetadata(c.input)
-		assert.Equal(t, c.expected, actual)
+		suite.Equal(c.expected, actual)
 	}
+}
+
+func TestHelpers(t *testing.T) {
+	suite.Run(t, new(HelpersTestSuite))
 }
