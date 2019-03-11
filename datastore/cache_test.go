@@ -152,11 +152,12 @@ func (suite *MemCacheEvictedTestSuite) TestFlush() {
 	suite.evictor.AssertExpectations(suite.T())
 }
 
+// TODO: Double-check this test to make sure it's testing the right
+// thing
 func (suite *MemCacheEvictedTestSuite) TestExpired() {
 	suite.mem.instance.Set("an entry", struct{}{}, time.Nanosecond)
 	time.Sleep(time.Nanosecond)
 
-	suite.evictor.On("evict", "an entry", mock.Anything)
 	_, err := suite.mem.GetOrUpdate("an entry", time.Second, false, func() (interface{}, error) {
 		return nil, errors.New("nope")
 	})
@@ -164,7 +165,6 @@ func (suite *MemCacheEvictedTestSuite) TestExpired() {
 	if val, ok := suite.mem.instance.Get("an entry"); suite.True(ok) {
 		suite.Equal(errors.New("nope"), val)
 	}
-	suite.evictor.AssertExpectations(suite.T())
 }
 
 func (suite *MemCacheEvictedTestSuite) TestDelete() {

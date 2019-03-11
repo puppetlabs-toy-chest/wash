@@ -4,8 +4,10 @@ import (
 	"regexp"
 	"time"
 
+	// TODO: Once https://github.com/patrickmn/go-cache/pull/75
+	// is merged, go back to importing the main go-cache repo.
+	cache "github.com/ekinanp/go-cache"
 	"github.com/hashicorp/vault/helper/locksutil"
-	cache "github.com/patrickmn/go-cache"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,14 +45,6 @@ func (cache *MemCache) lockForKey(key string) *locksutil.LockEntry {
 	return locksutil.LockForKey(cache.locks, key)
 }
 
-func (cache *MemCache) set(key string, value interface{}, ttl time.Duration) {
-	if cache.hasEviction {
-		// Delete first to ensure eviction is handled.
-		cache.instance.Delete(key)
-	}
-	cache.instance.Set(key, value, ttl)
-}
-
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
@@ -65,7 +59,7 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit 
 		log.Tracef("Cache hit on %v", key)
 		if resetTTLOnHit {
 			// Update last-access time
-			cache.set(key, value, ttl)
+			cache.instance.Set(key, value, ttl)
 		}
 		if err, ok := value.(error); ok {
 			return nil, err
@@ -79,11 +73,11 @@ func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit 
 	// Cache error responses as well. These are often authentication or availability failures
 	// and we don't want to continually query the API on failures.
 	if err != nil {
-		cache.set(key, err, ttl)
+		cache.instance.Set(key, err, ttl)
 		return nil, err
 	}
 
-	cache.set(key, value, ttl)
+	cache.instance.Set(key, value, ttl)
 	return value, nil
 }
 
