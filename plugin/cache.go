@@ -104,14 +104,33 @@ func UnsetTestCache() {
 	cache = nil
 }
 
+// This method exists to simplify ClearCacheFor's tests.
+// Specifically, it lets us decouple the regex's correctness
+// from the cache's implementation.
+func opKeysRegex(path string) (*regexp.Regexp, error) {
+	opQualifier := "^[a-zA-Z]*::"
+
+	var expr string
+	if path == "/" {
+		expr = opQualifier + "/.*"
+	} else {
+		expr = opQualifier + "/" + strings.Trim(path, "/") + "($|/.*)"
+	}
+
+	return regexp.Compile(expr)
+}
+
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
 // If successful, returns an array of deleted keys.
+//
+// TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
+// right now, but may be worth considering in the future.
 func ClearCacheFor(path string) ([]string, error) {
-	expr := "^[a-zA-Z]*::/" + strings.Trim(path, "/") + "($|/.*)"
-	rx, err := regexp.Compile(expr)
+	rx, err := opKeysRegex(path)
 	if err != nil {
 		return nil, err
 	}
+
 	return cache.Delete(rx), nil
 }
 
