@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -25,11 +26,11 @@ type CacheTestSuite struct {
 }
 
 func (suite *CacheTestSuite) SetupSuite() {
-	InitCache()
+	SetTestCache(datastore.NewMemCache())
 }
 
 func (suite *CacheTestSuite) TearDownSuite() {
-	TeardownCache()
+	UnsetTestCache()
 }
 
 func (suite *CacheTestSuite) getOrUpdate(key string, init func() (interface{}, error)) {

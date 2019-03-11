@@ -59,17 +59,48 @@ func (config *CacheConfig) TurnOffCaching() {
 	}
 }
 
-var cache *datastore.MemCache
+var cache datastore.Cache
 var defaultConfig CacheConfig
+
+func notRunningTests() bool {
+	return flag.Lookup("test.v") == nil
+}
 
 // InitCache initializes the cache
 func InitCache() {
-	cache = datastore.NewMemCache()
-	defaultConfig = *newCacheConfig()
+	if notRunningTests() {
+		cache = datastore.NewMemCache()
+		defaultConfig = *newCacheConfig()
+	} else {
+		panic("InitCache can only be called in production. Tests should call SetTestCache instead.")
+	}
 }
 
-// TeardownCache allows deleting the cache to support testing with and without caching.
-func TeardownCache() {
+// SetTestCache sets the cache to the provided mock. It can only be called
+// by the tests
+func SetTestCache(c datastore.Cache) {
+	if notRunningTests() {
+		panic("SetTestCache can only be called when running the tests")
+	}
+
+	if cache != nil {
+		panic("The test cache has already been set")
+	}
+
+	cache = c
+}
+
+// UnsetTestCache unsets the test cache. It can only be called
+// by the tests
+func UnsetTestCache() {
+	if notRunningTests() {
+		panic("UnsetTestCache can only be called when running the tests")
+	}
+
+	if cache == nil {
+		panic("The test cache has already been unset")
+	}
+
 	cache = nil
 }
 
@@ -86,11 +117,11 @@ func ClearCacheFor(path string) ([]string, error) {
 
 func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (interface{}, error)) (interface{}, error) {
 	if cache == nil {
-		// Skip cache operations when we're testing.
-		if flag.Lookup("test.v") != nil {
-			return generateValue()
+		if notRunningTests() {
+			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
+		} else {
+			panic("The test cache was not set. You can set it by invoking plugin.SetTestCache(<cache>)")
 		}
-		panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
 	}
 
 	cached, ok := entry.(Cached)

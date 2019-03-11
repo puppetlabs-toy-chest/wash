@@ -2,10 +2,9 @@ package api
 
 import (
 	"context"
-	"testing"
 
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 type mockGroup struct {
@@ -17,7 +16,19 @@ func (g *mockGroup) List(context.Context) ([]plugin.Entry, error) {
 	return g.entries, nil
 }
 
-func TestFindEntry(t *testing.T) {
+type HelpersTestSuite struct {
+	suite.Suite
+}
+
+func (suite *HelpersTestSuite) SetupSuite() {
+	plugin.SetTestCache(newMockCache())
+}
+
+func (suite *HelpersTestSuite) TearDownSuite() {
+	plugin.UnsetTestCache()
+}
+
+func (suite *HelpersTestSuite) TestFindEntry() {
 	type testcase struct {
 		segments      []string
 		expectedEntry string
@@ -25,15 +36,15 @@ func TestFindEntry(t *testing.T) {
 	}
 	runTestCase := func(grp plugin.Group, c testcase) {
 		got, err := findEntry(context.Background(), grp, c.segments)
-		if c.expectedEntry != "" && assert.NotNil(t, got) {
-			assert.Equal(t, c.expectedEntry, got.Name())
+		if c.expectedEntry != "" && suite.NotNil(got) {
+			suite.Equal(c.expectedEntry, got.Name())
 		} else {
-			assert.Nil(t, got)
+			suite.Nil(got)
 		}
 		if c.expectedErr == nil {
-			assert.Nil(t, err)
+			suite.Nil(err)
 		} else {
-			assert.Equal(t, c.expectedErr, err)
+			suite.Equal(c.expectedErr, err)
 		}
 	}
 

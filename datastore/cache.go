@@ -11,6 +11,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Cache is an interface for a cache.
+type Cache interface {
+	GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error)
+	Flush()
+	Delete(matcher *regexp.Regexp) []string
+}
+
 // MemCache is an in-memory cache. It supports concurrent get/set, as well as the ability
 // to get-or-update cached data in a single transaction to avoid redundant update activity.
 type MemCache struct {

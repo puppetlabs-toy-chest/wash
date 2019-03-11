@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -15,19 +17,61 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// TODO: Now that the plugin cache can be mocked, come back later and
+// simplify these tests.
+
+type mockCache struct {
+	mock.Mock
+	items map[string]interface{}
+}
+
+func newMockCache() *mockCache {
+	return &mockCache{items: make(map[string]interface{})}
+}
+
+func (m *mockCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+	if v, ok := m.items[key]; ok {
+		return v, nil
+	}
+
+	val, err := generateValue()
+	if err != nil {
+		return nil, err
+	}
+
+	m.items[key] = val
+	return val, nil
+}
+
+func (m *mockCache) Flush() {
+	m.items = make(map[string]interface{})
+}
+
+func (m *mockCache) Delete(matcher *regexp.Regexp) []string {
+	deleted := make([]string, 0, len(m.items))
+	for k := range m.items {
+		if matcher.MatchString(k) {
+			delete(m.items, k)
+			deleted = append(deleted, k)
+		}
+	}
+
+	return deleted
+}
+
 type CacheHandlerTestSuite struct {
 	suite.Suite
 	router *mux.Router
 }
 
 func (suite *CacheHandlerTestSuite) SetupSuite() {
-	plugin.InitCache()
+	plugin.SetTestCache(newMockCache())
 	suite.router = mux.NewRouter()
 	suite.router.Handle("/cache/{path:.*}", cacheHandler)
 }
 
 func (suite *CacheHandlerTestSuite) TearDownSuite() {
-	plugin.TeardownCache()
+	plugin.UnsetTestCache()
 }
 
 func (suite *CacheHandlerTestSuite) TestRejectsGet() {
