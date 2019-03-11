@@ -269,11 +269,6 @@ func (suite *HelpersTestSuite) TestExitCodeFromErr() {
 	}
 }
 
-func (suite *HelpersTestSuite) SetupTest() {
-	// Turn off the cache in case another set of tests initialized it
-	cache = nil
-}
-
 func TestHelpers(t *testing.T) {
 	suite.Run(t, new(HelpersTestSuite))
 }

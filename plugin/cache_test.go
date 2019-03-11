@@ -24,8 +24,12 @@ type CacheTestSuite struct {
 	suite.Suite
 }
 
-func (suite *CacheTestSuite) SetupTest() {
+func (suite *CacheTestSuite) SetupSuite() {
 	InitCache()
+}
+
+func (suite *CacheTestSuite) TearDownSuite() {
+	TeardownCache()
 }
 
 func (suite *CacheTestSuite) getOrUpdate(key string, init func() (interface{}, error)) {

@@ -251,11 +251,6 @@ func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 
 }
 
-func (suite *OutputStreamTestSuite) SetupTest() {
-	// Turn off the cache in case another set of tests initialized it
-	cache = nil
-}
-
 func TestOutputStream(t *testing.T) {
 	suite.Run(t, new(OutputStreamTestSuite))
 }
