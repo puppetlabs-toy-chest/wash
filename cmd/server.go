@@ -40,7 +40,7 @@ func serverCommand() *cobra.Command {
 	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
 	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
 
-	serverCmd.Flags().String("external-plugins", "plugins.yaml", "Specify the file to load any external plugins")
+	serverCmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
 	errz.Fatal(viper.BindPFlag("external-plugins", serverCmd.Flags().Lookup("external-plugins")))
 
 	serverCmd.RunE = toRunE(serverMain)
@@ -70,7 +70,9 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	var registry plugin.Registry
 	registry.Plugins = make(map[string]plugin.Root)
 	loadInternalPlugins(&registry)
-	loadExternalPlugins(&registry, externalPluginsPath)
+	if externalPluginsPath != "" {
+		loadExternalPlugins(&registry, externalPluginsPath)
+	}
 	if len(registry.Plugins) == 0 {
 		log.Warn("No plugins loaded")
 		return exitCode{1}
