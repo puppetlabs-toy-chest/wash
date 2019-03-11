@@ -254,7 +254,7 @@ func (suite *HelpersTestSuite) TestExitCodeFromErr() {
 	}
 
 	arbitraryErr := fmt.Errorf("an arbitrary error")
-	exitCode, err = ExitCodeFromErr(arbitraryErr)
+	_, err = ExitCodeFromErr(arbitraryErr)
 	suite.EqualError(err, arbitraryErr.Error())
 
 	// The default exit code is 0 for an empty ProcessState object

@@ -212,14 +212,19 @@ func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 		defer stdout.Close()
 		defer stderr.Close()
 
-		writeTo := func(stream *OutputStream, data string) {
+		writeTo := func(streamName string, stream *OutputStream, data string) {
 			expectedChunksCh <- ExecOutputChunk{StreamID: stream.id, Data: data}
-			stream.Write([]byte(data))
+			_, err := stream.Write([]byte(data))
+			if !suite.NoError(err) {
+				suite.FailNow(
+					fmt.Sprintf("Unexpected error writing to %v: %v", streamName, err),
+				)
+			}
 		}
 		for i := 0; i < 5; i++ {
 			data := strconv.Itoa(i)
-			writeTo(stdout, data)
-			writeTo(stderr, data)
+			writeTo("stdout", stdout, data)
+			writeTo("stderr", stderr, data)
 		}
 	}()
 

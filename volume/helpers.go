@@ -46,7 +46,7 @@ func StatParse(line string) (plugin.Attributes, string, error) {
 		*target = time.Unix(epoch, 0)
 	}
 
-	mode, err := plugin.ToFileMode(segments[4])
+	mode, err := plugin.ToFileMode("0x" + segments[4])
 	if err != nil {
 		return attr, "", err
 	}
