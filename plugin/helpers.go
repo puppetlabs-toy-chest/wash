@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -68,15 +69,45 @@ func (e ErrCouldNotDetermineSizeAttr) Error() string {
 	return fmt.Sprintf("could not determine the size attribute: %v", e.reason)
 }
 
+func parseMode(mode interface{}) (uint64, error) {
+	if uintMode, ok := mode.(uint64); ok {
+		return uintMode, nil
+	}
+
+	if intMode, ok := mode.(int64); ok {
+		return uint64(intMode), nil
+	}
+
+	if floatMode, ok := mode.(float64); ok {
+		if floatMode != float64(uint64(floatMode)) {
+			return 0, fmt.Errorf("could not parse mode: the provided mode %v is a decimal number", floatMode)
+		}
+
+		return uint64(floatMode), nil
+	}
+
+	strMode, ok := mode.(string)
+	if !ok {
+		return 0, fmt.Errorf("could not parse mode: the provided mode %v is not a uint64, int64, float64, or string", strMode)
+	}
+
+	if intMode, err := strconv.ParseUint(strMode, 0, 32); err == nil {
+		return intMode, nil
+	}
+
+	return 0, fmt.Errorf("could not parse mode: the provided mode %v is not a octal/hex/decimal number", strMode)
+}
+
 // ToFileMode converts a given mode into an os.FileMode object.
 // The mode can be either an integer or a string representing
 // an octal/hex/decimal number.
-func ToFileMode(mode uint64) os.FileMode {
-	fileMode := os.FileMode(mode & 0777)
-	if fileMode == 0 {
-		return fileMode
+func ToFileMode(mode interface{}) (os.FileMode, error) {
+	intMode, err := parseMode(mode)
+	if err != nil {
+		return 0, err
 	}
 
+	fileMode := os.FileMode(intMode & 0777)
 	for bits, mod := range map[uint64]os.FileMode{
 		0140000: os.ModeSocket,
 		0120000: os.ModeSymlink,
@@ -90,12 +121,12 @@ func ToFileMode(mode uint64) os.FileMode {
 		0001000: os.ModeSticky,
 	} {
 		// Ensure exact match of all bits in the mask.
-		if mode&bits == bits {
+		if intMode&bits == bits {
 			fileMode |= mod
 		}
 	}
 
-	return fileMode
+	return fileMode, nil
 }
 
 // FillAttr fills the given attributes struct with the entry's attributes.

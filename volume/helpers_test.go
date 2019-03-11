@@ -3,6 +3,7 @@ package volume
 import (
 	"errors"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -65,7 +66,7 @@ func TestStatParse(t *testing.T) {
 
 	_, _, err = StatParse("96 1550611510 1550611448 1550611448 zebra mnt/path")
 	if assert.NotNil(t, err) {
-		assert.Equal(t, &strconv.NumError{Func: "ParseUint", Num: "zebra", Err: strconv.ErrSyntax}, err)
+		assert.Regexp(t, regexp.MustCompile("parse.*mode.*zebra"), err.Error())
 	}
 }
 

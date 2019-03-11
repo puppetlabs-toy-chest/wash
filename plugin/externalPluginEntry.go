@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/puppetlabs/wash/journal"
@@ -16,12 +17,12 @@ import (
 
 type decodedAttributes struct {
 	// Atime, Mtime, and Ctime are in Unix time
-	Atime int64         `json:"Atime"`
-	Mtime int64         `json:"Mtime"`
-	Ctime int64         `json:"Ctime"`
-	Mode  uint64        `json:"Mode"`
-	Size  uint64        `json:"Size"`
-	Valid time.Duration `json:"Valid"`
+	Atime int64         `json:"atime"`
+	Mtime int64         `json:"mtime"`
+	Ctime int64         `json:"ctime"`
+	Mode  interface{}   `json:"mode"`
+	Size  uint64        `json:"size"`
+	Valid time.Duration `json:"valid"`
 }
 
 func unixSecondsToTimeAttr(seconds int64) time.Time {
@@ -32,15 +33,24 @@ func unixSecondsToTimeAttr(seconds int64) time.Time {
 	return time.Unix(seconds, 0)
 }
 
-func (a decodedAttributes) toAttributes() Attributes {
-	return Attributes{
+func (a decodedAttributes) toAttributes() (Attributes, error) {
+	attr := Attributes{
 		Atime: unixSecondsToTimeAttr(a.Atime),
 		Mtime: unixSecondsToTimeAttr(a.Mtime),
 		Ctime: unixSecondsToTimeAttr(a.Ctime),
-		Mode:  ToFileMode(a.Mode),
 		Size:  a.Size,
 		Valid: a.Valid,
 	}
+
+	if a.Mode != nil {
+		mode, err := ToFileMode(a.Mode)
+		if err != nil {
+			return Attributes{}, err
+		}
+		attr.Mode = mode
+	}
+
+	return attr, nil
 }
 
 type decodedCacheTTLs struct {
@@ -82,11 +92,16 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 		return nil, fmt.Errorf("the entry's supported actions must be provided")
 	}
 
+	attr, err := e.Attributes.toAttributes()
+	if err != nil {
+		return nil, err
+	}
+
 	entry := &ExternalPluginEntry{
 		name:             e.Name,
 		supportedActions: e.SupportedActions,
 		state:            e.State,
-		attr:             e.Attributes.toAttributes(),
+		attr:             attr,
 		cacheConfig:      e.CacheTTLs.toCacheConfig(),
 	}
 	return entry, nil
@@ -186,6 +201,39 @@ func (e *ExternalPluginEntry) Attr() Attributes {
 	return e.attr
 }
 
+type stdoutStreamer struct {
+	stdoutRdr io.ReadCloser
+	cmd       *exec.Cmd
+}
+
+func (s *stdoutStreamer) Read(p []byte) (int, error) {
+	return s.stdoutRdr.Read(p)
+}
+
+func (s *stdoutStreamer) Close() error {
+	var err error
+
+	if closeErr := s.stdoutRdr.Close(); closeErr != nil {
+		err = fmt.Errorf("error closing stdout: %v", closeErr)
+	}
+
+	if signalErr := s.cmd.Process.Signal(syscall.SIGTERM); signalErr != nil {
+		signalErr = fmt.Errorf(
+			"error sending SIGTERM to process with PID %v: %v",
+			s.cmd.Process.Pid,
+			signalErr,
+		)
+
+		if err != nil {
+			err = fmt.Errorf("%v; and %v", err, signalErr)
+		} else {
+			err = signalErr
+		}
+	}
+
+	return err
+}
+
 // Stream streams the entry's content
 func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
@@ -278,7 +326,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 			}
 		}()
 
-		return stdoutR, nil
+		return &stdoutStreamer{stdoutR, cmd}, nil
 	case <-timer:
 		defer waitForCommandToFinish()
 
