@@ -84,8 +84,9 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 	// Test a successful write
 	data := []byte("data")
 	nw, writeErr := stream.Write(data)
-	suite.NoError(writeErr)
-	suite.Equal(len(data), nw, "Write should return the number of written bytes")
+	if suite.NoError(writeErr) {
+		suite.Equal(len(data), nw, "Write should return the number of written bytes")
+	}
 	select {
 	case chunk := <-stream.ch:
 		suite.EqualChunk(

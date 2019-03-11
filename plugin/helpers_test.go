@@ -59,8 +59,9 @@ func (suite *HelpersTestSuite) TestParseMode() {
 		if c.errRegex != "" {
 			suite.Regexp(regexp.MustCompile(c.errRegex), err)
 		} else {
-			suite.NoError(err)
-			suite.Equal(c.expected, actual)
+			if suite.NoError(err) {
+				suite.Equal(c.expected, actual)
+			}
 		}
 	}
 }
@@ -87,8 +88,9 @@ func (suite *HelpersTestSuite) TestToFileMode() {
 		if c.errRegex != "" {
 			suite.Regexp(regexp.MustCompile(c.errRegex), err)
 		} else {
-			suite.NoError(err)
-			suite.Equal(c.expected, actual)
+			if suite.NoError(err) {
+				suite.Equal(c.expected, actual)
+			}
 		}
 	}
 }
@@ -125,24 +127,26 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	entry.On("Attr").Return(expectedAttributes)
 	attr := Attributes{}
 	err := FillAttr(context.Background(), entry, "id", &attr)
-	suite.NoError(err)
-	suite.Equal(
-		expectedAttributes,
-		attr,
-		"FillAttr should use the entry's filesystem attributes if they're provided",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			expectedAttributes,
+			attr,
+			"FillAttr should use the entry's filesystem attributes if they're provided",
+		)
+	}
 
 	// Test that if the entry supports the list action, then it sets
 	// the mode to 0550
 	group := &mockGroup{EntryBase: NewEntry("mockGroup")}
 	attr = Attributes{}
 	err = FillAttr(context.Background(), group, "id", &attr)
-	suite.NoError(err)
-	suite.Equal(
-		Attributes{Mode: os.ModeDir | 0550, Size: SizeUnknown},
-		attr,
-		"FillAttr does not set the default mode to os.ModeDir | 0550 for entries that support the list action",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			Attributes{Mode: os.ModeDir | 0550, Size: SizeUnknown},
+			attr,
+			"FillAttr does not set the default mode to os.ModeDir | 0550 for entries that support the list action",
+		)
+	}
 
 	// Test that if the entry does not support the list action, then it sets
 	// the mode to 0440
@@ -150,12 +154,13 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	entry.On("Attr").Return(Attributes{})
 	attr = Attributes{}
 	err = FillAttr(context.Background(), entry, "id", &attr)
-	suite.NoError(err)
-	suite.Equal(
-		Attributes{Mode: 0440, Size: SizeUnknown},
-		attr,
-		"FillAttr does not set the default mode to 0440 for entries that do notsupport the list action",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			Attributes{Mode: 0440, Size: SizeUnknown},
+			attr,
+			"FillAttr does not set the default mode to 0440 for entries that do notsupport the list action",
+		)
+	}
 }
 
 type mockReadableEntry struct {
@@ -194,12 +199,13 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr := Attributes{}
 	err := FillAttr(ctx, entry, "id", &attr)
-	suite.NoError(err)
-	suite.Equal(
-		uint64(mockRdr.Size()),
-		attr.Size,
-		"FillAttr should calculate the size attribute from the entry's content if its value is SizeUnknown",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			uint64(mockRdr.Size()),
+			attr.Size,
+			"FillAttr should calculate the size attribute from the entry's content if its value is SizeUnknown",
+		)
+	}
 
 	// Test that the size attribute is _not_ calculated from the content
 	// if it is already known
@@ -207,12 +213,13 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr = Attributes{}
 	err = FillAttr(ctx, entry, "id", &attr)
-	suite.NoError(err)
-	suite.Equal(
-		uint64(10),
-		attr.Size,
-		"FillAttr should _not_ calculate the size attribute from the entry's content if it is already known",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			uint64(10),
+			attr.Size,
+			"FillAttr should _not_ calculate the size attribute from the entry's content if it is already known",
+		)
+	}
 
 	// Test that FillAttr returns an ErrCouldNotDetermineSizeAttr error if
 	// Open errors, and that it still proceeds to fill-in the mode for FUSE
@@ -238,12 +245,13 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 
 func (suite *HelpersTestSuite) TestExitCodeFromErr() {
 	exitCode, err := ExitCodeFromErr(nil)
-	suite.NoError(err)
-	suite.Equal(
-		0,
-		exitCode,
-		"ExitCodeFromErr should return an exit code of 0 if no error was passed-in",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			0,
+			exitCode,
+			"ExitCodeFromErr should return an exit code of 0 if no error was passed-in",
+		)
+	}
 
 	arbitraryErr := fmt.Errorf("an arbitrary error")
 	exitCode, err = ExitCodeFromErr(arbitraryErr)
@@ -252,12 +260,13 @@ func (suite *HelpersTestSuite) TestExitCodeFromErr() {
 	// The default exit code is 0 for an empty ProcessState object
 	exitErr := &exec.ExitError{ProcessState: &os.ProcessState{}}
 	exitCode, err = ExitCodeFromErr(exitErr)
-	suite.NoError(err)
-	suite.Equal(
-		0,
-		exitCode,
-		"ExitCodeFromErr should return the ExitError's exit code",
-	)
+	if suite.NoError(err) {
+		suite.Equal(
+			0,
+			exitCode,
+			"ExitCodeFromErr should return the ExitError's exit code",
+		)
+	}
 }
 
 func (suite *HelpersTestSuite) SetupTest() {
