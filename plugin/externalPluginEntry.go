@@ -237,7 +237,7 @@ func (s *stdoutStreamer) Close() error {
 // Stream streams the entry's content
 func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
-		e.script.Path,
+		e.script.Path(),
 		"stream",
 		e.washPath,
 		e.state,
@@ -247,7 +247,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		return nil, err
 	}
 
-	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path, "stream", e.washPath, e.state)
+	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.washPath, e.state)
 
 	journal.Record(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
@@ -362,7 +362,7 @@ func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// besides Stdin. Could do something like
 	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
 	cmdObj := exec.Command(
-		e.script.Path,
+		e.script.Path(),
 		append(
 			[]string{"exec", e.washPath, e.state, cmd},
 			args...,

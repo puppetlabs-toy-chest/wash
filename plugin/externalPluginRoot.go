@@ -24,7 +24,7 @@ type ExternalPluginRoot struct {
 // the plugin script
 func NewExternalPluginRoot(plugin ExternalPluginSpec) *ExternalPluginRoot {
 	return &ExternalPluginRoot{&ExternalPluginEntry{
-		script: ExternalPluginScript{Path: plugin.Script},
+		script: NewExternalPluginScript(plugin.Script),
 	}}
 }
 
