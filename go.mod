@@ -12,6 +12,7 @@ require (
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.11 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/aws/aws-sdk-go v1.17.14
 	github.com/docker/distribution v2.7.0+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -55,6 +56,7 @@ require (
 	google.golang.org/genproto v0.0.0-20181219182458-5a97ab628bfb // indirect
 	google.golang.org/grpc v1.17.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
