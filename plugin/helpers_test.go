@@ -15,9 +15,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TODO: Now that the cache can be mocked, come back
-// and simplify these tests.
-
 type HelpersTestSuite struct {
 	suite.Suite
 }
@@ -107,22 +104,42 @@ func (suite *HelpersTestSuite) TestToFileMode() {
 	}
 }
 
-type mockEntry struct {
+type helpersTestsMockEntry struct {
 	EntryBase
 	mock.Mock
 }
 
-func (e *mockEntry) Attr() Attributes {
+func newHelpersTestsMockEntry() *helpersTestsMockEntry {
+	e := &helpersTestsMockEntry{
+		EntryBase: NewEntry("mockEntry"),
+	}
+
+	e.CacheConfig().TurnOffCaching()
+
+	return e
+}
+
+func (e *helpersTestsMockEntry) Attr() Attributes {
 	args := e.Called()
 	return args.Get(0).(Attributes)
 }
 
-type mockGroup struct {
+type helpersTestsMockGroup struct {
 	EntryBase
 	mock.Mock
 }
 
-func (e *mockGroup) List(ctx context.Context) ([]Entry, error) {
+func newHelpersTestsMockGroup() *helpersTestsMockGroup {
+	e := &helpersTestsMockGroup{
+		EntryBase: NewEntry("mockEntry"),
+	}
+
+	e.CacheConfig().TurnOffCaching()
+
+	return e
+}
+
+func (e *helpersTestsMockGroup) List(ctx context.Context) ([]Entry, error) {
 	args := e.Called()
 	return args.Get(0).([]Entry), args.Error(1)
 }
@@ -130,8 +147,7 @@ func (e *mockGroup) List(ctx context.Context) ([]Entry, error) {
 func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	// Test that Attr()'s result is used if the entry implements it
 	// and if entry.Attr() returns a non-zero set of attributes
-	entry := &mockEntry{EntryBase: NewEntry("mockFileEntry")}
-	entry.CacheConfig().TurnOffCaching()
+	entry := newHelpersTestsMockEntry()
 	expectedAttributes := Attributes{
 		Ctime: time.Now(),
 		Size:  10,
@@ -150,8 +166,7 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 
 	// Test that if the entry supports the list action, then it sets
 	// the mode to 0550
-	group := &mockGroup{EntryBase: NewEntry("mockGroup")}
-	group.CacheConfig().TurnOffCaching()
+	group := newHelpersTestsMockGroup()
 	attr = Attributes{}
 	err = FillAttr(context.Background(), group, "id", &attr)
 	if suite.NoError(err) {
@@ -164,8 +179,7 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 
 	// Test that if the entry does not support the list action, then it sets
 	// the mode to 0440
-	entry = &mockEntry{EntryBase: NewEntry("mockEntry")}
-	entry.CacheConfig().TurnOffCaching()
+	entry = newHelpersTestsMockEntry()
 	entry.On("Attr").Return(Attributes{})
 	attr = Attributes{}
 	err = FillAttr(context.Background(), entry, "id", &attr)
@@ -178,20 +192,22 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	}
 }
 
-type mockReadableEntry struct {
-	*mockEntry
+type helpersTestsMockReadableEntry struct {
+	*helpersTestsMockEntry
 }
 
-func (e *mockReadableEntry) Open(ctx context.Context) (SizedReader, error) {
+func newHelpersTestsMockReadableEntry(attr Attributes) *helpersTestsMockReadableEntry {
+	e := &helpersTestsMockReadableEntry{
+		newHelpersTestsMockEntry(),
+	}
+
+	e.On("Attr").Return(attr)
+	return e
+}
+
+func (e *helpersTestsMockReadableEntry) Open(ctx context.Context) (SizedReader, error) {
 	args := e.Called(ctx)
 	return args.Get(0).(SizedReader), args.Error(1)
-}
-
-func newMockReadableEntry(attr Attributes) *mockReadableEntry {
-	entry := new(mockReadableEntry)
-	entry.mockEntry = &mockEntry{EntryBase: NewEntry("mockReadableEntry")}
-	entry.On("Attr").Return(attr)
-	return entry
 }
 
 type negativeSizedReader struct{}
@@ -210,8 +226,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 
 	// Test that the size attribute is calculated from the content
 	// if it is not known
-	entry := newMockReadableEntry(Attributes{})
-	entry.CacheConfig().TurnOffCaching()
+	entry := newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr := Attributes{}
 	err := FillAttr(ctx, entry, "id", &attr)
@@ -225,8 +240,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 
 	// Test that the size attribute is _not_ calculated from the content
 	// if it is already known
-	entry = newMockReadableEntry(Attributes{Size: 10})
-	entry.CacheConfig().TurnOffCaching()
+	entry = newHelpersTestsMockReadableEntry(Attributes{Size: 10})
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr = Attributes{}
 	err = FillAttr(ctx, entry, "id", &attr)
@@ -240,8 +254,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 
 	// Test that FillAttr returns an ErrCouldNotDetermineSizeAttr error if
 	// Open errors, and that it still proceeds to fill-in the mode for FUSE
-	entry = newMockReadableEntry(Attributes{})
-	entry.CacheConfig().TurnOffCaching()
+	entry = newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(mockRdr, fmt.Errorf("could not open"))
 	attr = Attributes{}
 	err = FillAttr(ctx, entry, "id", &attr)
@@ -254,8 +267,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 
 	// Test that FillAttr returns an ErrNegativeSizeAttr error if the content
 	// has negative size
-	entry = newMockReadableEntry(Attributes{})
-	entry.CacheConfig().TurnOffCaching()
+	entry = newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(negativeSizedReader{}, nil)
 	attr = Attributes{}
 	err = FillAttr(ctx, entry, "id", &attr)

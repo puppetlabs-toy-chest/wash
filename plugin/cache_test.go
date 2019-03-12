@@ -210,7 +210,7 @@ func (suite *CacheTestSuite) testCachedOp(op cachedOp, opName string, mockValue 
 }
 
 func (suite *CacheTestSuite) TestCachedList() {
-	mockChildren := []Entry{&mockEntry{}}
+	mockChildren := []Entry{&cacheTestsMockEntry{}}
 	suite.testCachedOp(List, "List", mockChildren, func(ctx context.Context, e Entry, id string) (interface{}, error) {
 		return CachedList(ctx, e.(Group), id)
 	})
