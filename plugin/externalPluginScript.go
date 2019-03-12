@@ -11,8 +11,23 @@ import (
 )
 
 // ExternalPluginScript represents an external plugin's script
-type ExternalPluginScript struct {
-	Path string
+type ExternalPluginScript interface {
+	Path() string
+	InvokeAndWait(ctx context.Context, args ...string) ([]byte, error)
+}
+
+type externalPluginScript struct {
+	path string
+}
+
+// NewExternalPluginScript returns a new external plugin script
+// object
+func NewExternalPluginScript(path string) ExternalPluginScript {
+	return externalPluginScript{path: path}
+}
+
+func (s externalPluginScript) Path() string {
+	return s.path
 }
 
 // InvokeAndWait shells out to the plugin script, passing it the given
@@ -23,10 +38,10 @@ type ExternalPluginScript struct {
 // https://golang.org/pkg/os/exec/#Cmd.Wait. Could this be specified by
 // plugin authors in the top-level YAML file? Should it be a per-entry
 // thing?
-func (s ExternalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
-	journal.Record(ctx, "Running command: %v %v", s.Path, strings.Join(args, " "))
+func (s externalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
+	journal.Record(ctx, "Running command: %v %v", s.path, strings.Join(args, " "))
 
-	cmd := exec.Command(s.Path, args...)
+	cmd := exec.Command(s.path, args...)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
