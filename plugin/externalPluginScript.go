@@ -39,9 +39,9 @@ func (s externalPluginScript) Path() string {
 // plugin authors in the top-level YAML file? Should it be a per-entry
 // thing?
 func (s externalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
-	journal.Record(ctx, "Running command: %v %v", s.path, strings.Join(args, " "))
+	journal.Record(ctx, "Running command: %v %v", s.Path(), strings.Join(args, " "))
 
-	cmd := exec.Command(s.path, args...)
+	cmd := exec.Command(s.Path(), args...)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
