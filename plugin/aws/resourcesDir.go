@@ -23,6 +23,7 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 
 	resourcesDir.resources = []plugin.Entry{
 		newS3Dir(resourcesDir.session),
+		newEC2Dir(resourcesDir.session),
 	}
 
 	return resourcesDir

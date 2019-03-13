@@ -45,6 +45,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/xattr v0.4.0
 	github.com/sirupsen/logrus v1.3.0
+	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.2.2
@@ -58,6 +59,7 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/ini.v1 v1.42.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20181221193117-173ce66c1e39
