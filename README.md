@@ -46,6 +46,14 @@ Obtain FUSE for OSX [here](https://osxfuse.github.io/).
 
 Add your mount directory to Spotlight's list of excluded directories to avoid heavy load.
 
+#### Known issues on Mac
+
+If the `wash` daemon exits with a exit status of 255, that typically means that `wash` couldn't load the FUSE extensions. MacOS only allows for a certain (small) number of virtual devices on the system, and if all available slots are taken up by other programs then we won't be able to run.
+
+The biggest culprit is VirtualBox, which creates many virtual devices and keeps them resident even if the program isn't running. Currently, we recommend uninstalling VirtualBox to make room for `wash`.
+
+More information in [this github issue for osxfuse](https://github.com/osxfuse/osxfuse/issues/358).
+
 ## Design
 
 Several principles that inform the design of *wash* are:
