@@ -22,24 +22,30 @@ type OutputStream struct {
 	closer     *multiCloser
 }
 
-func (s *OutputStream) sendData(data string) {
-	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Data: data}
+func (s *OutputStream) sendData(timestamp time.Time, data string) {
+	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: timestamp, Data: data}
 }
 
-func (s *OutputStream) sendError(err error) {
-	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: time.Now(), Err: err}
+func (s *OutputStream) sendError(timestamp time.Time, err error) {
+	s.ch <- ExecOutputChunk{StreamID: s.id, Timestamp: timestamp, Err: err}
+}
+
+// WriteWithTimestamp writes the given data with the specified timestamp
+func (s *OutputStream) WriteWithTimestamp(timestamp time.Time, data []byte) error {
+	select {
+	case <-s.ctx.Done():
+		s.sendError(timestamp, s.ctx.Err())
+		s.sentCtxErr = true
+		return s.ctx.Err()
+	default:
+		s.sendData(timestamp, string(data))
+		return nil
+	}
 }
 
 func (s *OutputStream) Write(data []byte) (int, error) {
-	select {
-	case <-s.ctx.Done():
-		s.sendError(s.ctx.Err())
-		s.sentCtxErr = true
-		return 0, s.ctx.Err()
-	default:
-		s.sendData(string(data))
-		return len(data), nil
-	}
+	err := s.WriteWithTimestamp(time.Now(), data)
+	return len(data), err
 }
 
 // Close ensures the channel is closed when the last OutputStream is closed.
@@ -53,7 +59,7 @@ func (s *OutputStream) CloseWithError(err error) {
 		// Avoid re-sending ctx.Err() if it was already sent
 		// by OutputStream#Write
 		if err != s.ctx.Err() || !s.sentCtxErr {
-			s.sendError(err)
+			s.sendError(time.Now(), err)
 		}
 	}
 
