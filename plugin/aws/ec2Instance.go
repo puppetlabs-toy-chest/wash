@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"sync"
 	"time"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
@@ -42,12 +43,13 @@ func describeInstance(inst *ec2Instance) (*ec2Client.Instance, error) {
 // ec2Instance represents an EC2 instance
 type ec2Instance struct {
 	plugin.EntryBase
-	session          *session.Session
-	client           *ec2Client.EC2
-	ssmClient        *ssm.SSM
-	cloudwatchClient *cloudwatchlogs.CloudWatchLogs
-	attr             plugin.Attributes
-	entries          []plugin.Entry
+	session                 *session.Session
+	client                  *ec2Client.EC2
+	ssmClient               *ssm.SSM
+	cloudwatchClient        *cloudwatchlogs.CloudWatchLogs
+	attr                    plugin.Attributes
+	latestConsoleOutputOnce sync.Once
+	entries                 []plugin.Entry
 }
 
 // These constants represent the possible states that the EC2 instance
@@ -78,11 +80,30 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 		newEC2InstanceConsoleOutput(ec2Instance, false),
 	}
 
-	if ec2Instance.hasLatestConsoleOutput(ctx) {
-		ec2Instance.entries = append(ec2Instance.entries, newEC2InstanceConsoleOutput(ec2Instance, true))
+	return ec2Instance
+}
+
+func (inst *ec2Instance) Attr() plugin.Attributes {
+	return inst.attr
+}
+
+func (inst *ec2Instance) Metadata(context.Context) (plugin.MetadataMap, error) {
+	metadata, err := describeInstance(inst)
+	if err != nil {
+		return nil, err
 	}
 
-	return ec2Instance
+	return plugin.ToMetadata(metadata), nil
+}
+
+func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
+	inst.latestConsoleOutputOnce.Do(func() {
+		if inst.hasLatestConsoleOutput(ctx) {
+			inst.entries = append(inst.entries, newEC2InstanceConsoleOutput(inst, true))
+		}
+	})
+
+	return inst.entries, nil
 }
 
 // According to https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-console.html,
@@ -102,14 +123,17 @@ func (inst *ec2Instance) hasLatestConsoleOutput(ctx context.Context) bool {
 
 	awserr, ok := err.(awserr.Error)
 	if !ok {
-		// Open failed w/ some other error, so log a warning and
-		// return false. This should be a rare occurrence.
+		// Open failed w/ some other error, which should be a
+		// rare occurrence. Here we log a warning, reset
+		// latestConsoleOutputOnce so that we check again for
+		// the latest console output the next time List's called,
+		// then return false.
 		log.Warnf(
-			"could not determine whether the EC2 instance %v supports retrieving the latest console logs: %v",
+			"could not determine whether the EC2 instance %v supports retrieving the latest console output: %v",
 			inst.Name(),
 			ctx.Err(),
 		)
-
+		inst.latestConsoleOutputOnce = sync.Once{}
 		return false
 	}
 
@@ -123,23 +147,6 @@ func (inst *ec2Instance) hasLatestConsoleOutput(ctx context.Context) bool {
 	// that the instance _does_ have the latest console logs, but something
 	// went wrong with accessing them.
 	return true
-}
-
-func (inst *ec2Instance) Attr() plugin.Attributes {
-	return inst.attr
-}
-
-func (inst *ec2Instance) Metadata(context.Context) (plugin.MetadataMap, error) {
-	metadata, err := describeInstance(inst)
-	if err != nil {
-		return nil, err
-	}
-
-	return plugin.ToMetadata(metadata), nil
-}
-
-func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
-	return inst.entries, nil
 }
 
 // These constants represent the possible states that the command
