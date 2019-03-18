@@ -50,8 +50,10 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 			return nil, fmt.Errorf("could not get the region of bucket %v: %v", name, err)
 		}
 
+		region := awsSDK.StringValue(resp.LocationConstraint)
+
 		cfg := awsSDK.NewConfig()
-		cfg.WithRegion(awsSDK.StringValue(resp.LocationConstraint))
+		cfg.WithRegion(region)
 
 		attr := plugin.Attributes{
 			Ctime: awsSDK.TimeValue(bucket.CreationDate),
@@ -60,6 +62,7 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		buckets[i] = newS3Bucket(
 			awsSDK.StringValue(name),
 			attr,
+			region,
 			s3Client.New(s.session, cfg),
 		)
 	}

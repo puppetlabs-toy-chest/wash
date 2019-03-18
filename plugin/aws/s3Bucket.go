@@ -3,12 +3,12 @@ package aws
 import (
 	"context"
 	"fmt"
-	"path"
 
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -20,8 +20,6 @@ import (
 // it makes it difficult to refresh the shared s3Bucket object when the original object
 // is evicted from the cache.
 func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix string) ([]plugin.Entry, error) {
-	// TODO: Figure out what to log into the journal
-
 	request := &s3Client.ListObjectsInput{
 		Bucket:    awsSDK.String(bucket),
 		Prefix:    awsSDK.String(prefix),
@@ -59,31 +57,26 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 		}
 
 		key := awsSDK.StringValue(o.Key)
-		name := path.Base(key)
 
 		// TODO: Once https://github.com/puppetlabs/wash/issues/123
 		// is resolved, we should move the HeadObject calls over to
-		// s3Object and cache its response.
+		// s3Object and cache its response. This way, we can re-use
+		// it for Attr and Metadata
 		resp, err := client.HeadObjectWithContext(ctx, request)
 		if err != nil {
-			// TODO: Should we log a warning here instead?
-			return nil, fmt.Errorf("could not get the metadata + attributes for object %v: %v", name, err)
+			return nil, fmt.Errorf("could not get the metadata + attributes for object %v: %v", key, err)
+		}
+
+		size := awsSDK.Int64Value(resp.ContentLength)
+		if size < 0 {
+			return nil, fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, key)
 		}
 
 		attr := plugin.Attributes{
 			Mtime: awsSDK.TimeValue(resp.LastModified),
-			// TODO: Check for a negative size
-			Size: uint64(awsSDK.Int64Value(resp.ContentLength)),
+			Size:  uint64(size),
 		}
-
-		// TODO: Right now, resp.Metadata includes the user-specified
-		// metadata. What else would be useful to include here?
-		//
-		// NOTE: Here's everything returned by HeadObjectOutput:
-		//
-		// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/#HeadObjectOutput
-		//
-		metadata := plugin.ToMetadata(resp.Metadata)
+		metadata := plugin.ToMetadata(resp)
 
 		entries[numPrefixes+i] = newS3Object(attr, metadata, bucket, key, client)
 	}
@@ -95,13 +88,15 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 type s3Bucket struct {
 	plugin.EntryBase
 	attr   plugin.Attributes
+	region string
 	client *s3Client.S3
 }
 
-func newS3Bucket(name string, attr plugin.Attributes, client *s3Client.S3) *s3Bucket {
+func newS3Bucket(name string, attr plugin.Attributes, region string, client *s3Client.S3) *s3Bucket {
 	return &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
 		attr:      attr,
+		region:    region,
 		client:    client,
 	}
 }
@@ -112,6 +107,38 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 
 func (b *s3Bucket) Attr() plugin.Attributes {
 	return b.attr
+}
+
+func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+	request := &s3Client.GetBucketTaggingInput{
+		Bucket: awsSDK.String(b.Name()),
+	}
+
+	resp, err := b.client.GetBucketTaggingWithContext(ctx, request)
+
+	var metadata plugin.MetadataMap
+	if err == nil {
+		metadata = plugin.ToMetadata(resp)
+	} else if awserr, ok := err.(awserr.Error); ok {
+		// Check if this is a NoSuchTagSet error. If yes, then that means
+		// this bucket doesn't have any tags.
+		//
+		// NOTE: See https://github.com/boto/boto3/issues/341#issuecomment-186007537
+		// if you're interested in knowing why AWS does not return
+		// an empty TagSet instead of a NoSuchTagSet error
+		if awserr.Code() == "NoSuchTagSet" {
+			metadata = plugin.MetadataMap{}
+		} else {
+			return nil, err
+		}
+	} else {
+		// We have a non-AWS related error
+		return nil, err
+	}
+
+	metadata["region"] = b.region
+
+	return metadata, nil
 }
 
 // TODO: Implement Metadata. What would be useful information that we could

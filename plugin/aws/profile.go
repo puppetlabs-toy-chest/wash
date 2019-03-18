@@ -38,6 +38,3 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 func (p *profile) List(ctx context.Context) ([]plugin.Entry, error) {
 	return p.resourcesDir, nil
 }
-
-// TODO: Would implementing Metadata make sense here? What kind of information
-// would be useful?

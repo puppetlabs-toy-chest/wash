@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
@@ -17,25 +18,41 @@ type Root struct {
 	plugin.EntryBase
 }
 
-func awsCredentialsFile() string {
+func awsCredentialsFile() (string, error) {
 	if filename := os.Getenv("AWS_SHARED_CREDENTIALS_FILE"); len(filename) != 0 {
-		return filename
+		return filename, nil
 	}
 
-	return filepath.Join(os.Getenv("HOME"), ".aws", "credentials")
+	curUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+
+	if curUser.HomeDir == "" {
+		return "", fmt.Errorf(
+			"could not determine the location of the AWS credentials file: the current user %v does not have a home directory",
+			curUser.Name,
+		)
+	}
+
+	return filepath.Join(curUser.HomeDir, ".aws", "credentials"), nil
 }
 
 // Init for root
 func (r *Root) Init() error {
 	r.EntryBase = plugin.NewEntry("aws")
-	r.CacheConfig().SetTTLOf(plugin.List, 5*time.Minute)
+	r.CacheConfig().SetTTLOf(plugin.List, 1*time.Minute)
 
 	return nil
 }
 
-// List lists the available AWS profiles
+// List the available AWS profiles
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
-	awsCredentials := awsCredentialsFile()
+	awsCredentials, err := awsCredentialsFile()
+	if err != nil {
+		return nil, err
+	}
+
 	if _, err := os.Stat(awsCredentials); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("could not load any profiles: the %v file does not exist", awsCredentials)
