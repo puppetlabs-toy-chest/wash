@@ -63,6 +63,10 @@ func (suite *OutputStreamTestSuite) EqualChunk(expected ExecOutputChunk, actual 
 	return eqlStreamName && eqlPacket
 }
 
+// We choose not to add tests for WriteWithTimestamp because doing so
+// would complicate the test suite for little gain. Instead, since Write
+// calls WriteWithTimestamp, it is reasonable to assume that if the tests
+// for Write pass then so, too, do the tests for WriteWithTimestamp.
 func (suite *OutputStreamTestSuite) TestWrite() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer func() {
