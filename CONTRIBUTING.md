@@ -54,7 +54,7 @@ Tip: base new resources on the `EntryBase` struct to simplify creating them and 
 ## Submitting Changes
 Fork the repo, make changes, file a Pull Request.
 
-Contributions to this project require sign-off consistent with the [Developers Certificate of Origin](https://developercertificate.org)
+Contributions to this project require sign-off consistent with the [Developers Certificate of Origin](https://developercertificate.org). This can be as simple as using `git commit -s` on each commit.
 
 ### Guidelines
 
