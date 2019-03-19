@@ -1,1 +1,1 @@
-Contributions to this project require sign-off consistent with the [Developers Certificate of Origin](https://developercertificate.org)
+Contributions to this project require sign-off consistent with the [Developers Certificate of Origin](https://developercertificate.org). This can be as simple as using `git commit -s` on each commit.
