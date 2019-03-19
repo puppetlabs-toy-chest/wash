@@ -1,3 +1,4 @@
+// Package apitypes declares types common to the API client and server.
 package apitypes
 
 import (

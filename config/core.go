@@ -1,3 +1,5 @@
+// Package config implements configuration for the wash executable using
+// https://github.com/spf13/viper.
 package config
 
 import (

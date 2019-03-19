@@ -1,3 +1,4 @@
+// Package client provides helpers for interacting with the wash socket HTTP API.
 package client
 
 // This package is named `client` instead of `apiclient` because a client

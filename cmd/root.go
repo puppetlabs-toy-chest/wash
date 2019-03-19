@@ -1,3 +1,4 @@
+// Package cmd implements Wash's CLI using https://github.com/spf13/cobra.
 package cmd
 
 import (

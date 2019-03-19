@@ -1,3 +1,7 @@
+// Package docker presents a filesystem hierarchy for Docker resources.
+//
+// It uses local socket access or the DOCKER environment variables to
+// access the Docker daemon.
 package docker
 
 import (

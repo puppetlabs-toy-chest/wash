@@ -1,4 +1,31 @@
+/*
+Package plugin defines a set of interfaces that plugins must implement to enable wash
+functonality.
+
+All resources must implement the Entry interface. To do so they should include the EntryBase
+type, and initialize it via NewEntry. For example
+	type myResource struct {
+		plugin.EntryBase
+	}
+	...
+	rsc := myResource{plugin.NewEntry("a resource")}
+EntryBase gives the resource a name - which is how it will be displayed in the filesystem
+or referenced via the API - and tools for controlling how its data is cached.
+
+The Group interface identifies the resource as a container for other things. Implementing it
+enables displaying it as a directory in the filesystem. Anything that does not implement
+Group will be displayed as a file.
+
+The File interface allows control over its filesystem attributes.
+
+The Readable interface gives a file its contents when read via the filesystem.
+
+All of the above, as well as other types - Resource, Execable, Pipe - provide
+additional functionality via the HTTP API.
+*/
 package plugin
+
+// This file should be reserved for types that plugin authors need to understand.
 
 import (
 	"context"
@@ -6,8 +33,6 @@ import (
 	"os"
 	"time"
 )
-
-// ==== Wash Protocols and Resources ====
 
 // Entry is a basic named resource type. It is a sealed
 // interface, meaning you must use plugin.NewEntry when

@@ -1,3 +1,4 @@
+// Package cmdutil provides utilities for formatting CLI output.
 package cmdutil
 
 import (
