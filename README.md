@@ -53,7 +53,7 @@ We've implemented some neat features inside of `wash` to support the above goals
 
 * [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
     * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
-    * `wash` handles the plugin lifecycle. it invokes your pluging with a certain calling convention; all you have to do is supply the business logic
+    * `wash` handles the plugin lifecycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic
     * users interact with external plugins the exact same way as core plugins; they are first-class citizens
 
 ## Installation
