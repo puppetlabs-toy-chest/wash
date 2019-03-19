@@ -1,6 +1,15 @@
 # wash (Wide Area SHell)
 
-A cloud-native shell for bringing remote infrastructure to your terminal.
+`wash` helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love!
+
+Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it's containers, VMs, network devices, IoT stuff, or anything in between...they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that's no fun at all!
+
+[UNIX's philosophy](https://en.wikipedia.org/wiki/Unix_philosophy#Origin) and abstractions have worked for decades. They're pretty good, and more importantly, they're _familiar_ to millions of people. `wash` intends to apply those same philosophies and abstractions to modern, distributed infrastructure: With `wash`, we want to:
+
+* make navigating stuff like servers, containers, or APIs as easy as navigating a local filesystem
+* make scripting across your new-fangled infrastructure as easy as writing a local shell script
+* render into text that which can be rendered into text (cuz text is a universal interface!) for easy viewing, editing, and UNIXy slicing-and-dicing
+* build new versions of basic, UNIX tools to support the above goals (but reuse existing ones if they work!)
 
 ## Usage
 
