@@ -9,24 +9,18 @@ import (
 
 // ==== Wash Protocols and Resources ====
 
-// Entry is a basic named resource type.
+// Entry is a basic named resource type. It is a sealed
+// interface, meaning you must use plugin.NewEntry when
+// creating your plugin objects.
 type Entry interface {
 	Name() string
-	CacheConfig() *CacheConfig
+	ID() string
+	SetTTLOf(op cacheableOp, ttl time.Duration)
+	TurnOffCachingFor(op cacheableOp)
+	TurnOffCaching()
+	getTTLOf(op cacheableOp) time.Duration
+	setID(id string)
 }
-
-// EntryBase implements Entry, making it easy to create new entries.
-// EntryBase includes a default caching configuration.
-type EntryBase struct {
-	name        string
-	cacheConfig *CacheConfig
-}
-
-// Name returns the entry's name.
-func (e *EntryBase) Name() string { return e.name }
-
-// CacheConfig returns the entry's cache config.
-func (e *EntryBase) CacheConfig() *CacheConfig { return e.cacheConfig }
 
 // MetadataMap maps keys to arbitrary structured data.
 type MetadataMap = map[string]interface{}

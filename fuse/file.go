@@ -24,7 +24,7 @@ var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
 func newFile(e plugin.Entry) *file {
-	return &file{e, e.CacheConfig().ID()}
+	return &file{e, e.ID()}
 }
 
 func (f *file) Entry() plugin.Entry {

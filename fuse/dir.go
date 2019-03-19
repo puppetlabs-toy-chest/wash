@@ -22,7 +22,7 @@ var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
 func newDir(e plugin.Group) *dir {
-	return &dir{e, e.CacheConfig().ID()}
+	return &dir{e, e.ID()}
 }
 
 func (d *dir) Entry() plugin.Entry {

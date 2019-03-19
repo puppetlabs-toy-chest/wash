@@ -73,7 +73,7 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 		cloudwatchClient: cloudwatchlogs.New(session),
 		attr:             attr,
 	}
-	ec2Instance.CacheConfig().TurnOffCachingFor(plugin.List)
+	ec2Instance.TurnOffCachingFor(plugin.List)
 
 	ec2Instance.entries = []plugin.Entry{
 		newEC2InstanceMetadataJSON(ec2Instance),

@@ -90,20 +90,6 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
 	suite.Error(err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestDecodeCacheConfig() {
-	decodedTTLs := decodedCacheTTLs{
-		List:     10,
-		Open:     15,
-		Metadata: 20,
-	}
-
-	config := decodedTTLs.toCacheConfig()
-
-	suite.Equal(decodedTTLs.List*time.Second, config.getTTLOf(List))
-	suite.Equal(decodedTTLs.Open*time.Second, config.getTTLOf(Open))
-	suite.Equal(decodedTTLs.Metadata*time.Second, config.getTTLOf(Metadata))
-}
-
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
 	decodedEntry := decodedExternalPluginEntry{}
 
@@ -130,9 +116,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
 	entryWithCacheConfig, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		expectedCacheConfig := newCacheConfig()
-		expectedCacheConfig.SetTTLOf(List, decodedEntry.CacheTTLs.List*time.Second)
-		suite.Equal(expectedCacheConfig, entryWithCacheConfig.CacheConfig())
+		expectedTTLs := NewEntry("").ttl
+		expectedTTLs[List] = decodedEntry.CacheTTLs.List * time.Second
+		suite.Equal(expectedTTLs, entryWithCacheConfig.EntryBase.ttl)
 	}
 
 	decodedEntry.Attributes = decodedAttributes{Size: 10}
@@ -146,14 +132,21 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
 	suite.Error(err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestName() {
-	entry := ExternalPluginEntry{name: "foo"}
-	suite.Equal("foo", entry.Name())
-}
+func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
+	decodedTTLs := decodedCacheTTLs{
+		List:     10,
+		Open:     15,
+		Metadata: 20,
+	}
 
-func (suite *ExternalPluginEntryTestSuite) TestCacheConfig() {
-	entry := ExternalPluginEntry{cacheConfig: newCacheConfig()}
-	suite.Equal(newCacheConfig(), entry.CacheConfig())
+	entry := ExternalPluginEntry{
+		EntryBase: NewEntry("foo"),
+	}
+	entry.setCacheTTLs(decodedTTLs)
+
+	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(List))
+	suite.Equal(decodedTTLs.Open*time.Second, entry.getTTLOf(Open))
+	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(Metadata))
 }
 
 // TODO: There's a bit of duplication between TestList, TestOpen,
@@ -165,13 +158,14 @@ func (suite *ExternalPluginEntryTestSuite) TestCacheConfig() {
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := ExternalPluginEntry{
-		script:   mockScript,
-		washPath: "/foo",
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
 	}
+	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry.washPath, entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry.ID(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then List returns its error
@@ -195,10 +189,8 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	if suite.NoError(err) {
 		expectedEntries := []Entry{
 			&ExternalPluginEntry{
-				name:             "foo",
+				EntryBase:        NewEntry("foo"),
 				supportedActions: []string{"list"},
-				cacheConfig:      newCacheConfig(),
-				washPath:         entry.washPath + "/" + "foo",
 				script:           entry.script,
 			},
 		}
@@ -210,13 +202,14 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := ExternalPluginEntry{
-		script:   mockScript,
-		washPath: "/foo",
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
 	}
+	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "read", entry.washPath, entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "read", entry.ID(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Open returns its error
@@ -238,13 +231,14 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := ExternalPluginEntry{
-		script:   mockScript,
-		washPath: "/foo",
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
 	}
+	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "metadata", entry.washPath, entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "metadata", entry.ID(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Metadata returns its error

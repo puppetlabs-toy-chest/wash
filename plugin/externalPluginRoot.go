@@ -57,7 +57,6 @@ func (r *ExternalPluginRoot) Init() error {
 
 	r.ExternalPluginEntry = entry
 	r.ExternalPluginEntry.script = script
-	r.ExternalPluginEntry.washPath = "/" + r.Name()
 
 	return nil
 }

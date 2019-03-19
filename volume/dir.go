@@ -31,7 +31,7 @@ func NewDir(name string, attr plugin.Attributes, cb ContentCB, path string, dirs
 		path:      path,
 		dirs:      dirs,
 	}
-	vd.CacheConfig().SetTTLOf(plugin.Open, 60*time.Second)
+	vd.SetTTLOf(plugin.Open, 60*time.Second)
 
 	return vd
 }

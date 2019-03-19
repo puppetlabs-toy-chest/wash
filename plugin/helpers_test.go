@@ -114,7 +114,7 @@ func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 		EntryBase: NewEntry("mockEntry"),
 	}
 
-	e.CacheConfig().TurnOffCaching()
+	e.TurnOffCaching()
 
 	return e
 }
@@ -134,7 +134,7 @@ func newHelpersTestsMockGroup() *helpersTestsMockGroup {
 		EntryBase: NewEntry("mockEntry"),
 	}
 
-	e.CacheConfig().TurnOffCaching()
+	e.TurnOffCaching()
 
 	return e
 }

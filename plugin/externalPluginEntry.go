@@ -59,22 +59,6 @@ type decodedCacheTTLs struct {
 	Metadata time.Duration `json:"metadata"`
 }
 
-func (c decodedCacheTTLs) toCacheConfig() *CacheConfig {
-	config := newCacheConfig()
-
-	if c.List != 0 {
-		config.SetTTLOf(List, c.List*time.Second)
-	}
-	if c.Open != 0 {
-		config.SetTTLOf(Open, c.Open*time.Second)
-	}
-	if c.Metadata != 0 {
-		config.SetTTLOf(Metadata, c.Metadata*time.Second)
-	}
-
-	return config
-}
-
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
 	Name             string            `json:"name"`
@@ -98,12 +82,13 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 	}
 
 	entry := &ExternalPluginEntry{
-		name:             e.Name,
+		EntryBase:        NewEntry(e.Name),
 		supportedActions: e.SupportedActions,
 		state:            e.State,
 		attr:             attr,
-		cacheConfig:      e.CacheTTLs.toCacheConfig(),
 	}
+	entry.setCacheTTLs(e.CacheTTLs)
+
 	return entry, nil
 }
 
@@ -111,28 +96,28 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 // of its name, its object (as serialized JSON), and the path to its
 // main plugin script.
 type ExternalPluginEntry struct {
+	EntryBase
 	script           ExternalPluginScript
-	washPath         string
-	name             string
 	supportedActions []string
 	state            string
-	cacheConfig      *CacheConfig
 	attr             Attributes
 }
 
-// Name returns the entry's name
-func (e *ExternalPluginEntry) Name() string {
-	return e.name
-}
-
-// CacheConfig returns the entry's cache config
-func (e *ExternalPluginEntry) CacheConfig() *CacheConfig {
-	return e.cacheConfig
+func (e *ExternalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
+	if ttls.List != 0 {
+		e.SetTTLOf(List, ttls.List*time.Second)
+	}
+	if ttls.Open != 0 {
+		e.SetTTLOf(Open, ttls.Open*time.Second)
+	}
+	if ttls.Metadata != 0 {
+		e.SetTTLOf(Metadata, ttls.Metadata*time.Second)
+	}
 }
 
 // List lists the entry's children, if it has any.
 func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "list", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "list", e.ID(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +141,6 @@ func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 			return nil, err
 		}
 		entry.script = e.script
-		entry.washPath = e.washPath + "/" + entry.Name()
 
 		entries[i] = entry
 	}
@@ -166,7 +150,7 @@ func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 // Open returns the entry's content
 func (e *ExternalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "read", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "read", e.ID(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +160,7 @@ func (e *ExternalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 
 // Metadata displays the resource's metadata
 func (e *ExternalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.washPath, e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.ID(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +223,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
 		e.script.Path(),
 		"stream",
-		e.washPath,
+		e.ID(),
 		e.state,
 	)
 
@@ -247,7 +231,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		return nil, err
 	}
 
-	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.washPath, e.state)
+	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.ID(), e.state)
 
 	journal.Record(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
@@ -364,7 +348,7 @@ func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj := exec.Command(
 		e.script.Path(),
 		append(
-			[]string{"exec", e.washPath, e.state, cmd},
+			[]string{"exec", e.ID(), e.state, cmd},
 			args...,
 		)...,
 	)

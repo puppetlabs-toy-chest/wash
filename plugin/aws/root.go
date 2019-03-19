@@ -41,7 +41,7 @@ func awsCredentialsFile() (string, error) {
 // Init for root
 func (r *Root) Init() error {
 	r.EntryBase = plugin.NewEntry("aws")
-	r.CacheConfig().SetTTLOf(plugin.List, 1*time.Minute)
+	r.SetTTLOf(plugin.List, 1*time.Minute)
 
 	return nil
 }

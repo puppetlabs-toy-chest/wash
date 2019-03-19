@@ -37,7 +37,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		client:    c,
 		startTime: startTime,
 	}
-	vol.CacheConfig().SetTTLOf(plugin.List, 60*time.Second)
+	vol.SetTTLOf(plugin.List, 60*time.Second)
 
 	return vol, nil
 }
