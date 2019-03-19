@@ -15,6 +15,7 @@ import (
 
 // Root of the Kubernetes plugin
 type Root struct {
+	plugin.EntryBase
 	contexts []plugin.Entry
 }
 
@@ -35,9 +36,6 @@ func createContext(raw clientcmdapi.Config, name string, access clientcmd.Config
 	return &k8context{plugin.NewEntry(name), clientset, cfg, defaultns}, nil
 }
 
-// Name returns 'kubernetes'
-func (r *Root) Name() string { return "kubernetes" }
-
 // Init for root
 func (r *Root) Init() error {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -46,6 +44,9 @@ func (r *Root) Init() error {
 	if err != nil {
 		return err
 	}
+
+	r.EntryBase = plugin.NewEntry("kubernetes")
+	r.CacheConfig().TurnOffCaching()
 
 	contexts := make([]plugin.Entry, 0)
 	for name := range raw.Contexts {

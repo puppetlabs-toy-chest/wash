@@ -12,11 +12,6 @@ import (
 // Entry is a basic named resource type.
 type Entry interface {
 	Name() string
-}
-
-// Cached is a resource that expects its method invocations to be cached.
-// If CacheConfig() returns nil, a default config will be used.
-type Cached interface {
 	CacheConfig() *CacheConfig
 }
 
@@ -125,8 +120,43 @@ type Attributes struct {
 // SizeUnknown can be used to denote that the size is unknown and should be queried from content.
 const SizeUnknown = ^uint64(0)
 
-// The Registry contains the core filesystem data.
-// Plugins: maps plugin mount points to their implementations.
+// Registry represents the plugin registry. It is also Wash's root.
 type Registry struct {
-	Plugins map[string]Root
+	EntryBase
+	plugins     map[string]Root
+	pluginRoots []Entry
+}
+
+// NewRegistry creates a new plugin registry object
+func NewRegistry() *Registry {
+	r := &Registry{
+		EntryBase: NewEntry("/"),
+		plugins:   make(map[string]Root),
+	}
+
+	// Set the registry's ID to the empty string. This way,
+	// CachedList sets the cache IDs of the Plugin roots to
+	// "/<root_name>" (e.g. "/docker", "/kubernetes", "/aws"),
+	// and all other IDs are correctly set to <parent_id> + "/" + <name>.
+	r.CacheConfig().id = ""
+	r.CacheConfig().TurnOffCaching()
+
+	return r
+}
+
+// Plugins returns a map of the currently registered
+// plugins
+func (r *Registry) Plugins() map[string]Root {
+	return r.plugins
+}
+
+// RegisterPlugin registers the given plugin
+func (r *Registry) RegisterPlugin(name string, root Root) {
+	r.plugins[name] = root
+	r.pluginRoots = append(r.pluginRoots, root)
+}
+
+// List all of Wash's loaded plugins
+func (r *Registry) List(ctx context.Context) ([]Entry, error) {
+	return r.pluginRoots, nil
 }

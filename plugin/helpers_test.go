@@ -155,7 +155,7 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	}
 	entry.On("Attr").Return(expectedAttributes)
 	attr := Attributes{}
-	err := FillAttr(context.Background(), entry, "id", &attr)
+	err := FillAttr(context.Background(), entry, &attr)
 	if suite.NoError(err) {
 		suite.Equal(
 			expectedAttributes,
@@ -168,7 +168,7 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	// the mode to 0550
 	group := newHelpersTestsMockGroup()
 	attr = Attributes{}
-	err = FillAttr(context.Background(), group, "id", &attr)
+	err = FillAttr(context.Background(), group, &attr)
 	if suite.NoError(err) {
 		suite.Equal(
 			Attributes{Mode: os.ModeDir | 0550, Size: SizeUnknown},
@@ -182,7 +182,7 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 	entry = newHelpersTestsMockEntry()
 	entry.On("Attr").Return(Attributes{})
 	attr = Attributes{}
-	err = FillAttr(context.Background(), entry, "id", &attr)
+	err = FillAttr(context.Background(), entry, &attr)
 	if suite.NoError(err) {
 		suite.Equal(
 			Attributes{Mode: 0440, Size: SizeUnknown},
@@ -229,7 +229,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry := newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr := Attributes{}
-	err := FillAttr(ctx, entry, "id", &attr)
+	err := FillAttr(ctx, entry, &attr)
 	if suite.NoError(err) {
 		suite.Equal(
 			uint64(mockRdr.Size()),
@@ -243,7 +243,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry = newHelpersTestsMockReadableEntry(Attributes{Size: 10})
 	entry.On("Open", ctx).Return(mockRdr, nil)
 	attr = Attributes{}
-	err = FillAttr(ctx, entry, "id", &attr)
+	err = FillAttr(ctx, entry, &attr)
 	if suite.NoError(err) {
 		suite.Equal(
 			uint64(10),
@@ -257,7 +257,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry = newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(mockRdr, fmt.Errorf("could not open"))
 	attr = Attributes{}
-	err = FillAttr(ctx, entry, "id", &attr)
+	err = FillAttr(ctx, entry, &attr)
 	suite.EqualError(err, ErrCouldNotDetermineSizeAttr{"could not open"}.Error())
 	suite.Equal(
 		os.FileMode(0440),
@@ -270,7 +270,7 @@ func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
 	entry = newHelpersTestsMockReadableEntry(Attributes{})
 	entry.On("Open", ctx).Return(negativeSizedReader{}, nil)
 	attr = Attributes{}
-	err = FillAttr(ctx, entry, "id", &attr)
+	err = FillAttr(ctx, entry, &attr)
 	suite.EqualError(err, ErrNegativeSizeAttr{-1}.Error())
 }
 

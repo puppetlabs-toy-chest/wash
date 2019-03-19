@@ -32,21 +32,20 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 
 	journal.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
-	groupID := toID(path)
-	entries, err := plugin.CachedList(ctx, group, groupID)
+	entries, err := plugin.CachedList(ctx, group)
 	if err != nil {
 		journal.Record(ctx, "API: List %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
-	info := func(entry plugin.Entry, entryID string) apitypes.ListEntry {
+	info := func(entry plugin.Entry) apitypes.ListEntry {
 		result := apitypes.ListEntry{
 			Name:    entry.Name(),
 			Actions: plugin.SupportedActionsOf(entry),
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 
-		err := plugin.FillAttr(r.Context(), entry, entryID, &result.Attributes)
+		err := plugin.FillAttr(r.Context(), entry, &result.Attributes)
 		if err != nil {
 			result.Errors["attributes"] = newUnknownErrorObj(err)
 		}
@@ -55,11 +54,11 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	result := make([]apitypes.ListEntry, len(entries)+1)
-	result[0] = info(group, groupID)
+	result[0] = info(group)
 	result[0].Name = "."
 
 	for i, entry := range entries {
-		result[i+1] = info(entry, groupID+"/"+entry.Name())
+		result[i+1] = info(entry)
 	}
 	journal.Record(ctx, "API: List %v %+v", path, result)
 

@@ -15,7 +15,7 @@ import (
 
 type file struct {
 	entry plugin.Entry
-	id    string
+	path  string
 }
 
 var _ fs.Node = (*file)(nil)
@@ -23,8 +23,8 @@ var _ = fs.NodeOpener(&file{})
 var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
-func newFile(e plugin.Entry, parent string) *file {
-	return &file{e, parent + "/" + e.Name()}
+func newFile(e plugin.Entry) *file {
+	return &file{e, e.CacheConfig().ID()}
 }
 
 func (f *file) Entry() plugin.Entry {
@@ -32,7 +32,7 @@ func (f *file) Entry() plugin.Entry {
 }
 
 func (f *file) String() string {
-	return f.id
+	return f.path
 }
 
 // Attr returns the attributes of a file.
@@ -59,7 +59,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
 	if plugin.ReadAction.IsSupportedOn(f.Entry()) {
-		content, err := plugin.CachedOpen(ctx, f.Entry().(plugin.Readable), f.id)
+		content, err := plugin.CachedOpen(ctx, f.Entry().(plugin.Readable))
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 			journal.Record(ctx, "FUSE: Open %v errored: %v", f, err)

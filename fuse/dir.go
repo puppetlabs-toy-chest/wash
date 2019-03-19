@@ -2,7 +2,6 @@ package fuse
 
 import (
 	"context"
-	"strings"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -15,16 +14,15 @@ import (
 
 type dir struct {
 	entry plugin.Entry
-	id    string
+	path  string
 }
 
 var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(e plugin.Entry, parent string) *dir {
-	id := strings.TrimSuffix(parent, "/") + "/" + strings.TrimPrefix(e.Name(), "/")
-	return &dir{e, id}
+func newDir(e plugin.Group) *dir {
+	return &dir{e, e.CacheConfig().ID()}
 }
 
 func (d *dir) Entry() plugin.Entry {
@@ -32,7 +30,7 @@ func (d *dir) Entry() plugin.Entry {
 }
 
 func (d *dir) String() string {
-	return d.id
+	return d.path
 }
 
 // Attr returns the attributes of a directory.
@@ -54,7 +52,7 @@ func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fus
 func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction.IsSupportedOn(d.Entry()) {
-		return plugin.CachedList(ctx, d.Entry().(plugin.Group), d.id)
+		return plugin.CachedList(ctx, d.Entry().(plugin.Group))
 	}
 
 	return []plugin.Entry{}, fuse.ENOENT
@@ -77,7 +75,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
 			if plugin.ListAction.IsSupportedOn(entry) {
-				childdir := newDir(entry, d.String())
+				childdir := newDir(entry.(plugin.Group))
 				journal.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
@@ -88,7 +86,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			}
 
 			journal.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
-			return newFile(entry, d.String()), nil
+			return newFile(entry), nil
 		}
 	}
 	journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)

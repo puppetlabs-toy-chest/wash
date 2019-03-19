@@ -29,7 +29,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	journal.Record(ctx, "API: Read %v", path)
-	content, err := plugin.CachedOpen(ctx, entry.(plugin.Readable), toID(path))
+	content, err := plugin.CachedOpen(ctx, entry.(plugin.Readable))
 
 	if err != nil {
 		journal.Record(ctx, "API: Read %v errored: %v", path, err)

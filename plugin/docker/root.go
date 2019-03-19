@@ -11,11 +11,9 @@ import (
 
 // Root of the Docker plugin
 type Root struct {
+	plugin.EntryBase
 	resources []plugin.Entry
 }
-
-// Name returns 'docker'
-func (r *Root) Name() string { return "docker" }
 
 // Init for root
 func (r *Root) Init() error {
@@ -24,6 +22,8 @@ func (r *Root) Init() error {
 		return err
 	}
 
+	r.EntryBase = plugin.NewEntry("docker")
+	r.CacheConfig().TurnOffCaching()
 	r.resources = []plugin.Entry{
 		&containers{EntryBase: plugin.NewEntry("containers"), client: dockerCli},
 		&volumes{EntryBase: plugin.NewEntry("volumes"), client: dockerCli},
