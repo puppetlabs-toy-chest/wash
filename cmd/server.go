@@ -17,6 +17,7 @@ import (
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/aws"
 	"github.com/puppetlabs/wash/plugin/docker"
 	"github.com/puppetlabs/wash/plugin/kubernetes"
 
@@ -181,6 +182,7 @@ func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
 
 func loadInternalPlugins(registry *plugin.Registry) {
 	log.Info("Loading internal plugins")
+	loadPlugin(registry, "aws", &aws.Root{})
 	loadPlugin(registry, "docker", &docker.Root{})
 	loadPlugin(registry, "kubernetes", &kubernetes.Root{})
 	log.Info("Finished loading internal plugins")

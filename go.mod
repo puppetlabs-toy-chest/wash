@@ -12,6 +12,7 @@ require (
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.11 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/aws/aws-sdk-go v1.17.14
 	github.com/docker/distribution v2.7.0+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -32,6 +33,7 @@ require (
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
@@ -44,6 +46,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/pkg/xattr v0.4.0
 	github.com/sirupsen/logrus v1.3.0
+	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.2.2
@@ -55,7 +58,9 @@ require (
 	google.golang.org/genproto v0.0.0-20181219182458-5a97ab628bfb // indirect
 	google.golang.org/grpc v1.17.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/ini.v1 v1.42.0 // indirect
 	gopkg.in/yaml.v2 v2.2.2
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/api v0.0.0-20181221193117-173ce66c1e39
