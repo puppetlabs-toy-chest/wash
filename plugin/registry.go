@@ -22,8 +22,8 @@ func NewRegistry() *Registry {
 	// CachedList sets the cache IDs of the Plugin roots to
 	// "/<root_name>" (e.g. "/docker", "/kubernetes", "/aws"),
 	// and all other IDs are correctly set to <parent_id> + "/" + <name>.
-	r.CacheConfig().id = ""
-	r.CacheConfig().TurnOffCaching()
+	r.setID("")
+	r.TurnOffCaching()
 
 	return r
 }

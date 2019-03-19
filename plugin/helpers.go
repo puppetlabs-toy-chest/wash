@@ -18,11 +18,6 @@ import (
 // DefaultTimeout is the default timeout for prefetching
 var DefaultTimeout = 10 * time.Second
 
-// NewEntry creates a new named entry
-func NewEntry(name string) EntryBase {
-	return EntryBase{name, newCacheConfig()}
-}
-
 // ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
 // must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
 func ToMetadata(obj interface{}) MetadataMap {

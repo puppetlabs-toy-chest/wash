@@ -15,8 +15,8 @@ type ExternalPluginRootTestSuite struct {
 func (suite *ExternalPluginRootTestSuite) TestInit() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	root := &ExternalPluginRoot{&ExternalPluginEntry{
-		script:   mockScript,
-		washPath: "/foo",
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
 	}}
 
 	mockInvokeAndWait := func(stdout []byte, err error) {
@@ -42,10 +42,8 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	if suite.NoError(err) {
 		expectedRoot := &ExternalPluginRoot{
 			ExternalPluginEntry: &ExternalPluginEntry{
-				name:             "foo",
+				EntryBase:        NewEntry("foo"),
 				supportedActions: []string{"list"},
-				cacheConfig:      newCacheConfig(),
-				washPath:         "/foo",
 				script:           root.script,
 			},
 		}

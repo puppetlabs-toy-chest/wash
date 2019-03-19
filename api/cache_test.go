@@ -90,7 +90,7 @@ func (suite *CacheHandlerTestSuite) TestRejectsGet() {
 func (suite *CacheHandlerTestSuite) TestClearCache() {
 	// Populate the cache with a mocked resource and plugin.Cached*
 	group := newMockedGroup()
-	group.CacheConfig().SetTestID("/dir")
+	group.SetTestID("/dir")
 	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
 	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {

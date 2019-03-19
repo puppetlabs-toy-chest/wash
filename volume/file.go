@@ -26,7 +26,7 @@ func NewFile(name string, attr plugin.Attributes, cb ContentCB, path string) *Fi
 		contentcb: cb,
 		path:      path,
 	}
-	vf.CacheConfig().SetTTLOf(plugin.Open, 60*time.Second)
+	vf.SetTTLOf(plugin.Open, 60*time.Second)
 
 	return vf
 }

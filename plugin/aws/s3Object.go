@@ -33,7 +33,7 @@ func newS3Object(attr plugin.Attributes, metadata plugin.MetadataMap, bucket str
 		key:       key,
 		client:    client,
 	}
-	o.CacheConfig().TurnOffCachingFor(plugin.Metadata)
+	o.TurnOffCachingFor(plugin.Metadata)
 
 	return o
 }

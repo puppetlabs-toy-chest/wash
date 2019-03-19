@@ -35,7 +35,7 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		podi:      pd,
 		startTime: p.CreationTimestamp.Time,
 	}
-	vol.CacheConfig().SetTTLOf(plugin.List, 60*time.Second)
+	vol.SetTTLOf(plugin.List, 60*time.Second)
 
 	return vol
 }

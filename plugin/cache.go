@@ -2,85 +2,13 @@ package plugin
 
 import (
 	"context"
-	"flag"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/puppetlabs/wash/datastore"
 )
 
-type cachedOp int8
-
-const (
-	// List represents Group#List
-	List cachedOp = iota
-	// Open represents Readable#Open
-	Open
-	// Metadata represents Resource#Metadata
-	Metadata
-)
-
-var cachedOpToNameMap = [3]string{"List", "Open", "Metadata"}
-
-// CacheConfig represents an entry's cache configuration
-type CacheConfig struct {
-	ttl [3]time.Duration
-	// id represents the entry's cache ID. It is set in CachedList.
-	id string
-}
-
-func newCacheConfig() *CacheConfig {
-	config := &CacheConfig{}
-
-	for op := range config.ttl {
-		config.SetTTLOf(cachedOp(op), 15*time.Second)
-	}
-
-	return config
-}
-
-func (config *CacheConfig) getTTLOf(op cachedOp) time.Duration {
-	return config.ttl[op]
-}
-
-// SetTTLOf sets the specified op's TTL
-func (config *CacheConfig) SetTTLOf(op cachedOp, ttl time.Duration) {
-	config.ttl[op] = ttl
-}
-
-// TurnOffCachingFor turns off caching for the specified op
-func (config *CacheConfig) TurnOffCachingFor(op cachedOp) {
-	config.SetTTLOf(op, -1)
-}
-
-// TurnOffCaching turns off caching for all ops
-func (config *CacheConfig) TurnOffCaching() {
-	for op := range config.ttl {
-		config.TurnOffCachingFor(cachedOp(op))
-	}
-}
-
-// ID returns the entry's cache ID
-func (config *CacheConfig) ID() string {
-	return config.id
-}
-
-// SetTestID sets the entry's cache ID for testing.
-// It can only be called by the tests.
-func (config *CacheConfig) SetTestID(id string) {
-	if notRunningTests() {
-		panic("SetTestID can be only be called by the tests")
-	}
-
-	config.id = id
-}
-
 var cache datastore.Cache
-
-func notRunningTests() bool {
-	return flag.Lookup("test.v") == nil
-}
 
 // InitCache initializes the cache
 func InitCache() {
@@ -149,11 +77,7 @@ func ClearCacheFor(path string) ([]string, error) {
 	return cache.Delete(rx), nil
 }
 
-func panicNilCacheConfig() {
-	panic("The entry's cache config is nil. Did you initialize the entry's EntryBase field with plugin.NewEntry(<name>)?")
-}
-
-func cachedOpHelper(op cachedOp, entry Entry, generateValue func() (interface{}, error)) (interface{}, error) {
+func cachedOpHelper(op cacheableOp, entry Entry, generateValue func() (interface{}, error)) (interface{}, error) {
 	if cache == nil {
 		if notRunningTests() {
 			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
@@ -162,18 +86,13 @@ func cachedOpHelper(op cachedOp, entry Entry, generateValue func() (interface{},
 		}
 	}
 
-	config := entry.CacheConfig()
-	if config == nil {
-		panicNilCacheConfig()
-	}
-
-	ttl := config.getTTLOf(op)
+	ttl := entry.getTTLOf(op)
 	if ttl < 0 {
 		return generateValue()
 	}
 
-	opName := cachedOpToNameMap[op]
-	return cache.GetOrUpdate(opName+"::"+entry.CacheConfig().ID(), ttl, false, generateValue)
+	opName := cacheableOpToNameMap[op]
+	return cache.GetOrUpdate(opName+"::"+entry.ID(), ttl, false, generateValue)
 }
 
 // CachedList caches a Group object's List method
@@ -185,12 +104,7 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 		}
 
 		for _, entry := range entries {
-			cacheConfig := entry.CacheConfig()
-			if cacheConfig == nil {
-				panicNilCacheConfig()
-			}
-
-			cacheConfig.id = g.CacheConfig().ID() + "/" + strings.Trim(entry.Name(), "/")
+			entry.setID(g.ID() + "/" + strings.Trim(entry.Name(), "/"))
 		}
 
 		return entries, nil

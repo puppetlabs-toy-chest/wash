@@ -23,7 +23,7 @@ func (r *Root) Init() error {
 	}
 
 	r.EntryBase = plugin.NewEntry("docker")
-	r.CacheConfig().TurnOffCaching()
+	r.TurnOffCaching()
 	r.resources = []plugin.Entry{
 		&containers{EntryBase: plugin.NewEntry("containers"), client: dockerCli},
 		&volumes{EntryBase: plugin.NewEntry("volumes"), client: dockerCli},
