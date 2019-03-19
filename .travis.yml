@@ -19,9 +19,10 @@ jobs:
   - stage: deploy
     name: Deploy to GitHub Releases
     if: branch = master AND type = push
+    env: LINKFLAGS="-w -s -X github.com/puppetlabs/wash/cmd.version=${TRAVIS_TAG}" CGO_ENABLED=0
     script:
-    - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-apple-darwin
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-unknown-linux
+    - GOOS=darwin GOARCH=amd64 go build -ldflags="$LINKFLAGS" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-apple-darwin
+    - GOOS=linux GOARCH=amd64 go build -ldflags="$LINKFLAGS" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-unknown-linux
     deploy:
       provider: releases
       api_key:
