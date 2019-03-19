@@ -18,8 +18,8 @@ jobs:
     script: golangci-lint run -v
   - stage: deploy
     name: Deploy to GitHub Releases
-    script: skip
-    before_deploy:
+    if: branch = master AND type = push
+    script:
     - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-apple-darwin
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-unknown-linux
     deploy:
