@@ -8,6 +8,7 @@ services:
 env:
   global:
   - GO111MODULE=on
+  - PROJECT_NAME=wash
 jobs:
   include:
   - name: Test Go stable
@@ -15,6 +16,25 @@ jobs:
     before_script:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
     script: golangci-lint run -v
+  - stage: deploy
+    name: Deploy to GitHub Releases
+    if: branch = master AND type = push
+    script:
+    - CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-apple-darwin
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-unknown-linux
+    deploy:
+      provider: releases
+      api_key:
+        secure: PVefYvPRdpOtWvvZEG9wxv2HxjBUQ1/t1XsXQFOuF30/YzjY4EHaYBH/RXtFzuiCqpyk5GA1dWVUSE356Aka2Y3JlqImv1d0n+prrG2fEJBEtaDlR7Q6DeIiONPsCMxWyJ22r+bBz3C1Qq+QwSLzFuTN1XKIQTFdzIaqnIO7rthPNZNSfMmreed6SXfFmnsIcA+7TG+k4iDYz8COSDrYdjaiHnejvHlUiXh9Rfa3LzTdC4rxtOKofbUa9Qei08mSaSuRGD0U0vymOfFKf/QjNuwFmGSbdIH+1KmCOD9MV/47l6xZMDHDL4mLabsDB9ipf9LFAWmN9pQ/a5UoPyh4IXgaP7NeS3ISNlbKSCx7S70In8/whQv7jB8a5dNuo8HtKx0wzdQ9pKDBDt/N3h1YYJhGR2UF4JJd1CkBytRgIKzjZ5D7Ky+j23Vr6/+lvCRL0CN3RvvBP91/rfyO61eW4FGo+J/Es2u5+HPjVST4S4ntZnTDA6I2K1js8AbG1ofalivpcth4i+2zoKANXEjlXgUUI63gypBvyKGgHHouQTzKuyeIPBzlhYCIrQVhN5QG2+Lc9w7A2KqeRm0vxQ9elEKO1i5bSzSxYUXLMVSPkted0+gSPRRp4i67wOUO+1V9cLubbXm8PG1E1DhpiOQnxQb2DnaaVlL1mr3XQVDl6BY=
+      file_glob: true
+      file: ${PROJECT_NAME}-${TRAVIS_TAG}-*
+      skip_cleanup: true
+      on:
+        repo: puppetlabs/wash
+        draft: true
+        # Testing with 'draft'. Enable before tagging release.
+        #tags: true
+
 # TODO: Re-enable this step once we've got the container
 # experience fleshed out.
 #  - name: Build Docker container
