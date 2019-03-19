@@ -140,6 +140,3 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 
 	return metadata, nil
 }
-
-// TODO: Implement Metadata. What would be useful information that we could
-// include here?

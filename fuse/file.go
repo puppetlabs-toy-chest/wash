@@ -97,10 +97,6 @@ func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 }
 
 // Read fills a buffer with the requested amount of data from the file.
-//
-// TODO: Pass the ctx into ReadAt. This is useful when the reader's API
-// lets you start from a specified offset when reading the data (e.g. like
-// AWS w/ S3 objects).
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
 	ctx = context.WithValue(ctx, journal.Key, journal.PIDToID(int(req.Pid)))
 
