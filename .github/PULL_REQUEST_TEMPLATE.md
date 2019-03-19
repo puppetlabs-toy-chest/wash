@@ -1,0 +1,1 @@
+Contributions to this project require sign-off consistent with the [Developers Certificate of Origin](https://developercertificate.org)
