@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/puppetlabs/wash/cmd/util"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +45,7 @@ func rootCommand() *cobra.Command {
 		SilenceErrors: true,
 	}
 
+	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(metaCommand())
 	rootCmd.AddCommand(lsCommand())
