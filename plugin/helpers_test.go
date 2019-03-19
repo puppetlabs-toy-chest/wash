@@ -113,7 +113,7 @@ func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 	e := &helpersTestsMockEntry{
 		EntryBase: NewEntry("mockEntry"),
 	}
-
+	e.SetTestID("id")
 	e.TurnOffCaching()
 
 	return e
@@ -133,7 +133,7 @@ func newHelpersTestsMockGroup() *helpersTestsMockGroup {
 	e := &helpersTestsMockGroup{
 		EntryBase: NewEntry("mockEntry"),
 	}
-
+	e.SetTestID("id")
 	e.TurnOffCaching()
 
 	return e

@@ -35,6 +35,19 @@ type CacheTestSuite struct {
 	cache *cacheTestsMockCache
 }
 
+type generateValueMatcherFunc = func(func() (interface{}, error)) bool
+
+func (suite *CacheTestSuite) makeGenerateValueMatcher(expectedValue interface{}) generateValueMatcherFunc {
+	return func(generateValue func() (interface{}, error)) bool {
+		res, err := generateValue()
+		if suite.NoError(err) {
+			return suite.Equal(expectedValue, res)
+		}
+
+		return false
+	}
+}
+
 func (suite *CacheTestSuite) SetupTest() {
 	suite.cache = &cacheTestsMockCache{}
 	SetTestCache(suite.cache)
@@ -100,7 +113,7 @@ type cacheTestsMockEntry struct {
 
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
 	return &cacheTestsMockEntry{
-		EntryBase: NewEntry(name),
+		EntryBase: newEntryBase(name),
 	}
 }
 
@@ -119,51 +132,83 @@ func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (MetadataMap, error)
 	return args.Get(0).(MetadataMap), args.Error(1)
 }
 
-type cachedOpFunc func(ctx context.Context, e Entry) (interface{}, error)
+type cachedActionOpFunc func(ctx context.Context, e Entry) (interface{}, error)
 
-func (suite *CacheTestSuite) testCachedOp(op cacheableOp, opName string, mockValue interface{}, cachedOp cachedOpFunc) {
+func (suite *CacheTestSuite) TestCachedOp() {
+	makePanicFunc := func(opName string, ttl time.Duration) func() {
+		return func() {
+			entry := newCacheTestsMockEntry("mock")
+			_, _ = CachedOp("List", entry, ttl, func() (interface{}, error) { return nil, nil })
+		}
+	}
+
+	// Test that CachedOp panics if an opName == an action op's name
+	suite.Panics(makePanicFunc("List", 15), "The opName List conflicts with CachedList")
+
+	// Test that CachedOp panics if a negative TTL's passed-in
+	suite.Panics(makePanicFunc("Op", -15), "plugin.CachedOp: received a negative TTL")
+
+	// Test that CachedOp panics if the cache == nil
+	UnsetTestCache()
+	suite.Panics(makePanicFunc("Op", 15))
+	SetTestCache(suite.cache)
+
+	// Test that CachedOp panics if entry.ID() == ""
+	suite.Panics(makePanicFunc("Op", 15), "entry.ID() returned an empty ID")
+
+	// Test that CachedOp calls cache#GetOrUpdate with the right parameters
+	entry := newCacheTestsMockEntry("mock")
+	entry.SetTestID("id")
+	opName := "Op"
+	opTTL := 5 * time.Second
+	op := func() (interface{}, error) { return "result", nil }
+	opKey := "Op::id"
+	generateValueMatcher := suite.makeGenerateValueMatcher("result")
+	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
+	v, err := CachedOp(opName, entry, opTTL, op)
+	if suite.NoError(err) {
+		suite.Equal("result", v)
+	}
+	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
+}
+
+func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, mockValue interface{}, cachedActionOp cachedActionOpFunc) {
 	ctx := context.Background()
 
-	// Test that cachedOp panics if the cache == nil
+	// Test that cachedActionOp panics if the cache == nil
 	panicFunc := func() {
-		entry := newCacheTestsMockEntry("")
-		_, _ = cachedOp(ctx, entry)
+		entry := newCacheTestsMockEntry("mock")
+		_, _ = cachedActionOp(ctx, entry)
 	}
 	UnsetTestCache()
 	suite.Panics(panicFunc)
 	SetTestCache(suite.cache)
 
-	// Test that cachedOp does _not_ call cache#GetOrUpdate for an
+	// Test that cachedActionOp panics if entry.ID() == ""
+	suite.Panics(panicFunc, "entry.ID() returned an empty ID")
+
+	// Test that cachedActionOp does _not_ call cache#GetOrUpdate for an
 	// entry that's turned off caching
-	entry := newCacheTestsMockEntry("")
+	entry := newCacheTestsMockEntry("mock")
 	entry.SetTestID("id")
 	entry.On(opName, ctx).Return(mockValue, nil)
 	entry.TurnOffCachingFor(op)
-	v, err := cachedOp(ctx, entry)
+	v, err := cachedActionOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mockValue, v)
 	}
 	suite.cache.AssertNotCalled(suite.T(), "GetOrUpdate")
 
-	// Test that cachedOp does call cache#GetOrUpdate for an
+	// Test that cachedActionOp does call cache#GetOrUpdate for an
 	// entry that's enabled caching, and that it passes-in the
 	// right arguments.
 	opTTL := 5 * time.Second
 	entry.SetTTLOf(op, opTTL)
 	entry.On(opName, ctx).Return(mockValue, nil)
 	opKey := opName + "::" + "id"
-	generateValueMatcher := func(generateValue func() (interface{}, error)) bool {
-		// This matcher ensures that cachedOp is passing-in the right generator function to
-		// GetOrUpdate
-		res, err := generateValue()
-		if suite.NoError(err) {
-			return suite.Equal(mockValue, res)
-		}
-
-		return false
-	}
+	generateValueMatcher := suite.makeGenerateValueMatcher(mockValue)
 	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mockValue, nil).Once()
-	v, err = cachedOp(ctx, entry)
+	v, err = cachedActionOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mockValue, v)
 	}
@@ -171,42 +216,56 @@ func (suite *CacheTestSuite) testCachedOp(op cacheableOp, opName string, mockVal
 }
 
 func (suite *CacheTestSuite) TestCachedList() {
-	mockChildren := []Entry{newCacheTestsMockEntry("")}
-	suite.testCachedOp(List, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
+	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
+	suite.testCachedActionOp(List, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedList(ctx, e.(Group))
 	})
 
-	// Set-up another mock entry for additional CachedList tests
-	ctx := context.Background()
-	entry := newCacheTestsMockEntry("parent")
-	entry.SetTestID("parentID")
-	entry.TurnOffCaching()
-
 	// Test that CachedList sets the children's cache IDs
 	// to <parent_cache_id>/<child_name>
+	ctx := context.Background()
 	mockChildren = []Entry{
-		newCacheTestsMockEntry("/child1/"),
+		newCacheTestsMockEntry("child1"),
 		newCacheTestsMockEntry("child2"),
 	}
+
+	// When the parent's the root
+	entry := newCacheTestsMockEntry("/")
+	entry.SetTestID("/")
+	entry.TurnOffCaching()
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
-		suite.Equal(mockChildren, children)
-		suite.Equal("parentID/child1", children[0].ID())
-		suite.Equal("parentID/child2", children[1].ID())
+		if suite.Equal(mockChildren, children) {
+			suite.Equal("/child1", children[0].ID())
+			suite.Equal("/child2", children[1].ID())
+		}
+	}
+
+	// When the parent's some other entry
+	entry = newCacheTestsMockEntry("parent")
+	entry.SetTestID("/parent")
+	entry.TurnOffCaching()
+	entry.On("List", ctx).Return(mockChildren, nil).Once()
+	children, err = CachedList(ctx, entry)
+	if suite.NoError(err) {
+		if suite.Equal(mockChildren, children) {
+			suite.Equal("/parent/child1", children[0].ID())
+			suite.Equal("/parent/child2", children[1].ID())
+		}
 	}
 }
 
 func (suite *CacheTestSuite) TestCachedOpen() {
 	mockReader := strings.NewReader("foo")
-	suite.testCachedOp(Open, "Open", mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedActionOp(Open, "Open", mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedOpen(ctx, e.(Readable))
 	})
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockMetadataMap := MetadataMap{"foo": "bar"}
-	suite.testCachedOp(Metadata, "Metadata", mockMetadataMap, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedActionOp(Metadata, "Metadata", mockMetadataMap, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedMetadata(ctx, e.(Resource))
 	})
 }

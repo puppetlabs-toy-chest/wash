@@ -2,8 +2,10 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/puppetlabs/wash/datastore"
 )
@@ -77,34 +79,45 @@ func ClearCacheFor(path string) ([]string, error) {
 	return cache.Delete(rx), nil
 }
 
-func cachedOpHelper(op cacheableOp, entry Entry, generateValue func() (interface{}, error)) (interface{}, error) {
-	if cache == nil {
-		if notRunningTests() {
-			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
-		} else {
-			panic("The test cache was not set. You can set it by invoking plugin.SetTestCache(<cache>)")
+type opFunc func() (interface{}, error)
+
+// CachedOp caches the given op's result for the duration specified by the
+// ttl. You should use it when you need more fine-grained caching than what
+// the existing CachedList, CachedOpen, and CachedMetadata methods provide.
+// For example, CachedOp could be useful to cache an API request whose response
+// lets you implement Attr() and Metadata() for the given entry.
+func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+	for _, actionOpName := range actionOpCodeToNameMap {
+		if opName == actionOpName {
+			panic(fmt.Sprintf("The opName %v conflicts with Cached%v", opName, actionOpName))
 		}
 	}
 
-	ttl := entry.getTTLOf(op)
 	if ttl < 0 {
-		return generateValue()
+		panic("plugin.CachedOp: received a negative TTL")
 	}
 
-	opName := cacheableOpToNameMap[op]
-	return cache.GetOrUpdate(opName+"::"+entry.ID(), ttl, false, generateValue)
+	return cachedOp(opName, entry, ttl, op)
 }
 
-// CachedList caches a Group object's List method
+// CachedList caches a Group object's List method. It also sets the
+// children's IDs to <parent_id> + "/" + <child_name>.
 func CachedList(ctx context.Context, g Group) ([]Entry, error) {
-	cachedEntries, err := cachedOpHelper(List, g, func() (interface{}, error) {
+	cachedEntries, err := cachedActionOp(List, g, func() (interface{}, error) {
 		entries, err := g.List(ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		for _, entry := range entries {
-			entry.setID(g.ID() + "/" + strings.Trim(entry.Name(), "/"))
+			var id string
+			if g.ID() == "/" {
+				id = g.ID() + entry.Name()
+			} else {
+				id = g.ID() + "/" + entry.Name()
+			}
+
+			entry.setID(id)
 		}
 
 		return entries, nil
@@ -122,7 +135,7 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
 func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedOpHelper(Open, r, func() (interface{}, error) {
+	cachedContent, err := cachedActionOp(Open, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
 
@@ -135,7 +148,7 @@ func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 
 // CachedMetadata caches a Resource object's Metadata method
 func CachedMetadata(ctx context.Context, r Resource) (MetadataMap, error) {
-	cachedMetadata, err := cachedOpHelper(Metadata, r, func() (interface{}, error) {
+	cachedMetadata, err := cachedActionOp(Metadata, r, func() (interface{}, error) {
 		return r.Metadata(ctx)
 	})
 
@@ -144,4 +157,35 @@ func CachedMetadata(ctx context.Context, r Resource) (MetadataMap, error) {
 	}
 
 	return cachedMetadata.(MetadataMap), nil
+}
+
+// Common helper for CachedList, CachedOpen and CachedMetadata
+func cachedActionOp(opCode actionOpCode, entry Entry, op opFunc) (interface{}, error) {
+	opName := actionOpCodeToNameMap[opCode]
+	ttl := entry.getTTLOf(opCode)
+
+	return cachedOp(opName, entry, ttl, op)
+}
+
+// Common helper for CachedOp and cachedActionOp.
+func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+	if cache == nil {
+		if notRunningTests() {
+			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
+		} else {
+			panic("The test cache was not set. You can set it by invoking plugin.SetTestCache(<cache>)")
+		}
+	}
+
+	if entry.ID() == "" {
+		// The Registry's ID is set to "/", while all other entries' IDs are
+		// set in CachedList. Thus, we should never hit this code-path.
+		panic("entry.ID() returned an empty ID")
+	}
+
+	if ttl < 0 {
+		return op()
+	}
+
+	return cache.GetOrUpdate(opName+"::"+entry.ID(), ttl, false, op)
 }

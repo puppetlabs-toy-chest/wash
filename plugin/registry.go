@@ -14,15 +14,10 @@ type Registry struct {
 // NewRegistry creates a new plugin registry object
 func NewRegistry() *Registry {
 	r := &Registry{
-		EntryBase: NewEntry("/"),
+		EntryBase: newEntryBase("/"),
 		plugins:   make(map[string]Root),
 	}
-
-	// Set the registry's ID to the empty string. This way,
-	// CachedList sets the cache IDs of the Plugin roots to
-	// "/<root_name>" (e.g. "/docker", "/kubernetes", "/aws"),
-	// and all other IDs are correctly set to <parent_id> + "/" + <name>.
-	r.setID("")
+	r.setID("/")
 	r.TurnOffCaching()
 
 	return r

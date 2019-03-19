@@ -2,21 +2,22 @@ package plugin
 
 import (
 	"flag"
+	"strings"
 	"time"
 )
 
-type cacheableOp int8
+type actionOpCode int8
 
 const (
 	// List represents Group#List
-	List cacheableOp = iota
+	List actionOpCode = iota
 	// Open represents Readable#Open
 	Open
 	// Metadata represents Resource#Metadata
 	Metadata
 )
 
-var cacheableOpToNameMap = [3]string{"List", "Open", "Metadata"}
+var actionOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
 // EntryBase implements Entry, making it easy to create new entries.
 // You should use plugin.NewEntry to create new EntryBase objects.
@@ -27,14 +28,28 @@ type EntryBase struct {
 	ttl [3]time.Duration
 }
 
-// NewEntry creates a new entry
-func NewEntry(name string) EntryBase {
+// newEntryBase is needed by NewEntry, NewRegistry,
+// and some of the cache tests
+func newEntryBase(name string) EntryBase {
 	e := EntryBase{name: name}
+
 	for op := range e.ttl {
-		e.SetTTLOf(cacheableOp(op), 15*time.Second)
+		e.SetTTLOf(actionOpCode(op), 15*time.Second)
 	}
 
 	return e
+}
+
+// NewEntry creates a new entry
+func NewEntry(name string) EntryBase {
+	if name == "" {
+		panic("plugin.NewEntry: received an empty name")
+	}
+	if strings.Contains(name, "/") {
+		panic("plugin.NewEntry: received a name containing a /")
+	}
+
+	return newEntryBase(name)
 }
 
 // Name returns the entry's name.
@@ -48,23 +63,23 @@ func (e *EntryBase) ID() string {
 }
 
 // SetTTLOf sets the specified op's TTL
-func (e *EntryBase) SetTTLOf(op cacheableOp, ttl time.Duration) {
+func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {
 	e.ttl[op] = ttl
 }
 
 // TurnOffCachingFor turns off caching for the specified op
-func (e *EntryBase) TurnOffCachingFor(op cacheableOp) {
+func (e *EntryBase) TurnOffCachingFor(op actionOpCode) {
 	e.SetTTLOf(op, -1)
 }
 
 // TurnOffCaching turns off caching for all ops
 func (e *EntryBase) TurnOffCaching() {
 	for op := range e.ttl {
-		e.TurnOffCachingFor(cacheableOp(op))
+		e.TurnOffCachingFor(actionOpCode(op))
 	}
 }
 
-func (e *EntryBase) getTTLOf(op cacheableOp) time.Duration {
+func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
 	return e.ttl[op]
 }
 

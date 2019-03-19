@@ -12,8 +12,17 @@ type EntryBaseTestSuite struct {
 }
 
 func (suite *EntryBaseTestSuite) TestNewEntry() {
+	suite.Panics(
+		func() { NewEntry("") },
+		"plugin.NewEntry: received an empty name",
+	)
+	suite.Panics(
+		func() { NewEntry("/foo/") },
+		"plugin.NewEntry: received a name containing a /",
+	)
+
 	e := NewEntry("foo")
-	assertOpTTL := func(op cacheableOp, opName string, expectedTTL time.Duration) {
+	assertOpTTL := func(op actionOpCode, opName string, expectedTTL time.Duration) {
 		actualTTL := e.getTTLOf(op)
 		suite.Equal(
 			expectedTTL,
