@@ -31,9 +31,7 @@ jobs:
       skip_cleanup: true
       on:
         repo: puppetlabs/wash
-        draft: true
-        # Testing with 'draft'. Enable before tagging release.
-        #tags: true
+        tags: true
 
 # TODO: Re-enable this step once we've got the container
 # experience fleshed out.
