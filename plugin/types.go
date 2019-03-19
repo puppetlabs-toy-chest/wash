@@ -12,11 +12,6 @@ import (
 // Entry is a basic named resource type.
 type Entry interface {
 	Name() string
-}
-
-// Cached is a resource that expects its method invocations to be cached.
-// If CacheConfig() returns nil, a default config will be used.
-type Cached interface {
 	CacheConfig() *CacheConfig
 }
 
@@ -124,9 +119,3 @@ type Attributes struct {
 
 // SizeUnknown can be used to denote that the size is unknown and should be queried from content.
 const SizeUnknown = ^uint64(0)
-
-// The Registry contains the core filesystem data.
-// Plugins: maps plugin mount points to their implementations.
-type Registry struct {
-	Plugins map[string]Root
-}

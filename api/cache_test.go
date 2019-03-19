@@ -89,10 +89,11 @@ func (suite *CacheHandlerTestSuite) TestRejectsGet() {
 
 func (suite *CacheHandlerTestSuite) TestClearCache() {
 	// Populate the cache with a mocked resource and plugin.Cached*
-	var group mockedGroup
+	group := newMockedGroup()
+	group.CacheConfig().SetTestID("/dir")
 	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
-	if children, err := plugin.CachedList(context.Background(), &group, "/dir"); suite.Nil(err) {
+	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
 		suite.Equal([]plugin.Entry{}, children)
 	}
 
@@ -103,7 +104,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal("[]\n", w.Body.String())
 
-	if children, err := plugin.CachedList(context.Background(), &group, "/dir"); suite.Nil(err) {
+	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
 		suite.Equal([]plugin.Entry{}, children)
 	}
 
@@ -114,7 +115,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
 
-	if children, err := plugin.CachedList(context.Background(), &group, "/dir"); suite.Nil(err) {
+	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
 		suite.Equal([]plugin.Entry{}, children)
 	}
 
@@ -128,6 +129,14 @@ func TestCacheHandler(t *testing.T) {
 type mockedGroup struct {
 	plugin.EntryBase
 	mock.Mock
+}
+
+func newMockedGroup() *mockedGroup {
+	g := &mockedGroup{
+		EntryBase: plugin.NewEntry("mockGroup"),
+	}
+
+	return g
 }
 
 func (g *mockedGroup) List(ctx context.Context) ([]plugin.Entry, error) {

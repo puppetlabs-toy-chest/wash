@@ -19,7 +19,7 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 		switch curGroup := curEntry.(type) {
 		case plugin.Group:
 			// Get the entries via. List()
-			entries, err := plugin.CachedList(ctx, curGroup, curEntryID)
+			entries, err := plugin.CachedList(ctx, curGroup)
 			if err != nil {
 				return nil, entryNotFoundResponse(path, err.Error())
 			}
@@ -68,14 +68,10 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 
 	// Get the registry from context (added by registry middleware).
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
-	root, ok := registry.Plugins[pluginName]
+	root, ok := registry.Plugins()[pluginName]
 	if !ok {
 		return nil, pluginDoesNotExistResponse(pluginName)
 	}
 
 	return findEntry(ctx, root, segments)
-}
-
-func toID(path string) string {
-	return "/" + strings.TrimSuffix(path, "/")
 }

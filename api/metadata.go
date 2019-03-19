@@ -30,7 +30,7 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 	}
 
 	journal.Record(ctx, "API: Metadata %v", path)
-	metadata, err := plugin.CachedMetadata(ctx, entry.(plugin.Resource), toID(path))
+	metadata, err := plugin.CachedMetadata(ctx, entry.(plugin.Resource))
 
 	if err != nil {
 		journal.Record(ctx, "API: Metadata %v errored: %v", path, err)

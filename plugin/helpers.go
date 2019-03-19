@@ -130,7 +130,7 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 }
 
 // FillAttr fills the given attributes struct with the entry's attributes.
-func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes) error {
+func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 	attr.Size = SizeUnknown
 
 	if item, ok := entry.(File); ok {
@@ -146,7 +146,7 @@ func FillAttr(ctx context.Context, entry Entry, entryID string, attr *Attributes
 
 	var err error
 	if ReadAction.IsSupportedOn(entry) && attr.Size == SizeUnknown {
-		content, openErr := CachedOpen(ctx, entry.(Readable), entryID)
+		content, openErr := CachedOpen(ctx, entry.(Readable))
 		if openErr != nil {
 			err = ErrCouldNotDetermineSizeAttr{openErr.Error()}
 			attr.Size = 0

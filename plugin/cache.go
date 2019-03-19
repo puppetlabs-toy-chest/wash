@@ -26,6 +26,8 @@ var cachedOpToNameMap = [3]string{"List", "Open", "Metadata"}
 // CacheConfig represents an entry's cache configuration
 type CacheConfig struct {
 	ttl [3]time.Duration
+	// id represents the entry's cache ID. It is set in CachedList.
+	id string
 }
 
 func newCacheConfig() *CacheConfig {
@@ -59,8 +61,22 @@ func (config *CacheConfig) TurnOffCaching() {
 	}
 }
 
+// ID returns the entry's cache ID
+func (config *CacheConfig) ID() string {
+	return config.id
+}
+
+// SetTestID sets the entry's cache ID for testing.
+// It can only be called by the tests.
+func (config *CacheConfig) SetTestID(id string) {
+	if notRunningTests() {
+		panic("SetTestID can be only be called by the tests")
+	}
+
+	config.id = id
+}
+
 var cache datastore.Cache
-var defaultConfig CacheConfig
 
 func notRunningTests() bool {
 	return flag.Lookup("test.v") == nil
@@ -70,7 +86,6 @@ func notRunningTests() bool {
 func InitCache() {
 	if notRunningTests() {
 		cache = datastore.NewMemCache()
-		defaultConfig = *newCacheConfig()
 	} else {
 		panic("InitCache can only be called in production. Tests should call SetTestCache instead.")
 	}
@@ -134,7 +149,11 @@ func ClearCacheFor(path string) ([]string, error) {
 	return cache.Delete(rx), nil
 }
 
-func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (interface{}, error)) (interface{}, error) {
+func panicNilCacheConfig() {
+	panic("The entry's cache config is nil. Did you initialize the entry's EntryBase field with plugin.NewEntry(<name>)?")
+}
+
+func cachedOpHelper(op cachedOp, entry Entry, generateValue func() (interface{}, error)) (interface{}, error) {
 	if cache == nil {
 		if notRunningTests() {
 			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
@@ -143,14 +162,9 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 		}
 	}
 
-	cached, ok := entry.(Cached)
-	if !ok {
-		return generateValue()
-	}
-
-	config := cached.CacheConfig()
+	config := entry.CacheConfig()
 	if config == nil {
-		config = &defaultConfig
+		panicNilCacheConfig()
 	}
 
 	ttl := config.getTTLOf(op)
@@ -159,13 +173,27 @@ func cachedOpHelper(op cachedOp, entry Entry, id string, generateValue func() (i
 	}
 
 	opName := cachedOpToNameMap[op]
-	return cache.GetOrUpdate(opName+"::"+id, ttl, false, generateValue)
+	return cache.GetOrUpdate(opName+"::"+entry.CacheConfig().ID(), ttl, false, generateValue)
 }
 
 // CachedList caches a Group object's List method
-func CachedList(ctx context.Context, g Group, id string) ([]Entry, error) {
-	cachedEntries, err := cachedOpHelper(List, g, id, func() (interface{}, error) {
-		return g.List(ctx)
+func CachedList(ctx context.Context, g Group) ([]Entry, error) {
+	cachedEntries, err := cachedOpHelper(List, g, func() (interface{}, error) {
+		entries, err := g.List(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, entry := range entries {
+			cacheConfig := entry.CacheConfig()
+			if cacheConfig == nil {
+				panicNilCacheConfig()
+			}
+
+			cacheConfig.id = g.CacheConfig().ID() + "/" + strings.Trim(entry.Name(), "/")
+		}
+
+		return entries, nil
 	})
 
 	if err != nil {
@@ -179,8 +207,8 @@ func CachedList(ctx context.Context, g Group, id string) ([]Entry, error) {
 // When using the reader returned by this method, use idempotent read operations
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
-func CachedOpen(ctx context.Context, r Readable, id string) (SizedReader, error) {
-	cachedContent, err := cachedOpHelper(Open, r, id, func() (interface{}, error) {
+func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
+	cachedContent, err := cachedOpHelper(Open, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
 
@@ -192,8 +220,8 @@ func CachedOpen(ctx context.Context, r Readable, id string) (SizedReader, error)
 }
 
 // CachedMetadata caches a Resource object's Metadata method
-func CachedMetadata(ctx context.Context, r Resource, id string) (MetadataMap, error) {
-	cachedMetadata, err := cachedOpHelper(Metadata, r, id, func() (interface{}, error) {
+func CachedMetadata(ctx context.Context, r Resource) (MetadataMap, error) {
+	cachedMetadata, err := cachedOpHelper(Metadata, r, func() (interface{}, error) {
 		return r.Metadata(ctx)
 	})
 

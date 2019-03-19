@@ -68,20 +68,19 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		}()
 	}
 
-	var registry plugin.Registry
-	registry.Plugins = make(map[string]plugin.Root)
-	loadInternalPlugins(&registry)
+	registry := plugin.NewRegistry()
+	loadInternalPlugins(registry)
 	if externalPluginsPath != "" {
-		loadExternalPlugins(&registry, externalPluginsPath)
+		loadExternalPlugins(registry, externalPluginsPath)
 	}
-	if len(registry.Plugins) == 0 {
+	if len(registry.Plugins()) == 0 {
 		log.Warn("No plugins loaded")
 		return exitCode{1}
 	}
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(&registry, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
 	if err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -95,7 +94,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		<-apiServerStoppedCh
 	}
 
-	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(&registry, mountpoint)
+	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(registry, mountpoint)
 	if err != nil {
 		stopAPIServer()
 		log.Warn(err)
@@ -176,7 +175,7 @@ func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
 		// %+v is a convention used by some errors to print additional context such as a stack trace
 		log.Warnf("%v failed to load: %+v", name, err)
 	} else {
-		registry.Plugins[name] = root
+		registry.RegisterPlugin(name, root)
 	}
 }
 

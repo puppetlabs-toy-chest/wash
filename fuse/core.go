@@ -16,34 +16,17 @@ var startTime = time.Now()
 
 // Root represents the root of the FUSE filesystem
 type Root struct {
-	plugins []plugin.Entry
+	registry *plugin.Registry
 }
 
-func newRoot(plugins map[string]plugin.Root) Root {
-	root := Root{}
-
-	root.plugins = make([]plugin.Entry, 0, len(plugins))
-	for _, v := range plugins {
-		root.plugins = append(root.plugins, v)
-	}
-
-	return root
-}
-
-// Name returns '/', the name for the filesystem root.
-func (r *Root) Name() string {
-	return "/"
+func newRoot(registry *plugin.Registry) Root {
+	return Root{registry: registry}
 }
 
 // Root presents the root of the filesystem.
 func (r *Root) Root() (fs.Node, error) {
 	log.Infof("Entering root of filesystem")
-	return newDir(r, ""), nil
-}
-
-// List lists all clients as directories.
-func (r *Root) List(_ context.Context) ([]plugin.Entry, error) {
-	return r.plugins, nil
+	return newDir(r.registry), nil
 }
 
 func getIDs() (uint32, uint32) {
@@ -112,7 +95,7 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 func attr(ctx context.Context, f fuseNode, a *fuse.Attr) error {
 	attr := plugin.Attributes{}
 
-	err := plugin.FillAttr(ctx, f.Entry(), f.String(), &attr)
+	err := plugin.FillAttr(ctx, f.Entry(), &attr)
 	if _, ok := err.(plugin.ErrCouldNotDetermineSizeAttr); ok {
 		log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
 	} else if err != nil {
@@ -172,7 +155,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 
 		log.Infof("FUSE: Serving filesystem")
 
-		root := newRoot(filesys.Plugins)
+		root := newRoot(filesys)
 		if err := fs.Serve(fuseConn, &root); err != nil {
 			log.Warnf("FUSE: fs.Serve errored with: %v", err)
 		}
