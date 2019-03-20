@@ -1,3 +1,4 @@
+// Package datastore implements structured data storage for wash server functionality.
 package datastore
 
 import (

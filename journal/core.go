@@ -1,3 +1,11 @@
+// Package journal provides tools for recording wash operations to journals stored
+// in the user's cache directory. The cache directory is created at 'wash/activity'
+// in the directory found via https://golang.org/pkg/os/#UserCacheDir. Journals are
+// separated by Journal ID.
+//
+// Wash plugins should use
+//	journal.Record(ctx context.Context, msg string, a ...interface{})
+// to record entries. The context contains the Journal ID.
 package journal
 
 import (

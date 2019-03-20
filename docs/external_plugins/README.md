@@ -6,7 +6,7 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
     * What things are my directories? What things are my files?
     * What Wash actions should I support on these things?
 
-2. Write the plugin script. This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.
+2. Write the [plugin script](plugin_script.md). This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.
 
 3. Add the plugin to the (configurable) `plugins.yaml` file by specifying its name and path to the plugin script. An example `plugins.yaml` file is shown below:
 

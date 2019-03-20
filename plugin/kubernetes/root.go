@@ -1,3 +1,6 @@
+// Package kubernetes presents a filesystem hierarchy for Kubernetes resources.
+//
+// It uses uses contexts from ~/.kube/config to access Kubernetes APIs.
 package kubernetes
 
 import (

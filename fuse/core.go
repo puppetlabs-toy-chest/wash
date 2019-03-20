@@ -1,3 +1,4 @@
+// Package fuse adapts wash plugin types to a FUSE filesystem.
 package fuse
 
 import (

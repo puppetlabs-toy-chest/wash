@@ -1,3 +1,9 @@
+// Package volume provides helpers for representing a remote filesystem.
+//
+// Plugins should use these helpers when representing a filesystem where the
+// structure and stats are retrieved all-at-once. The filesystem representation
+// should be stored in 'DirMap'. The root of the filesystem is then created with
+// 'NewDir'.
 package volume
 
 import (

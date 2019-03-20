@@ -1,3 +1,7 @@
+// Package aws presents a filesystem hierarchy for AWS resources.
+//
+// It uses the AWS_SHARED_CREDENTIALS_FILE environment variable or
+// $HOME/.aws/credentials to configure AWS access.
 package aws
 
 import (
