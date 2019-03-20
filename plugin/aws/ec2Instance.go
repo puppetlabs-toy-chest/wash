@@ -83,8 +83,8 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 	return ec2Instance
 }
 
-func (inst *ec2Instance) Attr() plugin.Attributes {
-	return inst.attr
+func (inst *ec2Instance) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return inst.attr, nil
 }
 
 func (inst *ec2Instance) Metadata(context.Context) (plugin.MetadataMap, error) {

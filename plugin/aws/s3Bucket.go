@@ -109,8 +109,8 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
 }
 
-func (b *s3Bucket) Attr() plugin.Attributes {
-	return b.attr
+func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return b.attr, nil
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {

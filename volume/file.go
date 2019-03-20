@@ -32,8 +32,8 @@ func NewFile(name string, attr plugin.Attributes, cb ContentCB, path string) *Fi
 }
 
 // Attr returns the attributes of the file.
-func (v *File) Attr() plugin.Attributes {
-	return v.attr
+func (v *File) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return v.attr, nil
 }
 
 // Open returns the content of the file as a SizedReader.

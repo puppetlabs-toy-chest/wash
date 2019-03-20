@@ -99,7 +99,7 @@ type Execable interface {
 // File is an entry that specifies filesystem attributes.
 type File interface {
 	Entry
-	Attr() Attributes
+	Attr(ctx context.Context) (Attributes, error)
 }
 
 // Pipe is an entry that returns a stream of updates.

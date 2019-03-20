@@ -265,7 +265,8 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 
 func (suite *ExternalPluginEntryTestSuite) TestAttr() {
 	entry := externalPluginEntry{attr: Attributes{Size: 10}}
-	suite.Equal(entry.attr, entry.Attr())
+	attr, _ := entry.Attr(context.Background())
+	suite.Equal(entry.attr, attr)
 }
 
 // TODO: Add tests for stdoutStreamer, Stream and Exec

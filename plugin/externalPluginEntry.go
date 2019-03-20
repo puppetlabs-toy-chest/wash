@@ -181,8 +181,8 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error)
 }
 
 // Attr returns the entry's filesystem attributes
-func (e *externalPluginEntry) Attr() Attributes {
-	return e.attr
+func (e *externalPluginEntry) Attr(ctx context.Context) (Attributes, error) {
+	return e.attr, nil
 }
 
 type stdoutStreamer struct {

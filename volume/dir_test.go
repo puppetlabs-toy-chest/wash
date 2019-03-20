@@ -19,7 +19,8 @@ func TestVolumeDir(t *testing.T) {
 
 	assert.NotNil(t, dmap[""]["path"])
 	vd := NewDir("path", dmap[""]["path"], contentcb, "/path", dmap)
-	assert.Equal(t, 0755|os.ModeDir, vd.Attr().Mode)
+	attr, _ := vd.Attr(context.Background())
+	assert.Equal(t, 0755|os.ModeDir, attr.Mode)
 
 	assert.NotNil(t, dmap[""]["path1"])
 	vd = NewDir("path", dmap[""]["path1"], contentcb, "/path1", dmap)

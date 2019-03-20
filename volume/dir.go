@@ -37,8 +37,8 @@ func NewDir(name string, attr plugin.Attributes, cb ContentCB, path string, dirs
 }
 
 // Attr returns the attributes of the directory.
-func (v *Dir) Attr() plugin.Attributes {
-	return v.attr
+func (v *Dir) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return v.attr, nil
 }
 
 // List lists the children of the directory.

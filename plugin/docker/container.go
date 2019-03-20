@@ -31,12 +31,12 @@ func (c *container) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 }
 
 // Attr
-func (c *container) Attr() plugin.Attributes {
+func (c *container) Attr(ctx context.Context) (plugin.Attributes, error) {
 	return plugin.Attributes{
 		Ctime: c.startTime,
 		Mtime: c.startTime,
 		Atime: c.startTime,
-	}
+	}, nil
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {

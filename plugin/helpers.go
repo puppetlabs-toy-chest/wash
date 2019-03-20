@@ -129,7 +129,10 @@ func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 	attr.Size = SizeUnknown
 
 	if item, ok := entry.(File); ok {
-		attrRet := item.Attr()
+		attrRet, err := item.Attr(ctx)
+		if err != nil {
+			return err
+		}
 
 		// We need the zero-value check for external plugin entries,
 		// b/c the externalPluginEntry class has Attr() implemented,

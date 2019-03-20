@@ -38,8 +38,8 @@ func newS3Object(attr plugin.Attributes, metadata plugin.MetadataMap, bucket str
 	return o
 }
 
-func (o *s3Object) Attr() plugin.Attributes {
-	return o.attr
+func (o *s3Object) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return o.attr, nil
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
@@ -62,7 +62,12 @@ func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
 }
 
 func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return &s3ObjectReader{o}, nil
+	attr, err := o.Attr(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &s3ObjectReader{o: o, size: int64(attr.Size)}, nil
 }
 
 func (o *s3Object) Stream(context.Context) (io.Reader, error) {
@@ -77,7 +82,8 @@ func (o *s3Object) Stream(context.Context) (io.Reader, error) {
 // https://github.com/kahing/goofys/blob/master/internal/file.go has some prior
 // art we could use to optimize this.
 type s3ObjectReader struct {
-	o *s3Object
+	o    *s3Object
+	size int64
 }
 
 func (s *s3ObjectReader) closeContent(content io.ReadCloser) {
@@ -105,5 +111,5 @@ func (s *s3ObjectReader) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (s *s3ObjectReader) Size() int64 {
-	return int64(s.o.Attr().Size)
+	return s.size
 }

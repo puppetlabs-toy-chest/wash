@@ -18,7 +18,8 @@ func TestVolumeFile(t *testing.T) {
 		return strings.NewReader("hello"), nil
 	}, "my path")
 
-	assert.Equal(t, plugin.Attributes{Ctime: now}, vf.Attr())
+	attr, _ := vf.Attr(context.Background())
+	assert.Equal(t, plugin.Attributes{Ctime: now}, attr)
 	rdr, err := vf.Open(context.Background())
 	assert.Nil(t, err)
 	if assert.NotNil(t, rdr) {
