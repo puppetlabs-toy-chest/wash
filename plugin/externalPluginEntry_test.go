@@ -116,7 +116,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
 	entryWithCacheConfig, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		expectedTTLs := NewEntry("").ttl
+		expectedTTLs := NewEntry("mock").ttl
 		expectedTTLs[List] = decodedEntry.CacheTTLs.List * time.Second
 		suite.Equal(expectedTTLs, entryWithCacheConfig.EntryBase.ttl)
 	}

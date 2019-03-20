@@ -15,10 +15,10 @@ import (
 type Entry interface {
 	Name() string
 	ID() string
-	SetTTLOf(op cacheableOp, ttl time.Duration)
-	TurnOffCachingFor(op cacheableOp)
+	SetTTLOf(op actionOpCode, ttl time.Duration)
+	TurnOffCachingFor(op actionOpCode)
 	TurnOffCaching()
-	getTTLOf(op cacheableOp) time.Duration
+	getTTLOf(op actionOpCode) time.Duration
 	setID(id string)
 }
 
