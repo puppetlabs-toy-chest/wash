@@ -9,27 +9,21 @@ import (
 	"github.com/puppetlabs/wash/journal"
 )
 
-// ExternalPluginSpec represents an external plugin's YAML specification.
-type ExternalPluginSpec struct {
-	Name   string
-	Script string
+// externalPluginRoot represents an external plugin's root.
+type externalPluginRoot struct {
+	*externalPluginEntry
 }
 
-// ExternalPluginRoot represents an external plugin's root.
-type ExternalPluginRoot struct {
-	*ExternalPluginEntry
-}
-
-// NewExternalPluginRoot returns a new external plugin root given
+// newExternalPluginRoot returns a new external plugin root given
 // the plugin script
-func NewExternalPluginRoot(plugin ExternalPluginSpec) *ExternalPluginRoot {
-	return &ExternalPluginRoot{&ExternalPluginEntry{
-		script: NewExternalPluginScript(plugin.Script),
+func newExternalPluginRoot(script string) *externalPluginRoot {
+	return &externalPluginRoot{&externalPluginEntry{
+		script: externalPluginScriptImpl{path: script},
 	}}
 }
 
 // Init initializes the external plugin root
-func (r *ExternalPluginRoot) Init() error {
+func (r *externalPluginRoot) Init() error {
 	ctx := context.Background()
 	script := r.script
 
@@ -55,17 +49,17 @@ func (r *ExternalPluginRoot) Init() error {
 		return err
 	}
 
-	r.ExternalPluginEntry = entry
-	r.ExternalPluginEntry.script = script
+	r.externalPluginEntry = entry
+	r.externalPluginEntry.script = script
 
 	return nil
 }
 
 // List lists the root's entries.
 //
-// We need this b/c *ExternalPluginEntry#List has a different receiver
-// (*ExternalPluginEntry) than *ExternalPluginRoot (i.e. b/c Go's
+// We need this b/c *externalPluginEntry#List has a different receiver
+// (*externalPluginEntry) than *externalPluginRoot (i.e. b/c Go's
 // typechecker complains about it)
-func (r *ExternalPluginRoot) List(ctx context.Context) ([]Entry, error) {
-	return r.ExternalPluginEntry.List(ctx)
+func (r *externalPluginRoot) List(ctx context.Context) ([]Entry, error) {
+	return r.externalPluginEntry.List(ctx)
 }

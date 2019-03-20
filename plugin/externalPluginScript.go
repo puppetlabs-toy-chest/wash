@@ -10,23 +10,17 @@ import (
 	"github.com/puppetlabs/wash/journal"
 )
 
-// ExternalPluginScript represents an external plugin's script
-type ExternalPluginScript interface {
+// externalPluginScript represents an external plugin's script
+type externalPluginScript interface {
 	Path() string
 	InvokeAndWait(ctx context.Context, args ...string) ([]byte, error)
 }
 
-type externalPluginScript struct {
+type externalPluginScriptImpl struct {
 	path string
 }
 
-// NewExternalPluginScript returns a new external plugin script
-// object
-func NewExternalPluginScript(path string) ExternalPluginScript {
-	return externalPluginScript{path: path}
-}
-
-func (s externalPluginScript) Path() string {
+func (s externalPluginScriptImpl) Path() string {
 	return s.path
 }
 
@@ -38,7 +32,7 @@ func (s externalPluginScript) Path() string {
 // https://golang.org/pkg/os/exec/#Cmd.Wait. Could this be specified by
 // plugin authors in the top-level YAML file? Should it be a per-entry
 // thing?
-func (s externalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
+func (s externalPluginScriptImpl) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
 	journal.Record(ctx, "Running command: %v %v", s.Path(), strings.Join(args, " "))
 
 	cmd := exec.Command(s.Path(), args...)

@@ -44,9 +44,9 @@ var ExecAction = newAction("exec", "Execable")
 // entry's supported actions.
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
-	case *ExternalPluginRoot:
+	case *externalPluginRoot:
 		return t.supportedActions
-	case *ExternalPluginEntry:
+	case *externalPluginEntry:
 		return t.supportedActions
 	default:
 		actions := make([]string, 0)

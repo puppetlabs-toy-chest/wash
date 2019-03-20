@@ -51,7 +51,6 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	e.TurnOffCaching()
 	assertOpTTL(Open, "Open", -1)
 	assertOpTTL(Metadata, "Metadata", -1)
-
 }
 
 func TestEntryBase(t *testing.T) {

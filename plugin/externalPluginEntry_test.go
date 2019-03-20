@@ -139,7 +139,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 		Metadata: 20,
 	}
 
-	entry := ExternalPluginEntry{
+	entry := externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 	}
 	entry.setCacheTTLs(decodedTTLs)
@@ -157,7 +157,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := ExternalPluginEntry{
+	entry := externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
@@ -188,7 +188,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
 		expectedEntries := []Entry{
-			&ExternalPluginEntry{
+			&externalPluginEntry{
 				EntryBase:        NewEntry("foo"),
 				supportedActions: []string{"list"},
 				script:           entry.script,
@@ -201,7 +201,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := ExternalPluginEntry{
+	entry := externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
@@ -230,7 +230,7 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 
 func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := ExternalPluginEntry{
+	entry := externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
@@ -264,7 +264,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestAttr() {
-	entry := ExternalPluginEntry{attr: Attributes{Size: 10}}
+	entry := externalPluginEntry{attr: Attributes{Size: 10}}
 	suite.Equal(entry.attr, entry.Attr())
 }
 

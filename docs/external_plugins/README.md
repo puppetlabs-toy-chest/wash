@@ -8,14 +8,11 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
 
 2. Write the [plugin script](plugin_script.md). This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.
 
-3. Add the plugin to the (configurable) `plugins.yaml` file by specifying its name and path to the plugin script. An example `plugins.yaml` file is shown below:
+3. Add the plugin to the (configurable) `plugins.yaml` file by specifying a path to the plugin script. The name will be determined by invoking the script with the `init` action. An example `plugins.yaml` file is shown below:
 
     ```
-    - name: 'external-aws'
-      script: '/Users/enis.inan/wash/external-plugins/external-aws.rb'
-  
-    - name: 'network'
-      script: '/Users/enis.inan/wash/external-plugins/network.sh'
+    - script: '/Users/enis.inan/wash/external-plugins/external-aws.rb'
+    - script: '/Users/enis.inan/wash/external-plugins/network.sh'
     ```
 4. Start the Wash server to see your plugin in action.
 

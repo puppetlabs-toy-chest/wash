@@ -68,7 +68,7 @@ type decodedExternalPluginEntry struct {
 	State            string            `json:"state"`
 }
 
-func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntry, error) {
+func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
 	if e.Name == "" {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
@@ -81,7 +81,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 		return nil, err
 	}
 
-	entry := &ExternalPluginEntry{
+	entry := &externalPluginEntry{
 		EntryBase:        NewEntry(e.Name),
 		supportedActions: e.SupportedActions,
 		state:            e.State,
@@ -92,18 +92,18 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*ExternalPluginEntr
 	return entry, nil
 }
 
-// ExternalPluginEntry represents an entry from an external plugin. It consists
+// externalPluginEntry represents an entry from an external plugin. It consists
 // of its name, its object (as serialized JSON), and the path to its
 // main plugin script.
-type ExternalPluginEntry struct {
+type externalPluginEntry struct {
 	EntryBase
-	script           ExternalPluginScript
+	script           externalPluginScript
 	supportedActions []string
 	state            string
 	attr             Attributes
 }
 
-func (e *ExternalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
+func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 	if ttls.List != 0 {
 		e.SetTTLOf(List, ttls.List*time.Second)
 	}
@@ -116,7 +116,7 @@ func (e *ExternalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 }
 
 // List lists the entry's children, if it has any.
-func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
+func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	stdout, err := e.script.InvokeAndWait(ctx, "list", e.ID(), e.state)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (e *ExternalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 }
 
 // Open returns the entry's content
-func (e *ExternalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
+func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 	stdout, err := e.script.InvokeAndWait(ctx, "read", e.ID(), e.state)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (e *ExternalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 }
 
 // Metadata displays the resource's metadata
-func (e *ExternalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
+func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
 	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.ID(), e.state)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (e *ExternalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error)
 }
 
 // Attr returns the entry's filesystem attributes
-func (e *ExternalPluginEntry) Attr() Attributes {
+func (e *externalPluginEntry) Attr() Attributes {
 	return e.attr
 }
 
@@ -219,7 +219,7 @@ func (s *stdoutStreamer) Close() error {
 }
 
 // Stream streams the entry's content
-func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
+func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
 		e.script.Path(),
 		"stream",
@@ -339,7 +339,7 @@ func (e *ExternalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 }
 
 // Exec executes a command on the given entry
-func (e *ExternalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error) {
+func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error) {
 	execResult := ExecResult{}
 
 	// TODO: Figure out how to pass-in opts when we have entries

@@ -171,11 +171,9 @@ func loadLogger(levelStr string, logfile string) (*os.File, error) {
 
 func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
 	log.Infof("Loading %v", name)
-	if err := root.Init(); err != nil {
+	if err := registry.RegisterPlugin(root); err != nil {
 		// %+v is a convention used by some errors to print additional context such as a stack trace
 		log.Warnf("%v failed to load: %+v", name, err)
-	} else {
-		registry.RegisterPlugin(name, root)
 	}
 }
 
@@ -213,8 +211,11 @@ func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) 
 	}
 
 	for _, p := range externalPlugins {
-		root := plugin.NewExternalPluginRoot(p)
-		loadPlugin(registry, p.Name, root)
+		log.Infof("Loading %v", p.Script)
+		if err := registry.RegisterExternalPlugin(p); err != nil {
+			// %+v is a convention used by some errors to print additional context such as a stack trace
+			log.Warnf("%v failed to load: %+v", p.Script, err)
+		}
 	}
 
 	log.Infof("Finished loading external plugins")
