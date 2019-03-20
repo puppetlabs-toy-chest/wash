@@ -47,6 +47,10 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 
 	for i, p := range resp.CommonPrefixes {
 		prefix := awsSDK.StringValue(p.Prefix)
+		// Skip the top-level '/' prefix, it would be redundant to list it.
+		if prefix == "/" {
+			continue
+		}
 		entries[i] = newS3ObjectPrefix(bucket, prefix, client)
 	}
 
