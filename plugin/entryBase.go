@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"flag"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -46,7 +47,7 @@ func NewEntry(name string) EntryBase {
 		panic("plugin.NewEntry: received an empty name")
 	}
 	if strings.Contains(name, "/") {
-		panic("plugin.NewEntry: received a name containing a /")
+		panic(fmt.Sprintf("plugin.NewEntry: received name %v containing a /", name))
 	}
 
 	return newEntryBase(name)
