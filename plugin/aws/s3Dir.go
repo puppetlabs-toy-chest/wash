@@ -50,7 +50,11 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 			return nil, fmt.Errorf("could not get the region of bucket %v: %v", name, err)
 		}
 
-		region := awsSDK.StringValue(resp.LocationConstraint)
+		// The response will be empty if the bucket is in Amazon's default region (us-east-1)
+		region := "us-east-1"
+		if resp.LocationConstraint != nil {
+			region = awsSDK.StringValue(resp.LocationConstraint)
+		}
 
 		cfg := awsSDK.NewConfig()
 		cfg.WithRegion(region)
