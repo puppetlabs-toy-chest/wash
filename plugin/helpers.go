@@ -132,7 +132,7 @@ func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 		attrRet := item.Attr()
 
 		// We need the zero-value check for external plugin entries,
-		// b/c the ExternalPluginEntry class has Attr() implemented,
+		// b/c the externalPluginEntry class has Attr() implemented,
 		// but not all external plugin entries have attributes.
 		if attrRet != (Attributes{}) {
 			(*attr) = attrRet
