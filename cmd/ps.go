@@ -62,7 +62,7 @@ pid=$$
 for i in $procs; do
 	if [ -d $i -a ${i#/proc/} -ne $pid ]; then
 	  cmdline=$(cat $i/cmdline | tr '\0' ' ')
-		printf '%s\t%s\t%s' "$cmdline" "$(cat $i/stat)" "$(cat $i/statm)"
+		printf '%s\t%s\t%s\n' "$cmdline" "$(cat $i/stat)" "$(cat $i/statm)"
 	fi
 done
 `
@@ -80,7 +80,7 @@ type psresult struct {
 func parseEntry(line string) (psresult, error) {
 	tokens := strings.Split(strings.TrimSpace(line), "\t")
 	if len(tokens) != 3 {
-		return psresult{}, fmt.Errorf("Line did not have 3 tokens: %v", tokens)
+		return psresult{}, fmt.Errorf("Line had %v, not 3 tokens: %#v", len(tokens), tokens)
 	}
 	stat := string(tokens[1])
 	// statm := tokens[2]
