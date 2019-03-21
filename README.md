@@ -91,11 +91,73 @@ See available subcommands - such as `ls` and `exec` - with
 wash help
 ```
 
-_TBD: run docker, examine system_
-
-All operations will have their activity recorded to journals in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory will be `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
-
 When done, `cd` out of `mnt`, then run `umount mnt` or `Ctrl-C` the server process.
+
+### Wash by Example
+
+To get a sense of how `wash` works, we've included a multi-node Docker application based on the [Docker Compose tutorial](https://docs.docker.com/compose/gettingstarted). To start it run
+```
+docker-compose -f examples/swarm/docker-compose.yml up -d
+```
+
+> When done, run `docker-compose -f examples/swarm/docker-compose.yml down` to stop the example application.
+
+This starts a small [Flask](http://flask.pocoo.org) webapp that keeps a count of how often it's been accessed in a [Redis](http://redis.io) instance that maintains state in a Docker volume.
+
+Navigate the filesystem to view running containers
+```
+$ cd mnt/docker/containers
+$ wash ls
+NAME                                                                CREATED               ACTIONS
+./                                                                  <unknown>             list
+45a0265546d63a8f1b0d17033748db1468dc49dfd09cdaf2db62c45a60e82aaf/   20 Mar 19 17:02 PDT   exec, list, metadata
+382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6/   20 Mar 19 17:02 PDT   exec, list, metadata
+$ wash ls 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6
+NAME            CREATED               ACTIONS
+./              20 Mar 19 17:02 PDT   exec, list, metadata
+metadata.json   <unknown>             read
+log             <unknown>             read, stream
+```
+
+Those containers are displayed as a directory, and provide access to their logs and metadata as files. Recent output from both can be accessed with common tools.
+```
+$ tail */log
+==> 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6/log <==
+ * Serving Flask app "app" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+...
+
+==> 45a0265546d63a8f1b0d17033748db1468dc49dfd09cdaf2db62c45a60e82aaf/log <==
+1:C 21 Mar 2019 00:02:33.112 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 21 Mar 2019 00:02:33.112 # Redis version=5.0.4, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 21 Mar 2019 00:02:33.112 # Configuration loaded
+1:M 21 Mar 2019 00:02:33.113 * Running mode=standalone, port=6379.
+...
+```
+
+The list earlier also noted that the container "directories" support the *metadata* action. We can get structured metadata in ether YAML or JSON with `wash meta`
+```
+$ wash meta 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6 -o yaml
+AppArmorProfile: ""
+Args:
+- app.py
+Config:
+...
+```
+
+We can interogate the container more closely with `wash exec`
+```
+$ wash exec 45a0265546d63a8f1b0d17033748db1468dc49dfd09cdaf2db62c45a60e82aaf whoami
+root
+```
+
+Try exploring `mnt/docker/volumes` to interact with the volume created for Redis.
+
+### Record of Activity
+
+All operations have their activity recorded to journals in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory is `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
 
 ## Known Issues
 
