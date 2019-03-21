@@ -49,8 +49,8 @@ func UnsetTestCache() {
 	cache = nil
 }
 
-var opNameRegex = regexp.MustCompile("^[a-zA-Z]+")
-var opQualifier = opNameRegex.String() + "::"
+var opNameRegex = regexp.MustCompile("^[a-zA-Z]+$")
+var opQualifier = "^[a-zA-Z]+::"
 
 // This method exists to simplify ClearCacheFor's tests.
 // Specifically, it lets us decouple the regex's correctness

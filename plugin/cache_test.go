@@ -80,6 +80,7 @@ func (suite *CacheTestSuite) TestOpNameRegex() {
 	suite.NotRegexp(opNameRegex, "")
 	suite.NotRegexp(opNameRegex, " op")
 	suite.NotRegexp(opNameRegex, "123")
+	suite.NotRegexp(opNameRegex, "abc  ")
 }
 
 func (suite *CacheTestSuite) TestOpKeysRegex() {
