@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strings"
@@ -25,8 +26,9 @@ var actionOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 type EntryBase struct {
 	name string
 	// id represents the entry's wash ID. It is set in CachedList.
-	id  string
-	ttl [3]time.Duration
+	id   string
+	attr Attributes
+	ttl  [3]time.Duration
 }
 
 // newEntryBase is needed by NewEntry, NewRegistry,
@@ -61,6 +63,11 @@ func (e *EntryBase) Name() string {
 // ID returns the entry's wash ID
 func (e *EntryBase) ID() string {
 	return e.id
+}
+
+// Attr returns the entry's attributes
+func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
+	return e.attr, nil
 }
 
 // SetTTLOf sets the specified op's TTL

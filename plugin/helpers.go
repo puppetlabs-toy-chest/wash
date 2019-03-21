@@ -128,21 +128,16 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 	attr.Size = SizeUnknown
 
-	if item, ok := entry.(File); ok {
-		attrRet, err := item.Attr(ctx)
-		if err != nil {
-			return err
-		}
-
-		// We need the zero-value check for external plugin entries,
-		// b/c the externalPluginEntry class has Attr() implemented,
-		// but not all external plugin entries have attributes.
-		if attrRet != (Attributes{}) {
-			(*attr) = attrRet
-		}
+	// Check if our entry has any attributes. If yes,
+	// then fill them in.
+	attrRet, err := entry.Attr(ctx)
+	if err != nil {
+		return err
+	}
+	if attrRet != (Attributes{}) {
+		(*attr) = attrRet
 	}
 
-	var err error
 	if ReadAction.IsSupportedOn(entry) && attr.Size == SizeUnknown {
 		content, openErr := CachedOpen(ctx, entry.(Readable))
 		if openErr != nil {

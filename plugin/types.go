@@ -40,6 +40,7 @@ import (
 type Entry interface {
 	Name() string
 	ID() string
+	Attr(ctx context.Context) (Attributes, error)
 	SetTTLOf(op actionOpCode, ttl time.Duration)
 	TurnOffCachingFor(op actionOpCode)
 	TurnOffCaching()
@@ -94,12 +95,6 @@ type ExecResult struct {
 type Execable interface {
 	Entry
 	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
-}
-
-// File is an entry that specifies filesystem attributes.
-type File interface {
-	Entry
-	Attr(ctx context.Context) (Attributes, error)
 }
 
 // Pipe is an entry that returns a stream of updates.
