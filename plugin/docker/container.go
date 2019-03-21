@@ -78,7 +78,8 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	if opts.Stdin != nil {
 		go func() {
 			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
-			journal.Record(ctx, "Closed execution response stream for %v: %v", c.Name(), writeErr)
+			respErr := resp.CloseWrite()
+			journal.Record(ctx, "Closed execution input stream for %v: %v, %v", c.Name(), writeErr, respErr)
 		}()
 	}
 
