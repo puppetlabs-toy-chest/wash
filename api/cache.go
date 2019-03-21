@@ -5,20 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
-var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodDelete {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodDelete})
-	}
-
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Cache DELETE %v", path)
-
+var cacheHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
 	ctx := r.Context()
 	journal.Record(ctx, "API: Cache DELETE %v", path)
 	deleted, err := plugin.ClearCacheFor(path)

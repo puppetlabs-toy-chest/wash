@@ -19,10 +19,19 @@ type key int
 
 const pluginRegistryKey key = iota
 
-type handler func(http.ResponseWriter, *http.Request) *errorResponse
+type handler func(http.ResponseWriter, *http.Request, string) *errorResponse
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if err := handle(w, r); err != nil {
+	log.Infof("API: %v %v", r.Method, r.URL)
+
+	paths := r.URL.Query()["path"]
+	if len(paths) != 1 {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "Request must include one 'path' query parameter")
+		return
+	}
+
+	if err := handle(w, r, paths[0]); err != nil {
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
@@ -74,12 +83,12 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 
 	r := mux.NewRouter()
 
-	r.Handle("/fs/list/{path:.+}", listHandler)
-	r.Handle("/fs/metadata/{path:.+}", metadataHandler)
-	r.Handle("/fs/read/{path:.+}", readHandler)
-	r.Handle("/fs/stream/{path:.+}", streamHandler)
-	r.Handle("/fs/exec/{path:.+}", execHandler)
-	r.Handle("/cache/{path:.*}", cacheHandler)
+	r.Handle("/fs/list", listHandler).Methods(http.MethodGet)
+	r.Handle("/fs/metadata", metadataHandler).Methods(http.MethodGet)
+	r.Handle("/fs/read", readHandler).Methods(http.MethodGet)
+	r.Handle("/fs/stream", streamHandler).Methods(http.MethodGet)
+	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
+	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
 
 	r.Use(addPluginRegistryAndJournalIDMiddleware)
 

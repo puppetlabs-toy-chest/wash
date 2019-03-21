@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
@@ -93,11 +92,14 @@ func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
-func badRequestResponse(path string, reason string) *errorResponse {
-	fields := apitypes.ErrorFields{"path": path}
+func badRequestResponse(path string, a plugin.Action, reason string) *errorResponse {
+	fields := apitypes.ErrorFields{
+		"path":   path,
+		"action": a.Name,
+	}
 	body := newErrorObj(
 		"bad-request",
-		fmt.Sprintf("Bad request on %v: %v", path, reason),
+		fmt.Sprintf("Bad request for %v action on %v: %v", a.Name, path, reason),
 		fields,
 	)
 	return &errorResponse{http.StatusBadRequest, body}
@@ -117,20 +119,4 @@ func erroredActionResponse(path string, a plugin.Action, reason string) *errorRe
 	)
 
 	return &errorResponse{statusCode, body}
-}
-
-func httpMethodNotSupported(method string, path string, supported []string) *errorResponse {
-	fields := apitypes.ErrorFields{
-		"method":    method,
-		"path":      path,
-		"supported": supported,
-	}
-
-	body := newErrorObj(
-		"http-method-not-supported",
-		fmt.Sprintf("The %v method is not supported for %v, supported methods are: %v", method, path, strings.Join(supported, ", ")),
-		fields,
-	)
-
-	return &errorResponse{http.StatusNotFound, body}
 }

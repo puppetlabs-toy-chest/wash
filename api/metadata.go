@@ -5,20 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodGet {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodGet})
-	}
-
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Metadata %v", path)
-
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {
