@@ -479,7 +479,7 @@ func sendEvent(e *cloudwatchlogs.OutputLogEvent, stream *plugin.OutputStream) er
 	//
 	// NOTE: Since SSM uses bufio.Scanner to parse each message, there's a
 	// chance that the printed stdout/stderr stream can end in an extra
-	// newline character. Unfortunately, we don't have an easy way of determing
+	// newline character. Unfortunately, we don't have an easy way of determining
 	// whether the last message did end in a new line, so let this be a known
 	// issue until there's a good reason for us to address it.
 	message := awsSDK.StringValue(e.Message) + "\n"
