@@ -49,12 +49,13 @@ func UnsetTestCache() {
 	cache = nil
 }
 
+var opNameRegex = regexp.MustCompile("^[a-zA-Z]+")
+var opQualifier = opNameRegex.String() + "::"
+
 // This method exists to simplify ClearCacheFor's tests.
 // Specifically, it lets us decouple the regex's correctness
 // from the cache's implementation.
 func opKeysRegex(path string) (*regexp.Regexp, error) {
-	opQualifier := "^[a-zA-Z]*::"
-
 	var expr string
 	if path == "/" {
 		expr = opQualifier + "/.*"
@@ -87,6 +88,10 @@ type opFunc func() (interface{}, error)
 // For example, CachedOp could be useful to cache an API request whose response
 // lets you implement Attr() and Metadata() for the given entry.
 func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+	if !opNameRegex.MatchString(opName) {
+		panic(fmt.Sprintf("The opName %v does not match %v", opName, opNameRegex.String()))
+	}
+
 	for _, actionOpName := range actionOpCodeToNameMap {
 		if opName == actionOpName {
 			panic(fmt.Sprintf("The opName %v conflicts with Cached%v", opName, actionOpName))

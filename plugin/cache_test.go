@@ -68,24 +68,33 @@ func (suite *CacheTestSuite) opKeysRegex(path string) *regexp.Regexp {
 	return rx
 }
 
+func (suite *CacheTestSuite) TestOpNameRegex() {
+	suite.Regexp(opNameRegex, "a")
+	suite.Regexp(opNameRegex, "A")
+	suite.Regexp(opNameRegex, "op")
+	suite.Regexp(opNameRegex, "Op")
+	suite.Regexp(opNameRegex, "List")
+	suite.Regexp(opNameRegex, "Open")
+	suite.Regexp(opNameRegex, "Metadata")
+
+	suite.NotRegexp(opNameRegex, "")
+	suite.NotRegexp(opNameRegex, " op")
+	suite.NotRegexp(opNameRegex, "123")
+}
+
 func (suite *CacheTestSuite) TestOpKeysRegex() {
 	rx := suite.opKeysRegex("/a")
 
-	// Test that it matches all of the op keys
-	suite.Regexp(rx, "List::/a")
-	suite.Regexp(rx, "Open::/a")
-	suite.Regexp(rx, "Metadata::/a")
-
 	// Test that it matches children
-	suite.Regexp(rx, "List::/a/b")
-	suite.Regexp(rx, "List::/a/b/c")
-	suite.Regexp(rx, "List::/a/bcd/ef/g")
-	suite.Regexp(rx, "List::/a/a space")
+	suite.Regexp(rx, "Test::/a/b")
+	suite.Regexp(rx, "Test::/a/b/c")
+	suite.Regexp(rx, "Test::/a/bcd/ef/g")
+	suite.Regexp(rx, "Test::/a/a space")
 
 	// Test that it does not match other entries
-	suite.NotRegexp(rx, "List::/")
-	suite.NotRegexp(rx, "List::/ab")
-	suite.NotRegexp(rx, "List::/bc/d")
+	suite.NotRegexp(rx, "Test::/")
+	suite.NotRegexp(rx, "Test::/ab")
+	suite.NotRegexp(rx, "Test::/bc/d")
 
 	// Test that it matches root, and children of root
 	rx = suite.opKeysRegex("/")
@@ -141,6 +150,9 @@ func (suite *CacheTestSuite) TestCachedOp() {
 			_, _ = CachedOp("List", entry, ttl, func() (interface{}, error) { return nil, nil })
 		}
 	}
+
+	// Test that CachedOp panics if opName does not match opNameRegex
+	suite.Panics(makePanicFunc("123", 15), fmt.Sprintf("The opName 123 does not match %v", opNameRegex.String()))
 
 	// Test that CachedOp panics if an opName == an action op's name
 	suite.Panics(makePanicFunc("List", 15), "The opName List conflicts with CachedList")
