@@ -99,15 +99,16 @@ func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {
 	e.ttl[op] = ttl
 }
 
-// TurnOffCachingFor turns off caching for the specified op
-func (e *EntryBase) TurnOffCachingFor(op actionOpCode) {
+// DisableCachingFor disables caching for the specified op
+func (e *EntryBase) DisableCachingFor(op actionOpCode) {
 	e.SetTTLOf(op, -1)
 }
 
-// TurnOffCaching turns off caching for all ops
-func (e *EntryBase) TurnOffCaching() {
+// DisableDefaultCaching disables the default caching
+// for List, Open and Metadata.
+func (e *EntryBase) DisableDefaultCaching() {
 	for op := range e.ttl {
-		e.TurnOffCachingFor(actionOpCode(op))
+		e.DisableCachingFor(actionOpCode(op))
 	}
 }
 

@@ -46,10 +46,10 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	e.SetTTLOf(List, 40*time.Second)
 	assertOpTTL(List, "List", 40*time.Second)
 
-	e.TurnOffCachingFor(List)
+	e.DisableCachingFor(List)
 	assertOpTTL(List, "List", -1)
 
-	e.TurnOffCaching()
+	e.DisableDefaultCaching()
 	assertOpTTL(Open, "Open", -1)
 	assertOpTTL(Metadata, "Metadata", -1)
 

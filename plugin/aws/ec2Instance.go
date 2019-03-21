@@ -52,7 +52,7 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 		ssmClient:        ssm.New(session),
 		cloudwatchClient: cloudwatchlogs.New(session),
 	}
-	ec2Instance.TurnOffCaching()
+	ec2Instance.DisableDefaultCaching()
 
 	ec2Instance.entries = []plugin.Entry{
 		newEC2InstanceMetadataJSON(ec2Instance),

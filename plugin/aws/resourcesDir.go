@@ -19,7 +19,7 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 		EntryBase: plugin.NewEntry("resources"),
 		session:   session,
 	}
-	resourcesDir.TurnOffCaching()
+	resourcesDir.DisableDefaultCaching()
 
 	resourcesDir.resources = []plugin.Entry{
 		newS3Dir(resourcesDir.session),

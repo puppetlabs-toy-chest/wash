@@ -26,7 +26,7 @@ func newEC2InstanceConsoleOutput(inst *ec2Instance, latest bool) *ec2InstanceCon
 	} else {
 		cl.EntryBase = plugin.NewEntry("console.out")
 	}
-	cl.TurnOffCaching()
+	cl.DisableDefaultCaching()
 
 	return cl
 }

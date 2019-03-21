@@ -31,7 +31,7 @@ func newS3Object(bucket string, key string, client *s3Client.S3) *s3Object {
 		key:       key,
 		client:    client,
 	}
-	o.TurnOffCachingFor(plugin.Metadata)
+	o.DisableCachingFor(plugin.Metadata)
 
 	return o
 }

@@ -23,7 +23,7 @@ func newEC2Dir(session *session.Session) *ec2Dir {
 		session:   session,
 		client:    ec2Client.New(session),
 	}
-	ec2Dir.TurnOffCaching()
+	ec2Dir.DisableDefaultCaching()
 
 	ec2Dir.entries = []plugin.Entry{
 		newEC2InstancesDir(ec2Dir.session, ec2Dir.client),

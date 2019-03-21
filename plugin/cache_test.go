@@ -192,7 +192,7 @@ func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, 
 	entry := newCacheTestsMockEntry("mock")
 	entry.SetTestID("id")
 	entry.On(opName, ctx).Return(mockValue, nil)
-	entry.TurnOffCachingFor(op)
+	entry.DisableCachingFor(op)
 	v, err := cachedActionOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mockValue, v)
@@ -232,7 +232,7 @@ func (suite *CacheTestSuite) TestCachedList() {
 	// When the parent's the root
 	entry := newCacheTestsMockEntry("/")
 	entry.SetTestID("/")
-	entry.TurnOffCaching()
+	entry.DisableDefaultCaching()
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
@@ -245,7 +245,7 @@ func (suite *CacheTestSuite) TestCachedList() {
 	// When the parent's some other entry
 	entry = newCacheTestsMockEntry("parent")
 	entry.SetTestID("/parent")
-	entry.TurnOffCaching()
+	entry.DisableDefaultCaching()
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err = CachedList(ctx, entry)
 	if suite.NoError(err) {
