@@ -68,6 +68,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
+	ctime  time.Time
 	region string
 	client *s3Client.S3
 }
@@ -75,12 +76,20 @@ type s3Bucket struct {
 func newS3Bucket(name string, ctime time.Time, region string, client *s3Client.S3) *s3Bucket {
 	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
+		ctime:     ctime,
 		region:    region,
 		client:    client,
 	}
-	bucket.Ctime = ctime
 
 	return bucket
+}
+
+func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return plugin.Attributes{
+		Ctime: b.ctime,
+		Mtime: b.ctime,
+		Atime: b.ctime,
+	}, nil
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {

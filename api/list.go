@@ -45,9 +45,11 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 
-		err := plugin.FillAttr(r.Context(), entry, &result.Attributes)
+		attr, err := plugin.Attr(r.Context(), entry)
 		if err != nil {
 			result.Errors["attributes"] = newUnknownErrorObj(err)
+		} else {
+			result.Attributes = attr
 		}
 
 		return result

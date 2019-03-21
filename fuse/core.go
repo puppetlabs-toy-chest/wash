@@ -103,9 +103,7 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 }
 
 func attr(ctx context.Context, f fuseNode, a *fuse.Attr) error {
-	attr := plugin.Attributes{}
-
-	err := plugin.FillAttr(ctx, f.Entry(), &attr)
+	attr, err := plugin.Attr(ctx, f.Entry())
 	if _, ok := err.(plugin.ErrCouldNotDetermineSizeAttr); ok {
 		log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
 	} else if err != nil {

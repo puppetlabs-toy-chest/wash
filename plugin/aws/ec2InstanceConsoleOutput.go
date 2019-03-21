@@ -37,9 +37,6 @@ func (cl *ec2InstanceConsoleOutput) Attr(ctx context.Context) (plugin.Attributes
 		return plugin.Attributes{}, err
 	}
 
-	// We can't use cl.EntryBase.Attr() here because that depends on the Ctime
-	// field being set. Setting Ctime would introduce a race condition, so manually
-	// create the Attributes struct
 	return plugin.Attributes{
 		Ctime: output.mtime,
 		Mtime: output.mtime,

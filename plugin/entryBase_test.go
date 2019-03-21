@@ -54,22 +54,13 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	assertOpTTL(Metadata, "Metadata", -1)
 
 	ctx := context.Background()
-
 	attr, err := e.Attr(ctx)
 	if suite.NoError(err) {
-		suite.Equal(Attributes{}, attr)
-	}
-
-	e.Ctime = time.Now()
-	attr, err = e.Attr(ctx)
-	if suite.NoError(err) {
-		expectedAttributes := Attributes{
-			Ctime: e.Ctime,
-			Mtime: e.Ctime,
-			Atime: e.Ctime,
+		expectedAttr := Attributes{
+			Size: SizeUnknown,
 		}
 
-		suite.Equal(expectedAttributes, attr)
+		suite.Equal(expectedAttr, attr)
 	}
 }
 

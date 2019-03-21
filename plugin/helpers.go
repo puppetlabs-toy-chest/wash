@@ -124,21 +124,26 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 	return fileMode, nil
 }
 
-// FillAttr fills the given attributes struct with the entry's attributes.
-func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
-	attr.Size = SizeUnknown
-
-	// Check if our entry has any attributes. If yes,
-	// then fill them in.
-	attrRet, err := entry.Attr(ctx)
+// Attr returns the entry's attributes in a form that's consummable by
+// FUSE and the API. This may or may not match entry.Attr(). Specifically,
+//   * If entry.Attr() sets the size field to SizeUnknown and the entry supports
+//   the Read action, then the returned attributes' size will be set to
+//   the size of the entry's content as returned by Open.
+//
+//   * If entry.Attr() does not set the mode, then the returned attributes'
+//   mode will be set to "os.ModeDir | 0550" if the entry supports the List
+//   action; otherwise, it will be set to 0440. This is needed by FUSE.
+//
+//   * Otherwise, the returned attributes will match what's returned by
+//   entry.Attr().
+//
+func Attr(ctx context.Context, entry Entry) (Attributes, error) {
+	attr, err := entry.Attr(ctx)
 	if err != nil {
-		return err
-	}
-	if attrRet != (Attributes{}) {
-		(*attr) = attrRet
+		return attr, err
 	}
 
-	if ReadAction.IsSupportedOn(entry) && attr.Size == SizeUnknown {
+	if attr.Size == SizeUnknown && ReadAction.IsSupportedOn(entry) {
 		content, openErr := CachedOpen(ctx, entry.(Readable))
 		if openErr != nil {
 			err = ErrCouldNotDetermineSizeAttr{openErr.Error()}
@@ -146,7 +151,7 @@ func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 		} else {
 			size := content.Size()
 			if size < 0 {
-				return ErrNegativeSizeAttr{size}
+				return attr, ErrNegativeSizeAttr{size}
 			}
 
 			attr.Size = uint64(size)
@@ -161,7 +166,7 @@ func FillAttr(ctx context.Context, entry Entry, attr *Attributes) error {
 		}
 	}
 
-	return err
+	return attr, err
 }
 
 // CreateCommand creates a cmd object encapsulating the given cmd and its args.

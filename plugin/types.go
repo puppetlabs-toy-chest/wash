@@ -16,8 +16,6 @@ The Group interface identifies the resource as a container for other things. Imp
 enables displaying it as a directory in the filesystem. Anything that does not implement
 Group will be displayed as a file.
 
-The File interface allows control over its filesystem attributes.
-
 The Readable interface gives a file its contents when read via the filesystem.
 
 All of the above, as well as other types - Resource, Execable, Pipe - provide
