@@ -41,7 +41,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	assertOpTTL(Metadata, "Metadata", 15*time.Second)
 
 	e.setID("/foo")
-	suite.Equal("/foo", e.ID())
+	suite.Equal("/foo", e.id())
 
 	e.SetTTLOf(List, 40*time.Second)
 	assertOpTTL(List, "List", 40*time.Second)

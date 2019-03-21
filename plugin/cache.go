@@ -110,13 +110,7 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 		}
 
 		for _, entry := range entries {
-			var id string
-			if g.ID() == "/" {
-				id = g.ID() + entry.Name()
-			} else {
-				id = g.ID() + "/" + entry.Name()
-			}
-
+			id := strings.TrimRight(g.id(), "/") + "/" + entry.Name()
 			entry.setID(id)
 		}
 
@@ -177,15 +171,15 @@ func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interfa
 		}
 	}
 
-	if entry.ID() == "" {
+	if entry.id() == "" {
 		// The Registry's ID is set to "/", while all other entries' IDs are
 		// set in CachedList. Thus, we should never hit this code-path.
-		panic("entry.ID() returned an empty ID")
+		panic("entry.id() returned an empty ID")
 	}
 
 	if ttl < 0 {
 		return op()
 	}
 
-	return cache.GetOrUpdate(opName+"::"+entry.ID(), ttl, false, op)
+	return cache.GetOrUpdate(opName+"::"+entry.id(), ttl, false, op)
 }

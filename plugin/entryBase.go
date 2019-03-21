@@ -28,9 +28,9 @@ type EntryBase struct {
 	// details on how this is used.
 	Ctime time.Time
 	name  string
-	// id represents the entry's wash ID. It is set in CachedList.
-	id  string
-	ttl [3]time.Duration
+	// washID represents the entry's wash ID. It is set in CachedList.
+	washID string
+	ttl    [3]time.Duration
 }
 
 // newEntryBase is needed by NewEntry, NewRegistry,
@@ -59,14 +59,9 @@ func NewEntry(name string) EntryBase {
 
 // ENTRY INTERFACE
 
-// Name returns the entry's name.
+// Name returns the entry's name. Do not override this.
 func (e *EntryBase) Name() string {
 	return e.name
-}
-
-// ID returns the entry's wash ID
-func (e *EntryBase) ID() string {
-	return e.id
 }
 
 // Attr returns the entry's attributes. The default return value
@@ -84,12 +79,16 @@ func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
 	}, nil
 }
 
-func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
-	return e.ttl[op]
+func (e *EntryBase) id() string {
+	return e.washID
 }
 
 func (e *EntryBase) setID(id string) {
-	e.id = id
+	e.washID = id
+}
+
+func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
+	return e.ttl[op]
 }
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT

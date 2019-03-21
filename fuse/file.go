@@ -23,8 +23,8 @@ var _ = fs.NodeOpener(&file{})
 var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
-func newFile(e plugin.Entry) *file {
-	return &file{e, e.ID()}
+func newFile(parentPath string, e plugin.Entry) *file {
+	return &file{e, joinPath(parentPath, e)}
 }
 
 func (f *file) Entry() plugin.Entry {

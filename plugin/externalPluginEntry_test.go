@@ -165,7 +165,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry.ID(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry.id(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then List returns its error
@@ -209,7 +209,7 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "read", entry.ID(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "read", entry.id(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Open returns its error
@@ -238,7 +238,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "metadata", entry.ID(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "metadata", entry.id(), entry.state).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Metadata returns its error

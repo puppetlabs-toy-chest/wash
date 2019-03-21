@@ -5,6 +5,7 @@ import (
 	"context"
 	"os/user"
 	"strconv"
+	"strings"
 	"time"
 
 	"bazil.org/fuse"
@@ -27,7 +28,7 @@ func newRoot(registry *plugin.Registry) Root {
 // Root presents the root of the filesystem.
 func (r *Root) Root() (fs.Node, error) {
 	log.Infof("Entering root of filesystem")
-	return newDir(r.registry), nil
+	return newDir("", r.registry), nil
 }
 
 func getIDs() (uint32, uint32) {
@@ -50,6 +51,14 @@ func getIDs() (uint32, uint32) {
 }
 
 var uid, gid = getIDs()
+
+func joinPath(parentPath string, e plugin.Entry) string {
+	if parentPath == "" {
+		return e.Name()
+	}
+
+	return strings.TrimRight(parentPath, "/") + "/" + e.Name()
+}
 
 type fuseNode interface {
 	Entry() plugin.Entry

@@ -39,10 +39,10 @@ import (
 // creating your plugin objects.
 type Entry interface {
 	Name() string
-	ID() string
 	Attr(ctx context.Context) (Attributes, error)
-	getTTLOf(op actionOpCode) time.Duration
+	id() string
 	setID(id string)
+	getTTLOf(op actionOpCode) time.Duration
 }
 
 // MetadataMap maps keys to arbitrary structured data.

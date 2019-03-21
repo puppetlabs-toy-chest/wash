@@ -153,8 +153,8 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	suite.Panics(makePanicFunc("Op", 15))
 	SetTestCache(suite.cache)
 
-	// Test that CachedOp panics if entry.ID() == ""
-	suite.Panics(makePanicFunc("Op", 15), "entry.ID() returned an empty ID")
+	// Test that CachedOp panics if entry.id() == ""
+	suite.Panics(makePanicFunc("Op", 15), "entry.id() returned an empty ID")
 
 	// Test that CachedOp calls cache#GetOrUpdate with the right parameters
 	entry := newCacheTestsMockEntry("mock")
@@ -184,8 +184,8 @@ func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, 
 	suite.Panics(panicFunc)
 	SetTestCache(suite.cache)
 
-	// Test that cachedActionOp panics if entry.ID() == ""
-	suite.Panics(panicFunc, "entry.ID() returned an empty ID")
+	// Test that cachedActionOp panics if entry.id() == ""
+	suite.Panics(panicFunc, "entry.id() returned an empty ID")
 
 	// Test that cachedActionOp does _not_ call cache#GetOrUpdate for an
 	// entry that's turned off caching
@@ -237,8 +237,8 @@ func (suite *CacheTestSuite) TestCachedList() {
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(mockChildren, children) {
-			suite.Equal("/child1", children[0].ID())
-			suite.Equal("/child2", children[1].ID())
+			suite.Equal("/child1", children[0].id())
+			suite.Equal("/child2", children[1].id())
 		}
 	}
 
@@ -250,8 +250,8 @@ func (suite *CacheTestSuite) TestCachedList() {
 	children, err = CachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(mockChildren, children) {
-			suite.Equal("/parent/child1", children[0].ID())
-			suite.Equal("/parent/child2", children[1].ID())
+			suite.Equal("/parent/child1", children[0].id())
+			suite.Equal("/parent/child2", children[1].id())
 		}
 	}
 }
