@@ -16,8 +16,6 @@ The Group interface identifies the resource as a container for other things. Imp
 enables displaying it as a directory in the filesystem. Anything that does not implement
 Group will be displayed as a file.
 
-The File interface allows control over its filesystem attributes.
-
 The Readable interface gives a file its contents when read via the filesystem.
 
 All of the above, as well as other types - Resource, Execable, Pipe - provide
@@ -39,12 +37,10 @@ import (
 // creating your plugin objects.
 type Entry interface {
 	Name() string
-	ID() string
-	SetTTLOf(op actionOpCode, ttl time.Duration)
-	TurnOffCachingFor(op actionOpCode)
-	TurnOffCaching()
-	getTTLOf(op actionOpCode) time.Duration
+	Attr(ctx context.Context) (Attributes, error)
+	id() string
 	setID(id string)
+	getTTLOf(op actionOpCode) time.Duration
 }
 
 // MetadataMap maps keys to arbitrary structured data.
@@ -94,12 +90,6 @@ type ExecResult struct {
 type Execable interface {
 	Entry
 	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
-}
-
-// File is an entry that specifies filesystem attributes.
-type File interface {
-	Entry
-	Attr() Attributes
 }
 
 // Pipe is an entry that returns a stream of updates.

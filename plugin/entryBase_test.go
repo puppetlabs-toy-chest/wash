@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -40,17 +41,27 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	assertOpTTL(Metadata, "Metadata", 15*time.Second)
 
 	e.setID("/foo")
-	suite.Equal("/foo", e.ID())
+	suite.Equal("/foo", e.id())
 
 	e.SetTTLOf(List, 40*time.Second)
 	assertOpTTL(List, "List", 40*time.Second)
 
-	e.TurnOffCachingFor(List)
+	e.DisableCachingFor(List)
 	assertOpTTL(List, "List", -1)
 
-	e.TurnOffCaching()
+	e.DisableDefaultCaching()
 	assertOpTTL(Open, "Open", -1)
 	assertOpTTL(Metadata, "Metadata", -1)
+
+	ctx := context.Background()
+	attr, err := e.Attr(ctx)
+	if suite.NoError(err) {
+		expectedAttr := Attributes{
+			Size: SizeUnknown,
+		}
+
+		suite.Equal(expectedAttr, attr)
+	}
 }
 
 func TestEntryBase(t *testing.T) {

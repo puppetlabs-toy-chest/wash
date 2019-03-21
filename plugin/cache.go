@@ -49,12 +49,13 @@ func UnsetTestCache() {
 	cache = nil
 }
 
+var opNameRegex = regexp.MustCompile("^[a-zA-Z]+$")
+const opQualifier = "^[a-zA-Z]+::"
+
 // This method exists to simplify ClearCacheFor's tests.
 // Specifically, it lets us decouple the regex's correctness
 // from the cache's implementation.
 func opKeysRegex(path string) (*regexp.Regexp, error) {
-	opQualifier := "^[a-zA-Z]*::"
-
 	var expr string
 	if path == "/" {
 		expr = opQualifier + "/.*"
@@ -87,6 +88,10 @@ type opFunc func() (interface{}, error)
 // For example, CachedOp could be useful to cache an API request whose response
 // lets you implement Attr() and Metadata() for the given entry.
 func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+	if !opNameRegex.MatchString(opName) {
+		panic(fmt.Sprintf("The opName %v does not match %v", opName, opNameRegex.String()))
+	}
+
 	for _, actionOpName := range actionOpCodeToNameMap {
 		if opName == actionOpName {
 			panic(fmt.Sprintf("The opName %v conflicts with Cached%v", opName, actionOpName))
@@ -110,13 +115,7 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 		}
 
 		for _, entry := range entries {
-			var id string
-			if g.ID() == "/" {
-				id = g.ID() + entry.Name()
-			} else {
-				id = g.ID() + "/" + entry.Name()
-			}
-
+			id := strings.TrimRight(g.id(), "/") + "/" + entry.Name()
 			entry.setID(id)
 		}
 
@@ -177,15 +176,15 @@ func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interfa
 		}
 	}
 
-	if entry.ID() == "" {
+	if entry.id() == "" {
 		// The Registry's ID is set to "/", while all other entries' IDs are
 		// set in CachedList. Thus, we should never hit this code-path.
-		panic("entry.ID() returned an empty ID")
+		panic("entry.id() returned an empty ID")
 	}
 
 	if ttl < 0 {
 		return op()
 	}
 
-	return cache.GetOrUpdate(opName+"::"+entry.ID(), ttl, false, op)
+	return cache.GetOrUpdate(opName+"::"+entry.id(), ttl, false, op)
 }

@@ -50,12 +50,12 @@ func (v *pvc) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	return plugin.ToMetadata(obj), nil
 }
 
-func (v *pvc) Attr() plugin.Attributes {
+func (v *pvc) Attr(ctx context.Context) (plugin.Attributes, error) {
 	return plugin.Attributes{
 		Ctime: v.startTime,
 		Mtime: v.startTime,
 		Atime: v.startTime,
-	}
+	}, nil
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {

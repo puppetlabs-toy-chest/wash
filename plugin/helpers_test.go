@@ -114,14 +114,14 @@ func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 		EntryBase: NewEntry("mockEntry"),
 	}
 	e.SetTestID("id")
-	e.TurnOffCaching()
+	e.DisableDefaultCaching()
 
 	return e
 }
 
-func (e *helpersTestsMockEntry) Attr() Attributes {
-	args := e.Called()
-	return args.Get(0).(Attributes)
+func (e *helpersTestsMockEntry) Attr(ctx context.Context) (Attributes, error) {
+	args := e.Called(ctx)
+	return args.Get(0).(Attributes), args.Error(1)
 }
 
 type helpersTestsMockGroup struct {
@@ -134,7 +134,7 @@ func newHelpersTestsMockGroup() *helpersTestsMockGroup {
 		EntryBase: NewEntry("mockEntry"),
 	}
 	e.SetTestID("id")
-	e.TurnOffCaching()
+	e.DisableDefaultCaching()
 
 	return e
 }
@@ -144,7 +144,9 @@ func (e *helpersTestsMockGroup) List(ctx context.Context) ([]Entry, error) {
 	return args.Get(0).([]Entry), args.Error(1)
 }
 
-func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
+func (suite *HelpersTestSuite) TestAttrAnyEntry() {
+	ctx := context.Background()
+
 	// Test that Attr()'s result is used if the entry implements it
 	// and if entry.Attr() returns a non-zero set of attributes
 	entry := newHelpersTestsMockEntry()
@@ -153,41 +155,38 @@ func (suite *HelpersTestSuite) TestFillAttrAnyEntry() {
 		Size:  10,
 		Mode:  0777,
 	}
-	entry.On("Attr").Return(expectedAttributes)
-	attr := Attributes{}
-	err := FillAttr(context.Background(), entry, &attr)
+	entry.On("Attr", ctx).Return(expectedAttributes, nil)
+	attr, err := Attr(context.Background(), entry)
 	if suite.NoError(err) {
 		suite.Equal(
 			expectedAttributes,
 			attr,
-			"FillAttr should use the entry's filesystem attributes if they're provided",
+			"Attr should use the entry's filesystem attributes if they're provided",
 		)
 	}
 
 	// Test that if the entry supports the list action, then it sets
 	// the mode to 0550
 	group := newHelpersTestsMockGroup()
-	attr = Attributes{}
-	err = FillAttr(context.Background(), group, &attr)
+	attr, err = Attr(ctx, group)
 	if suite.NoError(err) {
 		suite.Equal(
 			Attributes{Mode: os.ModeDir | 0550, Size: SizeUnknown},
 			attr,
-			"FillAttr does not set the default mode to os.ModeDir | 0550 for entries that support the list action",
+			"Attr does not set the default mode to os.ModeDir | 0550 for entries that support the list action",
 		)
 	}
 
 	// Test that if the entry does not support the list action, then it sets
 	// the mode to 0440
 	entry = newHelpersTestsMockEntry()
-	entry.On("Attr").Return(Attributes{})
-	attr = Attributes{}
-	err = FillAttr(context.Background(), entry, &attr)
+	entry.On("Attr", ctx).Return(Attributes{}, nil)
+	attr, err = Attr(context.Background(), entry)
 	if suite.NoError(err) {
 		suite.Equal(
-			Attributes{Mode: 0440, Size: SizeUnknown},
+			Attributes{Mode: 0440},
 			attr,
-			"FillAttr does not set the default mode to 0440 for entries that do notsupport the list action",
+			"Attr does not set the default mode to 0440 for entries that do notsupport the list action",
 		)
 	}
 }
@@ -196,12 +195,12 @@ type helpersTestsMockReadableEntry struct {
 	*helpersTestsMockEntry
 }
 
-func newHelpersTestsMockReadableEntry(attr Attributes) *helpersTestsMockReadableEntry {
+func newHelpersTestsMockReadableEntry(ctx context.Context, attr Attributes) *helpersTestsMockReadableEntry {
 	e := &helpersTestsMockReadableEntry{
 		newHelpersTestsMockEntry(),
 	}
 
-	e.On("Attr").Return(attr)
+	e.On("Attr", ctx).Return(attr, nil)
 	return e
 }
 
@@ -220,57 +219,53 @@ func (r negativeSizedReader) Size() int64 {
 	return -1
 }
 
-func (suite *HelpersTestSuite) TestFillAttrReadableEntry() {
+func (suite *HelpersTestSuite) TestAttrReadableEntry() {
 	ctx := context.Background()
 	mockRdr := strings.NewReader("foo")
 
 	// Test that the size attribute is calculated from the content
 	// if it is not known
-	entry := newHelpersTestsMockReadableEntry(Attributes{})
+	entry := newHelpersTestsMockReadableEntry(ctx, Attributes{Size: SizeUnknown})
 	entry.On("Open", ctx).Return(mockRdr, nil)
-	attr := Attributes{}
-	err := FillAttr(ctx, entry, &attr)
+	attr, err := Attr(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(
 			uint64(mockRdr.Size()),
 			attr.Size,
-			"FillAttr should calculate the size attribute from the entry's content if its value is SizeUnknown",
+			"Attr should calculate the size attribute from the entry's content if its value is SizeUnknown",
 		)
 	}
 
 	// Test that the size attribute is _not_ calculated from the content
 	// if it is already known
-	entry = newHelpersTestsMockReadableEntry(Attributes{Size: 10})
+	entry = newHelpersTestsMockReadableEntry(ctx, Attributes{Size: 10})
 	entry.On("Open", ctx).Return(mockRdr, nil)
-	attr = Attributes{}
-	err = FillAttr(ctx, entry, &attr)
+	attr, err = Attr(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(
 			uint64(10),
 			attr.Size,
-			"FillAttr should _not_ calculate the size attribute from the entry's content if it is already known",
+			"Attr should _not_ calculate the size attribute from the entry's content if it is already known",
 		)
 	}
 
-	// Test that FillAttr returns an ErrCouldNotDetermineSizeAttr error if
+	// Test that Attr returns an ErrCouldNotDetermineSizeAttr error if
 	// Open errors, and that it still proceeds to fill-in the mode for FUSE
-	entry = newHelpersTestsMockReadableEntry(Attributes{})
+	entry = newHelpersTestsMockReadableEntry(ctx, Attributes{Size: SizeUnknown})
 	entry.On("Open", ctx).Return(mockRdr, fmt.Errorf("could not open"))
-	attr = Attributes{}
-	err = FillAttr(ctx, entry, &attr)
+	attr, err = Attr(ctx, entry)
 	suite.EqualError(err, ErrCouldNotDetermineSizeAttr{"could not open"}.Error())
 	suite.Equal(
 		os.FileMode(0440),
 		attr.Mode,
-		"FillAttr should fill-in the Mode attribute for FUSE even when Open errors",
+		"Attr should fill-in the Mode attribute for FUSE even when Open errors",
 	)
 
-	// Test that FillAttr returns an ErrNegativeSizeAttr error if the content
+	// Test that Attr returns an ErrNegativeSizeAttr error if the content
 	// has negative size
-	entry = newHelpersTestsMockReadableEntry(Attributes{})
+	entry = newHelpersTestsMockReadableEntry(ctx, Attributes{Size: SizeUnknown})
 	entry.On("Open", ctx).Return(negativeSizedReader{}, nil)
-	attr = Attributes{}
-	err = FillAttr(ctx, entry, &attr)
+	attr, err = Attr(ctx, entry)
 	suite.EqualError(err, ErrNegativeSizeAttr{-1}.Error())
 }
 

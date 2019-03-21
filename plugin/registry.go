@@ -20,7 +20,7 @@ func NewRegistry() *Registry {
 		plugins:   make(map[string]Root),
 	}
 	r.setID("/")
-	r.TurnOffCaching()
+	r.DisableDefaultCaching()
 
 	return r
 }

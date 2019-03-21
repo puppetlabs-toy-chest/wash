@@ -2,7 +2,7 @@ package aws
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
@@ -55,34 +55,11 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	}
 
 	for i, o := range resp.Contents {
-		request := &s3Client.HeadObjectInput{
-			Bucket: awsSDK.String(bucket),
-			Key:    o.Key,
-		}
-
-		key := awsSDK.StringValue(o.Key)
-
-		// TODO: Once https://github.com/puppetlabs/wash/issues/123
-		// is resolved, we should move the HeadObject calls over to
-		// s3Object and cache its response. This way, we can re-use
-		// it for Attr and Metadata
-		resp, err := client.HeadObjectWithContext(ctx, request)
-		if err != nil {
-			return nil, fmt.Errorf("could not get the metadata + attributes for object %v: %v", key, err)
-		}
-
-		size := awsSDK.Int64Value(resp.ContentLength)
-		if size < 0 {
-			return nil, fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, key)
-		}
-
-		attr := plugin.Attributes{
-			Mtime: awsSDK.TimeValue(resp.LastModified),
-			Size:  uint64(size),
-		}
-		metadata := plugin.ToMetadata(resp)
-
-		entries[numPrefixes+i] = newS3Object(attr, metadata, bucket, key, client)
+		entries[numPrefixes+i] = newS3Object(
+			bucket,
+			awsSDK.StringValue(o.Key),
+			client,
+		)
 	}
 
 	return entries, nil
@@ -91,26 +68,32 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
-	attr   plugin.Attributes
+	ctime  time.Time
 	region string
 	client *s3Client.S3
 }
 
-func newS3Bucket(name string, attr plugin.Attributes, region string, client *s3Client.S3) *s3Bucket {
-	return &s3Bucket{
+func newS3Bucket(name string, ctime time.Time, region string, client *s3Client.S3) *s3Bucket {
+	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
-		attr:      attr,
+		ctime:     ctime,
 		region:    region,
 		client:    client,
 	}
+
+	return bucket
+}
+
+func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
+	return plugin.Attributes{
+		Ctime: b.ctime,
+		Mtime: b.ctime,
+		Atime: b.ctime,
+	}, nil
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
-}
-
-func (b *s3Bucket) Attr() plugin.Attributes {
-	return b.attr
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {

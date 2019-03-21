@@ -21,8 +21,8 @@ var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(e plugin.Group) *dir {
-	return &dir{e, e.ID()}
+func newDir(parentPath string, e plugin.Group) *dir {
+	return &dir{e, joinPath(parentPath, e)}
 }
 
 func (d *dir) Entry() plugin.Entry {
@@ -75,7 +75,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		if entry.Name() == req.Name {
 			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
 			if plugin.ListAction.IsSupportedOn(entry) {
-				childdir := newDir(entry.(plugin.Group))
+				childdir := newDir(d.path, entry.(plugin.Group))
 				journal.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
@@ -86,7 +86,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 			}
 
 			journal.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
-			return newFile(entry), nil
+			return newFile(d.path, entry), nil
 		}
 	}
 	journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)

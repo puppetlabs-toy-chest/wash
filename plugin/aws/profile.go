@@ -16,7 +16,7 @@ type profile struct {
 
 func newProfile(ctx context.Context, name string) (*profile, error) {
 	profile := profile{EntryBase: plugin.NewEntry(name)}
-	profile.TurnOffCaching()
+	profile.DisableDefaultCaching()
 
 	journal.Record(ctx, "Creating a new AWS session for the %v profile", name)
 

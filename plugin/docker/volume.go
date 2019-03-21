@@ -50,12 +50,12 @@ func (v *volume) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	return plugin.ToMetadata(raw), nil
 }
 
-func (v *volume) Attr() plugin.Attributes {
+func (v *volume) Attr(ctx context.Context) (plugin.Attributes, error) {
 	return plugin.Attributes{
 		Ctime: v.startTime,
 		Mtime: v.startTime,
 		Atime: v.startTime,
-	}
+	}, nil
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"strings"
@@ -24,9 +25,9 @@ var actionOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 // You should use plugin.NewEntry to create new EntryBase objects.
 type EntryBase struct {
 	name string
-	// id represents the entry's wash ID. It is set in CachedList.
-	id  string
-	ttl [3]time.Duration
+	// washID represents the entry's wash ID. It is set in CachedList.
+	washID string
+	ttl    [3]time.Duration
 }
 
 // newEntryBase is needed by NewEntry, NewRegistry,
@@ -53,39 +54,57 @@ func NewEntry(name string) EntryBase {
 	return newEntryBase(name)
 }
 
-// Name returns the entry's name.
+// ENTRY INTERFACE
+
+// Name returns the entry's name. Do not override this.
 func (e *EntryBase) Name() string {
 	return e.name
 }
 
-// ID returns the entry's wash ID
-func (e *EntryBase) ID() string {
-	return e.id
+// Attr returns the entry's attributes. The default return value
+// is a zero'ed attributes struct with the Size field set to
+// SizeUnknown. You should override Attr() if you'd like to return
+// a different set of attributes.
+//
+// NOTE: See the comments for plugin.Attr if you're interested in
+// knowing why the Size field is set to SizeUnknown.
+func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
+	return Attributes{
+		Size: SizeUnknown,
+	}, nil
 }
 
-// SetTTLOf sets the specified op's TTL
-func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {
-	e.ttl[op] = ttl
+func (e *EntryBase) id() string {
+	return e.washID
 }
 
-// TurnOffCachingFor turns off caching for the specified op
-func (e *EntryBase) TurnOffCachingFor(op actionOpCode) {
-	e.SetTTLOf(op, -1)
-}
-
-// TurnOffCaching turns off caching for all ops
-func (e *EntryBase) TurnOffCaching() {
-	for op := range e.ttl {
-		e.TurnOffCachingFor(actionOpCode(op))
-	}
+func (e *EntryBase) setID(id string) {
+	e.washID = id
 }
 
 func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
 	return e.ttl[op]
 }
 
-func (e *EntryBase) setID(id string) {
-	e.id = id
+// OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
+// AND TESTING
+
+// SetTTLOf sets the specified op's TTL
+func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {
+	e.ttl[op] = ttl
+}
+
+// DisableCachingFor disables caching for the specified op
+func (e *EntryBase) DisableCachingFor(op actionOpCode) {
+	e.SetTTLOf(op, -1)
+}
+
+// DisableDefaultCaching disables the default caching
+// for List, Open and Metadata.
+func (e *EntryBase) DisableDefaultCaching() {
+	for op := range e.ttl {
+		e.DisableCachingFor(actionOpCode(op))
+	}
 }
 
 // SetTestID sets the entry's cache ID for testing.

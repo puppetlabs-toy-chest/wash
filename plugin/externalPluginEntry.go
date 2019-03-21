@@ -117,7 +117,7 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 
 // List lists the entry's children, if it has any.
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "list", e.ID(), e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "list", e.id(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 // Open returns the entry's content
 func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "read", e.ID(), e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "read", e.id(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 
 // Metadata displays the resource's metadata
 func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.ID(), e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.id(), e.state)
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +181,8 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error)
 }
 
 // Attr returns the entry's filesystem attributes
-func (e *externalPluginEntry) Attr() Attributes {
-	return e.attr
+func (e *externalPluginEntry) Attr(ctx context.Context) (Attributes, error) {
+	return e.attr, nil
 }
 
 type stdoutStreamer struct {
@@ -223,7 +223,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
 		e.script.Path(),
 		"stream",
-		e.ID(),
+		e.id(),
 		e.state,
 	)
 
@@ -231,7 +231,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		return nil, err
 	}
 
-	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.ID(), e.state)
+	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.id(), e.state)
 
 	journal.Record(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
@@ -348,7 +348,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj := exec.Command(
 		e.script.Path(),
 		append(
-			[]string{"exec", e.ID(), e.state, cmd},
+			[]string{"exec", e.id(), e.state, cmd},
 			args...,
 		)...,
 	)

@@ -3,9 +3,11 @@ package aws
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
@@ -17,33 +19,69 @@ import (
 // s3Object represents an S3 object.
 type s3Object struct {
 	plugin.EntryBase
-	attr     plugin.Attributes
-	metadata plugin.MetadataMap
-	bucket   string
-	key      string
-	client   *s3Client.S3
+	bucket string
+	key    string
+	client *s3Client.S3
 }
 
-func newS3Object(attr plugin.Attributes, metadata plugin.MetadataMap, bucket string, key string, client *s3Client.S3) *s3Object {
+func newS3Object(bucket string, key string, client *s3Client.S3) *s3Object {
 	o := &s3Object{
 		EntryBase: plugin.NewEntry(path.Base(key)),
-		attr:      attr,
-		metadata:  metadata,
 		bucket:    bucket,
 		key:       key,
 		client:    client,
 	}
-	o.TurnOffCachingFor(plugin.Metadata)
+	o.DisableCachingFor(plugin.Metadata)
 
 	return o
 }
 
-func (o *s3Object) Attr() plugin.Attributes {
-	return o.attr
+func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
+	resp, err := plugin.CachedOp("HeadObject", o, 15*time.Second, func() (interface{}, error) {
+		request := &s3Client.HeadObjectInput{
+			Bucket: awsSDK.String(o.bucket),
+			Key:    awsSDK.String(o.key),
+		}
+
+		return o.client.HeadObjectWithContext(ctx, request)
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.(*s3Client.HeadObjectOutput), nil
+}
+
+func (o *s3Object) Attr(ctx context.Context) (plugin.Attributes, error) {
+	metadata, err := o.cachedHeadObject(ctx)
+	if err != nil {
+		return plugin.Attributes{}, nil
+	}
+
+	size := awsSDK.Int64Value(metadata.ContentLength)
+	if size < 0 {
+		err := fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, o.key)
+		return plugin.Attributes{}, err
+	}
+
+	mtime := awsSDK.TimeValue(metadata.LastModified)
+
+	return plugin.Attributes{
+		Ctime: mtime,
+		Mtime: mtime,
+		Atime: mtime,
+		Size:  uint64(size),
+	}, nil
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
-	return o.metadata, nil
+	metadata, err := o.cachedHeadObject(ctx)
+	if err != nil {
+		return nil, nil
+	}
+
+	return plugin.ToMetadata(metadata), nil
 }
 
 func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
@@ -62,7 +100,12 @@ func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
 }
 
 func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return &s3ObjectReader{o}, nil
+	attr, err := o.Attr(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &s3ObjectReader{o: o, size: int64(attr.Size)}, nil
 }
 
 func (o *s3Object) Stream(context.Context) (io.Reader, error) {
@@ -78,6 +121,9 @@ func (o *s3Object) Stream(context.Context) (io.Reader, error) {
 // art we could use to optimize this.
 type s3ObjectReader struct {
 	o *s3Object
+	// See the comments in s3ObjectReader#Size to understand how this field's
+	// used.
+	size int64
 }
 
 func (s *s3ObjectReader) closeContent(content io.ReadCloser) {
@@ -105,5 +151,18 @@ func (s *s3ObjectReader) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (s *s3ObjectReader) Size() int64 {
-	return int64(s.o.Attr().Size)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelFunc()
+
+	// We'd like to return s.o.Attr().Size here. Unfortunately since
+	// s.o.Attr() is calculated via. an API request, there's a chance
+	// that it could error. If that happens, we return s.size instead
+	// as a fallback. We could change Size()'s return signature to
+	// (int64, error), but there's no good reason to do that right now.
+	attr, err := s.o.Attr(ctx)
+	if err != nil {
+		return s.size
+	}
+
+	return int64(attr.Size)
 }

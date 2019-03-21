@@ -47,13 +47,13 @@ func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	return plugin.ToMetadata(pd), nil
 }
 
-func (p *pod) Attr() plugin.Attributes {
+func (p *pod) Attr(ctx context.Context) (plugin.Attributes, error) {
 	return plugin.Attributes{
 		Ctime: p.startTime,
 		Mtime: time.Now(),
 		Atime: p.startTime,
 		Size:  plugin.SizeUnknown,
-	}
+	}, nil
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {

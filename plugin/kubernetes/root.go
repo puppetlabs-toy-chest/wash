@@ -49,7 +49,7 @@ func (r *Root) Init() error {
 	}
 
 	r.EntryBase = plugin.NewEntry("kubernetes")
-	r.TurnOffCaching()
+	r.DisableDefaultCaching()
 
 	contexts := make([]plugin.Entry, 0)
 	for name := range raw.Contexts {
