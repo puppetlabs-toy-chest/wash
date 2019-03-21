@@ -41,9 +41,6 @@ type Entry interface {
 	Name() string
 	ID() string
 	Attr(ctx context.Context) (Attributes, error)
-	SetTTLOf(op actionOpCode, ttl time.Duration)
-	TurnOffCachingFor(op actionOpCode)
-	TurnOffCaching()
 	getTTLOf(op actionOpCode) time.Duration
 	setID(id string)
 }

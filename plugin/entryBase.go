@@ -55,6 +55,8 @@ func NewEntry(name string) EntryBase {
 	return newEntryBase(name)
 }
 
+// ENTRY INTERFACE
+
 // Name returns the entry's name.
 func (e *EntryBase) Name() string {
 	return e.name
@@ -69,6 +71,17 @@ func (e *EntryBase) ID() string {
 func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
 	return e.attr, nil
 }
+
+func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
+	return e.ttl[op]
+}
+
+func (e *EntryBase) setID(id string) {
+	e.id = id
+}
+
+// OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
+// AND TESTING
 
 // SetTTLOf sets the specified op's TTL
 func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {
@@ -85,14 +98,6 @@ func (e *EntryBase) TurnOffCaching() {
 	for op := range e.ttl {
 		e.TurnOffCachingFor(actionOpCode(op))
 	}
-}
-
-func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
-	return e.ttl[op]
-}
-
-func (e *EntryBase) setID(id string) {
-	e.id = id
 }
 
 // SetTestID sets the entry's cache ID for testing.
