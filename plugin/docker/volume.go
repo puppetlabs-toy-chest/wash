@@ -128,7 +128,7 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 func (v *volume) createContainer(ctx context.Context, cmd []string) (string, error) {
 	// Use tty to avoid messing with the extra log formatting.
 	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
-	mounts := []mount.Mount{mount.Mount{
+	mounts := []mount.Mount{{
 		Type:     mount.TypeVolume,
 		Source:   v.Name(),
 		Target:   mountpoint,

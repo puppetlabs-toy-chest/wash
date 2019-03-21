@@ -117,12 +117,12 @@ func (v *pvc) createPod(cmd []string) (string, error) {
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:  "busybox",
 					Image: "busybox",
 					Args:  cmd,
 					VolumeMounts: []corev1.VolumeMount{
-						corev1.VolumeMount{
+						{
 							Name:      v.Name(),
 							MountPath: mountpoint,
 							ReadOnly:  true,
@@ -132,7 +132,7 @@ func (v *pvc) createPod(cmd []string) (string, error) {
 			},
 			RestartPolicy: corev1.RestartPolicyNever,
 			Volumes: []corev1.Volume{
-				corev1.Volume{
+				{
 					Name: v.Name(),
 					VolumeSource: corev1.VolumeSource{
 						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{

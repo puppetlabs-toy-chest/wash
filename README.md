@@ -1,6 +1,6 @@
 # wash (Wide Area SHell)
 
-[![GitHub release](https://img.shields.io/github/release/puppetlabs/wash.svg)](https://github.com/puppetlabs/wash/releases/) [![Build Status](https://travis-ci.com/puppetlabs/wash.svg)](https://travis-ci.com/puppetlabs/wash) [![GoDoc](https://godoc.org/github.com/puppetlabs/wash?status.svg)](https://godoc.org/github.com/puppetlabs/wash)
+[![GitHub release](https://img.shields.io/github/release/puppetlabs/wash.svg)](https://github.com/puppetlabs/wash/releases/) [![Build Status](https://travis-ci.com/puppetlabs/wash.svg)](https://travis-ci.com/puppetlabs/wash) [![GoDoc](https://godoc.org/github.com/puppetlabs/wash?status.svg)](https://godoc.org/github.com/puppetlabs/wash) [![Go Report Card](https://goreportcard.com/badge/github.com/puppetlabs/wash)](https://goreportcard.com/report/github.com/puppetlabs/wash)
 
 `wash` helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love!
 
