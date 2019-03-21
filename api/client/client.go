@@ -77,14 +77,12 @@ func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) 
 func (c *DomainSocketClient) getRequest(endpoint string, result interface{}) error {
 	respBody, err := c.doRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
-		log.Printf("Error performing GET request: %v", err)
 		return err
 	}
 
 	defer func() { errz.Log(respBody.Close()) }()
 	body, err := ioutil.ReadAll(respBody)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
@@ -133,7 +131,6 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 
 	respBody, err := c.doRequest(http.MethodPost, endpoint, bytes.NewReader(jsonBody))
 	if err != nil {
-		log.Printf("Error performing POST request: %v", err)
 		return nil, err
 	}
 
