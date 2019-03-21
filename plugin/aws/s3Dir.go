@@ -59,13 +59,9 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		cfg := awsSDK.NewConfig()
 		cfg.WithRegion(region)
 
-		attr := plugin.Attributes{
-			Ctime: awsSDK.TimeValue(bucket.CreationDate),
-		}
-
 		buckets[i] = newS3Bucket(
 			awsSDK.StringValue(name),
-			attr,
+			awsSDK.TimeValue(bucket.CreationDate),
 			region,
 			s3Client.New(s.session, cfg),
 		)

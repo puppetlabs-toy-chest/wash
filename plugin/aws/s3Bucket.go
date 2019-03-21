@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
@@ -91,26 +92,23 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
-	attr   plugin.Attributes
 	region string
 	client *s3Client.S3
 }
 
-func newS3Bucket(name string, attr plugin.Attributes, region string, client *s3Client.S3) *s3Bucket {
-	return &s3Bucket{
+func newS3Bucket(name string, ctime time.Time, region string, client *s3Client.S3) *s3Bucket {
+	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
-		attr:      attr,
 		region:    region,
 		client:    client,
 	}
+	bucket.Ctime = ctime
+
+	return bucket
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
-}
-
-func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return b.attr, nil
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {

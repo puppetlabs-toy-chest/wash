@@ -24,11 +24,13 @@ var actionOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 // EntryBase implements Entry, making it easy to create new entries.
 // You should use plugin.NewEntry to create new EntryBase objects.
 type EntryBase struct {
-	name string
+	// Ctime specifies the entry's creation time. See Attr for more
+	// details on how this is used.
+	Ctime time.Time
+	name  string
 	// id represents the entry's wash ID. It is set in CachedList.
-	id   string
-	attr Attributes
-	ttl  [3]time.Duration
+	id  string
+	ttl [3]time.Duration
 }
 
 // newEntryBase is needed by NewEntry, NewRegistry,
@@ -67,9 +69,19 @@ func (e *EntryBase) ID() string {
 	return e.id
 }
 
-// Attr returns the entry's attributes
+// Attr returns the entry's attributes. The default return value
+// is a zero'ed attributes struct. If e.Ctime is set, then
+// the returned attributes struct's Ctime, Mtime, and Atime fields
+// are set to this value.
+//
+// Entries can override Attr if they'd like to return a different
+// set of attributes.
 func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
-	return e.attr, nil
+	return Attributes{
+		Ctime: e.Ctime,
+		Mtime: e.Ctime,
+		Atime: e.Ctime,
+	}, nil
 }
 
 func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {

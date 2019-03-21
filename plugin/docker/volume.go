@@ -20,8 +20,7 @@ import (
 
 type volume struct {
 	plugin.EntryBase
-	client    *client.Client
-	startTime time.Time
+	client *client.Client
 }
 
 const mountpoint = "/mnt"
@@ -35,8 +34,8 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	vol := &volume{
 		EntryBase: plugin.NewEntry(v.Name),
 		client:    c,
-		startTime: startTime,
 	}
+	vol.Ctime = startTime
 	vol.SetTTLOf(plugin.List, 60*time.Second)
 
 	return vol, nil
@@ -48,14 +47,6 @@ func (v *volume) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		return nil, err
 	}
 	return plugin.ToMetadata(raw), nil
-}
-
-func (v *volume) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: v.startTime,
-		Mtime: v.startTime,
-		Atime: v.startTime,
-	}, nil
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -15,8 +14,7 @@ import (
 
 type container struct {
 	plugin.EntryBase
-	client    *client.Client
-	startTime time.Time
+	client *client.Client
 }
 
 // Metadata
@@ -28,15 +26,6 @@ func (c *container) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	}
 
 	return plugin.ToMetadata(raw), nil
-}
-
-// Attr
-func (c *container) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: c.startTime,
-		Mtime: c.startTime,
-		Atime: c.startTime,
-	}, nil
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {

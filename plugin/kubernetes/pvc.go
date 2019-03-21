@@ -19,9 +19,8 @@ import (
 
 type pvc struct {
 	plugin.EntryBase
-	pvci      typedv1.PersistentVolumeClaimInterface
-	podi      typedv1.PodInterface
-	startTime time.Time
+	pvci typedv1.PersistentVolumeClaimInterface
+	podi typedv1.PodInterface
 }
 
 const mountpoint = "/mnt"
@@ -33,8 +32,8 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		EntryBase: plugin.NewEntry(p.Name),
 		pvci:      pi,
 		podi:      pd,
-		startTime: p.CreationTimestamp.Time,
 	}
+	vol.Ctime = p.CreationTimestamp.Time
 	vol.SetTTLOf(plugin.List, 60*time.Second)
 
 	return vol
@@ -48,14 +47,6 @@ func (v *pvc) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 	journal.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
 
 	return plugin.ToMetadata(obj), nil
-}
-
-func (v *pvc) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: v.startTime,
-		Mtime: v.startTime,
-		Atime: v.startTime,
-	}, nil
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {

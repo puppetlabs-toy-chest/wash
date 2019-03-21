@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -51,6 +52,25 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	e.TurnOffCaching()
 	assertOpTTL(Open, "Open", -1)
 	assertOpTTL(Metadata, "Metadata", -1)
+
+	ctx := context.Background()
+
+	attr, err := e.Attr(ctx)
+	if suite.NoError(err) {
+		suite.Equal(Attributes{}, attr)
+	}
+
+	e.Ctime = time.Now()
+	attr, err = e.Attr(ctx)
+	if suite.NoError(err) {
+		expectedAttributes := Attributes{
+			Ctime: e.Ctime,
+			Mtime: e.Ctime,
+			Atime: e.Ctime,
+		}
+
+		suite.Equal(expectedAttributes, attr)
+	}
 }
 
 func TestEntryBase(t *testing.T) {

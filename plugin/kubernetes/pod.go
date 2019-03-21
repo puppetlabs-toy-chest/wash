@@ -19,10 +19,9 @@ import (
 
 type pod struct {
 	plugin.EntryBase
-	client    *k8s.Clientset
-	config    *rest.Config
-	ns        string
-	startTime time.Time
+	client *k8s.Clientset
+	config *rest.Config
+	ns     string
 }
 
 func newPod(client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) *pod {
@@ -31,8 +30,8 @@ func newPod(client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod
 		client:    client,
 		config:    config,
 		ns:        ns,
-		startTime: p.CreationTimestamp.Time,
 	}
+	pd.Ctime = p.CreationTimestamp.Time
 
 	return pd
 }
@@ -49,9 +48,9 @@ func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 
 func (p *pod) Attr(ctx context.Context) (plugin.Attributes, error) {
 	return plugin.Attributes{
-		Ctime: p.startTime,
+		Ctime: p.Ctime,
 		Mtime: time.Now(),
-		Atime: p.startTime,
+		Atime: p.Ctime,
 		Size:  plugin.SizeUnknown,
 	}, nil
 }
