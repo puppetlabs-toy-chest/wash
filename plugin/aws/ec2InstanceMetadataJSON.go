@@ -23,7 +23,7 @@ func newEC2InstanceMetadataJSON(inst *ec2Instance) *ec2InstanceMetadataJSON {
 }
 
 func (im *ec2InstanceMetadataJSON) Open(ctx context.Context) (plugin.SizedReader, error) {
-	metadata, err := im.inst.Metadata(ctx)
+	metadata, err := plugin.CachedMetadata(ctx, im.inst)
 	if err != nil {
 		return nil, err
 	}

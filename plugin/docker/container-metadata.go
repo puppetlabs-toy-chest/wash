@@ -14,7 +14,7 @@ type containerMetadata struct {
 }
 
 func (cm *containerMetadata) Open(ctx context.Context) (plugin.SizedReader, error) {
-	metadata, err := cm.container.Metadata(ctx)
+	metadata, err := plugin.CachedMetadata(ctx, cm.container)
 	if err != nil {
 		return nil, err
 	}
