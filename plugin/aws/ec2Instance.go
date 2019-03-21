@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -20,26 +21,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO: Once https://github.com/puppetlabs/wash/issues/123 is resolved,
-// make this use the cache
-func describeInstance(inst *ec2Instance) (*ec2Client.Instance, error) {
-	request := &ec2Client.DescribeInstancesInput{
-		InstanceIds: []*string{
-			awsSDK.String(inst.Name()),
-		},
-	}
-
-	resp, err := inst.client.DescribeInstances(request)
-	if err != nil {
-		return nil, err
-	}
-
-	// The API returns an error for an invalid instance ID. Since
-	// our API call succeeded, the response is guaranteed to contain
-	// the instance's metadata
-	return resp.Reservations[0].Instances[0], nil
-}
-
 // ec2Instance represents an EC2 instance
 type ec2Instance struct {
 	plugin.EntryBase
@@ -47,7 +28,6 @@ type ec2Instance struct {
 	client                  *ec2Client.EC2
 	ssmClient               *ssm.SSM
 	cloudwatchClient        *cloudwatchlogs.CloudWatchLogs
-	attr                    plugin.Attributes
 	latestConsoleOutputOnce sync.Once
 	entries                 []plugin.Entry
 }
@@ -64,16 +44,15 @@ const (
 	EC2InstanceStopped           = 80
 )
 
-func newEC2Instance(ctx context.Context, ID string, session *session.Session, client *ec2Client.EC2, attr plugin.Attributes) *ec2Instance {
+func newEC2Instance(ctx context.Context, ID string, session *session.Session, client *ec2Client.EC2) *ec2Instance {
 	ec2Instance := &ec2Instance{
 		EntryBase:        plugin.NewEntry(ID),
 		session:          session,
 		client:           client,
 		ssmClient:        ssm.New(session),
 		cloudwatchClient: cloudwatchlogs.New(session),
-		attr:             attr,
 	}
-	ec2Instance.TurnOffCachingFor(plugin.List)
+	ec2Instance.TurnOffCaching()
 
 	ec2Instance.entries = []plugin.Entry{
 		newEC2InstanceMetadataJSON(ec2Instance),
@@ -83,17 +62,77 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 	return ec2Instance
 }
 
-func (inst *ec2Instance) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return inst.attr, nil
+type describeInstanceResult struct {
+	attr     plugin.Attributes
+	metadata *ec2Client.Instance
 }
 
-func (inst *ec2Instance) Metadata(context.Context) (plugin.MetadataMap, error) {
-	metadata, err := describeInstance(inst)
+func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeInstanceResult, error) {
+	info, err := plugin.CachedOp("DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
+		request := &ec2Client.DescribeInstancesInput{
+			InstanceIds: []*string{
+				awsSDK.String(inst.Name()),
+			},
+		}
+
+		resp, err := inst.client.DescribeInstances(request)
+		if err != nil {
+			return nil, err
+		}
+
+		result := describeInstanceResult{}
+
+		// The API returns an error for an invalid instance ID. Since
+		// our API call succeeded, the response is guaranteed to contain
+		// the instance's metadata
+		result.metadata = resp.Reservations[0].Instances[0]
+
+		// AWS does not include the EC2 instance's ctime in its
+		// metadata. It also does not include the EC2 instance's
+		// last state transition time (mtime). Thus, we try to "guess"
+		// reasonable values for ctime and mtime by looping over each
+		// block device's attachment time and the instance's launch time.
+		// The oldest of these times is the ctime; the newest is the mtime.
+		result.attr.Ctime = awsSDK.TimeValue(result.metadata.LaunchTime)
+		result.attr.Mtime = result.attr.Ctime
+		for _, mapping := range result.metadata.BlockDeviceMappings {
+			attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
+
+			if attachTime.Before(result.attr.Ctime) {
+				result.attr.Ctime = attachTime
+			}
+
+			if attachTime.After(result.attr.Mtime) {
+				result.attr.Mtime = attachTime
+			}
+		}
+
+		return result, nil
+	})
+
+	if err != nil {
+		return describeInstanceResult{}, err
+	}
+
+	return info.(describeInstanceResult), nil
+}
+
+func (inst *ec2Instance) Attr(ctx context.Context) (plugin.Attributes, error) {
+	result, err := inst.cachedDescribeInstance(ctx)
+	if err != nil {
+		return plugin.Attributes{}, err
+	}
+
+	return result.attr, nil
+}
+
+func (inst *ec2Instance) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+	result, err := inst.cachedDescribeInstance(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return plugin.ToMetadata(metadata), nil
+	return plugin.ToMetadata(result.metadata), nil
 }
 
 func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -104,6 +143,48 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 	})
 
 	return inst.entries, nil
+}
+
+type consoleOutput struct {
+	mtime   time.Time
+	content []byte
+}
+
+func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (consoleOutput, error) {
+	opName := "ConsoleOutput"
+	if latest {
+		opName = "Latest" + opName
+	}
+
+	output, err := plugin.CachedOp(opName, inst, 30*time.Second, func() (interface{}, error) {
+		request := &ec2Client.GetConsoleOutputInput{
+			InstanceId: awsSDK.String(inst.Name()),
+		}
+		if latest {
+			request.Latest = awsSDK.Bool(latest)
+		}
+
+		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+
+		content, err := base64.StdEncoding.DecodeString(awsSDK.StringValue(resp.Output))
+		if err != nil {
+			return nil, err
+		}
+
+		return consoleOutput{
+			mtime:   awsSDK.TimeValue(resp.Timestamp),
+			content: content,
+		}, nil
+	})
+
+	if err != nil {
+		return consoleOutput{}, err
+	}
+
+	return output.(consoleOutput), nil
 }
 
 // According to https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-console.html,
@@ -172,16 +253,16 @@ const (
 func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
 	execResult := plugin.ExecResult{}
 
-	metadata, err := describeInstance(inst)
+	result, err := inst.cachedDescribeInstance(ctx)
 	if err != nil {
 		return execResult, nil
 	}
 
 	// Exec only makes sense on a running EC2 instance.
-	if awsSDK.Int64Value(metadata.State.Code) != EC2InstanceRunningState {
+	if awsSDK.Int64Value(result.metadata.State.Code) != EC2InstanceRunningState {
 		err := fmt.Errorf(
 			"instance is not in the running state. Its current state is: %v",
-			awsSDK.StringValue(metadata.State.Name),
+			awsSDK.StringValue(result.metadata.State.Name),
 		)
 
 		return execResult, err

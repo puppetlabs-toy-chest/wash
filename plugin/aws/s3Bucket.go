@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/puppetlabs/wash/journal"
@@ -56,34 +55,11 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	}
 
 	for i, o := range resp.Contents {
-		request := &s3Client.HeadObjectInput{
-			Bucket: awsSDK.String(bucket),
-			Key:    o.Key,
-		}
-
-		key := awsSDK.StringValue(o.Key)
-
-		// TODO: Once https://github.com/puppetlabs/wash/issues/123
-		// is resolved, we should move the HeadObject calls over to
-		// s3Object and cache its response. This way, we can re-use
-		// it for Attr and Metadata
-		resp, err := client.HeadObjectWithContext(ctx, request)
-		if err != nil {
-			return nil, fmt.Errorf("could not get the metadata + attributes for object %v: %v", key, err)
-		}
-
-		size := awsSDK.Int64Value(resp.ContentLength)
-		if size < 0 {
-			return nil, fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, key)
-		}
-
-		attr := plugin.Attributes{
-			Mtime: awsSDK.TimeValue(resp.LastModified),
-			Size:  uint64(size),
-		}
-		metadata := plugin.ToMetadata(resp)
-
-		entries[numPrefixes+i] = newS3Object(attr, metadata, bucket, key, client)
+		entries[numPrefixes+i] = newS3Object(
+			bucket,
+			awsSDK.StringValue(o.Key),
+			client,
+		)
 	}
 
 	return entries, nil

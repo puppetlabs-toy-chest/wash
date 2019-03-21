@@ -50,33 +50,11 @@ func (is *ec2InstancesDir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 		instances := make([]plugin.Entry, len(reservation.Instances))
 		for i, instance := range reservation.Instances {
-			// AWS does not include the EC2 instance's ctime in its
-			// metadata. It also does not include the EC2 instance's
-			// last state transition time (mtime). Thus, we try to "guess"
-			// reasonable values for ctime and mtime by looping over each
-			// block device's attachment time and the instance's launch time.
-			// The oldest of these times is the ctime; the newest is the mtime.
-			var attr plugin.Attributes
-			attr.Ctime = awsSDK.TimeValue(instance.LaunchTime)
-			attr.Mtime = attr.Ctime
-			for _, mapping := range instance.BlockDeviceMappings {
-				attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
-
-				if attachTime.Before(attr.Ctime) {
-					attr.Ctime = attachTime
-				}
-
-				if attachTime.After(attr.Mtime) {
-					attr.Mtime = attachTime
-				}
-			}
-
 			instances[i] = newEC2Instance(
 				ctx,
 				awsSDK.StringValue(instance.InstanceId),
 				is.session,
 				is.client,
-				attr,
 			)
 		}
 
