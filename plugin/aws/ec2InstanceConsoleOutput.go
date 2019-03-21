@@ -37,11 +37,15 @@ func (cl *ec2InstanceConsoleOutput) Attr(ctx context.Context) (plugin.Attributes
 		return plugin.Attributes{}, err
 	}
 
-	cl.Ctime = output.mtime
-	attr, _ := cl.EntryBase.Attr(ctx)
-	attr.Size = uint64(len(output.content))
-
-	return attr, nil
+	// We can't use cl.EntryBase.Attr() here because that depends on the Ctime
+	// field being set. Setting Ctime would introduce a race condition, so manually
+	// create the Attributes struct
+	return plugin.Attributes{
+		Ctime: output.mtime,
+		Mtime: output.mtime,
+		Atime: output.mtime,
+		Size:  uint64(len(output.content)),
+	}, nil
 }
 
 func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {

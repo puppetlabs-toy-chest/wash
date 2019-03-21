@@ -36,49 +36,62 @@ func newS3Object(bucket string, key string, client *s3Client.S3) *s3Object {
 	return o
 }
 
-func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
+type headObjectResult struct {
+	attr     plugin.Attributes
+	metadata *s3Client.HeadObjectOutput
+}
+
+func (o *s3Object) cachedHeadObject(ctx context.Context) (headObjectResult, error) {
 	resp, err := plugin.CachedOp("HeadObject", o, 15*time.Second, func() (interface{}, error) {
 		request := &s3Client.HeadObjectInput{
 			Bucket: awsSDK.String(o.bucket),
 			Key:    awsSDK.String(o.key),
 		}
 
-		return o.client.HeadObjectWithContext(ctx, request)
+		resp, err := o.client.HeadObjectWithContext(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+		result := headObjectResult{
+			metadata: resp,
+		}
+
+		size := awsSDK.Int64Value(result.metadata.ContentLength)
+		if size < 0 {
+			err := fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, o.key)
+			return plugin.Attributes{}, err
+		}
+
+		o.Ctime = awsSDK.TimeValue(result.metadata.LastModified)
+		result.attr, _ = o.EntryBase.Attr(ctx)
+		result.attr.Size = uint64(size)
+
+		return result, nil
 	})
 
 	if err != nil {
-		return nil, err
+		return headObjectResult{}, err
 	}
 
-	return resp.(*s3Client.HeadObjectOutput), nil
+	return resp.(headObjectResult), nil
 }
 
 func (o *s3Object) Attr(ctx context.Context) (plugin.Attributes, error) {
-	resp, err := o.cachedHeadObject(ctx)
+	result, err := o.cachedHeadObject(ctx)
 	if err != nil {
 		return plugin.Attributes{}, nil
 	}
 
-	size := awsSDK.Int64Value(resp.ContentLength)
-	if size < 0 {
-		err := fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, o.key)
-		return plugin.Attributes{}, err
-	}
-
-	o.Ctime = awsSDK.TimeValue(resp.LastModified)
-	attr, _ := o.EntryBase.Attr(ctx)
-	attr.Size = uint64(size)
-
-	return attr, nil
+	return result.attr, nil
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
-	resp, err := o.cachedHeadObject(ctx)
+	result, err := o.cachedHeadObject(ctx)
 	if err != nil {
 		return plugin.MetadataMap{}, nil
 	}
 
-	return plugin.ToMetadata(resp), nil
+	return plugin.ToMetadata(result.metadata), nil
 }
 
 func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
