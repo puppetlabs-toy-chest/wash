@@ -29,6 +29,7 @@ type params struct {
 }
 
 // swagger:response
+//nolint:deadcode,unused
 type octetResponse struct {
 	// in: body
 	Reader io.Reader

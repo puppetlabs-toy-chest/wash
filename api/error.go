@@ -11,6 +11,7 @@ import (
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
 
 // swagger:response
+//nolint:deadcode,unused
 type errorResp struct {
 	Body struct {
 		apitypes.ErrorObj

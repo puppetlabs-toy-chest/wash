@@ -50,12 +50,6 @@
         "operationId": "executeCommand",
         "parameters": [
           {
-            "type": "string",
-            "description": "uniquely identifies an entry",
-            "name": "Path",
-            "in": "query"
-          },
-          {
             "x-go-name": "Cmd",
             "description": "Name of the executable to invoke",
             "name": "cmd",
@@ -84,6 +78,12 @@
             "schema": {
               "$ref": "#/definitions/ExecOptions"
             }
+          },
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
           }
         ],
         "responses": {

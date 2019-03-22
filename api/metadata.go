@@ -10,6 +10,7 @@ import (
 )
 
 // swagger:response
+//nolint:deadcode,unused
 type metadataMap struct {
 	MetadataMap plugin.MetadataMap
 }

@@ -66,7 +66,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Re
 
 	var errorObj apitypes.ErrorObj
 	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	errz.Log(resp.Body.Close())
 	if err != nil {
 		return nil, err
 	}
