@@ -9,7 +9,28 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
+// swagger:response
+type metadataMap struct {
+	MetadataMap plugin.MetadataMap
+}
+
+// swagger:route GET /fs/metadata metadata getMetadata
+//
+// Get metadata
+//
+// Get metadata about the specified entry.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: metadataMap
+//       404: errorResp
+//       500: errorResp
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

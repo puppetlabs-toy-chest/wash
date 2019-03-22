@@ -10,6 +10,13 @@ import (
 
 // This approach was adapted from https://blog.golang.org/error-handling-and-go
 
+// swagger:response
+type errorResp struct {
+	Body struct {
+		apitypes.ErrorObj
+	}
+}
+
 func newErrorObj(kind string, message string, fields apitypes.ErrorFields) *apitypes.ErrorObj {
 	return &apitypes.ErrorObj{
 		Kind:   "puppetlabs.wash/" + kind,

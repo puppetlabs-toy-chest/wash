@@ -4,8 +4,9 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// ListEntry represents a single entry from the result of issuing a wash "list"
-// request.
+// ListEntry represents a single entry from the result of issuing a wash 'list' request.
+//
+// swagger:response
 type ListEntry struct {
 	Actions    []string             `json:"actions"`
 	Name       string               `json:"name"`

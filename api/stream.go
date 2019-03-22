@@ -11,7 +11,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var streamHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
+// swagger:route GET /fs/stream stream streamUpdates
+//
+// Stream updates
+//
+// Get a stream of new updates to the specified entry.
+//
+//     Produces:
+//     - application/json
+//     - application/octet-stream
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: octetResponse
+//       404: errorResp
+//       500: errorResp
+var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

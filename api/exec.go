@@ -67,7 +67,27 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 	sendPacket(ctx, w, &packet)
 }
 
-var execHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
+// swagger:route POST /fs/exec exec executeCommand
+//
+// Execute a command on a remote system
+//
+// Executes a command on the remote system described by the supplied path.
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: ExecPacket
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
+var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

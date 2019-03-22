@@ -10,7 +10,24 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-var listHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
+// swagger:route GET /fs/list list listEntries
+//
+// Lists children of a path
+//
+// Returns a list of ListEntry objects describing children of the given path.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: ListEntry
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
+var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

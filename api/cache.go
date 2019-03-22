@@ -9,7 +9,22 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-var cacheHandler handler = func(w http.ResponseWriter, r *http.Request, path string) *errorResponse {
+// swagger:route DELETE /cache cache cacheDelete
+//
+// Remove items from the cache
+//
+// Removes the specified entry and its children from the cache.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200:
+//       500: errorResp
+var cacheHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	journal.Record(ctx, "API: Cache DELETE %v", path)
 	deleted, err := plugin.ClearCacheFor(path)

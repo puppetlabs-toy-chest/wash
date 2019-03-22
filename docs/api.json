@@ -1,0 +1,436 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/cache": {
+      "delete": {
+        "description": "Removes the specified entry and its children from the cache.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "cache"
+        ],
+        "summary": "Remove items from the cache",
+        "operationId": "cacheDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {},
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/exec": {
+      "post": {
+        "description": "Executes a command on the remote system described by the supplied path.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "exec"
+        ],
+        "summary": "Execute a command on a remote system",
+        "operationId": "executeCommand",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          },
+          {
+            "x-go-name": "Cmd",
+            "description": "Name of the executable to invoke",
+            "name": "cmd",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "x-go-name": "Args",
+            "description": "Array of arguments to the executable",
+            "name": "args",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "x-go-name": "Opts",
+            "description": "Additional execution options",
+            "name": "opts",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/ExecOptions"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ExecPacket"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/list": {
+      "get": {
+        "description": "Returns a list of ListEntry objects describing children of the given path.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "list"
+        ],
+        "summary": "Lists children of a path",
+        "operationId": "listEntries",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/ListEntry"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/metadata": {
+      "get": {
+        "description": "Get metadata about the specified entry.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "metadata"
+        ],
+        "summary": "Get metadata",
+        "operationId": "getMetadata",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/metadataMap"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/read": {
+      "get": {
+        "description": "Read content from the specified entry.",
+        "produces": [
+          "application/json",
+          "application/octet-stream"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "read"
+        ],
+        "summary": "Read content",
+        "operationId": "readContent",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/octetResponse"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/stream": {
+      "get": {
+        "description": "Get a stream of new updates to the specified entry.",
+        "produces": [
+          "application/json",
+          "application/octet-stream"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "stream"
+        ],
+        "summary": "Stream updates",
+        "operationId": "streamUpdates",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/octetResponse"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Attributes": {
+      "type": "object",
+      "title": "Attributes of resources.",
+      "properties": {
+        "atime": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Atime"
+        },
+        "ctime": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Ctime"
+        },
+        "mode": {
+          "$ref": "#/definitions/FileMode"
+        },
+        "mtime": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Mtime"
+        },
+        "size": {
+          "type": "integer",
+          "format": "uint64",
+          "x-go-name": "Size"
+        },
+        "valid": {
+          "$ref": "#/definitions/Duration"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/plugin"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "ErrorFields": {
+      "description": "ErrorFields represents the fields of an ErrorObj",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "ErrorObj": {
+      "description": "ErrorObj represents an API error object",
+      "type": "object",
+      "properties": {
+        "fields": {
+          "$ref": "#/definitions/ErrorFields"
+        },
+        "kind": {
+          "description": "Identifies the kind of error.",
+          "type": "string",
+          "x-go-name": "Kind"
+        },
+        "msg": {
+          "description": "A description of what failed.",
+          "type": "string",
+          "x-go-name": "Msg"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "ExecOptions": {
+      "description": "These are not identical to plugin.ExecOptions because initially the API only\nsupports receiving a string of input, not a reader.",
+      "type": "object",
+      "title": "ExecOptions are options that can be passed as part of an Exec call.",
+      "properties": {
+        "input": {
+          "description": "Input to pass on stdin when executing the command",
+          "type": "string",
+          "x-go-name": "Input"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "ExecPacketType": {
+      "type": "string",
+      "title": "ExecPacketType identifies the packet type.",
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "FileMode": {
+      "description": "The bits have the same definition on all systems, so that\ninformation about files can be moved from one system\nto another portably. Not all bits apply to all systems.\nThe only required bit is ModeDir for directories.",
+      "type": "integer",
+      "format": "uint32",
+      "title": "A FileMode represents a file's mode and permission bits.",
+      "x-go-package": "os"
+    },
+    "MetadataMap": {
+      "type": "object",
+      "title": "MetadataMap maps keys to arbitrary structured data.",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "x-go-package": "github.com/puppetlabs/wash/plugin"
+    },
+    "Reader": {
+      "description": "Read reads up to len(p) bytes into p. It returns the number of bytes\nread (0 \u003c= n \u003c= len(p)) and any error encountered. Even if Read\nreturns n \u003c len(p), it may use all of p as scratch space during the call.\nIf some data is available but not len(p) bytes, Read conventionally\nreturns what is available instead of waiting for more.\n\nWhen Read encounters an error or end-of-file condition after\nsuccessfully reading n \u003e 0 bytes, it returns the number of\nbytes read. It may return the (non-nil) error from the same call\nor return the error (and n == 0) from a subsequent call.\nAn instance of this general case is that a Reader returning\na non-zero number of bytes at the end of the input stream may\nreturn either err == EOF or err == nil. The next Read should\nreturn 0, EOF.\n\nCallers should always process the n \u003e 0 bytes returned before\nconsidering the error err. Doing so correctly handles I/O errors\nthat happen after reading some bytes and also both of the\nallowed EOF behaviors.\n\nImplementations of Read are discouraged from returning a\nzero byte count with a nil error, except when len(p) == 0.\nCallers should treat a return of 0 and nil as indicating that\nnothing happened; in particular it does not indicate EOF.\n\nImplementations must not retain p.",
+      "type": "object",
+      "title": "Reader is the interface that wraps the basic Read method.",
+      "x-go-package": "io"
+    }
+  },
+  "responses": {
+    "ExecPacket": {
+      "description": "ExecPacket is a single packet of results from an exec.\nIf TypeField is Stdout or Stderr, Data will be a string.\nIf TypeField is Exitcode, Data will be an int (or float64 if deserialized from JSON).",
+      "schema": {
+        "type": "object",
+        "$ref": "#/definitions/ErrorObj"
+      },
+      "headers": {
+        "data": {},
+        "error": {},
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "type": {}
+      }
+    },
+    "ListEntry": {
+      "description": "ListEntry represents a single entry from the result of issuing a wash 'list' request.",
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/ErrorObj"
+        },
+        "$ref": "#/definitions/Attributes"
+      },
+      "headers": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attributes": {},
+        "errors": {},
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "errorResp": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "$ref": "#/definitions/ErrorFields"
+          },
+          "kind": {
+            "description": "Identifies the kind of error.",
+            "type": "string",
+            "x-go-name": "Kind"
+          },
+          "msg": {
+            "description": "A description of what failed.",
+            "type": "string",
+            "x-go-name": "Msg"
+          }
+        }
+      },
+      "headers": {
+        "Body": {}
+      }
+    },
+    "metadataMap": {
+      "schema": {
+        "$ref": "#/definitions/MetadataMap"
+      },
+      "headers": {
+        "MetadataMap": {}
+      }
+    },
+    "octetResponse": {
+      "schema": {
+        "$ref": "#/definitions/Reader"
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -19,7 +20,21 @@ type key int
 
 const pluginRegistryKey key = iota
 
-type handler func(http.ResponseWriter, *http.Request, string) *errorResponse
+// swagger:parameters cacheDelete listEntries executeCommand getMetadata readContent streamUpdates
+type params struct {
+	// uniquely identifies an entry
+	//
+	// in: query
+	Path string
+}
+
+// swagger:response
+type octetResponse struct {
+	// in: body
+	Reader io.Reader
+}
+
+type handler func(http.ResponseWriter, *http.Request, params) *errorResponse
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infof("API: %v %v", r.Method, r.URL)
@@ -31,7 +46,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := handle(w, r, paths[0]); err != nil {
+	if err := handle(w, r, params{Path: paths[0]}); err != nil {
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
