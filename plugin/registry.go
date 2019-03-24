@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 )
 
 // Registry represents the plugin registry. It is also Wash's root.
@@ -31,11 +32,23 @@ func (r *Registry) Plugins() map[string]Root {
 	return r.plugins
 }
 
+var pluginNameRegex = regexp.MustCompile("^[0-9a-zA-Z_-]+$")
+
 // RegisterPlugin initializes the given plugin and adds it to the registry if
 // initialization was successful.
 func (r *Registry) RegisterPlugin(root Root) error {
 	if err := root.Init(); err != nil {
 		return err
+	}
+
+	if !pluginNameRegex.MatchString(root.Name()) {
+		msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.Name())
+		panic(msg)
+	}
+
+	if _, ok := r.plugins[root.Name()]; ok {
+		msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.Name())
+		panic(msg)
 	}
 
 	r.plugins[root.Name()] = root
