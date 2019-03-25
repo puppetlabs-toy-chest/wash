@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"path"
 
 	"github.com/puppetlabs/wash/plugin"
 
@@ -20,9 +19,9 @@ type s3ObjectPrefix struct {
 	client *s3Client.S3
 }
 
-func newS3ObjectPrefix(bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
+func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
 	return &s3ObjectPrefix{
-		EntryBase: plugin.NewEntry(path.Base(prefix)),
+		EntryBase: plugin.NewEntry(name),
 		bucket:    bucket,
 		prefix:    prefix,
 		client:    client,

@@ -50,6 +50,7 @@ func UnsetTestCache() {
 }
 
 var opNameRegex = regexp.MustCompile("^[a-zA-Z]+$")
+
 const opQualifier = "^[a-zA-Z]+::"
 
 // This method exists to simplify ClearCacheFor's tests.
@@ -105,8 +106,36 @@ func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interfa
 	return cachedOp(opName, entry, ttl, op)
 }
 
+// DuplicateCNameErr represents a duplicate cname error, which
+// occurs when at least two children have the same cname.
+type DuplicateCNameErr struct {
+	ParentPath                      string
+	FirstChildName                  string
+	FirstChildSlashReplacementChar  rune
+	SecondChildName                 string
+	SecondChildSlashReplacementChar rune
+	CName                           string
+}
+
+func (c DuplicateCNameErr) Error() string {
+	pluginName := strings.SplitN(
+		strings.TrimLeft(c.ParentPath, "/"),
+		"/",
+		2,
+	)[0]
+
+	return fmt.Sprintf(
+		"error listing %v: children %v and %v have the same cname of %v. This means that either the %v plugin's API returns duplicate names, or that you need to use a different slash replacement character (see EntryBase#SetSlashReplacementCharar)",
+		c.ParentPath,
+		c.FirstChildName,
+		c.SecondChildName,
+		c.CName,
+		pluginName,
+	)
+}
+
 // CachedList caches a Group object's List method. It also sets the
-// children's IDs to <parent_id> + "/" + <child_name>.
+// children's IDs to <parent_id> + "/" + <child_cname>.
 func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 	cachedEntries, err := cachedActionOp(List, g, func() (interface{}, error) {
 		entries, err := g.List(ctx)
@@ -114,8 +143,23 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 			return nil, err
 		}
 
+		searchedEntries := make(map[string]Entry)
 		for _, entry := range entries {
-			id := strings.TrimRight(g.id(), "/") + "/" + entry.Name()
+			cname := CName(entry)
+
+			if duplicateEntry, ok := searchedEntries[cname]; ok {
+				return nil, DuplicateCNameErr{
+					ParentPath:                      g.id(),
+					FirstChildName:                  duplicateEntry.Name(),
+					FirstChildSlashReplacementChar:  duplicateEntry.slashReplacementChar(),
+					SecondChildName:                 entry.Name(),
+					SecondChildSlashReplacementChar: entry.slashReplacementChar(),
+					CName:                           cname,
+				}
+			}
+			searchedEntries[cname] = entry
+
+			id := strings.TrimRight(g.id(), "/") + "/" + cname
 			entry.setID(id)
 		}
 

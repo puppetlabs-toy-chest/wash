@@ -33,6 +33,20 @@ func (m *mockRoot) List(ctx context.Context) ([]Entry, error) {
 	return args.Get(0).([]Entry), args.Error(1)
 }
 
+func (suite *RegistryTestSuite) TestPluginNameRegex() {
+	suite.Regexp(pluginNameRegex, "a")
+	suite.Regexp(pluginNameRegex, "A")
+	suite.Regexp(pluginNameRegex, "1")
+	suite.Regexp(pluginNameRegex, "_")
+	suite.Regexp(pluginNameRegex, "-")
+	suite.Regexp(pluginNameRegex, "foobar-123_baz")
+
+	suite.NotRegexp(pluginNameRegex, "")
+	suite.NotRegexp(pluginNameRegex, " plugin")
+	suite.NotRegexp(pluginNameRegex, "plugin/name")
+	suite.NotRegexp(pluginNameRegex, "plugin  ")
+}
+
 func (suite *RegistryTestSuite) TestRegisterPlugin() {
 	reg := NewRegistry()
 	m := &mockRoot{EntryBase: NewEntry("mine")}
@@ -43,7 +57,7 @@ func (suite *RegistryTestSuite) TestRegisterPlugin() {
 	suite.Contains(reg.Plugins(), "mine")
 }
 
-func (suite *RegistryTestSuite) TestRegisterPluginError() {
+func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 	reg := NewRegistry()
 	m := &mockRoot{EntryBase: NewEntry("mine")}
 	m.On("Init").Return(errors.New("failed"))
@@ -51,6 +65,30 @@ func (suite *RegistryTestSuite) TestRegisterPluginError() {
 	suite.EqualError(reg.RegisterPlugin(m), "failed")
 	m.AssertExpectations(suite.T())
 	suite.NotContains(reg.Plugins(), "mine")
+}
+
+func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
+	panicFunc := func() {
+		reg := NewRegistry()
+		m := &mockRoot{EntryBase: NewEntry("b@dname")}
+		_ = reg.RegisterPlugin(m)
+	}
+
+	suite.Panics(
+		panicFunc,
+		"r.RegisterPlugin: invalid plugin name b@dname. The plugin name must consist of alphanumeric characters, or a hyphen",
+	)
+}
+
+func (suite *RegistryTestSuite) TestRegisterPluginRegisteredPlugin() {
+	panicFunc := func() {
+		reg := NewRegistry()
+		m1 := &mockRoot{EntryBase: NewEntry("mine")}
+		_ = reg.RegisterPlugin(m1)
+		_ = reg.RegisterPlugin(m1)
+	}
+
+	suite.Panics(panicFunc, "r.RegisterPlugin: the mine plugin's already been registered")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPlugin() {

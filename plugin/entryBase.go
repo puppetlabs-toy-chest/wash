@@ -3,8 +3,6 @@ package plugin
 import (
 	"context"
 	"flag"
-	"fmt"
-	"strings"
 	"time"
 )
 
@@ -24,7 +22,8 @@ var actionOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 // EntryBase implements Entry, making it easy to create new entries.
 // You should use plugin.NewEntry to create new EntryBase objects.
 type EntryBase struct {
-	name string
+	name               string
+	slashReplacementCh rune
 	// washID represents the entry's wash ID. It is set in CachedList.
 	washID string
 	ttl    [3]time.Duration
@@ -33,7 +32,10 @@ type EntryBase struct {
 // newEntryBase is needed by NewEntry, NewRegistry,
 // and some of the cache tests
 func newEntryBase(name string) EntryBase {
-	e := EntryBase{name: name}
+	e := EntryBase{
+		name:               name,
+		slashReplacementCh: '#',
+	}
 
 	for op := range e.ttl {
 		e.SetTTLOf(actionOpCode(op), 15*time.Second)
@@ -47,16 +49,15 @@ func NewEntry(name string) EntryBase {
 	if name == "" {
 		panic("plugin.NewEntry: received an empty name")
 	}
-	if strings.Contains(name, "/") {
-		panic(fmt.Sprintf("plugin.NewEntry: received name %v containing a /", name))
-	}
 
 	return newEntryBase(name)
 }
 
 // ENTRY INTERFACE
 
-// Name returns the entry's name. Do not override this.
+// Name returns the entry's name as it was passed into
+// plugin.NewEntry. You should use e.Name() when making
+// the appropriate API calls within your plugin.
 func (e *EntryBase) Name() string {
 	return e.name
 }
@@ -74,6 +75,10 @@ func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
 	}, nil
 }
 
+func (e *EntryBase) slashReplacementChar() rune {
+	return e.slashReplacementCh
+}
+
 func (e *EntryBase) id() string {
 	return e.washID
 }
@@ -88,6 +93,20 @@ func (e *EntryBase) getTTLOf(op actionOpCode) time.Duration {
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
 // AND TESTING
+
+/*
+SetSlashReplacementChar overrides the default '/' replacement
+character of '#' to char. The '/' replacement character is used
+when determining the entry's cname. See plugin.CName for more
+details.
+*/
+func (e *EntryBase) SetSlashReplacementChar(char rune) {
+	if char == '/' {
+		panic("e.SetSlashReplacementChar called with '/'")
+	}
+
+	e.slashReplacementCh = char
+}
 
 // SetTTLOf sets the specified op's TTL
 func (e *EntryBase) SetTTLOf(op actionOpCode, ttl time.Duration) {

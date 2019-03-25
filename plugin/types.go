@@ -38,6 +38,7 @@ import (
 type Entry interface {
 	Name() string
 	Attr(ctx context.Context) (Attributes, error)
+	slashReplacementChar() rune
 	id() string
 	setID(id string)
 	getTTLOf(op actionOpCode) time.Duration

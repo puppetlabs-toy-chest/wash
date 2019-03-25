@@ -128,3 +128,22 @@ func erroredActionResponse(path string, a plugin.Action, reason string) *errorRe
 
 	return &errorResponse{statusCode, body}
 }
+
+func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
+	fields := apitypes.ErrorFields{
+		"parent_path":                         e.ParentPath,
+		"first_child_name":                    e.FirstChildName,
+		"first_child_slash_replacement_char":  e.FirstChildSlashReplacementChar,
+		"second_child_name":                   e.SecondChildName,
+		"second_child_slash_replacement_char": e.SecondChildSlashReplacementChar,
+		"cname":                               e.CName,
+	}
+
+	body := newErrorObj(
+		"duplicate-cname-error",
+		e.Error(),
+		fields,
+	)
+
+	return &errorResponse{http.StatusInternalServerError, body}
+}

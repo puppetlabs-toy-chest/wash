@@ -27,7 +27,7 @@ func lsCommand() *cobra.Command {
 	return lsCmd
 }
 
-func formatListEntries(ls []apitypes.ListEntry) string {
+func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	headers := []cmdutil.ColumnHeader{
 		{ShortName: "size", FullName: "NAME"},
 		{ShortName: "ctime", FullName: "CREATED"},
@@ -49,7 +49,12 @@ func formatListEntries(ls []apitypes.ListEntry) string {
 		sort.Strings(actions)
 		verbs := strings.Join(actions, ", ")
 
-		name := entry.Name
+		if entry.Path == apiPath {
+			// Represent the pwd as "."
+			entry.CName = "."
+		}
+		name := entry.CName
+
 		isDir := actions[sort.SearchStrings(actions, "list")] == "list"
 		if isDir {
 			name += "/"
@@ -88,6 +93,6 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	fmt.Print(formatListEntries(ls))
+	fmt.Print(formatListEntries(apiPath, ls))
 	return exitCode{0}
 }

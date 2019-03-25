@@ -27,6 +27,21 @@ func (suite *HelpersTestSuite) TearDownSuite() {
 	UnsetTestCache()
 }
 
+func (suite *HelpersTestSuite) TestCName() {
+	e := NewEntry("foo/bar/baz")
+	suite.Equal("foo#bar#baz", CName(&e))
+
+	e.SetSlashReplacementChar(':')
+	suite.Equal("foo:bar:baz", CName(&e))
+}
+
+func (suite *HelpersTestSuite) TestPath() {
+	e := NewEntry("foo")
+	e.setID("/foo/bar")
+
+	suite.Equal(Path(&e), "/foo/bar")
+}
+
 func (suite *HelpersTestSuite) TestToMetadata() {
 	cases := []struct {
 		input    interface{}

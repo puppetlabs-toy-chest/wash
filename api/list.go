@@ -43,12 +43,19 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	entries, err := plugin.CachedList(ctx, group)
 	if err != nil {
 		journal.Record(ctx, "API: List %v errored: %v", path, err)
+
+		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
+			return duplicateCNameResponse(cnameErr)
+		}
+
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
 	info := func(entry plugin.Entry) apitypes.ListEntry {
 		result := apitypes.ListEntry{
+			Path:    plugin.Path(entry),
 			Name:    entry.Name(),
+			CName:   plugin.CName(entry),
 			Actions: plugin.SupportedActionsOf(entry),
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
@@ -65,7 +72,6 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 
 	result := make([]apitypes.ListEntry, len(entries)+1)
 	result[0] = info(group)
-	result[0].Name = "."
 
 	for i, entry := range entries {
 		result[i+1] = info(entry)

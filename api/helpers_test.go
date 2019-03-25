@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"testing"
 
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/suite"
@@ -37,7 +38,7 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	runTestCase := func(grp plugin.Group, c testcase) {
 		got, err := findEntry(context.Background(), grp, c.segments)
 		if c.expectedEntry != "" && suite.NotNil(got) {
-			suite.Equal(c.expectedEntry, got.Name())
+			suite.Equal(c.expectedEntry, plugin.CName(got))
 		} else {
 			suite.Nil(got)
 		}
@@ -48,18 +49,22 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		}
 	}
 
-	foo := plugin.NewEntry("foo")
+	foo := plugin.NewEntry("foo/bar")
 	group := &mockGroup{plugin.NewEntry("root"), []plugin.Entry{&foo}}
+	group.SetTestID("/root")
+	group.DisableDefaultCaching()
 	for _, c := range []testcase{
 		{[]string{"not found"}, "", entryNotFoundResponse("not found", "The not found entry does not exist")},
-		{[]string{"foo"}, "foo", nil},
-		{[]string{"foo", "bar"}, "", entryNotFoundResponse("foo/bar", "The entry foo is not a group")},
+		{[]string{"foo#bar"}, "foo#bar", nil},
+		{[]string{"foo#bar", "bar"}, "", entryNotFoundResponse("foo#bar/bar", "The entry foo#bar is not a group")},
 	} {
 		runTestCase(group, c)
 	}
 
 	baz := plugin.NewEntry("baz")
-	group.entries = append(group.entries, &mockGroup{plugin.NewEntry("bar"), []plugin.Entry{&baz}})
+	nestedGroup := &mockGroup{plugin.NewEntry("bar"), []plugin.Entry{&baz}}
+	nestedGroup.DisableDefaultCaching()
+	group.entries = append(group.entries, nestedGroup)
 	for _, c := range []testcase{
 		{[]string{"bar"}, "bar", nil},
 		{[]string{"bar", "foo"}, "", entryNotFoundResponse("bar/foo", "The foo entry does not exist in the bar group")},
@@ -67,4 +72,24 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	} {
 		runTestCase(group, c)
 	}
+
+	// Finally, test the duplicate cname error response
+	duplicateFoo := plugin.NewEntry("foo#bar")
+	group.entries = append(group.entries, &duplicateFoo)
+	expectedErr := plugin.DuplicateCNameErr{
+		ParentPath:                      plugin.Path(group),
+		FirstChildName:                  foo.Name(),
+		FirstChildSlashReplacementChar:  '#',
+		SecondChildName:                 duplicateFoo.Name(),
+		SecondChildSlashReplacementChar: '#',
+		CName:                           "foo#bar",
+	}
+	runTestCase(
+		group,
+		testcase{[]string{"foo#bar"}, "", duplicateCNameResponse(expectedErr)},
+	)
+}
+
+func TestHelpers(t *testing.T) {
+	suite.Run(t, new(HelpersTestSuite))
 }

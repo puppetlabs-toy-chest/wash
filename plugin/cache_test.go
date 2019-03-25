@@ -185,6 +185,21 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
+func (suite *CacheTestSuite) TestDuplicateCNameErr() {
+	err := DuplicateCNameErr{
+		ParentPath:                      "/my_plugin/foo",
+		FirstChildName:                  "foo/bar/",
+		FirstChildSlashReplacementChar:  '#',
+		SecondChildName:                 "foo#bar/",
+		SecondChildSlashReplacementChar: '#',
+		CName:                           "foo#bar#",
+	}
+
+	suite.Regexp("listing /my_plugin/foo", err.Error())
+	suite.Regexp("foo/bar/.*foo#bar/.*foo#bar#", err.Error())
+	suite.Regexp("my_plugin plugin", err.Error())
+}
+
 func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, mockValue interface{}, cachedActionOp cachedActionOpFunc) {
 	ctx := context.Background()
 
@@ -228,19 +243,48 @@ func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, 
 	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
-func (suite *CacheTestSuite) TestCachedList() {
+func (suite *CacheTestSuite) TestCachedListActionOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
 	suite.testCachedActionOp(List, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedList(ctx, e.(Group))
 	})
+}
 
-	// Test that CachedList sets the children's cache IDs
-	// to <parent_cache_id>/<child_name>
+func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	ctx := context.Background()
-	mockChildren = []Entry{
-		newCacheTestsMockEntry("child1"),
-		newCacheTestsMockEntry("child2"),
+	entry := newCacheTestsMockEntry("foo")
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/my_plugin/foo")
+
+	// Test that CachedList returns an error if two children have the same
+	// cname
+	child1 := newCacheTestsMockEntry("foo/bar/")
+	child2 := newCacheTestsMockEntry("foo#bar/")
+	child3 := newCacheTestsMockEntry("baz")
+	mockChildren := []Entry{child1, child2, child3}
+	entry.On("List", ctx).Return(mockChildren, nil).Once()
+	_, err := CachedList(ctx, entry)
+	if suite.Error(err) {
+		expectedErr := DuplicateCNameErr{
+			ParentPath:                      "/my_plugin/foo",
+			FirstChildName:                  "foo/bar/",
+			FirstChildSlashReplacementChar:  '#',
+			SecondChildName:                 "foo#bar/",
+			SecondChildSlashReplacementChar: '#',
+			CName:                           "foo#bar#",
+		}
+
+		suite.Equal(expectedErr, err)
 	}
+}
+
+func (suite *CacheTestSuite) TestCachedListSetEntryID() {
+	// Test that CachedList sets the children's cache IDs
+	// to <parent_cache_id>/<child_cname>
+	ctx := context.Background()
+	child1 := newCacheTestsMockEntry("foo/child1")
+	child2 := newCacheTestsMockEntry("child2")
+	mockChildren := []Entry{child1, child2}
 
 	// When the parent's the root
 	entry := newCacheTestsMockEntry("/")
@@ -250,7 +294,7 @@ func (suite *CacheTestSuite) TestCachedList() {
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(mockChildren, children) {
-			suite.Equal("/child1", children[0].id())
+			suite.Equal("/foo#child1", children[0].id())
 			suite.Equal("/child2", children[1].id())
 		}
 	}
@@ -263,7 +307,7 @@ func (suite *CacheTestSuite) TestCachedList() {
 	children, err = CachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(mockChildren, children) {
-			suite.Equal("/parent/child1", children[0].id())
+			suite.Equal("/parent/foo#child1", children[0].id())
 			suite.Equal("/parent/child2", children[1].id())
 		}
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
 	"strconv"
 	"time"
 
@@ -24,9 +23,9 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func newS3Object(bucket string, key string, client *s3Client.S3) *s3Object {
+func newS3Object(name string, bucket string, key string, client *s3Client.S3) *s3Object {
 	o := &s3Object{
-		EntryBase: plugin.NewEntry(path.Base(key)),
+		EntryBase: plugin.NewEntry(name),
 		bucket:    bucket,
 		key:       key,
 		client:    client,
@@ -56,7 +55,7 @@ func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOu
 func (o *s3Object) Attr(ctx context.Context) (plugin.Attributes, error) {
 	metadata, err := o.cachedHeadObject(ctx)
 	if err != nil {
-		return plugin.Attributes{}, nil
+		return plugin.Attributes{}, err
 	}
 
 	size := awsSDK.Int64Value(metadata.ContentLength)
