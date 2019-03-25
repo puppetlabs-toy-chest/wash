@@ -11,8 +11,11 @@ type ErrorFields = map[string]interface{}
 
 // ErrorObj represents an API error object
 type ErrorObj struct {
-	Kind   string      `json:"kind"`
-	Msg    string      `json:"msg"`
+	// Identifies the kind of error.
+	Kind string `json:"kind"`
+	// A description of what failed.
+	Msg string `json:"msg"`
+	// Additional structured data that may be useful in responding to the error.
 	Fields ErrorFields `json:"fields"`
 }
 

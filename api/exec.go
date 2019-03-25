@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
@@ -68,14 +67,27 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 	sendPacket(ctx, w, &packet)
 }
 
-var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodPost {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodPost})
-	}
-
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Exec %v", path)
-
+// swagger:route POST /fs/exec exec executeCommand
+//
+// Execute a command on a remote system
+//
+// Executes a command on the remote system described by the supplied path.
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: ExecPacket
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
+var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {
@@ -87,12 +99,12 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	if r.Body == nil {
-		return badRequestResponse(r.URL.Path, "Please send a JSON request body")
+		return badRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
 	}
 
 	var body apitypes.ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return badRequestResponse(r.URL.Path, err.Error())
+		return badRequestResponse(path, plugin.ExecAction, err.Error())
 	}
 
 	fw, ok := w.(flushableWriter)

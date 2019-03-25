@@ -15,6 +15,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/Benchkram/errz"
@@ -44,12 +45,14 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
-func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) (io.ReadCloser, error) {
-	url := fmt.Sprintf("%s%s", domainSocketBaseURL, endpoint)
-	req, err := http.NewRequest(method, url, body)
+func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
+	req, err := http.NewRequest(method, domainSocketBaseURL, body)
 	if err != nil {
 		return nil, err
 	}
+
+	req.URL.Path = endpoint
+	req.URL.RawQuery = url.Values{"path": []string{path}}.Encode()
 
 	req.Header.Set(apitypes.JournalIDHeader, journal.PIDToID(os.Getpid()))
 	resp, err := c.Do(req)
@@ -63,7 +66,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) 
 
 	var errorObj apitypes.ErrorObj
 	respBody, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	errz.Log(resp.Body.Close())
 	if err != nil {
 		return nil, err
 	}
@@ -74,17 +77,15 @@ func (c *DomainSocketClient) doRequest(method, endpoint string, body io.Reader) 
 	return nil, &errorObj
 }
 
-func (c *DomainSocketClient) getRequest(endpoint string, result interface{}) error {
-	respBody, err := c.doRequest(http.MethodGet, endpoint, nil)
+func (c *DomainSocketClient) getRequest(endpoint, path string, result interface{}) error {
+	respBody, err := c.doRequest(http.MethodGet, endpoint, path, nil)
 	if err != nil {
-		log.Printf("Error performing GET request: %v", err)
 		return err
 	}
 
 	defer func() { errz.Log(respBody.Close()) }()
 	body, err := ioutil.ReadAll(respBody)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
@@ -97,10 +98,8 @@ func (c *DomainSocketClient) getRequest(endpoint string, result interface{}) err
 
 // List lists the resources located at "path".
 func (c *DomainSocketClient) List(path string) ([]apitypes.ListEntry, error) {
-	endpoint := fmt.Sprintf("/fs/list%s", path)
-
 	var ls []apitypes.ListEntry
-	if err := c.getRequest(endpoint, &ls); err != nil {
+	if err := c.getRequest("/fs/list", path, &ls); err != nil {
 		return nil, err
 	}
 
@@ -109,10 +108,8 @@ func (c *DomainSocketClient) List(path string) ([]apitypes.ListEntry, error) {
 
 // Metadata gets the metadata of the resource located at "path".
 func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, error) {
-	endpoint := fmt.Sprintf("/fs/metadata%s", path)
-
 	var metadata map[string]interface{}
-	if err := c.getRequest(endpoint, &metadata); err != nil {
+	if err := c.getRequest("/fs/metadata", path, &metadata); err != nil {
 		return nil, err
 	}
 
@@ -124,16 +121,14 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 // The resulting channel contains events, ordered as we receive them from the
 // server. The channel will be closed when there are no more events.
 func (c *DomainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
-	endpoint := fmt.Sprintf("/fs/exec%s", path)
 	payload := apitypes.ExecBody{Cmd: command, Args: args, Opts: opts}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	respBody, err := c.doRequest(http.MethodPost, endpoint, bytes.NewReader(jsonBody))
+	respBody, err := c.doRequest(http.MethodPost, "/fs/exec", path, bytes.NewReader(jsonBody))
 	if err != nil {
-		log.Printf("Error performing POST request: %v", err)
 		return nil, err
 	}
 

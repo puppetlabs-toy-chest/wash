@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Benchkram/errz"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,6 +87,6 @@ func TestMain(m *testing.M) {
 
 	exitcode := m.Run()
 
-	os.RemoveAll(dir)
+	errz.Log(os.RemoveAll(dir))
 	os.Exit(exitcode)
 }

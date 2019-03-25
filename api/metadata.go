@@ -5,20 +5,33 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodGet {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodGet})
-	}
+// swagger:response
+//nolint:deadcode,unused
+type metadataMap struct {
+	MetadataMap plugin.MetadataMap
+}
 
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Metadata %v", path)
-
+// swagger:route GET /fs/metadata metadata getMetadata
+//
+// Get metadata
+//
+// Get metadata about the specified entry.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: metadataMap
+//       404: errorResp
+//       500: errorResp
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

@@ -4,20 +4,29 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
 
-var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodGet {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodGet})
-	}
-
-	path := mux.Vars(r)["path"]
-	log.Infof("API: Read %v", path)
-
+// swagger:route GET /fs/read read readContent
+//
+// Read content
+//
+// Read content from the specified entry.
+//
+//     Produces:
+//     - application/json
+//     - application/octet-stream
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: octetResponse
+//       404: errorResp
+//       500: errorResp
+var readHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {

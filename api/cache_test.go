@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -67,7 +65,7 @@ type CacheHandlerTestSuite struct {
 func (suite *CacheHandlerTestSuite) SetupSuite() {
 	plugin.SetTestCache(newMockCache())
 	suite.router = mux.NewRouter()
-	suite.router.Handle("/cache/{path:.*}", cacheHandler)
+	suite.router.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
 }
 
 func (suite *CacheHandlerTestSuite) TearDownSuite() {
@@ -75,16 +73,10 @@ func (suite *CacheHandlerTestSuite) TearDownSuite() {
 }
 
 func (suite *CacheHandlerTestSuite) TestRejectsGet() {
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/cache/foo", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/cache", nil)
 	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
-	suite.Equal(http.StatusNotFound, w.Code)
-	var resp apitypes.ErrorObj
-	if suite.Nil(json.Unmarshal(w.Body.Bytes(), &resp)) {
-		suite.Equal("puppetlabs.wash/http-method-not-supported", resp.Kind)
-		suite.Equal("The GET method is not supported for /cache/foo, supported methods are: DELETE", resp.Msg)
-		suite.Equal(apitypes.ErrorFields{"method": "GET", "path": "/cache/foo", "supported": []interface{}{"DELETE"}}, resp.Fields)
-	}
+	suite.Equal(http.StatusMethodNotAllowed, w.Code)
 }
 
 func (suite *CacheHandlerTestSuite) TestClearCache() {
@@ -98,7 +90,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	}
 
 	// Test clearing a different cache
-	req := httptest.NewRequest(http.MethodDelete, "http://example.com/cache/file", nil)
+	req := httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=file", nil)
 	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 	suite.Equal(http.StatusOK, w.Code)
@@ -109,7 +101,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	}
 
 	// Test clearing the cache
-	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache/dir", nil)
+	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=dir", nil)
 	w = httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 	suite.Equal(http.StatusOK, w.Code)

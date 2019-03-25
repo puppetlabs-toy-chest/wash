@@ -59,8 +59,8 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 		panic("path should never be empty")
 	}
 
-	// Don't interpret trailing slash as a new segment
-	path = strings.TrimSuffix(path, "/")
+	// Don't interpret trailing slash as a new segment, and ignore optional leading slash
+	path = strings.Trim(path, "/")
 	// Split into plugin name and an optional list of segments.
 	segments := strings.Split(path, "/")
 	pluginName := segments[0]

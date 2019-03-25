@@ -5,21 +5,29 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
-var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	if r.Method != http.MethodGet {
-		return httpMethodNotSupported(r.Method, r.URL.Path, []string{http.MethodGet})
-	}
-
-	path := mux.Vars(r)["path"]
-	log.Infof("API: List %v", path)
-
+// swagger:route GET /fs/list list listEntries
+//
+// Lists children of a path
+//
+// Returns a list of ListEntry objects describing children of the given path.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: ListEntry
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
+var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
+	path := p.Path
 	ctx := r.Context()
 	entry, errResp := getEntryFromPath(ctx, path)
 	if errResp != nil {
