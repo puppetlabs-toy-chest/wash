@@ -38,10 +38,10 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	buckets := make([]plugin.Entry, len(resp.Buckets))
 	for i, bucket := range resp.Buckets {
-		name := bucket.Name
+		name := awsSDK.StringValue(bucket.Name)
 
 		locRequest := &s3Client.GetBucketLocationInput{
-			Bucket: name,
+			Bucket: awsSDK.String(name),
 		}
 		resp, err := s.client.GetBucketLocationWithContext(ctx, locRequest)
 		if err != nil {
@@ -60,7 +60,7 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		cfg.WithRegion(region)
 
 		buckets[i] = newS3Bucket(
-			awsSDK.StringValue(name),
+			name,
 			awsSDK.TimeValue(bucket.CreationDate),
 			region,
 			s3Client.New(s.session, cfg),
