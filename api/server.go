@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -76,14 +77,17 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 		// Socket already exists, so nuke it and recreate it
 		log.Infof("API: Cleaning up old socket")
 		if err := os.Remove(socketPath); err != nil {
-			log.Warnf("API: %v", err)
+			return nil, nil, err
+		}
+	} else {
+		// Ensure the parent directory for the socket path exists
+		if err := os.MkdirAll(filepath.Dir(socketPath), 0750); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	server, err := net.Listen("unix", socketPath)
 	if err != nil {
-		log.Warnf("API: %v", err)
 		return nil, nil, err
 	}
 
