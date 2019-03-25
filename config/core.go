@@ -3,6 +3,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -20,7 +22,11 @@ var Socket string
 // Load Wash's config.
 func Load() error {
 	// Set any defaults
-	viper.SetDefault(SocketKey, "/tmp/wash-api.sock")
+	cdir, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+	viper.SetDefault(SocketKey, filepath.Join(cdir, "wash", "wash-api.sock"))
 
 	// Tell viper that the config. can be read from WASH_<entry>
 	// environment variables
