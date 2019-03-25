@@ -32,10 +32,9 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 		return nil, err
 	}
 
-	// CommonPrefixes represent S3 object prefixes; Contents represent S3 objects.
 	numPrefixes := len(resp.CommonPrefixes)
 	numObjects := len(resp.Contents)
-	entries := make([]plugin.Entry, numPrefixes+numObjects)
+	entries := make([]plugin.Entry, 0, numPrefixes+numObjects)
 
 	journal.Record(
 		ctx,
@@ -46,16 +45,15 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 		numObjects,
 	)
 
-	for i, p := range resp.CommonPrefixes {
+	for _, p := range resp.CommonPrefixes {
 		commonPrefix := awsSDK.StringValue(p.Prefix)
 		name := strings.TrimPrefix(commonPrefix, prefix)
 		if name != "/" {
 			name = strings.TrimSuffix(name, "/")
 		}
-		entries[i] = newS3ObjectPrefix(name, bucket, commonPrefix, client)
+		entries = append(entries, newS3ObjectPrefix(name, bucket, commonPrefix, client))
 	}
 
-	i := numPrefixes
 	for _, o := range resp.Contents {
 		key := awsSDK.StringValue(o.Key)
 		name := strings.TrimPrefix(key, prefix)
@@ -63,11 +61,10 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 			// Key has a trailing "/", so skip it
 			continue
 		}
-		entries[i] = newS3Object(name, bucket, key, client)
-		i++
+		entries = append(entries, newS3Object(name, bucket, key, client))
 	}
 
-	return entries[0:i], nil
+	return entries, nil
 }
 
 // s3Bucket represents an S3 bucket.

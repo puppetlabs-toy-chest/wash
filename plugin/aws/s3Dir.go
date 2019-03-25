@@ -41,7 +41,9 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		name := awsSDK.StringValue(bucket.Name)
 
 		locRequest := &s3Client.GetBucketLocationInput{
-			Bucket: awsSDK.String(name),
+			// Re-use bucket.Name to avoid a redundant cast of name
+			// using awsSDK.String(name)
+			Bucket: bucket.Name,
 		}
 		resp, err := s.client.GetBucketLocationWithContext(ctx, locRequest)
 		if err != nil {
