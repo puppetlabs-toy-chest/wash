@@ -34,7 +34,9 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	//         CommonPrefix = <prefix> + <key>.NonEmptySubstrAfter(<prefix>).UpToAndIncluding("/")
 	//
 	//     * "Contents". This contains all of the S3 objects whose keys begin with <prefix>,
-	//     but do not contain the delimiter "/" after <prefix>.
+	//     but do not contain the delimiter "/" after <prefix>. NOTE: These semantics imply that
+	//     if an object has <prefix> as its key, then it will also be included in "Contents"
+	//     (its key begins with <prefix>, but does not contain "/" after <prefix>).
 	//
 	// "CommonPrefixes" and "Contents" are mutually exclusive, meaning that an S3 object whose
 	// key is grouped by a "CommonPrefix" will not appear in "Contents".
@@ -129,7 +131,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 		key := awsSDK.StringValue(o.Key)
 		name := strings.TrimPrefix(key, prefix)
 		if name == "" {
-			// Key has a trailing "/", so skip it
+			// key == <prefix> so skip it. This is what the AWS console does.
 			continue
 		}
 		entries = append(entries, newS3Object(name, bucket, key, client))
