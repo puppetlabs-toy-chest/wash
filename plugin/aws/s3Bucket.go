@@ -21,17 +21,86 @@ import (
 // it makes it difficult to refresh the shared s3Bucket object when the original object
 // is evicted from the cache.
 func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix string) ([]plugin.Entry, error) {
+	// TODO: Clarify this a bit more later. For now, this should be enough.
+	//
+	// Everything's an object in S3. There is no such thing as a "hierarchy", meaning
+	// that hierarchical concepts like directories and files do not exist. However, we
+	// can represent S3 objects as a hierarchy using the API's "Prefix" and "Delimiter"
+	// options. When these options are set to <prefix> and "/", respectively, the response
+	// will contain two values:
+	//     * "CommonPrefixes". This is an array of common prefixes where a "CommonPrefix"
+	//     represents the group of keys that begin with "CommonPrefix". Let <key> be one of
+	//     these keys. Then we can describe "CommonPrefix" as (using pseudocode for clarity):
+	//         CommonPrefix = <prefix> + <key>.NonEmptySubstrAfter(<prefix>).UpToAndIncluding("/")
+	//
+	//     * "Contents". This contains all of the S3 objects whose keys begin with <prefix>,
+	//     but do not contain the delimiter "/" after <prefix>.
+	//
+	// "CommonPrefixes" and "Contents" are mutually exclusive, meaning that an S3 object whose
+	// key is grouped by a "CommonPrefix" will not appear in "Contents".
+	//
+	// As an example, assume our S3 bucket contains the following keys (each key's quoted for
+	// clarity)
+	//     "/"
+	//     "//"
+	//     "/foo"
+	//     "foo/bar"
+	//     "foo/bar/baz"
+	//     "bar"
+	//     "baz"
+	//
+	// Then if <prefix> == "", our response will consist of:
+	//     resp.CommonPrefixes = ["/", "foo/"]
+	//     resp.Contents = ["bar", "baz"]
+	//
+	// This should make sense. The "/", "//", and "/foo" keys are grouped by the
+	// "/" common prefix, while the "foo/bar", "foo/bar/baz" keys are grouped by the
+	// "foo/" common prefix. "bar" and "baz" begin with "", but do not contain the delimiter
+	// "/" after "".
+	//
+	// Let's check that "/" and "foo/" are common prefixes. Starting with "/", we can use
+	// the "/foo" key to see that:
+	//     CommonPrefix = <prefix> + <key>.NonEmptySubstrAfter(<prefix>).UpToAndIncluding("/")
+	//     CommonPrefix = "" + "/foo".NonEmptySubstrAfter("").UpToAndIncluding("/")
+	//     CommonPrefix = "/foo".UpToAndIncluding("/")
+	//     CommonPrefix = "/"
+	//
+	// which is correct. Similarly for "foo/", we can use the "foo/bar/baz" key to see that:
+	//     CommonPrefix = <prefix> + <key>.NonEmptySubstrAfter(<prefix>).UpToAndIncluding("/")
+	//     CommonPrefix = "" + "foo/bar/baz".NonEmptySubstrAfter("").UpToAndIncluding("/")
+	//     CommonPrefix = "foo/bar/baz".UpToAndIncluding("/")
+	//     CommonPrefix = "foo/"
+	//
+	// which is also correct.  Now what happens if we pass-in "/" as our prefix? Then the response
+	// will consist of:
+	//     resp.CommonPrefixes = ["//"]
+	//     resp.Contents = ["/foo"]
+	//
+	// This should also make sense. We see that the "//" key is grouped by the "//" common prefix
+	// (use the CommonPrefix "equation" with <prefix> = "/" to check this). Similarly, the "/foo"
+	// key begins with "/", but is not grouped by a common prefix because it does not contain the
+	// delimiter "/" after the prefix "/".
+	//
+	// Finally, what happens if we pass-in "foo/" as our prefix? Then the response consists of
+	//     resp.CommonPrefixes = ["foo/bar/"]
+	//     resp.Contents = ["foo/bar"]
+	//
+	// This should also make sense. The "foo/bar/baz" key is grouped by the "foo/bar/" common
+	// prefix. Similarly, the "foo/bar" key begins with "foo/", but does not contain the delimiter
+	// "/" after the prefix "foo/".
+	//
+	// Thus, we can view S3 objects hierarchically by making the "CommonPrefixes" our directories,
+	// and the "Contents" our files. These are modeled by the "s3ObjectPrefix" and "s3Object" classes,
+	// respectively.
 	request := &s3Client.ListObjectsInput{
 		Bucket:    awsSDK.String(bucket),
 		Prefix:    awsSDK.String(prefix),
 		Delimiter: awsSDK.String("/"),
 	}
-
 	resp, err := client.ListObjectsWithContext(ctx, request)
 	if err != nil {
 		return nil, err
 	}
-
 	numPrefixes := len(resp.CommonPrefixes)
 	numObjects := len(resp.Contents)
 	entries := make([]plugin.Entry, 0, numPrefixes+numObjects)
@@ -45,12 +114,14 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 		numObjects,
 	)
 
+	// resp.CommonPrefixes represents all of the object keys
 	for _, p := range resp.CommonPrefixes {
 		commonPrefix := awsSDK.StringValue(p.Prefix)
 		name := strings.TrimPrefix(commonPrefix, prefix)
 		if name != "/" {
 			name = strings.TrimSuffix(name, "/")
 		}
+
 		entries = append(entries, newS3ObjectPrefix(name, bucket, commonPrefix, client))
 	}
 
