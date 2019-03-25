@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/journal"
@@ -46,23 +47,27 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	)
 
 	for i, p := range resp.CommonPrefixes {
-		prefix := awsSDK.StringValue(p.Prefix)
-		// Skip the top-level '/' prefix, it would be redundant to list it.
-		if prefix == "/" {
+		commonPrefix := awsSDK.StringValue(p.Prefix)
+		name := strings.TrimPrefix(commonPrefix, prefix)
+		if name != "/" {
+			name = strings.TrimSuffix(name, "/")
+		}
+		entries[i] = newS3ObjectPrefix(name, bucket, commonPrefix, client)
+	}
+
+	i := numPrefixes
+	for _, o := range resp.Contents {
+		key := awsSDK.StringValue(o.Key)
+		name := strings.TrimPrefix(key, prefix)
+		if name == "" {
+			// Key has a trailing "/", so skip it
 			continue
 		}
-		entries[i] = newS3ObjectPrefix(bucket, prefix, client)
+		entries[i] = newS3Object(name, bucket, key, client)
+		i++
 	}
 
-	for i, o := range resp.Contents {
-		entries[numPrefixes+i] = newS3Object(
-			bucket,
-			awsSDK.StringValue(o.Key),
-			client,
-		)
-	}
-
-	return entries, nil
+	return entries[0:i], nil
 }
 
 // s3Bucket represents an S3 bucket.
