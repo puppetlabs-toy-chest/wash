@@ -15,7 +15,6 @@ import (
 
 type file struct {
 	entry plugin.Entry
-	path  string
 }
 
 var _ fs.Node = (*file)(nil)
@@ -23,8 +22,8 @@ var _ = fs.NodeOpener(&file{})
 var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
-func newFile(parentPath string, e plugin.Entry) *file {
-	return &file{e, joinPath(parentPath, e)}
+func newFile(e plugin.Entry) *file {
+	return &file{e}
 }
 
 func (f *file) Entry() plugin.Entry {
@@ -32,7 +31,7 @@ func (f *file) Entry() plugin.Entry {
 }
 
 func (f *file) String() string {
-	return f.path
+	return plugin.Path(f.entry)
 }
 
 // Attr returns the attributes of a file.

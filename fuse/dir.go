@@ -14,15 +14,14 @@ import (
 
 type dir struct {
 	entry plugin.Entry
-	path  string
 }
 
 var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(parentPath string, e plugin.Group) *dir {
-	return &dir{e, joinPath(parentPath, e)}
+func newDir(e plugin.Group) *dir {
+	return &dir{e}
 }
 
 func (d *dir) Entry() plugin.Entry {
@@ -30,7 +29,7 @@ func (d *dir) Entry() plugin.Entry {
 }
 
 func (d *dir) String() string {
-	return d.path
+	return plugin.Path(d.entry)
 }
 
 // Attr returns the attributes of a directory.
@@ -72,10 +71,11 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 
 	for _, entry := range entries {
-		if entry.Name() == req.Name {
-			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, entry.Name())
+		cname := plugin.CName(entry)
+		if cname == req.Name {
+			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, cname)
 			if plugin.ListAction.IsSupportedOn(entry) {
-				childdir := newDir(d.path, entry.(plugin.Group))
+				childdir := newDir(entry.(plugin.Group))
 				journal.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
@@ -85,8 +85,8 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 				return childdir, nil
 			}
 
-			journal.Record(ctx, "FUSE: Found file %v/%v", d, entry.Name())
-			return newFile(d.path, entry), nil
+			journal.Record(ctx, "FUSE: Found file %v/%v", d, cname)
+			return newFile(entry), nil
 		}
 	}
 	journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
@@ -111,7 +111,7 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	res := make([]fuse.Dirent, len(entries))
 	for i, entry := range entries {
 		var de fuse.Dirent
-		de.Name = entry.Name()
+		de.Name = plugin.CName(entry)
 		if plugin.ListAction.IsSupportedOn(d.Entry()) {
 			de.Type = fuse.DT_Dir
 		}

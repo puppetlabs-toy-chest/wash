@@ -17,10 +17,6 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 		func() { NewEntry("") },
 		"plugin.NewEntry: received an empty name",
 	)
-	suite.Panics(
-		func() { NewEntry("/foo/") },
-		"plugin.NewEntry: received a name containing a /",
-	)
 
 	e := NewEntry("foo")
 	assertOpTTL := func(op actionOpCode, opName string, expectedTTL time.Duration) {
@@ -62,6 +58,23 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 
 		suite.Equal(expectedAttr, attr)
 	}
+}
+
+func (suite *EntryBaseTestSuite) TestCName() {
+	e := NewEntry("foo/bar/baz")
+	suite.Equal(e.cname(), "foo#bar#baz")
+}
+
+func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
+	e := NewEntry("foo/bar")
+
+	suite.Panics(
+		func() { e.SetSlashReplacementChar('/') },
+		"e.SetSlashReplacementChar called with '/'",
+	)
+
+	e.SetSlashReplacementChar(':')
+	suite.Equal(e.slashReplacementChar(), ':')
 }
 
 func TestEntryBase(t *testing.T) {

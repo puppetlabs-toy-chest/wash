@@ -18,6 +18,36 @@ import (
 // DefaultTimeout is the default timeout for prefetching
 var DefaultTimeout = 10 * time.Second
 
+/*
+CName returns the entry's canonical name, which is what Wash uses
+to construct the entry's path (see plugin.Path). The entry's cname
+is e.Name(), but with all '/' characters replaced by a '#' character.
+CNames are necessary because it is possible for entry names to have '/'es
+in them, which is illegal in bourne shells and UNIX-y filesystems.
+
+CNames are unique. CName uniqueness is checked in plugin.CachedList.
+
+NOTE: The '#' character was chosen because it is unlikely to appear in
+a meaningful entry's name. If, however, there's a good chance that an
+entry's name can contain the '#' character, and that two entries can
+have the same cname (e.g. 'foo/bar', 'foo#bar'), then you can use
+e.SetSlashReplacementChar(<char>) to change the default slash replacement
+character from a '#' to <char>.
+*/
+func CName(e Entry) string {
+	return e.cname()
+}
+
+// Path returns the entry's path rooted at Wash's mountpoint. This is what
+// the API consumes. An entry's path is described as
+//     /<plugin_name>/<group1_cname>/<group2_cname>/.../<entry_cname>
+//
+// NOTE: <plugin_name> is really <plugin_cname>. However since <plugin_name>
+// can never contain a '/', <plugin_cname> reduces to <plugin_name>.
+func Path(e Entry) string {
+	return e.id()
+}
+
 // ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
 // must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
 func ToMetadata(obj interface{}) MetadataMap {

@@ -90,7 +90,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
 	suite.Error(err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
 
 	_, err := decodedEntry.toExternalPluginEntry()
@@ -101,30 +101,60 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry() {
 	suite.Regexp(regexp.MustCompile("action"), err)
 	decodedEntry.SupportedActions = []string{"list"}
 
-	minimalEntry, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, minimalEntry.name)
-		suite.Equal(decodedEntry.SupportedActions, minimalEntry.supportedActions)
+		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.SupportedActions, entry.supportedActions)
 	}
+}
 
+func newMockDecodedEntry(name string) decodedExternalPluginEntry {
+	return decodedExternalPluginEntry{
+		Name:             name,
+		SupportedActions: []string{"list"},
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithState() {
+	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.State = "some state"
-	entryWithState, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.State, entryWithState.state)
+		suite.Equal(decodedEntry.State, entry.state)
 	}
+}
 
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCacheTTLs() {
+	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
-	entryWithCacheConfig, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
 		expectedTTLs := NewEntry("mock").ttl
 		expectedTTLs[List] = decodedEntry.CacheTTLs.List * time.Second
-		suite.Equal(expectedTTLs, entryWithCacheConfig.EntryBase.ttl)
+		suite.Equal(expectedTTLs, entry.EntryBase.ttl)
 	}
+}
 
-	decodedEntry.Attributes = decodedAttributes{Size: 10}
-	entryWithAttributes, err := decodedEntry.toExternalPluginEntry()
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlashReplacementChar() {
+	decodedEntry := newMockDecodedEntry("name")
+	decodedEntry.SlashReplacementChar = "a string"
+	suite.Panics(
+		func() { _, _ = decodedEntry.toExternalPluginEntry() },
+		"e.SlashReplacementChar: received string a string instead of a character",
+	)
+	decodedEntry.SlashReplacementChar = ":"
+	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(Attributes{Size: 10}, entryWithAttributes.attr)
+		suite.Equal(':', entry.slashReplacementChar())
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttributes() {
+	decodedEntry := newMockDecodedEntry("name")
+	decodedEntry.Attributes = decodedAttributes{Size: 10}
+	entry, err := decodedEntry.toExternalPluginEntry()
+	if suite.NoError(err) {
+		suite.Equal(Attributes{Size: 10}, entry.attr)
 	}
 
 	decodedEntry.Attributes = decodedAttributes{Mode: "invalid mode"}

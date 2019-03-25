@@ -21,13 +21,17 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 			// Get the entries via. List()
 			entries, err := plugin.CachedList(ctx, curGroup)
 			if err != nil {
+				if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
+					return nil, duplicateCNameResponse(cnameErr)
+				}
+
 				return nil, entryNotFoundResponse(path, err.Error())
 			}
 
 			// Search for the specific entry
 			var found bool
 			for _, entry := range entries {
-				if entry.Name() == segment {
+				if plugin.CName(entry) == segment {
 					found = true
 
 					curEntry = entry
