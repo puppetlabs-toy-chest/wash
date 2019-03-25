@@ -60,11 +60,6 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	}
 }
 
-func (suite *EntryBaseTestSuite) TestCName() {
-	e := NewEntry("foo/bar/baz")
-	suite.Equal(e.cname(), "foo#bar#baz")
-}
-
 func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
 	e := NewEntry("foo/bar")
 

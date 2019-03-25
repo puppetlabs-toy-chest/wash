@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"flag"
-	"strings"
 	"time"
 )
 
@@ -74,15 +73,6 @@ func (e *EntryBase) Attr(ctx context.Context) (Attributes, error) {
 	return Attributes{
 		Size: SizeUnknown,
 	}, nil
-}
-
-func (e *EntryBase) cname() string {
-	return strings.Replace(
-		e.name,
-		"/",
-		string(e.slashReplacementCh),
-		-1,
-	)
 }
 
 func (e *EntryBase) slashReplacementChar() rune {

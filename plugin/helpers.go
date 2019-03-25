@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,7 +36,15 @@ e.SetSlashReplacementChar(<char>) to change the default slash replacement
 character from a '#' to <char>.
 */
 func CName(e Entry) string {
-	return e.cname()
+	// We make the CName a separate function instead of embedding it
+	// in the Entry interface because doing so prevents plugin authors
+	// from overriding it.
+	return strings.Replace(
+		e.Name(),
+		"/",
+		string(e.slashReplacementChar()),
+		-1,
+	)
 }
 
 // Path returns the entry's path rooted at Wash's mountpoint. This is what

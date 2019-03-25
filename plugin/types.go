@@ -38,7 +38,6 @@ import (
 type Entry interface {
 	Name() string
 	Attr(ctx context.Context) (Attributes, error)
-	cname() string
 	slashReplacementChar() rune
 	id() string
 	setID(id string)
