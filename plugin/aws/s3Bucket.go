@@ -2,14 +2,18 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
+	"github.com/ekinanp/go-cache"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 
+	"github.com/aws/aws-sdk-go/aws"
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
 )
 
@@ -143,17 +147,17 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
-	ctime  time.Time
-	region string
-	client *s3Client.S3
+	ctime   time.Time
+	client  *s3Client.S3
+	session *session.Session
 }
 
-func newS3Bucket(name string, ctime time.Time, region string, client *s3Client.S3) *s3Bucket {
+func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Bucket {
 	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
 		ctime:     ctime,
-		region:    region,
-		client:    client,
+		client:    s3Client.New(session),
+		session:   session,
 	}
 
 	return bucket
@@ -168,6 +172,9 @@ func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
+	if _, err := b.getRegion(ctx); err != nil {
+		return nil, err
+	}
 	return listObjects(ctx, b.client, b.Name(), "")
 }
 
@@ -198,7 +205,37 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		return nil, err
 	}
 
-	metadata["region"] = b.region
+	region, err := b.getRegion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	metadata["region"] = region
 
 	return metadata, nil
+}
+
+func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
+	// Note that the callback to CachedOp also creates a new client for that region.
+	// We use CachedOp with no expiration to ensure region is only fetched once, but
+	// to allow forcing a retry by deleting the cache entry if there was an error.
+	resp, err := plugin.CachedOp("Region", b, cache.NoExpiration, func() (interface{}, error) {
+		locRequest := &s3Client.GetBucketLocationInput{Bucket: awsSDK.String(b.Name())}
+		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest)
+		if err != nil {
+			return nil, fmt.Errorf("could not get the region of bucket %v: %v", b.Name(), err)
+		}
+
+		// The response will be empty if the bucket is in Amazon's default region (us-east-1)
+		region := s3Client.NormalizeBucketLocation(awsSDK.StringValue(resp.LocationConstraint))
+		// Update client to be region-specific
+		b.client = s3Client.New(b.session, aws.NewConfig().WithRegion(region))
+
+		return region, nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return resp.(string), nil
 }
