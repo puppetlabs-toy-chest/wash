@@ -22,24 +22,53 @@ type Root struct {
 	plugin.EntryBase
 }
 
-func awsCredentialsFile() (string, error) {
-	if filename := os.Getenv("AWS_SHARED_CREDENTIALS_FILE"); len(filename) != 0 {
-		return filename, nil
-	}
-
+func homeDir() (string, error) {
 	curUser, err := user.Current()
 	if err != nil {
 		return "", err
 	}
 
 	if curUser.HomeDir == "" {
-		return "", fmt.Errorf(
-			"could not determine the location of the AWS credentials file: the current user %v does not have a home directory",
-			curUser.Name,
-		)
+		return "", fmt.Errorf("the current user %v does not have a home directory", curUser.Name)
+	}
+	return curUser.HomeDir, nil
+}
+
+func awsCredentialsFile() (string, error) {
+	if filename := os.Getenv("AWS_SHARED_CREDENTIALS_FILE"); len(filename) != 0 {
+		return filename, nil
 	}
 
-	return filepath.Join(curUser.HomeDir, ".aws", "credentials"), nil
+	homedir, err := homeDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine the location of the AWS credentials file: %v", err)
+	}
+
+	return filepath.Join(homedir, ".aws", "credentials"), nil
+}
+
+func awsConfigFile() (string, error) {
+	if filename := os.Getenv("AWS_CONFIG_FILE"); len(filename) != 0 {
+		return filename, nil
+	}
+
+	homedir, err := homeDir()
+	if err != nil {
+		return "", fmt.Errorf("could not determine the location of the AWS config file: %v", err)
+	}
+
+	return filepath.Join(homedir, ".aws", "config"), nil
+}
+
+func exists(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("could not load any profiles: the %v file does not exist", path)
+		}
+
+		return err
+	}
+	return nil
 }
 
 // Init for root
@@ -57,24 +86,41 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	if _, err := os.Stat(awsCredentials); err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("could not load any profiles: the %v file does not exist", awsCredentials)
-		}
-
+	if err := exists(awsCredentials); err != nil {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Loading the profiles from %v", awsCredentials)
+	awsConfig, err := awsConfigFile()
+	if err != nil {
+		return nil, err
+	}
 
-	config, err := ini.Load(awsCredentials)
+	if err := exists(awsConfig); err != nil {
+		return nil, err
+	}
+
+	journal.Record(ctx, "Loading the profiles from %v and %v", awsConfig, awsCredentials)
+
+	cred, err := ini.Load(awsCredentials)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %v: %v", awsCredentials, err)
 	}
 
-	var profiles []plugin.Entry
+	config, err := ini.Load(awsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %v: %v", awsConfig, err)
+	}
+
+	names := make(map[string]struct{})
+	for _, section := range cred.Sections() {
+		names[section.Name()] = struct{}{}
+	}
 	for _, section := range config.Sections() {
-		name := section.Name()
+		names[section.Name()] = struct{}{}
+	}
+
+	var profiles []plugin.Entry
+	for name := range names {
 		if name == "DEFAULT" {
 			continue
 		}

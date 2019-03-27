@@ -49,7 +49,8 @@ We've implemented some neat features inside of `wash` to support the above goals
     * `kubernetes` - presents a filesystem hierarchy of pods, containers, and persistent volume claims
         - uses contexts from `~/.kube/config`
     * `aws` - presents a filesystem hierarchy for EC2 and S3
-        - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials`
+        - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
+        - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). If using MFA, `wash` will prompt for it on standard input. Note that currently `region` will also need to be specified with the profile.
 
 * [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
     * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
