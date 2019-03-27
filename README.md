@@ -50,7 +50,8 @@ We've implemented some neat features inside of `wash` to support the above goals
         - uses contexts from `~/.kube/config`
     * `aws` - presents a filesystem hierarchy for EC2 and S3
         - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
-        - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). If using MFA, `wash` will prompt for it on standard input. Note that currently `region` will also need to be specified with the profile.
+        - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). Note that currently `region` will also need to be specified with the profile.
+        - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 15 minutes. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
 
 * [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
     * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
@@ -158,7 +159,11 @@ Try exploring `mnt/docker/volumes` to interact with the volume created for Redis
 
 ### Record of Activity
 
-All operations have their activity recorded to journals in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory is `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
+All operations have their activity recorded to journals in `wash/activity` under your [user cache directory](#user-cache-directory), identified by process ID and executable name.
+
+### User Cache Directory
+
+`wash` uses a user-specific cache directory to store running state. The user cache directory is `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
 
 ## Known Issues
 

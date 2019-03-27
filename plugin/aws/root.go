@@ -76,7 +76,9 @@ func (r *Root) Init() error {
 	r.EntryBase = plugin.NewEntry("aws")
 	r.SetTTLOf(plugin.List, 1*time.Minute)
 
-	return nil
+	// Force authorizing profiles on startup
+	_, err := r.List(context.Background())
+	return err
 }
 
 // List the available AWS profiles
@@ -99,7 +101,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Loading the profiles from %v and %v", awsConfig, awsCredentials)
+	journal.Record(ctx, "Loading profiles from %v and %v", awsConfig, awsCredentials)
 
 	cred, err := ini.Load(awsCredentials)
 	if err != nil {
