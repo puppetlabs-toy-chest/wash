@@ -74,7 +74,7 @@ Ensure `$GOPATH/bin` is part of `$PATH`.
 
 ### Additional macOS Setup
 
-> If using iTerm2 and ZSH, we recommend installing [ZSH's iTerm2 shell integration](https://www.iterm2.com/documentation-shell-integration.html) to avoid [issue#84](https://github.com/puppetlabs/wash/issues/84).
+> If using iTerm2, we recommend installing [iTerm2's shell integration](https://www.iterm2.com/documentation-shell-integration.html) to avoid [issue#84](https://github.com/puppetlabs/wash/issues/84).
 
 Obtain FUSE for OSX [here](https://osxfuse.github.io/).
 
