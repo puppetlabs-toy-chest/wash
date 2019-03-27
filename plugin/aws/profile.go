@@ -2,7 +2,10 @@ package aws
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
@@ -11,6 +14,7 @@ import (
 // profile represents an AWS profile
 type profile struct {
 	plugin.EntryBase
+	session      *session.Session
 	resourcesDir []plugin.Entry
 }
 
@@ -22,14 +26,29 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 
 	// Create the session. SharedConfigEnable tells AWS to load the profile
 	// config from the ~/.aws/credentials and ~/.aws/config files
-	session, err := session.NewSessionWithOptions(session.Options{
-		Profile:           profile.Name(),
-		SharedConfigState: session.SharedConfigEnable,
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Profile:                 name,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		SharedConfigState:       session.SharedConfigEnable,
 	})
 	if err != nil {
 		return nil, err
 	}
-	profile.resourcesDir = []plugin.Entry{newResourcesDir(session)}
+
+	if cacheProvider, err := newFileCacheProvider(ctx, name, sess.Config.Credentials); err == nil {
+		journal.Record(ctx, "Using cached credentials for %v profile", name)
+		sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
+	} else {
+		journal.Record(ctx, "Unable to use cached credentials for %v profile: %v", name, err)
+	}
+
+	// Force retrieving credentials now to expose errors early.
+	if _, err := sess.Config.Credentials.Get(); err != nil {
+		return nil, fmt.Errorf("Unable to get credentials for %v: %v", name, err)
+	}
+
+	profile.session = sess
+	profile.resourcesDir = []plugin.Entry{newResourcesDir(sess)}
 
 	return &profile, nil
 }
