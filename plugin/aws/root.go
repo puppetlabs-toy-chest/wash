@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/journal"
@@ -118,7 +119,10 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		names[section.Name()] = struct{}{}
 	}
 	for _, section := range config.Sections() {
-		names[section.Name()] = struct{}{}
+		// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
+		// Named profiles in config begin with 'profile '. Trim that so config and credentials
+		// entries match up.
+		names[strings.TrimPrefix(section.Name(), "profile ")] = struct{}{}
 	}
 
 	var profiles []plugin.Entry
