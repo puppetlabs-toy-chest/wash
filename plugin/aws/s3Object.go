@@ -31,6 +31,11 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	}
 	s3Obj.DisableCachingFor(plugin.MetadataOp)
 
+	// S3 objects do not have a "creation time"; they're treated as atomic
+	// blobs that get replaced whenever the user uploads new data. Thus, we
+	// use the mtime as its creation date. See https://stackoverflow.com/questions/27746760/how-do-i-get-the-s3-keys-created-date-with-boto
+	// for more details.
+	//
 	// TODO: Export a mungeSize helper to abstract away the common
 	// logic of validating a negative size
 	mtime := awsSDK.TimeValue(o.LastModified)
