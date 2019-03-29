@@ -36,10 +36,7 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var ctimeStr string
-		if err, ok := entry.Errors["attributes"]; ok {
-			cmdutil.ErrPrintf("errored on %v: could not retrieve the attributes: %v\n", entry.Name, err)
-			ctimeStr = "<unknown>"
-		} else if entry.Attributes.Ctime.IsZero() {
+		if entry.Attributes.Ctime == nil {
 			ctimeStr = "<unknown>"
 		} else {
 			ctimeStr = entry.Attributes.Ctime.Format(time.RFC822)

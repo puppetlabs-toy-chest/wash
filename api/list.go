@@ -54,19 +54,13 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	info := func(entry plugin.Entry) apitypes.ListEntry {
 		result := apitypes.ListEntry{
 			Path:    plugin.Path(entry),
-			Name:    entry.Name(),
+			Name:    plugin.Name(entry),
 			CName:   plugin.CName(entry),
 			Actions: plugin.SupportedActionsOf(entry),
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 
-		attr, err := plugin.Attr(r.Context(), entry)
-		if err != nil {
-			result.Errors["attributes"] = newUnknownErrorObj(err)
-		} else {
-			result.Attributes = attr
-		}
-
+		result.Attributes = toAPIAttr(plugin.Attributes(entry))
 		return result
 	}
 

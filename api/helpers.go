@@ -5,14 +5,42 @@ import (
 	"fmt"
 	"strings"
 
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 )
+
+func toAPIAttr(attr plugin.EntryAttributes) apitypes.EntryAttributes {
+	apiAttr := apitypes.EntryAttributes{}
+
+	if attr.HasAtime() {
+		atime := attr.Atime()
+		apiAttr.Atime = &atime
+	}
+	if attr.HasMtime() {
+		mtime := attr.Mtime()
+		apiAttr.Mtime = &mtime
+	}
+	if attr.HasCtime() {
+		ctime := attr.Ctime()
+		apiAttr.Ctime = &ctime
+	}
+	if attr.HasMode() {
+		mode := attr.Mode()
+		apiAttr.Mode = &mode
+	}
+	if attr.HasSize() {
+		size := attr.Size()
+		apiAttr.Size = &size
+	}
+
+	return apiAttr
+}
 
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
 	path := strings.Join(segments, "/")
 
 	curEntry := root
-	curEntryID := "/" + root.Name()
+	curEntryID := "/" + plugin.CName(root)
 
 	visitedSegments := make([]string, 0, cap(segments))
 	for _, segment := range segments {

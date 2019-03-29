@@ -11,8 +11,8 @@ import (
 
 // swagger:response
 //nolint:deadcode,unused
-type metadataMap struct {
-	MetadataMap plugin.MetadataMap
+type entryMetadata struct {
+	EntryMetadata plugin.EntryMetadata
 }
 
 // swagger:route GET /fs/metadata metadata getMetadata
@@ -38,16 +38,12 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p par
 		return errResp
 	}
 
-	if !plugin.MetadataAction.IsSupportedOn(entry) {
-		return unsupportedActionResponse(path, plugin.MetadataAction)
-	}
-
 	journal.Record(ctx, "API: Metadata %v", path)
-	metadata, err := plugin.CachedMetadata(ctx, entry.(plugin.Resource))
+	metadata, err := plugin.CachedMetadata(ctx, entry)
 
 	if err != nil {
 		journal.Record(ctx, "API: Metadata %v errored: %v", path, err)
-		return erroredActionResponse(path, plugin.MetadataAction, err.Error())
+		return unknownErrorResponse(err)
 	}
 	journal.Record(ctx, "API: Metadata %v %+v", path, metadata)
 
