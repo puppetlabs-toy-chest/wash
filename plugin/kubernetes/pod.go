@@ -33,11 +33,14 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	}
 	pd.DisableDefaultCaching()
 
-	pdInfo, err := pd.cachedPodInfo(ctx, false)
+	pdInfo := podInfoResult{
+		pd: p,
+	}
+	logContent, err := pd.fetchLogContent(ctx)
 	if err != nil {
 		return nil, err
 	}
-	pdInfo.pd = p
+	pdInfo.logContent = logContent
 
 	meta := pdInfo.toMeta()
 	attr := plugin.EntryAttributes{}
@@ -62,31 +65,34 @@ func (pdInfo podInfoResult) toMeta() plugin.EntryMetadata {
 	return meta
 }
 
-func (p *pod) cachedPodInfo(ctx context.Context, queryPodMeta bool) (podInfoResult, error) {
+func (p *pod) fetchLogContent(ctx context.Context) ([]byte, error) {
+	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
+	rdr, err := req.Stream()
+	if err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	var n int64
+	if n, err = buf.ReadFrom(rdr); err != nil {
+		return nil, err
+	}
+	journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
+	return buf.Bytes(), nil
+}
+
+func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 	cachedPdInfo, err := plugin.CachedOp("PodInfo", p, 15*time.Second, func() (interface{}, error) {
 		result := podInfoResult{}
-
-		if queryPodMeta {
-			pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
-			if err != nil {
-				return result, err
-			}
-			result.pd = pd
-		}
-
-		req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
-		rdr, err := req.Stream()
+		pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
 		if err != nil {
 			return result, err
 		}
-		var buf bytes.Buffer
-		var n int64
-		if n, err = buf.ReadFrom(rdr); err != nil {
+		result.pd = pd
+		logContent, err := p.fetchLogContent(ctx)
+		if err != nil {
 			return result, err
 		}
-		journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
-		result.logContent = buf.Bytes()
-
+		result.logContent = logContent
 		return result, nil
 	})
 	if err != nil {
@@ -97,7 +103,7 @@ func (p *pod) cachedPodInfo(ctx context.Context, queryPodMeta bool) (podInfoResu
 }
 
 func (p *pod) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	pdInfo, err := p.cachedPodInfo(ctx, true)
+	pdInfo, err := p.cachedPodInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +112,7 @@ func (p *pod) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
-	pdInfo, err := p.cachedPodInfo(ctx, true)
+	pdInfo, err := p.cachedPodInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
