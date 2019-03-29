@@ -13,16 +13,36 @@ type containerMetadata struct {
 	container *container
 }
 
+func (cm *containerMetadata) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+	content, err := cm.content(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return plugin.EntryMetadata{
+		"Size": uint64(len(content)),
+	}, nil
+}
+
 func (cm *containerMetadata) Open(ctx context.Context) (plugin.SizedReader, error) {
-	metadata, err := plugin.CachedMetadata(ctx, cm.container)
+	content, err := cm.content(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	content, err := json.MarshalIndent(metadata, "", "  ")
+	return bytes.NewReader(content), err
+}
+
+func (cm *containerMetadata) content(ctx context.Context) ([]byte, error) {
+	meta, err := plugin.CachedMetadata(ctx, cm.container)
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes.NewReader(content), nil
+	prettyMeta, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	return prettyMeta, nil
 }

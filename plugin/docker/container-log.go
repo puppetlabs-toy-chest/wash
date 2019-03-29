@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -28,28 +29,56 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	return true
 }
 
-func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
-	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
-	rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
+func (clf *containerLogFile) cachedContent(ctx context.Context) ([]byte, error) {
+	cachedContent, err := plugin.CachedOp("Content", clf, 15*time.Second, func() (interface{}, error) {
+		opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
+		rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
+		if err != nil {
+			return nil, err
+		}
+
+		var buf bytes.Buffer
+		var n int64
+		if clf.isTty(ctx) {
+			if n, err = buf.ReadFrom(rdr); err != nil {
+				return nil, err
+			}
+		} else {
+			// Write stdout and stderr to the same buffer.
+			if n, err = stdcopy.StdCopy(&buf, &buf, rdr); err != nil {
+				return nil, err
+			}
+		}
+		journal.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
+
+		return buf.Bytes(), nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	var n int64
-	if clf.isTty(ctx) {
-		if n, err = buf.ReadFrom(rdr); err != nil {
-			return nil, err
-		}
-	} else {
-		// Write stdout and stderr to the same buffer.
-		if n, err = stdcopy.StdCopy(&buf, &buf, rdr); err != nil {
-			return nil, err
-		}
-	}
-	journal.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
+	return cachedContent.([]byte), nil
+}
 
-	return bytes.NewReader(buf.Bytes()), nil
+func (clf *containerLogFile) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+	content, err := clf.cachedContent(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return plugin.EntryMetadata{
+		"Size": len(content),
+	}, nil
+}
+
+func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
+	content, err := clf.cachedContent(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(content), err
 }
 
 func (clf *containerLogFile) Stream(ctx context.Context) (io.Reader, error) {

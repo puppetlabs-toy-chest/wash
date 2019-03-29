@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -15,35 +14,43 @@ import (
 
 type container struct {
 	plugin.EntryBase
-	client    *client.Client
-	startTime time.Time
+	client *client.Client
 }
 
-// Metadata
-func (c *container) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (c *container) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	// Use raw to also get the container size.
 	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.Name(), true)
 	if err != nil {
 		return nil, err
 	}
 
-	return plugin.ToMetadata(raw), nil
-}
-
-// Attr
-func (c *container) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: c.startTime,
-		Mtime: c.startTime,
-		Atime: c.startTime,
-	}, nil
+	return plugin.ToMeta(raw), nil
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
+	// TODO: May be worth creating a helper that makes it easy to create
+	// read-only files. Lots of shared code between these two.
 	cm := &containerMetadata{plugin.NewEntry("metadata.json"), c}
 	cm.DisableDefaultCaching()
+	meta, err := cm.Metadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cmAttr := plugin.EntryAttributes{}
+	cmAttr.SetSize(meta["Size"].(uint64))
+	cm.SetInitialAttributes(cmAttr)
+	cm.Sync(plugin.SizeAttr(), "Size")
 
 	clf := &containerLogFile{plugin.NewEntry("log"), c.Name(), c.client}
+	clf.DisableDefaultCaching()
+	meta, err = clf.Metadata(ctx)
+	if err != nil {
+		return nil, err
+	}
+	clfAttr := plugin.EntryAttributes{}
+	clfAttr.SetSize(uint64(meta["Size"].(int)))
+	clf.SetInitialAttributes(clfAttr)
+	clf.Sync(plugin.SizeAttr(), "Size")
 
 	return []plugin.Entry{cm, clf}, nil
 }

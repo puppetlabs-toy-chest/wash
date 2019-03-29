@@ -25,11 +25,19 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 	journal.Record(ctx, "Listing %v containers in %v", len(containers), cs)
 	keys := make([]plugin.Entry, len(containers))
 	for i, inst := range containers {
-		keys[i] = &container{
+		cont := &container{
 			EntryBase: plugin.NewEntry(inst.ID),
 			client:    cs.client,
-			startTime: time.Unix(inst.Created, 0),
 		}
+
+		startTime := time.Unix(inst.Created, 0)
+		attr := plugin.EntryAttributes{}
+		attr.SetCtime(startTime)
+		attr.SetMtime(startTime)
+		attr.SetAtime(startTime)
+		cont.SetInitialAttributes(attr)
+
+		keys[i] = cont
 	}
 	return keys, nil
 }
