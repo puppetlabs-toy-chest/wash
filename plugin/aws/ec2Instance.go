@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"sync"
@@ -17,8 +16,6 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ec2Instance represents an EC2 instance
@@ -29,7 +26,7 @@ type ec2Instance struct {
 	ssmClient               *ssm.SSM
 	cloudwatchClient        *cloudwatchlogs.CloudWatchLogs
 	latestConsoleOutputOnce sync.Once
-	entries                 []plugin.Entry
+	hasLatestConsoleOutput  bool
 }
 
 // These constants represent the possible states that the EC2 instance
@@ -44,9 +41,9 @@ const (
 	EC2InstanceStopped           = 80
 )
 
-func newEC2Instance(ctx context.Context, ID string, session *session.Session, client *ec2Client.EC2) *ec2Instance {
+func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *session.Session, client *ec2Client.EC2) *ec2Instance {
 	ec2Instance := &ec2Instance{
-		EntryBase:        plugin.NewEntry(ID),
+		EntryBase:        plugin.NewEntry(awsSDK.StringValue(inst.InstanceId)),
 		session:          session,
 		client:           client,
 		ssmClient:        ssm.New(session),
@@ -54,17 +51,60 @@ func newEC2Instance(ctx context.Context, ID string, session *session.Session, cl
 	}
 	ec2Instance.DisableDefaultCaching()
 
-	ec2Instance.entries = []plugin.Entry{
-		newEC2InstanceMetadataJSON(ec2Instance),
-		newEC2InstanceConsoleOutput(ec2Instance, false),
-	}
+	metaObj := newDescribeInstanceResult(inst)
+
+	attr := plugin.EntryAttributes{}
+	attr.SetCtime(metaObj.ctime)
+	attr.SetMtime(metaObj.mtime)
+	attr.SetMeta(metaObj.toMeta())
+	ec2Instance.SetInitialAttributes(attr)
+
+	ec2Instance.Sync(plugin.CtimeAttr(), "CreationTime")
+	ec2Instance.Sync(plugin.MtimeAttr(), "LastModifiedTime")
 
 	return ec2Instance
 }
 
 type describeInstanceResult struct {
-	attr     plugin.Attributes
-	metadata *ec2Client.Instance
+	inst  *ec2Client.Instance
+	ctime time.Time
+	mtime time.Time
+}
+
+func newDescribeInstanceResult(inst *ec2Client.Instance) describeInstanceResult {
+	result := describeInstanceResult{
+		inst: inst,
+	}
+
+	// AWS does not include the EC2 instance's ctime in its
+	// metadata. It also does not include the EC2 instance's
+	// last state transition time (mtime). Thus, we try to "guess"
+	// reasonable values for ctime and mtime by looping over each
+	// block device's attachment time and the instance's launch time.
+	// The oldest of these times is the ctime; the newest is the mtime.
+	result.ctime = awsSDK.TimeValue(inst.LaunchTime)
+	result.mtime = result.ctime
+	for _, mapping := range inst.BlockDeviceMappings {
+		attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
+
+		if attachTime.Before(result.ctime) {
+			result.ctime = attachTime
+		}
+
+		if attachTime.After(result.mtime) {
+			result.mtime = attachTime
+		}
+	}
+
+	return result
+}
+
+func (d describeInstanceResult) toMeta() plugin.EntryMetadata {
+	meta := plugin.ToMeta(d.inst)
+	meta["CreationTime"] = d.ctime
+	meta["LastModifiedTime"] = d.mtime
+
+	return meta
 }
 
 func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeInstanceResult, error) {
@@ -80,34 +120,8 @@ func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeIn
 			return nil, err
 		}
 
-		result := describeInstanceResult{}
-
-		// The API returns an error for an invalid instance ID. Since
-		// our API call succeeded, the response is guaranteed to contain
-		// the instance's metadata
-		result.metadata = resp.Reservations[0].Instances[0]
-
-		// AWS does not include the EC2 instance's ctime in its
-		// metadata. It also does not include the EC2 instance's
-		// last state transition time (mtime). Thus, we try to "guess"
-		// reasonable values for ctime and mtime by looping over each
-		// block device's attachment time and the instance's launch time.
-		// The oldest of these times is the ctime; the newest is the mtime.
-		result.attr.Ctime = awsSDK.TimeValue(result.metadata.LaunchTime)
-		result.attr.Mtime = result.attr.Ctime
-		for _, mapping := range result.metadata.BlockDeviceMappings {
-			attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
-
-			if attachTime.Before(result.attr.Ctime) {
-				result.attr.Ctime = attachTime
-			}
-
-			if attachTime.After(result.attr.Mtime) {
-				result.attr.Mtime = attachTime
-			}
-		}
-
-		return result, nil
+		inst := resp.Reservations[0].Instances[0]
+		return newDescribeInstanceResult(inst), nil
 	})
 
 	if err != nil {
@@ -117,74 +131,47 @@ func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeIn
 	return info.(describeInstanceResult), nil
 }
 
-func (inst *ec2Instance) Attr(ctx context.Context) (plugin.Attributes, error) {
-	result, err := inst.cachedDescribeInstance(ctx)
-	if err != nil {
-		return plugin.Attributes{}, err
-	}
-
-	return result.attr, nil
-}
-
-func (inst *ec2Instance) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (inst *ec2Instance) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	result, err := inst.cachedDescribeInstance(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return plugin.ToMetadata(result.metadata), nil
+	return result.toMeta(), nil
 }
 
 func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
+	var latestConsoleOutput *ec2InstanceConsoleOutput
+	var err error
 	inst.latestConsoleOutputOnce.Do(func() {
-		if inst.hasLatestConsoleOutput(ctx) {
-			inst.entries = append(inst.entries, newEC2InstanceConsoleOutput(inst, true))
-		}
+		latestConsoleOutput, err = inst.checkLatestConsoleOutput(ctx)
 	})
 
-	return inst.entries, nil
-}
+	entries := []plugin.Entry{}
 
-type consoleOutput struct {
-	mtime   time.Time
-	content []byte
-}
-
-func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (consoleOutput, error) {
-	opName := "ConsoleOutput"
-	if latest {
-		opName = "Latest" + opName
-	}
-
-	output, err := plugin.CachedOp(opName, inst, 30*time.Second, func() (interface{}, error) {
-		request := &ec2Client.GetConsoleOutputInput{
-			InstanceId: awsSDK.String(inst.Name()),
-		}
-		if latest {
-			request.Latest = awsSDK.Bool(latest)
-		}
-
-		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
-		if err != nil {
-			return nil, err
-		}
-
-		content, err := base64.StdEncoding.DecodeString(awsSDK.StringValue(resp.Output))
-		if err != nil {
-			return nil, err
-		}
-
-		return consoleOutput{
-			mtime:   awsSDK.TimeValue(resp.Timestamp),
-			content: content,
-		}, nil
-	})
-
+	metadataJSON, err := newEC2InstanceMetadataJSON(ctx, inst)
 	if err != nil {
-		return consoleOutput{}, err
+		return nil, err
+	}
+	entries = append(entries, metadataJSON)
+
+	consoleOutput, err := newEC2InstanceConsoleOutput(ctx, inst, false)
+	if err != nil {
+		return nil, err
+	}
+	entries = append(entries, consoleOutput)
+
+	if inst.hasLatestConsoleOutput {
+		if latestConsoleOutput == nil {
+			latestConsoleOutput, err = newEC2InstanceConsoleOutput(ctx, inst, true)
+			if err != nil {
+				return nil, err
+			}
+		}
+		entries = append(entries, latestConsoleOutput)
 	}
 
-	return output.(consoleOutput), nil
+	return entries, nil
 }
 
 // According to https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-console.html,
@@ -194,40 +181,43 @@ func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (
 // console output. Thus, this checks to see if our EC2 instance supports retrieving
 // the console logs, which reduces to checking whether we can open a
 // consoleLatestOutput object.
-func (inst *ec2Instance) hasLatestConsoleOutput(ctx context.Context) bool {
-	consoleLatestOutput := newEC2InstanceConsoleOutput(inst, true)
-
-	_, err := consoleLatestOutput.Open(ctx)
+//
+// NOTE: We return the object to avoid an extra request in List. The returned error
+// is whether something went wrong with opening the consoleLatestOutput object (so
+// that List can appropriately error).
+func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2InstanceConsoleOutput, error) {
+	consoleLatestOutput, err := newEC2InstanceConsoleOutput(ctx, inst, true)
 	if err == nil {
-		return true
+		inst.hasLatestConsoleOutput = true
+		return consoleLatestOutput, nil
 	}
 
 	awserr, ok := err.(awserr.Error)
 	if !ok {
 		// Open failed w/ some other error, which should be a
-		// rare occurrence. Here we log a warning, reset
-		// latestConsoleOutputOnce so that we check again for
-		// the latest console output the next time List's called,
-		// then return false.
-		log.Warnf(
+		// rare occurrence. Here we reset latestConsoleOutputOnce
+		// so that we check again for the latest console output the
+		// next time List's called, then return an error
+		inst.latestConsoleOutputOnce = sync.Once{}
+		return nil, fmt.Errorf(
 			"could not determine whether the EC2 instance %v supports retrieving the latest console output: %v",
 			inst.Name(),
 			ctx.Err(),
 		)
-		inst.latestConsoleOutputOnce = sync.Once{}
-		return false
 	}
 
 	// For some reason, the EC2 client does not have this error code
 	// as a constant.
 	if awserr.Code() == "UnsupportedOperation" {
-		return false
+		inst.hasLatestConsoleOutput = false
+		return nil, nil
 	}
 
 	// Open failed due to some other AWS-related error. Assume this means
 	// that the instance _does_ have the latest console logs, but something
 	// went wrong with accessing them.
-	return true
+	inst.hasLatestConsoleOutput = true
+	return nil, fmt.Errorf("could not access the latest console log: %v", err)
 }
 
 // These constants represent the possible states that the command
@@ -259,10 +249,10 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	}
 
 	// Exec only makes sense on a running EC2 instance.
-	if awsSDK.Int64Value(result.metadata.State.Code) != EC2InstanceRunningState {
+	if awsSDK.Int64Value(result.inst.State.Code) != EC2InstanceRunningState {
 		err := fmt.Errorf(
 			"instance is not in the running state. Its current state is: %v",
-			awsSDK.StringValue(result.metadata.State.Name),
+			awsSDK.StringValue(result.inst.State.Name),
 		)
 
 		return execResult, err

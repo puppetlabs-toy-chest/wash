@@ -75,7 +75,7 @@ func exists(path string) error {
 // Init for root
 func (r *Root) Init() error {
 	r.EntryBase = plugin.NewEntry("aws")
-	r.SetTTLOf(plugin.List, 1*time.Minute)
+	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
 
 	// Force authorizing profiles on startup
 	_, err := r.List(context.Background())

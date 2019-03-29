@@ -52,7 +52,7 @@ func (is *ec2InstancesDir) List(ctx context.Context) ([]plugin.Entry, error) {
 		for i, instance := range reservation.Instances {
 			instances[i] = newEC2Instance(
 				ctx,
-				awsSDK.StringValue(instance.InstanceId),
+				instance,
 				is.session,
 				is.client,
 			)
