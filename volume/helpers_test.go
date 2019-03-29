@@ -29,27 +29,27 @@ const fixture = `
 `
 
 func TestStatParse(t *testing.T) {
-	attr, path, err := StatParse("96 1550611510 1550611448 1550611448 41ed mnt/path")
+	actualAttr, path, err := StatParse("96 1550611510 1550611448 1550611448 41ed mnt/path")
 	assert.Nil(t, err)
 	assert.Equal(t, "mnt/path", path)
-	assert.Equal(t, plugin.Attributes{
-		Atime: time.Unix(1550611510, 0),
-		Mtime: time.Unix(1550611448, 0),
-		Ctime: time.Unix(1550611448, 0),
-		Mode:  0755 | os.ModeDir,
-		Size:  96,
-	}, attr)
+	expectedAttr := plugin.EntryAttributes{}
+	expectedAttr.SetAtime(time.Unix(1550611510, 0))
+	expectedAttr.SetMtime(time.Unix(1550611448, 0))
+	expectedAttr.SetCtime(time.Unix(1550611448, 0))
+	expectedAttr.SetMode(0755 | os.ModeDir)
+	expectedAttr.SetSize(96)
+	assert.Equal(t, expectedAttr, actualAttr)
 
-	attr, path, err = StatParse("0 1550611458 1550611458 1550611458 81a4 mnt/path/has/got/some/legs")
+	actualAttr, path, err = StatParse("0 1550611458 1550611458 1550611458 81a4 mnt/path/has/got/some/legs")
 	assert.Nil(t, err)
 	assert.Equal(t, "mnt/path/has/got/some/legs", path)
-	assert.Equal(t, plugin.Attributes{
-		Atime: time.Unix(1550611458, 0),
-		Mtime: time.Unix(1550611458, 0),
-		Ctime: time.Unix(1550611458, 0),
-		Mode:  0644,
-		Size:  0,
-	}, attr)
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.SetAtime(time.Unix(1550611458, 0))
+	expectedAttr.SetMtime(time.Unix(1550611458, 0))
+	expectedAttr.SetCtime(time.Unix(1550611458, 0))
+	expectedAttr.SetMode(0644)
+	expectedAttr.SetSize(0)
+	assert.Equal(t, expectedAttr, actualAttr)
 
 	_, _, err = StatParse("stat: failed")
 	assert.Equal(t, errors.New("Stat did not return 6 components: stat: failed"), err)
@@ -86,27 +86,27 @@ func TestStatParseAll(t *testing.T) {
 		assert.NotNil(t, dmap[""][node])
 	}
 
-	assert.Equal(t, plugin.Attributes{
-		Atime: time.Unix(1550611453, 0),
-		Mtime: time.Unix(1550611453, 0),
-		Ctime: time.Unix(1550611453, 0),
-		Mode:  0644,
-		Size:  0,
-	}, dmap["/path1"]["a file"])
+	expectedAttr := plugin.EntryAttributes{}
+	expectedAttr.SetAtime(time.Unix(1550611453, 0))
+	expectedAttr.SetMtime(time.Unix(1550611453, 0))
+	expectedAttr.SetCtime(time.Unix(1550611453, 0))
+	expectedAttr.SetMode(0644)
+	expectedAttr.SetSize(0)
+	assert.Equal(t, expectedAttr, dmap["/path1"]["a file"])
 
-	assert.Equal(t, plugin.Attributes{
-		Atime: time.Unix(1550611510, 0),
-		Mtime: time.Unix(1550611441, 0),
-		Ctime: time.Unix(1550611441, 0),
-		Mode:  0755 | os.ModeDir,
-		Size:  64,
-	}, dmap["/path2"]["dir"])
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.SetAtime(time.Unix(1550611510, 0))
+	expectedAttr.SetMtime(time.Unix(1550611441, 0))
+	expectedAttr.SetCtime(time.Unix(1550611441, 0))
+	expectedAttr.SetMode(0755 | os.ModeDir)
+	expectedAttr.SetSize(64)
+	assert.Equal(t, expectedAttr, dmap["/path2"]["dir"])
 
-	assert.Equal(t, plugin.Attributes{
-		Atime: time.Unix(1550611510, 0),
-		Mtime: time.Unix(1550611448, 0),
-		Ctime: time.Unix(1550611448, 0),
-		Mode:  0755 | os.ModeDir,
-		Size:  96,
-	}, dmap["/path"]["has"])
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.SetAtime(time.Unix(1550611510, 0))
+	expectedAttr.SetMtime(time.Unix(1550611448, 0))
+	expectedAttr.SetCtime(time.Unix(1550611448, 0))
+	expectedAttr.SetMode(0755 | os.ModeDir)
+	expectedAttr.SetSize(96)
+	assert.Equal(t, expectedAttr, dmap["/path"]["has"])
 }

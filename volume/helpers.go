@@ -30,47 +30,67 @@ func StatCmd(path string) []string {
 	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", ";"}
 }
 
-// StatParse parses a single line of the output of StatCmd into Attributes and a name.
-func StatParse(line string) (plugin.Attributes, string, error) {
-	var attr plugin.Attributes
+// TODO: Should move this over to plugin as a helper at some point
+func parseTime(t string) (time.Time, error) {
+	epoch, err := strconv.ParseInt(t, 10, 64)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(epoch, 0), nil
+}
+
+// StatParse parses a single line of the output of StatCmd into EntryAttributes and a name.
+func StatParse(line string) (plugin.EntryAttributes, string, error) {
+	var attr plugin.EntryAttributes
 	segments := strings.SplitN(line, " ", 6)
 	if len(segments) != 6 {
 		return attr, "", fmt.Errorf("Stat did not return 6 components: %v", line)
 	}
 
-	var err error
-	attr.Size, err = strconv.ParseUint(segments[0], 10, 64)
+	size, err := strconv.ParseUint(segments[0], 10, 64)
 	if err != nil {
 		return attr, "", err
 	}
+	attr.SetSize(size)
 
-	for i, target := range []*time.Time{&attr.Atime, &attr.Mtime, &attr.Ctime} {
-		epoch, err := strconv.ParseInt(segments[i+1], 10, 64)
-		if err != nil {
-			return attr, "", err
-		}
-		*target = time.Unix(epoch, 0)
+	atime, err := parseTime(segments[1])
+	if err != nil {
+		return attr, "", err
 	}
+	attr.SetAtime(atime)
+
+	mtime, err := parseTime(segments[2])
+	if err != nil {
+		return attr, "", err
+	}
+	attr.SetMtime(mtime)
+
+	ctime, err := parseTime(segments[3])
+	if err != nil {
+		return attr, "", err
+	}
+	attr.SetCtime(ctime)
 
 	mode, err := plugin.ToFileMode("0x" + segments[4])
 	if err != nil {
 		return attr, "", err
 	}
-	attr.Mode = mode
+	attr.SetMode(mode)
 
 	return attr, segments[5], nil
 }
 
 // A DirMap is a map of directory names to a map of their children and the children's attributes.
-type DirMap = map[string]map[string]plugin.Attributes
+type DirMap = map[string]map[string]plugin.EntryAttributes
 
 // StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
-// file paths, and maps each directory to a map of files in that directory and their attributes.
+// file paths, and maps each directory to a map of files in that directory and their attr
+// (attributes).
 func StatParseAll(output io.Reader, base string) (DirMap, error) {
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
-	attrs := DirMap{"": make(map[string]plugin.Attributes)}
+	attrs := DirMap{"": make(map[string]plugin.EntryAttributes)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {
@@ -81,8 +101,8 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 
 			relative := strings.TrimPrefix(fullpath, base)
 			// Create an entry for each directory.
-			if attr.Mode.IsDir() {
-				attrs[relative] = make(map[string]plugin.Attributes)
+			if attr.Mode().IsDir() {
+				attrs[relative] = make(map[string]plugin.EntryAttributes)
 			}
 
 			// Add each entry to its parent's listing.
