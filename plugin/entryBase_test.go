@@ -90,6 +90,13 @@ func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
 	suite.Equal(e.slashReplacementChar(), ':')
 }
 
+func (suite *EntryBaseTestSuite) TestHasSyncedAttributes() {
+	e := NewEntry("foo")
+	suite.Equal(false, e.hasSyncedAttributes())
+	e.Sync(CtimeAttr(), "CtimeKey")
+	suite.Equal(true, e.hasSyncedAttributes())
+}
+
 func (suite *EntryBaseTestSuite) TestSyncAttributesWithNoErrors() {
 	initialAttr := EntryAttributes{}
 	initialAttr.

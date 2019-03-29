@@ -181,6 +181,10 @@ func (e *EntryBase) SetTestID(id string) {
 	e.setID(id)
 }
 
+func (e *EntryBase) hasSyncedAttributes() bool {
+	return len(e.syncedAttrs) > 0
+}
+
 func (e *EntryBase) syncAttributesWith(meta EntryMetadata) error {
 	e.attrMux.Lock()
 	defer e.attrMux.Unlock()

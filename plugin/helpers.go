@@ -161,6 +161,13 @@ func Attributes(e Entry) EntryAttributes {
 // RefreshAttributes refreshes the entry's attributes. It is primarily
 // needed by FUSE because FUSE nodes have a very long lifetime.
 func RefreshAttributes(ctx context.Context, e Entry) error {
+	if !e.hasSyncedAttributes() {
+		// No need to refresh if the entry doesn't have any synced
+		// attributes. This prevents an unnecessary fetch of the
+		// entry's metadata.
+		return nil
+	}
+
 	journal.Record(ctx, "Refreshing the attributes of %v", Path(e))
 
 	// We can't put the refresh-attributes logic in EntryBase because doing
