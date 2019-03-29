@@ -3,6 +3,7 @@ package fuse
 
 import (
 	"context"
+	"os"
 	"os/user"
 	"strconv"
 	"time"
@@ -51,41 +52,58 @@ func getIDs() (uint32, uint32) {
 
 var uid, gid = getIDs()
 
-type fuseNode interface {
-	Entry() plugin.Entry
-	String() string
+var attrRefreshInterval = 5 * time.Second
+
+type fuseNode struct {
+	ftype             string
+	entry             plugin.Entry
+	entryCreationTime time.Time
 }
 
-func ftype(f fuseNode) string {
-	if _, ok := f.(*dir); ok {
-		return "d"
+func newFuseNode(ftype string, entry plugin.Entry) *fuseNode {
+	return &fuseNode{
+		ftype:             ftype,
+		entry:             entry,
+		entryCreationTime: time.Now(),
 	}
-	return "f"
+}
+
+func (f *fuseNode) String() string {
+	return plugin.Path(f.entry)
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
-func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
-	a.Valid = 1 * time.Second
-	if attr.Valid != 0 {
-		a.Valid = attr.Valid
-	}
+func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
+	// This doesn't quite work for some reason.
+	a.Valid = attrRefreshInterval
 
 	// TODO: tie this to actual hard links in plugins
 	a.Nlink = 1
-	a.Mode = attr.Mode
-	a.Size = attr.Size
+
+	if attr.HasMode() {
+		a.Mode = attr.Mode()
+	} else if plugin.ListAction.IsSupportedOn(f.entry) {
+		a.Mode = os.ModeDir | 0550
+	} else {
+		a.Mode = 0440
+	}
+
+	a.Size = ^uint64(0)
+	if attr.HasSize() {
+		a.Size = attr.Size()
+	}
 
 	a.Mtime = startTime
-	if !attr.Mtime.IsZero() {
-		a.Mtime = attr.Mtime
+	if attr.HasMtime() {
+		a.Mtime = attr.Mtime()
 	}
 	a.Atime = startTime
-	if !attr.Atime.IsZero() {
-		a.Atime = attr.Atime
+	if attr.HasAtime() {
+		a.Atime = attr.Atime()
 	}
 	a.Ctime = startTime
-	if !attr.Ctime.IsZero() {
-		a.Ctime = attr.Ctime
+	if attr.HasCtime() {
+		a.Ctime = attr.Ctime()
 	}
 	a.Crtime = startTime
 	a.BlockSize = 4096
@@ -93,28 +111,31 @@ func applyAttr(a *fuse.Attr, attr *plugin.Attributes) {
 	a.Gid = gid
 }
 
-func attr(ctx context.Context, f fuseNode, a *fuse.Attr) error {
-	attr, err := plugin.Attr(ctx, f.Entry())
-	if _, ok := err.(plugin.ErrCouldNotDetermineSizeAttr); ok {
-		log.Warnf("FUSE: Warn[Attr,%v]: %v", f, err)
-	} else if err != nil {
-		log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
-		return err
+func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
+	// TODO: The code below's a temporary hack to show that the refreshing
+	// behavior works. It blows up after several successive ls calls b/c each
+	// child simultaneously attempts to refresh their attributes.
+	if time.Since(f.entryCreationTime) >= attrRefreshInterval {
+		err := plugin.RefreshAttributes(ctx, f.entry)
+		if err != nil {
+			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+			return err
+		}
 	}
-
-	applyAttr(a, &attr)
-	log.Infof("FUSE: Attr[%v] %v %v", ftype(f), f, a)
+	attr := plugin.Attributes(f.entry)
+	f.applyAttr(a, &attr)
+	log.Infof("FUSE: Attr[%v] %v %v", f.ftype, f, a)
 	return nil
 }
 
-func listxattr(ctx context.Context, f fuseNode, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Infof("FUSE: Listxattr[%v,pid=%v] %v", ftype(f), req.Pid, f)
+func (f *fuseNode) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
+	log.Infof("FUSE: Listxattr[%v,pid=%v] %v", f.ftype, req.Pid, f)
 	resp.Append("wash.id")
 	return nil
 }
 
-func getxattr(ctx context.Context, f fuseNode, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Infof("FUSE: Getxattr[%v,pid=%v] %v", ftype(f), req.Pid, f)
+func (f *fuseNode) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
+	log.Infof("FUSE: Getxattr[%v,pid=%v] %v", f.ftype, req.Pid, f)
 	switch req.Name {
 	case "wash.id":
 		resp.Xattr = []byte(f.String())
