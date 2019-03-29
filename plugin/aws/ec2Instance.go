@@ -54,13 +54,15 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	metaObj := newDescribeInstanceResult(inst)
 
 	attr := plugin.EntryAttributes{}
-	attr.SetCtime(metaObj.ctime)
-	attr.SetMtime(metaObj.mtime)
-	attr.SetMeta(metaObj.toMeta())
+	attr.
+		SetCtime(metaObj.ctime).
+		SetMtime(metaObj.mtime).
+		SetMeta(metaObj.toMeta())
 	ec2Instance.SetInitialAttributes(attr)
 
-	ec2Instance.Sync(plugin.CtimeAttr(), "CreationTime")
-	ec2Instance.Sync(plugin.MtimeAttr(), "LastModifiedTime")
+	ec2Instance.
+		Sync(plugin.CtimeAttr(), "CreationTime").
+		Sync(plugin.MtimeAttr(), "LastModifiedTime")
 
 	return ec2Instance
 }

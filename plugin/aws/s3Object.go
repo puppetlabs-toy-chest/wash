@@ -22,31 +22,33 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func newS3Object(rawObj *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
-	o := &s3Object{
+func newS3Object(o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
+	s3Obj := &s3Object{
 		EntryBase: plugin.NewEntry(name),
 		bucket:    bucket,
 		key:       key,
 		client:    client,
 	}
-	o.DisableCachingFor(plugin.MetadataOp)
+	s3Obj.DisableCachingFor(plugin.MetadataOp)
 
-	attr := plugin.EntryAttributes{}
-	mtime := awsSDK.TimeValue(rawObj.LastModified)
-	attr.SetCtime(mtime)
-	attr.SetMtime(mtime)
-	attr.SetAtime(mtime)
 	// TODO: Export a mungeSize helper to abstract away the common
 	// logic of validating a negative size
-	attr.SetSize(uint64(awsSDK.Int64Value(rawObj.Size)))
-	o.SetInitialAttributes(attr)
+	mtime := awsSDK.TimeValue(o.LastModified)
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(mtime).
+		SetMtime(mtime).
+		SetAtime(mtime).
+		SetSize(uint64(awsSDK.Int64Value(o.Size)))
+	s3Obj.SetInitialAttributes(attr)
 
-	o.Sync(plugin.CtimeAttr(), "LastModified")
-	o.Sync(plugin.MtimeAttr(), "LastModified")
-	o.Sync(plugin.AtimeAttr(), "LastModified")
-	o.Sync(plugin.SizeAttr(), "ContentLength")
+	s3Obj.
+		Sync(plugin.CtimeAttr(), "LastModified").
+		Sync(plugin.MtimeAttr(), "LastModified").
+		Sync(plugin.AtimeAttr(), "LastModified").
+		Sync(plugin.SizeAttr(), "ContentLength")
 
-	return o
+	return s3Obj
 }
 
 func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {

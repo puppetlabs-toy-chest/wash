@@ -163,16 +163,16 @@ func Attributes(e Entry) EntryAttributes {
 func RefreshAttributes(ctx context.Context, e Entry) error {
 	journal.Record(ctx, "Refreshing the attributes of %v", Path(e))
 
+	// We can't put the refresh-attributes logic in EntryBase because doing
+	// so would call EntryBase#Metadata.
 	meta, err := CachedMetadata(ctx, e)
 	if err != nil {
 		return fmt.Errorf("failed to refresh the attributes: %v", err)
 	}
-
 	err = e.syncAttributesWith(meta)
 	if err != nil {
 		return fmt.Errorf("failed to refresh the attributes: %v", err)
 	}
-
 	return nil
 }
 

@@ -111,20 +111,32 @@ func (e *EntryBase) SetInitialAttributes(attr EntryAttributes) {
 	e.attr = attr
 }
 
-// Sync syncs the attribute with the given key's value in the entry's
-// metadata whenever the latter's refreshed via a call to plugin.CachedMetadata.
-// Use Sync if you expect the attribute to change.
-//
-// TODO: Find a way to let plugin authors specify a munging function. We'll
-// need this for the State attribute, and in case the metadata returns some of
-// the other attributes in a different format (e.g. like an arbitrarily formatted
-// string for one of the time fields)
-func (e *EntryBase) Sync(attr SyncableAttribute, key string) {
-	// TODO: Check if a hash can be used here.
+/*
+Sync syncs the attribute with the given key's value in the entry's
+metadata whenever the latter's refreshed via a call to plugin.CachedMetadata.
+Use Sync if you expect the attribute to change. It returns the entry, e,
+to facilitate the builder pattern, which lets you do something like
+
+	entry.
+		Sync(plugin.CtimeAttr(), "LastModified").
+		Sync(plugin.MtimeAttr(), "LastModified").
+		Sync(plugin.AtimeAttr(), "LastModified").
+		Sync(plugin.SizeAttr(), "ContentLength")
+
+TODO: Find a way to let plugin authors specify a munging function. We'll
+need this for the State attribute, and in case the metadata returns some of
+the other attributes in a different format (e.g. like an arbitrarily formatted
+string for one of the time fields)
+*/
+func (e *EntryBase) Sync(attr SyncableAttribute, key string) *EntryBase {
+	// We use an array instead of a map because the latter takes up a lot of
+	// memory (~40 bytes for an empty map). That adds up quick when there's
+	// hundreds of thousands of entries.
 	e.syncedAttrs = append(
 		e.syncedAttrs,
 		syncedAttribute{attr, key},
 	)
+	return e
 }
 
 /*

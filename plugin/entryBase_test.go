@@ -92,8 +92,9 @@ func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
 
 func (suite *EntryBaseTestSuite) TestSyncAttributesWithNoErrors() {
 	initialAttr := EntryAttributes{}
-	initialAttr.SetCtime(time.Now())
-	initialAttr.SetMtime(time.Now())
+	initialAttr.
+		SetCtime(time.Now()).
+		SetMtime(time.Now())
 
 	e := NewEntry("foo")
 	e.SetInitialAttributes(initialAttr)

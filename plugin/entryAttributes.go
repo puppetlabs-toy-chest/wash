@@ -32,9 +32,21 @@ func ToMeta(obj interface{}) EntryMetadata {
 	return meta
 }
 
-// EntryAttributes represents an entry's attributes. We use a struct
-// instead of a map for efficient memory allocation/deallocation,
-// which is needed to make Group#List fast.
+/*
+EntryAttributes represents an entry's attributes. We use a struct
+instead of a map for efficient memory allocation/deallocation,
+which is needed to make Group#List fast.
+
+Each of the setters supports the builder pattern, which enables you
+to do something like
+
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(ctime).
+		SetMtime(mtime).
+		SetMeta(meta)
+	entry.SetInitialAttributes(attr)
+*/
 type EntryAttributes struct {
 	atime   time.Time
 	mtime   time.Time
@@ -75,8 +87,9 @@ func (a *EntryAttributes) Atime() time.Time {
 }
 
 // SetAtime sets the entry's last access time
-func (a *EntryAttributes) SetAtime(atime time.Time) {
+func (a *EntryAttributes) SetAtime(atime time.Time) *EntryAttributes {
 	a.atime = atime
+	return a
 }
 
 // HasMtime returns true if the entry has a last modified time
@@ -90,8 +103,9 @@ func (a *EntryAttributes) Mtime() time.Time {
 }
 
 // SetMtime sets the entry's last modified time
-func (a *EntryAttributes) SetMtime(mtime time.Time) {
+func (a *EntryAttributes) SetMtime(mtime time.Time) *EntryAttributes {
 	a.mtime = mtime
+	return a
 }
 
 // HasCtime returns true if the entry has a creation time
@@ -105,8 +119,9 @@ func (a *EntryAttributes) Ctime() time.Time {
 }
 
 // SetCtime sets the entry's creation time
-func (a *EntryAttributes) SetCtime(ctime time.Time) {
+func (a *EntryAttributes) SetCtime(ctime time.Time) *EntryAttributes {
 	a.ctime = ctime
+	return a
 }
 
 // HasMode returns true if the entry has a mode
@@ -120,9 +135,10 @@ func (a *EntryAttributes) Mode() os.FileMode {
 }
 
 // SetMode sets the entry's mode
-func (a *EntryAttributes) SetMode(mode os.FileMode) {
+func (a *EntryAttributes) SetMode(mode os.FileMode) *EntryAttributes {
 	a.mode = mode
 	a.hasMode = true
+	return a
 }
 
 // HasSize returns true if the entry has a size
@@ -136,9 +152,10 @@ func (a *EntryAttributes) Size() uint64 {
 }
 
 // SetSize sets the entry's size
-func (a *EntryAttributes) SetSize(size uint64) {
+func (a *EntryAttributes) SetSize(size uint64) *EntryAttributes {
 	a.size = size
 	a.hasSize = true
+	return a
 }
 
 // Meta returns the entry's metadata. All entries have a
@@ -152,8 +169,9 @@ func (a *EntryAttributes) Meta() EntryMetadata {
 }
 
 // SetMeta sets the entry's metadata
-func (a *EntryAttributes) SetMeta(meta EntryMetadata) {
+func (a *EntryAttributes) SetMeta(meta EntryMetadata) *EntryAttributes {
 	a.meta = meta
+	return a
 }
 
 // This helper's useful for testing.

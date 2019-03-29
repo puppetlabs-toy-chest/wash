@@ -160,9 +160,10 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 	}
 
 	attr := plugin.EntryAttributes{}
-	attr.SetCtime(bucket.ctime)
-	attr.SetMtime(bucket.ctime)
-	attr.SetAtime(bucket.ctime)
+	attr.
+		SetCtime(bucket.ctime).
+		SetMtime(bucket.ctime).
+		SetAtime(bucket.ctime)
 	bucket.SetInitialAttributes(attr)
 
 	return bucket

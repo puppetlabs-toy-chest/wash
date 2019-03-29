@@ -38,10 +38,11 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
 
 	attr := plugin.EntryAttributes{}
-	attr.SetCtime(startTime)
-	attr.SetMtime(startTime)
-	attr.SetAtime(startTime)
-	attr.SetMeta(plugin.ToMeta(v))
+	attr.
+		SetCtime(startTime).
+		SetMtime(startTime).
+		SetAtime(startTime).
+		SetMeta(plugin.ToMeta(v))
 	vol.SetInitialAttributes(attr)
 
 	return vol, nil

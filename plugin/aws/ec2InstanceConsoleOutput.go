@@ -38,11 +38,12 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 	}
 
 	attr := plugin.EntryAttributes{}
-	attr.SetCtime(output.mtime)
-	attr.SetMtime(output.mtime)
-	attr.SetAtime(output.mtime)
-	attr.SetSize(uint64(len(output.content)))
-	attr.SetMeta(output.toMeta())
+	attr.
+		SetCtime(output.mtime).
+		SetMtime(output.mtime).
+		SetAtime(output.mtime).
+		SetSize(uint64(len(output.content))).
+		SetMeta(output.toMeta())
 	cl.SetInitialAttributes(attr)
 
 	cl.Sync(plugin.CtimeAttr(), "LastModified")

@@ -36,9 +36,10 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
 
 	attr := plugin.EntryAttributes{}
-	attr.SetCtime(p.CreationTimestamp.Time)
-	attr.SetMtime(attr.Ctime())
-	attr.SetAtime(attr.Ctime())
+	attr.
+		SetCtime(p.CreationTimestamp.Time).
+		SetMtime(attr.Ctime()).
+		SetAtime(attr.Ctime())
 	vol.SetInitialAttributes(attr)
 
 	return vol
