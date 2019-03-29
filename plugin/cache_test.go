@@ -123,7 +123,7 @@ type cacheTestsMockEntry struct {
 
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
 	return &cacheTestsMockEntry{
-		EntryBase: newEntryBase(name),
+		EntryBase: NewEntry(name),
 	}
 }
 
@@ -137,12 +137,12 @@ func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
 	return args.Get(0).(SizedReader), args.Error(1)
 }
 
-func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (MetadataMap, error) {
+func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (EntryMetadata, error) {
 	args := e.Called(ctx)
-	return args.Get(0).(MetadataMap), args.Error(1)
+	return args.Get(0).(EntryMetadata), args.Error(1)
 }
 
-type cachedActionOpFunc func(ctx context.Context, e Entry) (interface{}, error)
+type cachedDefaultOpFunc func(ctx context.Context, e Entry) (interface{}, error)
 
 func (suite *CacheTestSuite) TestCachedOp() {
 	makePanicFunc := func(opName string, ttl time.Duration) func() {
@@ -200,34 +200,42 @@ func (suite *CacheTestSuite) TestDuplicateCNameErr() {
 	suite.Regexp("my_plugin plugin", err.Error())
 }
 
-func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, mockValue interface{}, cachedActionOp cachedActionOpFunc) {
+func (suite *CacheTestSuite) testCachedDefaultOp(op defaultOpCode, opName string, mockValue interface{}, cachedDefaultOp cachedDefaultOpFunc) {
 	ctx := context.Background()
 
-	// Test that cachedActionOp panics if the cache == nil
+	// Test that cachedDefaultOp panics if the cache == nil
 	panicFunc := func() {
 		entry := newCacheTestsMockEntry("mock")
-		_, _ = cachedActionOp(ctx, entry)
+		_, _ = cachedDefaultOp(ctx, entry)
 	}
 	UnsetTestCache()
 	suite.Panics(panicFunc)
 	SetTestCache(suite.cache)
 
-	// Test that cachedActionOp panics if entry.id() == ""
-	suite.Panics(panicFunc, "entry.id() returned an empty ID")
-
-	// Test that cachedActionOp does _not_ call cache#GetOrUpdate for an
-	// entry that's turned off caching
 	entry := newCacheTestsMockEntry("mock")
+
+	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate if
+	// entry.id() == "" (possible if the entry's just been created and
+	// it needs to query its metadata to set its initial attributes).
+	suite.Panics(panicFunc, "entry.id() returned an empty ID")
+	entry.On(opName, ctx).Return(mockValue, nil)
+	v, err := cachedDefaultOp(ctx, entry)
+	if suite.NoError(err) {
+		suite.Equal(mockValue, v)
+	}
+
+	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate for an
+	// entry that's turned off caching
 	entry.SetTestID("id")
 	entry.On(opName, ctx).Return(mockValue, nil)
 	entry.DisableCachingFor(op)
-	v, err := cachedActionOp(ctx, entry)
+	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mockValue, v)
 	}
 	suite.cache.AssertNotCalled(suite.T(), "GetOrUpdate")
 
-	// Test that cachedActionOp does call cache#GetOrUpdate for an
+	// Test that cachedDefaultOp does call cache#GetOrUpdate for an
 	// entry that's enabled caching, and that it passes-in the
 	// right arguments.
 	opTTL := 5 * time.Second
@@ -236,16 +244,16 @@ func (suite *CacheTestSuite) testCachedActionOp(op actionOpCode, opName string, 
 	opKey := opName + "::" + "id"
 	generateValueMatcher := suite.makeGenerateValueMatcher(mockValue)
 	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mockValue, nil).Once()
-	v, err = cachedActionOp(ctx, entry)
+	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mockValue, v)
 	}
 	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
-func (suite *CacheTestSuite) TestCachedListActionOp() {
+func (suite *CacheTestSuite) TestCachedListDefaultOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
-	suite.testCachedActionOp(List, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedDefaultOp(ListOp, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedList(ctx, e.(Group))
 	})
 }
@@ -315,15 +323,15 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 
 func (suite *CacheTestSuite) TestCachedOpen() {
 	mockReader := strings.NewReader("foo")
-	suite.testCachedActionOp(Open, "Open", mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedOpen(ctx, e.(Readable))
 	})
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
-	mockMetadataMap := MetadataMap{"foo": "bar"}
-	suite.testCachedActionOp(Metadata, "Metadata", mockMetadataMap, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedMetadata(ctx, e.(Resource))
+	mockEntryMetadata := EntryMetadata{"foo": "bar"}
+	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockEntryMetadata, func(ctx context.Context, e Entry) (interface{}, error) {
+		return CachedMetadata(ctx, e)
 	})
 }
 

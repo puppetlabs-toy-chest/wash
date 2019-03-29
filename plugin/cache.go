@@ -93,7 +93,7 @@ func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interfa
 		panic(fmt.Sprintf("The opName %v does not match %v", opName, opNameRegex.String()))
 	}
 
-	for _, actionOpName := range actionOpCodeToNameMap {
+	for _, actionOpName := range defaultOpCodeToNameMap {
 		if opName == actionOpName {
 			panic(fmt.Sprintf("The opName %v conflicts with Cached%v", opName, actionOpName))
 		}
@@ -137,7 +137,7 @@ func (c DuplicateCNameErr) Error() string {
 // CachedList caches a Group object's List method. It also sets the
 // children's IDs to <parent_id> + "/" + <child_cname>.
 func CachedList(ctx context.Context, g Group) ([]Entry, error) {
-	cachedEntries, err := cachedActionOp(List, g, func() (interface{}, error) {
+	cachedEntries, err := cachedDefaultOp(ListOp, g, func() (interface{}, error) {
 		entries, err := g.List(ctx)
 		if err != nil {
 			return nil, err
@@ -150,9 +150,9 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 			if duplicateEntry, ok := searchedEntries[cname]; ok {
 				return nil, DuplicateCNameErr{
 					ParentPath:                      g.id(),
-					FirstChildName:                  duplicateEntry.Name(),
+					FirstChildName:                  duplicateEntry.name(),
 					FirstChildSlashReplacementChar:  duplicateEntry.slashReplacementChar(),
-					SecondChildName:                 entry.Name(),
+					SecondChildName:                 entry.name(),
 					SecondChildSlashReplacementChar: entry.slashReplacementChar(),
 					CName:                           cname,
 				}
@@ -178,7 +178,7 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
 func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedActionOp(Open, r, func() (interface{}, error) {
+	cachedContent, err := cachedDefaultOp(OpenOp, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
 
@@ -189,28 +189,28 @@ func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 	return cachedContent.(SizedReader), nil
 }
 
-// CachedMetadata caches a Resource object's Metadata method
-func CachedMetadata(ctx context.Context, r Resource) (MetadataMap, error) {
-	cachedMetadata, err := cachedActionOp(Metadata, r, func() (interface{}, error) {
-		return r.Metadata(ctx)
+// CachedMetadata caches an entry's Metadata method
+func CachedMetadata(ctx context.Context, e Entry) (EntryMetadata, error) {
+	cachedMetadata, err := cachedDefaultOp(MetadataOp, e, func() (interface{}, error) {
+		return e.Metadata(ctx)
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return cachedMetadata.(MetadataMap), nil
+	return cachedMetadata.(EntryMetadata), nil
 }
 
 // Common helper for CachedList, CachedOpen and CachedMetadata
-func cachedActionOp(opCode actionOpCode, entry Entry, op opFunc) (interface{}, error) {
-	opName := actionOpCodeToNameMap[opCode]
+func cachedDefaultOp(opCode defaultOpCode, entry Entry, op opFunc) (interface{}, error) {
+	opName := defaultOpCodeToNameMap[opCode]
 	ttl := entry.getTTLOf(opCode)
 
 	return cachedOp(opName, entry, ttl, op)
 }
 
-// Common helper for CachedOp and cachedActionOp.
+// Common helper for CachedOp and cachedDefaultOp.
 func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
 	if cache == nil {
 		if notRunningTests() {
@@ -221,9 +221,13 @@ func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interfa
 	}
 
 	if entry.id() == "" {
-		// The Registry's ID is set to "/", while all other entries' IDs are
-		// set in CachedList. Thus, we should never hit this code-path.
-		panic("entry.id() returned an empty ID")
+		// This can happen if the entry's just been created, and it calls one of the Cached*
+		// methods to query its Metadata so that it can set its initial attributes. In that case,
+		// just invoke op. Ideally we should panic here, but panicking makes it significantly more
+		// annoying for plugin authors to write their code. Since the plugin package manages the
+		// entry's ID, and the entry's ID is set in CachedList, an empty ID is such a rare edge case
+		// that it's better to not annoy people.
+		return op()
 	}
 
 	if ttl < 0 {

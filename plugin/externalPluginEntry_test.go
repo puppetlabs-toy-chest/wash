@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -49,6 +48,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnixSecondsToTimeAttr() {
 	suite.EqualTimeAttr(t, unixSecondsToTimeAttr(t.Unix()))
 }
 
+/*
 func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
 	atime := time.Now()
 	mtime := time.Now()
@@ -89,6 +89,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
 	attributes, err = decodedAttributes.toAttributes()
 	suite.Error(err)
 }
+*/
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
@@ -103,7 +104,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(decodedEntry.SupportedActions, entry.supportedActions)
 	}
 }
@@ -130,7 +131,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCach
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
 		expectedTTLs := NewEntry("mock").ttl
-		expectedTTLs[List] = decodedEntry.CacheTTLs.List * time.Second
+		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
 		suite.Equal(expectedTTLs, entry.EntryBase.ttl)
 	}
 }
@@ -149,6 +150,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	}
 }
 
+/*
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttributes() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.Attributes = decodedAttributes{Size: 10}
@@ -161,6 +163,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	_, err = decodedEntry.toExternalPluginEntry()
 	suite.Error(err)
 }
+*/
 
 func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	decodedTTLs := decodedCacheTTLs{
@@ -174,9 +177,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	}
 	entry.setCacheTTLs(decodedTTLs)
 
-	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(List))
-	suite.Equal(decodedTTLs.Open*time.Second, entry.getTTLOf(Open))
-	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(Metadata))
+	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(ListOp))
+	suite.Equal(decodedTTLs.Open*time.Second, entry.getTTLOf(OpenOp))
+	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(MetadataOp))
 }
 
 // TODO: There's a bit of duplication between TestList, TestOpen,
@@ -288,15 +291,9 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	metadata, err := entry.Metadata(ctx)
 	if suite.NoError(err) {
-		expectedMetadata := MetadataMap{"key": "value"}
+		expectedMetadata := EntryMetadata{"key": "value"}
 		suite.Equal(expectedMetadata, metadata)
 	}
-}
-
-func (suite *ExternalPluginEntryTestSuite) TestAttr() {
-	entry := externalPluginEntry{attr: Attributes{Size: 10}}
-	attr, _ := entry.Attr(context.Background())
-	suite.Equal(entry.attr, attr)
 }
 
 // TODO: Add tests for stdoutStreamer, Stream and Exec

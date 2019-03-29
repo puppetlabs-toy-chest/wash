@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -12,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Benchkram/errz"
+	"github.com/puppetlabs/wash/journal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -20,9 +19,19 @@ import (
 var DefaultTimeout = 10 * time.Second
 
 /*
+Name returns the entry's name as it was passed into
+plugin.NewEntry. It is meant to be called by other
+Wash packages. Plugin authors should use EntryBase#Name
+when writing their plugins.
+*/
+func Name(e Entry) string {
+	return e.name()
+}
+
+/*
 CName returns the entry's canonical name, which is what Wash uses
 to construct the entry's path (see plugin.Path). The entry's cname
-is e.Name(), but with all '/' characters replaced by a '#' character.
+is plugin.Name(e), but with all '/' characters replaced by a '#' character.
 CNames are necessary because it is possible for entry names to have '/'es
 in them, which is illegal in bourne shells and UNIX-y filesystems.
 
@@ -40,7 +49,7 @@ func CName(e Entry) string {
 	// in the Entry interface because doing so prevents plugin authors
 	// from overriding it.
 	return strings.Replace(
-		e.Name(),
+		e.name(),
 		"/",
 		string(e.slashReplacementChar()),
 		-1,
@@ -55,25 +64,6 @@ func CName(e Entry) string {
 // can never contain a '/', <plugin_cname> reduces to <plugin_name>.
 func Path(e Entry) string {
 	return e.id()
-}
-
-// ToMetadata converts an object to a metadata result. If the input is already an array of bytes, it
-// must contain a serialized JSON object. Will panic if given something besides a struct or []byte.
-func ToMetadata(obj interface{}) MetadataMap {
-	var err error
-	var inrec []byte
-	if arr, ok := obj.([]byte); ok {
-		inrec = arr
-	} else {
-		if inrec, err = json.Marshal(obj); err != nil {
-			// Internal error if we can't marshal an object
-			panic(err)
-		}
-	}
-	var meta MetadataMap
-	// Internal error if not a JSON object
-	errz.Fatal(json.Unmarshal(inrec, &meta))
-	return meta
 }
 
 // TrackTime helper is useful for timing functions.
@@ -163,49 +153,27 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 	return fileMode, nil
 }
 
-// Attr returns the entry's attributes in a form that's consummable by
-// FUSE and the API. This may or may not match entry.Attr(). Specifically,
-//   * If entry.Attr() sets the size field to SizeUnknown and the entry supports
-//   the Read action, then the returned attributes' size will be set to
-//   the size of the entry's content as returned by Open.
-//
-//   * If entry.Attr() does not set the mode, then the returned attributes'
-//   mode will be set to "os.ModeDir | 0550" if the entry supports the List
-//   action; otherwise, it will be set to 0440. This is needed by FUSE.
-//
-//   * Otherwise, the returned attributes will match what's returned by
-//   entry.Attr().
-//
-func Attr(ctx context.Context, entry Entry) (Attributes, error) {
-	attr, err := entry.Attr(ctx)
+// Attributes returns the entry's attribtues
+func Attributes(e Entry) EntryAttributes {
+	return e.attributes()
+}
+
+// RefreshAttributes refreshes the entry's attributes. It is primarily
+// needed by FUSE because FUSE nodes have a very long lifetime.
+func RefreshAttributes(ctx context.Context, e Entry) error {
+	journal.Record(ctx, "Refreshing the attributes of %v", Path(e))
+
+	meta, err := CachedMetadata(ctx, e)
 	if err != nil {
-		return attr, err
+		return fmt.Errorf("failed to refresh the attributes: %v", err)
 	}
 
-	if attr.Size == SizeUnknown && ReadAction.IsSupportedOn(entry) {
-		content, openErr := CachedOpen(ctx, entry.(Readable))
-		if openErr != nil {
-			err = ErrCouldNotDetermineSizeAttr{openErr.Error()}
-			attr.Size = 0
-		} else {
-			size := content.Size()
-			if size < 0 {
-				return attr, ErrNegativeSizeAttr{size}
-			}
-
-			attr.Size = uint64(size)
-		}
+	err = e.syncAttributesWith(meta)
+	if err != nil {
+		return fmt.Errorf("failed to refresh the attributes: %v", err)
 	}
 
-	if attr.Mode == 0 {
-		if ListAction.IsSupportedOn(entry) {
-			attr.Mode = os.ModeDir | 0550
-		} else {
-			attr.Mode = 0440
-		}
-	}
-
-	return attr, err
+	return nil
 }
 
 // CreateCommand creates a cmd object encapsulating the given cmd and its args.
