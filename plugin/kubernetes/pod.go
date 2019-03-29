@@ -19,56 +19,98 @@ import (
 
 type pod struct {
 	plugin.EntryBase
-	client    *k8s.Clientset
-	config    *rest.Config
-	ns        string
-	startTime time.Time
+	client *k8s.Clientset
+	config *rest.Config
+	ns     string
 }
 
-func newPod(client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) *pod {
+func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
 	pd := &pod{
 		EntryBase: plugin.NewEntry(p.Name),
 		client:    client,
 		config:    config,
 		ns:        ns,
-		startTime: p.CreationTimestamp.Time,
 	}
+	pd.DisableDefaultCaching()
 
-	return pd
+	pdInfo, err := pd.cachedPodInfo(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+	pdInfo.pd = p
+
+	meta := pdInfo.toMeta()
+	attr := plugin.EntryAttributes{}
+	attr.SetCtime(p.CreationTimestamp.Time)
+	attr.SetAtime(attr.Ctime())
+	attr.SetMeta(meta)
+	pd.SetInitialAttributes(attr)
+	pd.Sync(plugin.SizeAttr(), "LogSize")
+
+	return pd, nil
 }
 
-func (p *pod) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
-	pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
+type podInfoResult struct {
+	pd         *corev1.Pod
+	logContent []byte
+}
+
+func (pdInfo podInfoResult) toMeta() plugin.EntryMetadata {
+	meta := plugin.ToMeta(pdInfo.pd)
+	meta["LogSize"] = len(pdInfo.logContent)
+	return meta
+}
+
+func (p *pod) cachedPodInfo(ctx context.Context, queryPodMeta bool) (podInfoResult, error) {
+	cachedPdInfo, err := plugin.CachedOp("PodInfo", p, 15*time.Second, func() (interface{}, error) {
+		result := podInfoResult{}
+
+		if queryPodMeta {
+			pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
+			if err != nil {
+				return result, err
+			}
+			result.pd = pd
+		}
+
+		req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
+		rdr, err := req.Stream()
+		if err != nil {
+			return result, err
+		}
+		var buf bytes.Buffer
+		var n int64
+		if n, err = buf.ReadFrom(rdr); err != nil {
+			return result, err
+		}
+		journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
+		result.logContent = buf.Bytes()
+
+		return result, nil
+	})
+	if err != nil {
+		return podInfoResult{}, err
+	}
+
+	return cachedPdInfo.(podInfoResult), nil
+}
+
+func (p *pod) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+	pdInfo, err := p.cachedPodInfo(ctx, true)
 	if err != nil {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Metadata for pod %v: %+v", p.Name(), pd)
-	return plugin.ToMetadata(pd), nil
-}
-
-func (p *pod) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: p.startTime,
-		Mtime: time.Now(),
-		Atime: p.startTime,
-		Size:  plugin.SizeUnknown,
-	}, nil
+	return pdInfo.toMeta(), nil
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
-	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
-	rdr, err := req.Stream()
+	pdInfo, err := p.cachedPodInfo(ctx, true)
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	var n int64
-	if n, err = buf.ReadFrom(rdr); err != nil {
-		return nil, err
-	}
-	journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
-	return bytes.NewReader(buf.Bytes()), nil
+
+	return bytes.NewReader(pdInfo.logContent), nil
 }
 
 func (p *pod) Stream(ctx context.Context) (io.Reader, error) {

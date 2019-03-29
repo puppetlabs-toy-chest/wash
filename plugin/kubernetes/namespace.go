@@ -32,10 +32,10 @@ func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
 	return n.resourcetypes, nil
 }
 
-func (n *namespace) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (n *namespace) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	journal.Record(ctx, "Metadata for namespace %v: %+v", n.Name(), n.metadata)
 	if n.metadata != nil {
-		return plugin.ToMetadata(n.metadata), nil
+		return plugin.ToMeta(n.metadata), nil
 	}
-	return plugin.MetadataMap{}, nil
+	return plugin.EntryMetadata{}, nil
 }
