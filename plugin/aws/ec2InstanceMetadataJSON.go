@@ -28,7 +28,7 @@ func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2Ins
 	}
 
 	attr := plugin.EntryAttributes{}
-	attr.SetSize(uint64(meta["Size"].(int)))
+	attr.SetSize(uint64(meta["Size"].(int64)))
 	attr.SetMeta(meta)
 	im.SetInitialAttributes(attr)
 	im.Sync(plugin.SizeAttr(), "Size")
@@ -37,26 +37,17 @@ func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2Ins
 }
 
 func (im *ec2InstanceMetadataJSON) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	content, err := im.content(ctx)
+	content, err := im.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return plugin.EntryMetadata{
-		"Size": len(content),
+		"Size": content.Size(),
 	}, nil
 }
 
 func (im *ec2InstanceMetadataJSON) Open(ctx context.Context) (plugin.SizedReader, error) {
-	content, err := im.content(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewReader(content), err
-}
-
-func (im *ec2InstanceMetadataJSON) content(ctx context.Context) ([]byte, error) {
 	meta, err := plugin.CachedMetadata(ctx, im.inst)
 	if err != nil {
 		return nil, err
@@ -67,5 +58,5 @@ func (im *ec2InstanceMetadataJSON) content(ctx context.Context) ([]byte, error) 
 		return nil, err
 	}
 
-	return prettyMeta, nil
+	return bytes.NewReader(prettyMeta), nil
 }

@@ -37,7 +37,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 	cmAttr := plugin.EntryAttributes{}
-	cmAttr.SetSize(meta["Size"].(uint64))
+	cmAttr.SetSize(uint64(meta["Size"].(int64)))
 	cm.SetInitialAttributes(cmAttr)
 	cm.Sync(plugin.SizeAttr(), "Size")
 
