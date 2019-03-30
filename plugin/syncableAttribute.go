@@ -6,28 +6,28 @@ import (
 )
 
 // AtimeAttr represents the Atime attribute in plugin.EntryAttributes
-func AtimeAttr() SyncableAttribute {
-	return atimeField
+func AtimeAttr() *SyncableAttribute {
+	return &atimeField
 }
 
 // MtimeAttr represents the Mtime attribute in plugin.EntryAttributes
-func MtimeAttr() SyncableAttribute {
-	return mtimeField
+func MtimeAttr() *SyncableAttribute {
+	return &mtimeField
 }
 
 // CtimeAttr represents the Ctime attribute in plugin.EntryAttributes
-func CtimeAttr() SyncableAttribute {
-	return ctimeField
+func CtimeAttr() *SyncableAttribute {
+	return &ctimeField
 }
 
 // ModeAttr represents the Mode attribute in plugin.EntryAttributes
-func ModeAttr() SyncableAttribute {
-	return modeField
+func ModeAttr() *SyncableAttribute {
+	return &modeField
 }
 
 // SizeAttr represents the Size attribute in plugin.EntryAttributes
-func SizeAttr() SyncableAttribute {
-	return sizeField
+func SizeAttr() *SyncableAttribute {
+	return &sizeField
 }
 
 // SyncableAttribute represents a syncable attribute in

@@ -22,7 +22,7 @@ const (
 var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
 type syncedAttribute struct {
-	SyncableAttribute
+	*SyncableAttribute
 	key string
 }
 
@@ -128,7 +128,7 @@ need this for the State attribute, and in case the metadata returns some of
 the other attributes in a different format (e.g. like an arbitrarily formatted
 string for one of the time fields)
 */
-func (e *EntryBase) Sync(attr SyncableAttribute, key string) *EntryBase {
+func (e *EntryBase) Sync(attr *SyncableAttribute, key string) *EntryBase {
 	// We use an array instead of a map because the latter takes up a lot of
 	// memory (~40 bytes for an empty map). That adds up quick when there's
 	// hundreds of thousands of entries.

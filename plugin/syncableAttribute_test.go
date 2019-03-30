@@ -14,7 +14,7 @@ type SyncableAttributeTestSuite struct {
 }
 
 func (suite *SyncableAttributeTestSuite) testAttr(
-	attr SyncableAttribute,
+	attr *SyncableAttribute,
 	badValue interface{},
 	goodValue interface{},
 	mungedGoodValue interface{},
