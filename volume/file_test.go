@@ -13,13 +13,17 @@ import (
 
 func TestVolumeFile(t *testing.T) {
 	now := time.Now()
-	vf := NewFile("mine", plugin.Attributes{Ctime: now}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
+	initialAttr := plugin.EntryAttributes{}
+	initialAttr.SetCtime(now)
+	vf := NewFile("mine", initialAttr, func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		assert.Equal(t, "my path", path)
 		return strings.NewReader("hello"), nil
 	}, "my path")
 
-	attr, _ := vf.Attr(context.Background())
-	assert.Equal(t, plugin.Attributes{Ctime: now}, attr)
+	attr := plugin.Attributes(vf)
+	expectedAttr := plugin.EntryAttributes{}
+	expectedAttr.SetCtime(now)
+	assert.Equal(t, expectedAttr, attr)
 	rdr, err := vf.Open(context.Background())
 	assert.Nil(t, err)
 	if assert.NotNil(t, rdr) {
@@ -32,7 +36,7 @@ func TestVolumeFile(t *testing.T) {
 }
 
 func TestVolumeFileErr(t *testing.T) {
-	vf := NewFile("mine", plugin.Attributes{}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
+	vf := NewFile("mine", plugin.EntryAttributes{}, func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		return nil, errors.New("fail")
 	}, "my path")
 

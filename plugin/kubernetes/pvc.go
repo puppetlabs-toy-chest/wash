@@ -19,9 +19,8 @@ import (
 
 type pvc struct {
 	plugin.EntryBase
-	pvci      typedv1.PersistentVolumeClaimInterface
-	podi      typedv1.PodInterface
-	startTime time.Time
+	pvci typedv1.PersistentVolumeClaimInterface
+	podi typedv1.PodInterface
 }
 
 const mountpoint = "/mnt"
@@ -33,29 +32,27 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		EntryBase: plugin.NewEntry(p.Name),
 		pvci:      pi,
 		podi:      pd,
-		startTime: p.CreationTimestamp.Time,
 	}
-	vol.SetTTLOf(plugin.List, 60*time.Second)
+	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
+
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(p.CreationTimestamp.Time).
+		SetMtime(attr.Ctime()).
+		SetAtime(attr.Ctime())
+	vol.SetInitialAttributes(attr)
 
 	return vol
 }
 
-func (v *pvc) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (v *pvc) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	journal.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
 
-	return plugin.ToMetadata(obj), nil
-}
-
-func (v *pvc) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: v.startTime,
-		Mtime: v.startTime,
-		Atime: v.startTime,
-	}, nil
+	return plugin.ToMeta(obj), nil
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -100,7 +97,7 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
-		if attr.Mode.IsDir() {
+		if attr.Mode().IsDir() {
 			entries = append(entries, volume.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
 			entries = append(entries, volume.NewFile(name, attr, v.getContentCB(), "/"+name))

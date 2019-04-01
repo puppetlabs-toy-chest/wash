@@ -3,7 +3,6 @@ package aws
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -23,16 +22,38 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func newS3Object(name string, bucket string, key string, client *s3Client.S3) *s3Object {
-	o := &s3Object{
+func newS3Object(o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
+	s3Obj := &s3Object{
 		EntryBase: plugin.NewEntry(name),
 		bucket:    bucket,
 		key:       key,
 		client:    client,
 	}
-	o.DisableCachingFor(plugin.Metadata)
+	s3Obj.DisableCachingFor(plugin.MetadataOp)
 
-	return o
+	// S3 objects do not have a "creation time"; they're treated as atomic
+	// blobs that get replaced whenever the user uploads new data. Thus, we
+	// use the mtime as its creation date. See https://stackoverflow.com/questions/27746760/how-do-i-get-the-s3-keys-created-date-with-boto
+	// for more details.
+	//
+	// TODO: Export a mungeSize helper to abstract away the common
+	// logic of validating a negative size
+	mtime := awsSDK.TimeValue(o.LastModified)
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(mtime).
+		SetMtime(mtime).
+		SetAtime(mtime).
+		SetSize(uint64(awsSDK.Int64Value(o.Size)))
+	s3Obj.SetInitialAttributes(attr)
+
+	s3Obj.
+		Sync(plugin.CtimeAttr(), "LastModified").
+		Sync(plugin.MtimeAttr(), "LastModified").
+		Sync(plugin.AtimeAttr(), "LastModified").
+		Sync(plugin.SizeAttr(), "ContentLength")
+
+	return s3Obj
 }
 
 func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
@@ -52,35 +73,13 @@ func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOu
 	return resp.(*s3Client.HeadObjectOutput), nil
 }
 
-func (o *s3Object) Attr(ctx context.Context) (plugin.Attributes, error) {
-	metadata, err := o.cachedHeadObject(ctx)
-	if err != nil {
-		return plugin.Attributes{}, err
-	}
-
-	size := awsSDK.Int64Value(metadata.ContentLength)
-	if size < 0 {
-		err := fmt.Errorf("got a negative value of %v for the size of the %v object's content", size, o.key)
-		return plugin.Attributes{}, err
-	}
-
-	mtime := awsSDK.TimeValue(metadata.LastModified)
-
-	return plugin.Attributes{
-		Ctime: mtime,
-		Mtime: mtime,
-		Atime: mtime,
-		Size:  uint64(size),
-	}, nil
-}
-
-func (o *s3Object) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (o *s3Object) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	metadata, err := o.cachedHeadObject(ctx)
 	if err != nil {
 		return nil, nil
 	}
 
-	return plugin.ToMetadata(metadata), nil
+	return plugin.ToMeta(metadata), nil
 }
 
 func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
@@ -99,12 +98,7 @@ func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
 }
 
 func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
-	attr, err := o.Attr(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &s3ObjectReader{o: o, size: int64(attr.Size)}, nil
+	return &s3ObjectReader{o: o}, nil
 }
 
 func (o *s3Object) Stream(context.Context) (io.Reader, error) {
@@ -120,9 +114,6 @@ func (o *s3Object) Stream(context.Context) (io.Reader, error) {
 // art we could use to optimize this.
 type s3ObjectReader struct {
 	o *s3Object
-	// See the comments in s3ObjectReader#Size to understand how this field's
-	// used.
-	size int64
 }
 
 func (s *s3ObjectReader) closeContent(content io.ReadCloser) {
@@ -150,18 +141,6 @@ func (s *s3ObjectReader) ReadAt(p []byte, off int64) (int, error) {
 }
 
 func (s *s3ObjectReader) Size() int64 {
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancelFunc()
-
-	// We'd like to return s.o.Attr().Size here. Unfortunately since
-	// s.o.Attr() is calculated via. an API request, there's a chance
-	// that it could error. If that happens, we return s.size instead
-	// as a fallback. We could change Size()'s return signature to
-	// (int64, error), but there's no good reason to do that right now.
-	attr, err := s.o.Attr(ctx)
-	if err != nil {
-		return s.size
-	}
-
-	return int64(attr.Size)
+	attr := plugin.Attributes(s.o)
+	return int64(attr.Size())
 }

@@ -28,7 +28,6 @@ package plugin
 import (
 	"context"
 	"io"
-	"os"
 	"time"
 )
 
@@ -36,21 +35,15 @@ import (
 // interface, meaning you must use plugin.NewEntry when
 // creating your plugin objects.
 type Entry interface {
-	Name() string
-	Attr(ctx context.Context) (Attributes, error)
+	Metadata(ctx context.Context) (EntryMetadata, error)
+	name() string
+	attributes() EntryAttributes
+	hasSyncedAttributes() bool
+	syncAttributesWith(meta EntryMetadata) error
 	slashReplacementChar() rune
 	id() string
 	setID(id string)
-	getTTLOf(op actionOpCode) time.Duration
-}
-
-// MetadataMap maps keys to arbitrary structured data.
-type MetadataMap = map[string]interface{}
-
-// Resource is an entry that has metadata.
-type Resource interface {
-	Entry
-	Metadata(context.Context) (MetadataMap, error)
+	getTTLOf(op defaultOpCode) time.Duration
 }
 
 // Group is an entry that can list its contents, an array of entries.
@@ -116,16 +109,3 @@ type Writable interface {
 	Entry
 	Save(context.Context, io.Reader) error
 }
-
-// Attributes of resources.
-type Attributes struct {
-	Atime time.Time     `json:"atime"`
-	Mtime time.Time     `json:"mtime"`
-	Ctime time.Time     `json:"ctime"`
-	Mode  os.FileMode   `json:"mode"`
-	Size  uint64        `json:"size"`
-	Valid time.Duration `json:"valid"`
-}
-
-// SizeUnknown can be used to denote that the size is unknown and should be queried from content.
-const SizeUnknown = ^uint64(0)

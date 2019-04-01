@@ -137,7 +137,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 			// key == <prefix> so skip it. This is what the AWS console does.
 			continue
 		}
-		entries = append(entries, newS3Object(name, bucket, key, client))
+		entries = append(entries, newS3Object(o, name, bucket, key, client))
 	}
 
 	return entries, nil
@@ -159,15 +159,14 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 		session:   session,
 	}
 
-	return bucket
-}
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(bucket.ctime).
+		SetMtime(bucket.ctime).
+		SetAtime(bucket.ctime)
+	bucket.SetInitialAttributes(attr)
 
-func (b *s3Bucket) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: b.ctime,
-		Mtime: b.ctime,
-		Atime: b.ctime,
-	}, nil
+	return bucket
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -177,16 +176,16 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
 }
 
-func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (b *s3Bucket) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	request := &s3Client.GetBucketTaggingInput{
 		Bucket: awsSDK.String(b.Name()),
 	}
 
 	resp, err := b.client.GetBucketTaggingWithContext(ctx, request)
 
-	var metadata plugin.MetadataMap
+	var metadata plugin.EntryMetadata
 	if err == nil {
-		metadata = plugin.ToMetadata(resp)
+		metadata = plugin.ToMeta(resp)
 	} else if awserr, ok := err.(awserr.Error); ok {
 		// Check if this is a NoSuchTagSet error. If yes, then that means
 		// this bucket doesn't have any tags.
@@ -195,7 +194,7 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		// if you're interested in knowing why AWS does not return
 		// an empty TagSet instead of a NoSuchTagSet error
 		if awserr.Code() == "NoSuchTagSet" {
-			metadata = plugin.MetadataMap{}
+			metadata = plugin.EntryMetadata{}
 		} else {
 			return nil, err
 		}
@@ -209,6 +208,7 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
 		return nil, err
 	}
 	metadata["region"] = region
+	metadata["ctime"] = b.ctime
 
 	return metadata, nil
 }

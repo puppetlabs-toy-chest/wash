@@ -28,6 +28,17 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	return true
 }
 
+func (clf *containerLogFile) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+	content, err := plugin.CachedOpen(ctx, clf)
+	if err != nil {
+		return nil, err
+	}
+
+	return plugin.EntryMetadata{
+		"Size": content.Size(),
+	}, nil
+}
+
 func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
 	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
 	rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)

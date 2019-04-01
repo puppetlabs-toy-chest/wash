@@ -15,6 +15,9 @@ import (
 	"github.com/puppetlabs/wash/journal"
 )
 
+/*
+TODO: Come back and rethink attributes once all the attributes/metadata work is finished.
+*/
 type decodedAttributes struct {
 	// Atime, Mtime, and Ctime are in Unix time
 	Atime int64         `json:"atime"`
@@ -33,6 +36,7 @@ func unixSecondsToTimeAttr(seconds int64) time.Time {
 	return time.Unix(seconds, 0)
 }
 
+/*
 func (a decodedAttributes) toAttributes() (Attributes, error) {
 	attr := Attributes{
 		Atime: unixSecondsToTimeAttr(a.Atime),
@@ -52,6 +56,7 @@ func (a decodedAttributes) toAttributes() (Attributes, error) {
 
 	return attr, nil
 }
+*/
 
 type decodedCacheTTLs struct {
 	List     time.Duration `json:"list"`
@@ -77,16 +82,10 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		return nil, fmt.Errorf("the entry's supported actions must be provided")
 	}
 
-	attr, err := e.Attributes.toAttributes()
-	if err != nil {
-		return nil, err
-	}
-
 	entry := &externalPluginEntry{
 		EntryBase:        NewEntry(e.Name),
 		supportedActions: e.SupportedActions,
 		state:            e.State,
-		attr:             attr,
 	}
 	entry.setCacheTTLs(e.CacheTTLs)
 	if e.SlashReplacementChar != "" {
@@ -109,18 +108,17 @@ type externalPluginEntry struct {
 	script           externalPluginScript
 	supportedActions []string
 	state            string
-	attr             Attributes
 }
 
 func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 	if ttls.List != 0 {
-		e.SetTTLOf(List, ttls.List*time.Second)
+		e.SetTTLOf(ListOp, ttls.List*time.Second)
 	}
 	if ttls.Open != 0 {
-		e.SetTTLOf(Open, ttls.Open*time.Second)
+		e.SetTTLOf(OpenOp, ttls.Open*time.Second)
 	}
 	if ttls.Metadata != 0 {
-		e.SetTTLOf(Metadata, ttls.Metadata*time.Second)
+		e.SetTTLOf(MetadataOp, ttls.Metadata*time.Second)
 	}
 }
 
@@ -167,14 +165,14 @@ func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 	return bytes.NewReader(stdout), nil
 }
 
-// Metadata displays the resource's metadata
-func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error) {
+// Metadata displays the entry's metadata
+func (e *externalPluginEntry) Metadata(ctx context.Context) (EntryMetadata, error) {
 	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.id(), e.state)
 	if err != nil {
 		return nil, err
 	}
 
-	var metadata MetadataMap
+	var metadata EntryMetadata
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
 		journal.Record(
 			ctx,
@@ -187,11 +185,6 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (MetadataMap, error)
 	}
 
 	return metadata, nil
-}
-
-// Attr returns the entry's filesystem attributes
-func (e *externalPluginEntry) Attr(ctx context.Context) (Attributes, error) {
-	return e.attr, nil
 }
 
 type stdoutStreamer struct {

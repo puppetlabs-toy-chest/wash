@@ -2,8 +2,11 @@ package api
 
 import (
 	"context"
+	"os"
 	"testing"
+	"time"
 
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/suite"
 )
@@ -27,6 +30,74 @@ func (suite *HelpersTestSuite) SetupSuite() {
 
 func (suite *HelpersTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrAtime() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetAtime(time.Now())
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Atime) {
+		suite.Equal(a.Atime(), *apiAttr.Atime)
+	}
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrMtime() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetMtime(time.Now())
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Mtime) {
+		suite.Equal(a.Mtime(), *apiAttr.Mtime)
+	}
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrCtime() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetCtime(time.Now())
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Ctime) {
+		suite.Equal(a.Ctime(), *apiAttr.Ctime)
+	}
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrMode() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetMode(0777)
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Mode) {
+		suite.Equal(a.Mode(), *apiAttr.Mode)
+	}
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrSize() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetSize(10)
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Size) {
+		suite.Equal(a.Size(), *apiAttr.Size)
+	}
+}
+
+func (suite *HelpersTestSuite) TestToAPIAttrMultipleAttr() {
+	a := plugin.EntryAttributes{}
+	suite.Equal(apitypes.EntryAttributes{}, toAPIAttr(a))
+
+	a.SetMode(os.FileMode(0777))
+	a.SetSize(10)
+	apiAttr := toAPIAttr(a)
+	if suite.NotNil(apiAttr.Mode) && suite.NotNil(apiAttr.Size) {
+		suite.Equal(a.Mode(), *apiAttr.Mode)
+		suite.Equal(a.Size(), *apiAttr.Size)
+	}
 }
 
 func (suite *HelpersTestSuite) TestFindEntry() {

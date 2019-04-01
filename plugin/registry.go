@@ -17,7 +17,7 @@ type Registry struct {
 // NewRegistry creates a new plugin registry object
 func NewRegistry() *Registry {
 	r := &Registry{
-		EntryBase: newEntryBase("/"),
+		EntryBase: NewEntry("/"),
 		plugins:   make(map[string]Root),
 	}
 	r.setID("/")
@@ -41,17 +41,17 @@ func (r *Registry) RegisterPlugin(root Root) error {
 		return err
 	}
 
-	if !pluginNameRegex.MatchString(root.Name()) {
-		msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.Name())
+	if !pluginNameRegex.MatchString(root.name()) {
+		msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.name())
 		panic(msg)
 	}
 
-	if _, ok := r.plugins[root.Name()]; ok {
-		msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.Name())
+	if _, ok := r.plugins[root.name()]; ok {
+		msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.name())
 		panic(msg)
 	}
 
-	r.plugins[root.Name()] = root
+	r.plugins[root.name()] = root
 	r.pluginRoots = append(r.pluginRoots, root)
 	return nil
 }

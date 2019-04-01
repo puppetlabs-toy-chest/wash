@@ -13,7 +13,7 @@ import (
 // ==== FUSE Directory Interface ====
 
 type dir struct {
-	entry plugin.Entry
+	*fuseNode
 }
 
 var _ fs.Node = (*dir)(nil)
@@ -21,37 +21,13 @@ var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
 func newDir(e plugin.Group) *dir {
-	return &dir{e}
-}
-
-func (d *dir) Entry() plugin.Entry {
-	return d.entry
-}
-
-func (d *dir) String() string {
-	return plugin.Path(d.entry)
-}
-
-// Attr returns the attributes of a directory.
-func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
-	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
-	return attr(context.WithValue(ctx, journal.Key, ""), d, a)
-}
-
-// Listxattr lists extended attributes for the resource.
-func (d *dir) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	return listxattr(ctx, d, req, resp)
-}
-
-// Getxattr gets extended attributes for the resource.
-func (d *dir) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	return getxattr(ctx, d, req, resp)
+	return &dir{newFuseNode("d", e)}
 }
 
 func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
-	if plugin.ListAction.IsSupportedOn(d.Entry()) {
-		return plugin.CachedList(ctx, d.Entry().(plugin.Group))
+	if plugin.ListAction.IsSupportedOn(d.entry) {
+		return plugin.CachedList(ctx, d.entry.(plugin.Group))
 	}
 
 	return []plugin.Entry{}, fuse.ENOENT
@@ -112,7 +88,7 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	for i, entry := range entries {
 		var de fuse.Dirent
 		de.Name = plugin.CName(entry)
-		if plugin.ListAction.IsSupportedOn(d.Entry()) {
+		if plugin.ListAction.IsSupportedOn(d.entry) {
 			de.Type = fuse.DT_Dir
 		}
 		res[i] = de

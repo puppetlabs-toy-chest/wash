@@ -13,27 +13,21 @@ type ContentCB = func(context.Context, string) (plugin.SizedReader, error)
 // File represents a file in a volume that has content we can access.
 type File struct {
 	plugin.EntryBase
-	attr      plugin.Attributes
 	contentcb ContentCB
 	path      string
 }
 
 // NewFile creates a VolumeFile.
-func NewFile(name string, attr plugin.Attributes, cb ContentCB, path string) *File {
+func NewFile(name string, attr plugin.EntryAttributes, cb ContentCB, path string) *File {
 	vf := &File{
 		EntryBase: plugin.NewEntry(name),
-		attr:      attr,
 		contentcb: cb,
 		path:      path,
 	}
-	vf.SetTTLOf(plugin.Open, 60*time.Second)
+	vf.SetInitialAttributes(attr)
+	vf.SetTTLOf(plugin.OpenOp, 60*time.Second)
 
 	return vf
-}
-
-// Attr returns the attributes of the file.
-func (v *File) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return v.attr, nil
 }
 
 // Open returns the content of the file as a SizedReader.

@@ -20,8 +20,7 @@ import (
 
 type volume struct {
 	plugin.EntryBase
-	client    *client.Client
-	startTime time.Time
+	client *client.Client
 }
 
 const mountpoint = "/mnt"
@@ -35,27 +34,26 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	vol := &volume{
 		EntryBase: plugin.NewEntry(v.Name),
 		client:    c,
-		startTime: startTime,
 	}
-	vol.SetTTLOf(plugin.List, 60*time.Second)
+	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
+
+	attr := plugin.EntryAttributes{}
+	attr.
+		SetCtime(startTime).
+		SetMtime(startTime).
+		SetAtime(startTime).
+		SetMeta(plugin.ToMeta(v))
+	vol.SetInitialAttributes(attr)
 
 	return vol, nil
 }
 
-func (v *volume) Metadata(ctx context.Context) (plugin.MetadataMap, error) {
+func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
 	if err != nil {
 		return nil, err
 	}
-	return plugin.ToMetadata(raw), nil
-}
-
-func (v *volume) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return plugin.Attributes{
-		Ctime: v.startTime,
-		Mtime: v.startTime,
-		Atime: v.startTime,
-	}, nil
+	return plugin.ToMeta(raw), nil
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -115,7 +113,7 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
-		if attr.Mode.IsDir() {
+		if attr.Mode().IsDir() {
 			entries = append(entries, vol.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
 			entries = append(entries, vol.NewFile(name, attr, v.getContentCB(), "/"+name))

@@ -14,7 +14,7 @@ import (
 // ==== FUSE file Interface ====
 
 type file struct {
-	entry plugin.Entry
+	*fuseNode
 }
 
 var _ fs.Node = (*file)(nil)
@@ -23,31 +23,7 @@ var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
 func newFile(e plugin.Entry) *file {
-	return &file{e}
-}
-
-func (f *file) Entry() plugin.Entry {
-	return f.entry
-}
-
-func (f *file) String() string {
-	return plugin.Path(f.entry)
-}
-
-// Attr returns the attributes of a file.
-func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
-	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like Attr.
-	return attr(context.WithValue(ctx, journal.Key, ""), f, a)
-}
-
-// Listxattr lists extended attributes for the resource.
-func (f *file) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	return listxattr(ctx, f, req, resp)
-}
-
-// Getxattr gets extended attributes for the resource.
-func (f *file) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	return getxattr(ctx, f, req, resp)
+	return &file{newFuseNode("f", e)}
 }
 
 // Open a file for reading.
@@ -57,8 +33,8 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 	// Initiate content request and return a channel providing the results.
 	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
-	if plugin.ReadAction.IsSupportedOn(f.Entry()) {
-		content, err := plugin.CachedOpen(ctx, f.Entry().(plugin.Readable))
+	if plugin.ReadAction.IsSupportedOn(f.entry) {
+		content, err := plugin.CachedOpen(ctx, f.entry.(plugin.Readable))
 		if err != nil {
 			log.Warnf("FUSE: Error[Open,%v]: %v", f, err)
 			journal.Record(ctx, "FUSE: Open %v errored: %v", f, err)

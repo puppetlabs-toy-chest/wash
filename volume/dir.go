@@ -16,29 +16,23 @@ import (
 // when constructing an entire hierarchy.
 type Dir struct {
 	plugin.EntryBase
-	attr      plugin.Attributes
 	contentcb ContentCB
 	path      string
 	dirs      DirMap
 }
 
 // NewDir creates a Dir populated from dirs.
-func NewDir(name string, attr plugin.Attributes, cb ContentCB, path string, dirs DirMap) *Dir {
+func NewDir(name string, attr plugin.EntryAttributes, cb ContentCB, path string, dirs DirMap) *Dir {
 	vd := &Dir{
 		EntryBase: plugin.NewEntry(name),
-		attr:      attr,
 		contentcb: cb,
 		path:      path,
 		dirs:      dirs,
 	}
-	vd.SetTTLOf(plugin.Open, 60*time.Second)
+	vd.SetInitialAttributes(attr)
+	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
 
 	return vd
-}
-
-// Attr returns the attributes of the directory.
-func (v *Dir) Attr(ctx context.Context) (plugin.Attributes, error) {
-	return v.attr, nil
 }
 
 // List lists the children of the directory.
@@ -46,7 +40,7 @@ func (v *Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	root := v.dirs[v.path]
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
-		if attr.Mode.IsDir() {
+		if attr.Mode().IsDir() {
 			entries = append(entries, NewDir(name, attr, v.contentcb, v.path+"/"+name, v.dirs))
 		} else {
 			entries = append(entries, NewFile(name, attr, v.contentcb, v.path+"/"+name))

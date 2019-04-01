@@ -25,9 +25,6 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 	return false
 }
 
-// MetadataAction represents the metadata action
-var MetadataAction = newAction("metadata", "Resource")
-
 // ListAction represents the list action
 var ListAction = newAction("list", "Group")
 
@@ -54,9 +51,6 @@ func SupportedActionsOf(entry Entry) []string {
 		// We could use reflection to simplify this. In fact, a previous version
 		// of the code did do that. The reason we removed it was b/c type assertion's
 		// a lot faster, and the resulting code isn't that bad, if a little verbose.
-		if _, ok := entry.(Resource); ok {
-			actions = append(actions, MetadataAction.Name)
-		}
 		if _, ok := entry.(Group); ok {
 			actions = append(actions, ListAction.Name)
 		}
