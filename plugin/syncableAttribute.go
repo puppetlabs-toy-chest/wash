@@ -7,27 +7,27 @@ import (
 
 // AtimeAttr represents the Atime attribute in plugin.EntryAttributes
 func AtimeAttr() *SyncableAttribute {
-	return &atimeField
+	return &atimeAttr
 }
 
 // MtimeAttr represents the Mtime attribute in plugin.EntryAttributes
 func MtimeAttr() *SyncableAttribute {
-	return &mtimeField
+	return &mtimeAttr
 }
 
 // CtimeAttr represents the Ctime attribute in plugin.EntryAttributes
 func CtimeAttr() *SyncableAttribute {
-	return &ctimeField
+	return &ctimeAttr
 }
 
 // ModeAttr represents the Mode attribute in plugin.EntryAttributes
 func ModeAttr() *SyncableAttribute {
-	return &modeField
+	return &modeAttr
 }
 
 // SizeAttr represents the Size attribute in plugin.EntryAttributes
 func SizeAttr() *SyncableAttribute {
-	return &sizeField
+	return &sizeAttr
 }
 
 // SyncableAttribute represents a syncable attribute in
@@ -64,7 +64,7 @@ func (field SyncableAttribute) sync(entry *EntryBase, meta EntryMetadata, key st
 	return nil
 }
 
-var atimeField = SyncableAttribute{
+var atimeAttr = SyncableAttribute{
 	name: "atime",
 	setter: func(entry *EntryBase, v interface{}) error {
 		t, err := mungeToTimeVal(v)
@@ -77,7 +77,7 @@ var atimeField = SyncableAttribute{
 	},
 }
 
-var mtimeField = SyncableAttribute{
+var mtimeAttr = SyncableAttribute{
 	name: "mtime",
 	setter: func(entry *EntryBase, v interface{}) error {
 		t, err := mungeToTimeVal(v)
@@ -90,7 +90,7 @@ var mtimeField = SyncableAttribute{
 	},
 }
 
-var ctimeField = SyncableAttribute{
+var ctimeAttr = SyncableAttribute{
 	name: "ctime",
 	setter: func(entry *EntryBase, v interface{}) error {
 		t, err := mungeToTimeVal(v)
@@ -103,7 +103,7 @@ var ctimeField = SyncableAttribute{
 	},
 }
 
-var modeField = SyncableAttribute{
+var modeAttr = SyncableAttribute{
 	name: "mode",
 	setter: func(entry *EntryBase, v interface{}) error {
 		m, err := ToFileMode(v)
@@ -116,7 +116,7 @@ var modeField = SyncableAttribute{
 	},
 }
 
-var sizeField = SyncableAttribute{
+var sizeAttr = SyncableAttribute{
 	name: "size",
 	setter: func(entry *EntryBase, v interface{}) error {
 		size, err := mungeToSizeVal(v)
