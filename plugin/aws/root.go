@@ -133,7 +133,8 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 		profile, err := newProfile(ctx, name)
 		if err != nil {
-			return nil, err
+			journal.Record(ctx, err.Error())
+			continue
 		}
 
 		profiles = append(profiles, profile)

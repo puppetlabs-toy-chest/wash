@@ -36,7 +36,6 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	}
 
 	if cacheProvider, err := newFileCacheProvider(ctx, name, sess.Config.Credentials); err == nil {
-		journal.Record(ctx, "Using cached credentials for %v profile", name)
 		sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
 	} else {
 		journal.Record(ctx, "Unable to use cached credentials for %v profile: %v", name, err)

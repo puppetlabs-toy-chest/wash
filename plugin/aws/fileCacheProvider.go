@@ -74,7 +74,6 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 	expiration, err := f.credentials.ExpiresAt()
 	if err != nil {
 		// Fallback to the original credential
-		journal.Record(context.Background(), "Unable to cache credential for %s: %v", f.profile, err)
 		return credential, nil
 	}
 
@@ -89,8 +88,6 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 	f.cachedCredential = cachedCredential{credential, expiration}
 	if err = writeCache(filename, f.cachedCredential); err != nil {
 		journal.Record(context.Background(), "Unable to update credential cache %s: %v", filename, err)
-	} else {
-		journal.Record(context.Background(), "Updated cached credential %s", filename)
 	}
 	return credential, err
 }
