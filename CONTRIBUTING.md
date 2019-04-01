@@ -26,6 +26,12 @@ Open a "[Feature request](https://github.com/puppetlabs/wash/issues/new?template
 
 You can build a native binary with `go build`. The resulting `wash` binary will be placed in the current directory.
 
+### Updating Dependencies
+
+Versioning for the kubernetes and docker projects don't work well with Go modules. The best way to update dependencies is to update specific packages to a specific version using `go get <mod>@<tag>`.
+
+It should always be safe to run `go get -u=patch` to pickup patches.
+
 ## How to create a new plugin
 
 The [plugin](./plugin) package defines a set of interfaces that a plugin can implement to enable specific behaviors.
