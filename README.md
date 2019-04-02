@@ -173,7 +173,9 @@ If the `wash` daemon exits with a exit status of 255, that typically means that 
 
 ## Roadmap
 
-We're activilely soliciting community feedback and input on our roadmap! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on `#wash` on [Slack](https://slack.puppet.com/).
+We're actively soliciting community feedback and input on our roadmap! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on `#wash` on [Slack](https://slack.puppet.com/).
+
+Project maintainers are not actively working on all of these things, but any of these are directions we would support others in pursuing.
 
 ### Primitives
 
