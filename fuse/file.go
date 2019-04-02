@@ -22,8 +22,8 @@ var _ = fs.NodeOpener(&file{})
 var _ = fs.NodeGetxattrer(&file{})
 var _ = fs.NodeListxattrer(&file{})
 
-func newFile(e plugin.Entry) *file {
-	return &file{newFuseNode("f", e)}
+func newFile(p plugin.Group, e plugin.Entry) *file {
+	return &file{newFuseNode("f", p, e)}
 }
 
 // Open a file for reading.

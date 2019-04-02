@@ -3,6 +3,7 @@ package fuse
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/user"
 	"strconv"
@@ -29,7 +30,7 @@ func newRoot(registry *plugin.Registry) Root {
 // Root presents the root of the filesystem.
 func (r *Root) Root() (fs.Node, error) {
 	log.Infof("Entering root of filesystem")
-	return newDir(r.registry), nil
+	return newDir(nil, r.registry), nil
 }
 
 func getIDs() (uint32, uint32) {
@@ -53,17 +54,17 @@ func getIDs() (uint32, uint32) {
 
 var uid, gid = getIDs()
 
-var attrRefreshInterval = 5 * time.Second
-
 type fuseNode struct {
 	ftype             string
+	parent            plugin.Group
 	entry             plugin.Entry
 	entryCreationTime time.Time
 }
 
-func newFuseNode(ftype string, entry plugin.Entry) *fuseNode {
+func newFuseNode(ftype string, parent plugin.Group, entry plugin.Entry) *fuseNode {
 	return &fuseNode{
 		ftype:             ftype,
+		parent:            parent,
 		entry:             entry,
 		entryCreationTime: time.Now(),
 	}
@@ -77,8 +78,8 @@ const sizeUnknown = ^uint64(0)
 
 // Applies attributes where non-default, and sets defaults otherwise.
 func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
-	// This doesn't quite work for some reason.
-	a.Valid = attrRefreshInterval
+	// Setting a.Valid to 1 second avoids frequent Attr calls.
+	a.Valid = 1 * time.Second
 
 	// TODO: tie this to actual hard links in plugins
 	a.Nlink = 1
@@ -115,17 +116,33 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 }
 
 func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
-	// TODO: The code below's a temporary hack to show that the refreshing
-	// behavior works. It blows up after several successive ls calls b/c each
-	// child simultaneously attempts to refresh their attributes.
-	if time.Since(f.entryCreationTime) >= attrRefreshInterval {
-		err := plugin.RefreshAttributes(ctx, f.entry)
+	var attr plugin.EntryAttributes
+	if f.parent == nil {
+		attr = plugin.Attributes(f.entry)
+	} else {
+		// FUSE caches nodes for a long time, meaning there's a chance
+		// that f's attributes are outdated. CachedList returns the entry's
+		// and its sibling's updated attributes in a single request, so use
+		// it to get f's updated attributes.
+		entries, err := plugin.CachedList(ctx, f.parent)
 		if err != nil {
+			err := fmt.Errorf("could not refresh the attributes: %v", err)
 			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
 			return err
 		}
+		updatedEntry, ok := entries[plugin.CName(f.entry)]
+		if !ok {
+			err := fmt.Errorf("entry does not exist anymore")
+			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+			return err
+		}
+		attr = plugin.Attributes(updatedEntry)
+		// NOTE: We could set f.entry to updatedEntry, but doing so would require
+		// a separate mutex which may hinder performance. Since updating f.entry
+		// is not strictly necessary for the other FUSE operations, we choose to
+		// leave it alone.
 	}
-	attr := plugin.Attributes(f.entry)
+
 	f.applyAttr(a, &attr)
 	log.Infof("FUSE: Attr[%v] %v %v", f.ftype, f, a)
 	return nil
