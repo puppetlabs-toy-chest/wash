@@ -58,7 +58,7 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 		SetCtime(metaObj.ctime).
 		SetMtime(metaObj.mtime).
 		SetMeta(metaObj.toMeta())
-	ec2Instance.SetInitialAttributes(attr)
+	ec2Instance.SetAttributes(attr)
 
 	return ec2Instance
 }

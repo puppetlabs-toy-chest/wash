@@ -34,7 +34,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	initialAttr.SetCtime(time.Now())
 	e := NewEntry("foo")
 
-	e.SetInitialAttributes(initialAttr)
+	e.SetAttributes(initialAttr)
 	suite.Equal(initialAttr, e.attr)
 
 	suite.Equal("foo", e.Name())

@@ -45,7 +45,7 @@ to do something like
 		SetCtime(ctime).
 		SetMtime(mtime).
 		SetMeta(meta)
-	entry.SetInitialAttributes(attr)
+	entry.SetAttributes(attr)
 */
 type EntryAttributes struct {
 	atime   time.Time

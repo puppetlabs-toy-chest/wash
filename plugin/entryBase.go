@@ -92,9 +92,9 @@ func (e *EntryBase) Name() string {
 	return e.name()
 }
 
-// SetInitialAttributes sets the entry's initial attributes. Use it
+// SetAttributes sets the entry's attributes. Use it
 // after creating the entry via a call to NewEntry.
-func (e *EntryBase) SetInitialAttributes(attr EntryAttributes) {
+func (e *EntryBase) SetAttributes(attr EntryAttributes) {
 	e.attr = attr
 }
 

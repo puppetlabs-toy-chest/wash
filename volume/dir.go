@@ -29,7 +29,7 @@ func NewDir(name string, attr plugin.EntryAttributes, cb ContentCB, path string,
 		path:      path,
 		dirs:      dirs,
 	}
-	vd.SetInitialAttributes(attr)
+	vd.SetAttributes(attr)
 	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
 
 	return vd

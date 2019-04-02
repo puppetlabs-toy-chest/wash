@@ -164,7 +164,7 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 		SetCtime(bucket.ctime).
 		SetMtime(bucket.ctime).
 		SetAtime(bucket.ctime)
-	bucket.SetInitialAttributes(attr)
+	bucket.SetAttributes(attr)
 
 	return bucket
 }

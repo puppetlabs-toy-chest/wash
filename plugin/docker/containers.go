@@ -36,7 +36,7 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 			SetCtime(startTime).
 			SetMtime(startTime).
 			SetAtime(startTime)
-		cont.SetInitialAttributes(attr)
+		cont.SetAttributes(attr)
 
 		keys[i] = cont
 	}
