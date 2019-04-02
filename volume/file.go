@@ -24,7 +24,7 @@ func NewFile(name string, attr plugin.EntryAttributes, cb ContentCB, path string
 		contentcb: cb,
 		path:      path,
 	}
-	vf.SetInitialAttributes(attr)
+	vf.SetAttributes(attr)
 	vf.SetTTLOf(plugin.OpenOp, 60*time.Second)
 
 	return vf

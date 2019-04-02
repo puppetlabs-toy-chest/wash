@@ -44,12 +44,7 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		SetAtime(output.mtime).
 		SetSize(uint64(len(output.content))).
 		SetMeta(output.toMeta())
-	cl.SetInitialAttributes(attr)
-
-	cl.Sync(plugin.CtimeAttr(), "LastModified")
-	cl.Sync(plugin.MtimeAttr(), "LastModified")
-	cl.Sync(plugin.AtimeAttr(), "LastModified")
-	cl.Sync(plugin.SizeAttr(), "Size")
+	cl.SetAttributes(attr)
 
 	return cl, nil
 }

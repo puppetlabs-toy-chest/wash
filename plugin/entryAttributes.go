@@ -45,7 +45,7 @@ to do something like
 		SetCtime(ctime).
 		SetMtime(mtime).
 		SetMeta(meta)
-	entry.SetInitialAttributes(attr)
+	entry.SetAttributes(attr)
 */
 type EntryAttributes struct {
 	atime   time.Time
@@ -172,28 +172,4 @@ func (a *EntryAttributes) Meta() EntryMetadata {
 func (a *EntryAttributes) SetMeta(meta EntryMetadata) *EntryAttributes {
 	a.meta = meta
 	return a
-}
-
-// This helper's useful for testing.
-func (a *EntryAttributes) toMap() map[string]interface{} {
-	mp := make(map[string]interface{})
-
-	if a.HasAtime() {
-		mp[AtimeAttr().name] = a.Atime()
-	}
-	if a.HasMtime() {
-		mp[MtimeAttr().name] = a.Mtime()
-	}
-	if a.HasCtime() {
-		mp[CtimeAttr().name] = a.Ctime()
-	}
-	if a.HasMode() {
-		mp[ModeAttr().name] = a.Mode()
-	}
-	if a.HasSize() {
-		mp[SizeAttr().name] = a.Size()
-	}
-	mp["meta"] = a.Meta()
-
-	return mp
 }

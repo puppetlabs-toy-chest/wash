@@ -43,7 +43,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		SetMtime(startTime).
 		SetAtime(startTime).
 		SetMeta(plugin.ToMeta(v))
-	vol.SetInitialAttributes(attr)
+	vol.SetAttributes(attr)
 
 	return vol, nil
 }

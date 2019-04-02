@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -35,7 +34,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	initialAttr.SetCtime(time.Now())
 	e := NewEntry("foo")
 
-	e.SetInitialAttributes(initialAttr)
+	e.SetAttributes(initialAttr)
 	suite.Equal(initialAttr, e.attr)
 
 	suite.Equal("foo", e.Name())
@@ -67,17 +66,6 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 	suite.assertOpTTL(e, MetadataOp, "Metadata", -1)
 }
 
-func (suite *EntryBaseTestSuite) TestSync() {
-	e := NewEntry("foo")
-
-	e.Sync(CtimeAttr(), "CreationDate")
-	if suite.Equal(1, len(e.syncedAttrs)) {
-		syncedAttr := e.syncedAttrs[0]
-		suite.Equal(CtimeAttr().name, syncedAttr.name)
-		suite.Equal("CreationDate", syncedAttr.key)
-	}
-}
-
 func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
 	e := NewEntry("foo/bar")
 
@@ -88,57 +76,6 @@ func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
 
 	e.SetSlashReplacementChar(':')
 	suite.Equal(e.slashReplacementChar(), ':')
-}
-
-func (suite *EntryBaseTestSuite) TestHasSyncedAttributes() {
-	e := NewEntry("foo")
-	suite.Equal(false, e.hasSyncedAttributes())
-	e.Sync(CtimeAttr(), "CtimeKey")
-	suite.Equal(true, e.hasSyncedAttributes())
-}
-
-func (suite *EntryBaseTestSuite) TestSyncAttributesWithNoErrors() {
-	initialAttr := EntryAttributes{}
-	initialAttr.
-		SetCtime(time.Now()).
-		SetMtime(time.Now())
-
-	e := NewEntry("foo")
-	e.SetInitialAttributes(initialAttr)
-	e.Sync(MtimeAttr(), "LastModified")
-	e.Sync(SizeAttr(), "Size")
-
-	meta := EntryMetadata{
-		"LastModified": time.Now(),
-		"Size":         uint64(15),
-	}
-	err := e.syncAttributesWith(meta)
-	if suite.NoError(err) {
-		expectedAttr := initialAttr.toMap()
-		expectedAttr[MtimeAttr().name] = meta["LastModified"]
-		expectedAttr[SizeAttr().name] = meta["Size"]
-		expectedAttr["meta"] = meta
-
-		suite.Equal(expectedAttr, e.attr.toMap())
-	}
-}
-
-func (suite *EntryBaseTestSuite) TestSyncAttributesWithErrors() {
-	initialAttr := EntryAttributes{}
-	initialAttr.SetMode(os.FileMode(0))
-	initialAttr.SetSize(10)
-
-	e := NewEntry("foo")
-	e.SetInitialAttributes(initialAttr)
-	e.Sync(ModeAttr(), "Mode")
-	e.Sync(SizeAttr(), "Size")
-
-	meta := EntryMetadata{
-		"Mode": "badmode",
-		"Size": int64(-1),
-	}
-	err := e.syncAttributesWith(meta)
-	suite.Regexp("sync.*mode.*attr.*sync.*size.*attr", err)
 }
 
 func TestEntryBase(t *testing.T) {

@@ -49,8 +49,7 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 		SetAtime(attr.Ctime()).
 		SetSize(uint64(meta["LogSize"].(int))).
 		SetMeta(meta)
-	pd.SetInitialAttributes(attr)
-	pd.Sync(plugin.SizeAttr(), "LogSize")
+	pd.SetAttributes(attr)
 
 	return pd, nil
 }

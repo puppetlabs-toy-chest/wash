@@ -45,13 +45,7 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 		SetMtime(mtime).
 		SetAtime(mtime).
 		SetSize(uint64(awsSDK.Int64Value(o.Size)))
-	s3Obj.SetInitialAttributes(attr)
-
-	s3Obj.
-		Sync(plugin.CtimeAttr(), "LastModified").
-		Sync(plugin.MtimeAttr(), "LastModified").
-		Sync(plugin.AtimeAttr(), "LastModified").
-		Sync(plugin.SizeAttr(), "ContentLength")
+	s3Obj.SetAttributes(attr)
 
 	return s3Obj
 }

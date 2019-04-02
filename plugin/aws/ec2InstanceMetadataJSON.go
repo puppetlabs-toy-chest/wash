@@ -30,8 +30,7 @@ func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2Ins
 	attr := plugin.EntryAttributes{}
 	attr.SetSize(uint64(meta["Size"].(int64)))
 	attr.SetMeta(meta)
-	im.SetInitialAttributes(attr)
-	im.Sync(plugin.SizeAttr(), "Size")
+	im.SetAttributes(attr)
 
 	return im, nil
 }

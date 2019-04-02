@@ -38,8 +38,6 @@ type Entry interface {
 	Metadata(ctx context.Context) (EntryMetadata, error)
 	name() string
 	attributes() EntryAttributes
-	hasSyncedAttributes() bool
-	syncAttributesWith(meta EntryMetadata) error
 	slashReplacementChar() rune
 	id() string
 	setID(id string)

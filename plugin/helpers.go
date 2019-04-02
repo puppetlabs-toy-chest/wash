@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -160,31 +158,6 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 // Attributes returns the entry's attribtues
 func Attributes(e Entry) EntryAttributes {
 	return e.attributes()
-}
-
-// RefreshAttributes refreshes the entry's attributes. It is primarily
-// needed by FUSE because FUSE nodes have a very long lifetime.
-func RefreshAttributes(ctx context.Context, e Entry) error {
-	if !e.hasSyncedAttributes() {
-		// No need to refresh if the entry doesn't have any synced
-		// attributes. This prevents an unnecessary fetch of the
-		// entry's metadata.
-		return nil
-	}
-
-	journal.Record(ctx, "Refreshing the attributes of %v", Path(e))
-
-	// We can't put the refresh-attributes logic in EntryBase because doing
-	// so would call EntryBase#Metadata.
-	meta, err := CachedMetadata(ctx, e)
-	if err != nil {
-		return fmt.Errorf("failed to refresh the attributes: %v", err)
-	}
-	err = e.syncAttributesWith(meta)
-	if err != nil {
-		return fmt.Errorf("failed to refresh the attributes: %v", err)
-	}
-	return nil
 }
 
 // CreateCommand creates a cmd object encapsulating the given cmd and its args.
