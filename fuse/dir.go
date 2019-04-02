@@ -35,8 +35,6 @@ func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
 
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	jid := journal.PIDToID(int(req.Pid))
-	ctx = context.WithValue(ctx, journal.Key, jid)
 	journal.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
 
 	entries, err := d.children(ctx)
@@ -55,7 +53,11 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 				journal.Record(ctx, "FUSE: Found directory %v", childdir)
 				// Prefetch directory entries into the cache
 				go func() {
-					_, err := childdir.children(context.WithValue(context.Background(), journal.Key, jid))
+					// Need to use a different context here because we still want the prefetch
+					// to happen even when the current context is cancelled.
+					jid := journal.PIDToID(int(req.Pid))
+					ctx := context.WithValue(context.Background(), journal.Key, jid)
+					_, err := childdir.children(ctx)
 					journal.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
 				}()
 				return childdir, nil
@@ -71,8 +73,6 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 // ReadDirAll lists all children of the directory.
 func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
-	// TODO: need an enhancement to bazil.org/fuse to pass request to a method like ReadDirAll.
-	ctx = context.WithValue(ctx, journal.Key, "")
 	journal.Record(ctx, "FUSE: List %v", d)
 
 	entries, err := d.children(ctx)

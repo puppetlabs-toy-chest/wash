@@ -10,6 +10,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -177,8 +178,15 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 
 		log.Infof("FUSE: Serving filesystem")
 
+		serverConfig := &fs.Config{
+			WithContext: func(ctx context.Context, req fuse.Request) context.Context {
+				pid := int(req.Hdr().Pid)
+				return context.WithValue(ctx, journal.Key, journal.PIDToID(pid))
+			},
+		}
+		server := fs.New(fuseConn, serverConfig)
 		root := newRoot(filesys)
-		if err := fs.Serve(fuseConn, &root); err != nil {
+		if err := server.Serve(&root); err != nil {
 			log.Warnf("FUSE: fs.Serve errored with: %v", err)
 		}
 
