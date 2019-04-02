@@ -200,7 +200,13 @@ func (suite *CacheTestSuite) TestDuplicateCNameErr() {
 	suite.Regexp("my_plugin plugin", err.Error())
 }
 
-func (suite *CacheTestSuite) testCachedDefaultOp(op defaultOpCode, opName string, mockValue interface{}, cachedDefaultOp cachedDefaultOpFunc) {
+func (suite *CacheTestSuite) testCachedDefaultOp(
+	op defaultOpCode,
+	opName string,
+	opValue interface{},
+	mungedOpValue interface{},
+	cachedDefaultOp cachedDefaultOpFunc,
+) {
 	ctx := context.Background()
 
 	// Test that cachedDefaultOp panics if the cache == nil
@@ -218,20 +224,20 @@ func (suite *CacheTestSuite) testCachedDefaultOp(op defaultOpCode, opName string
 	// entry.id() == "" (possible if the entry's just been created and
 	// it needs to query its metadata to set its initial attributes).
 	suite.Panics(panicFunc, "entry.id() returned an empty ID")
-	entry.On(opName, ctx).Return(mockValue, nil)
+	entry.On(opName, ctx).Return(opValue, nil)
 	v, err := cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
-		suite.Equal(mockValue, v)
+		suite.Equal(mungedOpValue, v)
 	}
 
 	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate for an
 	// entry that's turned off caching
 	entry.SetTestID("id")
-	entry.On(opName, ctx).Return(mockValue, nil)
+	entry.On(opName, ctx).Return(opValue, nil)
 	entry.DisableCachingFor(op)
 	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
-		suite.Equal(mockValue, v)
+		suite.Equal(mungedOpValue, v)
 	}
 	suite.cache.AssertNotCalled(suite.T(), "GetOrUpdate")
 
@@ -240,20 +246,30 @@ func (suite *CacheTestSuite) testCachedDefaultOp(op defaultOpCode, opName string
 	// right arguments.
 	opTTL := 5 * time.Second
 	entry.SetTTLOf(op, opTTL)
-	entry.On(opName, ctx).Return(mockValue, nil)
+	entry.On(opName, ctx).Return(opValue, nil)
 	opKey := opName + "::" + "id"
-	generateValueMatcher := suite.makeGenerateValueMatcher(mockValue)
-	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mockValue, nil).Once()
+	generateValueMatcher := suite.makeGenerateValueMatcher(mungedOpValue)
+	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mungedOpValue, nil).Once()
 	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
-		suite.Equal(mockValue, v)
+		suite.Equal(mungedOpValue, v)
 	}
 	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
+func toMap(children []Entry) map[string]Entry {
+	mp := make(map[string]Entry)
+	for _, child := range children {
+		mp[CName(child)] = child
+	}
+
+	return mp
+}
+
 func (suite *CacheTestSuite) TestCachedListDefaultOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
-	suite.testCachedDefaultOp(ListOp, "List", mockChildren, func(ctx context.Context, e Entry) (interface{}, error) {
+	mungedOpValue := toMap(mockChildren)
+	suite.testCachedDefaultOp(ListOp, "List", mockChildren, mungedOpValue, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedList(ctx, e.(Group))
 	})
 }
@@ -301,9 +317,9 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
-		if suite.Equal(mockChildren, children) {
-			suite.Equal("/foo#child1", children[0].id())
-			suite.Equal("/child2", children[1].id())
+		if suite.Equal(toMap(mockChildren), children) {
+			suite.Equal("/foo#child1", children["foo#child1"].id())
+			suite.Equal("/child2", children["child2"].id())
 		}
 	}
 
@@ -314,23 +330,23 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err = CachedList(ctx, entry)
 	if suite.NoError(err) {
-		if suite.Equal(mockChildren, children) {
-			suite.Equal("/parent/foo#child1", children[0].id())
-			suite.Equal("/parent/child2", children[1].id())
+		if suite.Equal(toMap(mockChildren), children) {
+			suite.Equal("/parent/foo#child1", children["foo#child1"].id())
+			suite.Equal("/parent/child2", children["child2"].id())
 		}
 	}
 }
 
 func (suite *CacheTestSuite) TestCachedOpen() {
 	mockReader := strings.NewReader("foo")
-	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedOpen(ctx, e.(Readable))
 	})
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockEntryMetadata := EntryMetadata{"foo": "bar"}
-	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockEntryMetadata, func(ctx context.Context, e Entry) (interface{}, error) {
+	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockEntryMetadata, mockEntryMetadata, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedMetadata(ctx, e)
 	})
 }
