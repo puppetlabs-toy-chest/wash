@@ -40,8 +40,6 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 	path := strings.Join(segments, "/")
 
 	curEntry := root
-	curEntryID := "/" + plugin.CName(root)
-
 	visitedSegments := make([]string, 0, cap(segments))
 	for _, segment := range segments {
 		switch curGroup := curEntry.(type) {
@@ -57,19 +55,8 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 			}
 
 			// Search for the specific entry
-			var found bool
-			for _, entry := range entries {
-				if plugin.CName(entry) == segment {
-					found = true
-
-					curEntry = entry
-					curEntryID += "/" + segment
-					visitedSegments = append(visitedSegments, segment)
-
-					break
-				}
-			}
-			if !found {
+			entry, ok := entries[segment]
+			if !ok {
 				reason := fmt.Sprintf("The %v entry does not exist", segment)
 				if len(visitedSegments) != 0 {
 					reason += fmt.Sprintf(" in the %v group", strings.Join(visitedSegments, "/"))
@@ -77,6 +64,9 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 
 				return nil, entryNotFoundResponse(path, reason)
 			}
+
+			curEntry = entry
+			visitedSegments = append(visitedSegments, segment)
 		default:
 			reason := fmt.Sprintf("The entry %v is not a group", strings.Join(visitedSegments, "/"))
 			return nil, entryNotFoundResponse(path, reason)
