@@ -85,8 +85,9 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	group.SetTestID("/dir")
 	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
+	expectedChildren := make(map[string]plugin.Entry)
 	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
-		suite.Equal([]plugin.Entry{}, children)
+		suite.Equal(expectedChildren, children)
 	}
 
 	// Test clearing a different cache
@@ -97,7 +98,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal("[]\n", w.Body.String())
 
 	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
-		suite.Equal([]plugin.Entry{}, children)
+		suite.Equal(expectedChildren, children)
 	}
 
 	// Test clearing the cache
@@ -108,7 +109,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
 
 	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
-		suite.Equal([]plugin.Entry{}, children)
+		suite.Equal(expectedChildren, children)
 	}
 
 	group.AssertNumberOfCalls(suite.T(), "List", 2)

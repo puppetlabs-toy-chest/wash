@@ -20,17 +20,17 @@ var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(e plugin.Group) *dir {
-	return &dir{newFuseNode("d", e)}
+func newDir(p plugin.Group, e plugin.Group) *dir {
+	return &dir{newFuseNode("d", p, e)}
 }
 
-func (d *dir) children(ctx context.Context) ([]plugin.Entry, error) {
+func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction.IsSupportedOn(d.entry) {
 		return plugin.CachedList(ctx, d.entry.(plugin.Group))
 	}
 
-	return []plugin.Entry{}, fuse.ENOENT
+	return map[string]plugin.Entry{}, fuse.ENOENT
 }
 
 // Lookup searches a directory for children.
@@ -44,31 +44,31 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, fuse.ENOENT
 	}
 
-	for _, entry := range entries {
-		cname := plugin.CName(entry)
-		if cname == req.Name {
-			log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, cname)
-			if plugin.ListAction.IsSupportedOn(entry) {
-				childdir := newDir(entry.(plugin.Group))
-				journal.Record(ctx, "FUSE: Found directory %v", childdir)
-				// Prefetch directory entries into the cache
-				go func() {
-					// Need to use a different context here because we still want the prefetch
-					// to happen even when the current context is cancelled.
-					jid := journal.PIDToID(int(req.Pid))
-					ctx := context.WithValue(context.Background(), journal.Key, jid)
-					_, err := childdir.children(ctx)
-					journal.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
-				}()
-				return childdir, nil
-			}
-
-			journal.Record(ctx, "FUSE: Found file %v/%v", d, cname)
-			return newFile(entry), nil
-		}
+	cname := req.Name
+	entry, ok := entries[cname]
+	if !ok {
+		journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
+		return nil, fuse.ENOENT
 	}
-	journal.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
-	return nil, fuse.ENOENT
+
+	log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, cname)
+	if plugin.ListAction.IsSupportedOn(entry) {
+		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
+		journal.Record(ctx, "FUSE: Found directory %v", childdir)
+		// Prefetch directory entries into the cache
+		go func() {
+			// Need to use a different context here because we still want the prefetch
+			// to happen even when the current context is cancelled.
+			jid := journal.PIDToID(int(req.Pid))
+			ctx := context.WithValue(context.Background(), journal.Key, jid)
+			_, err := childdir.children(ctx)
+			journal.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
+		}()
+		return childdir, nil
+	}
+
+	journal.Record(ctx, "FUSE: Found file %v/%v", d, cname)
+	return newFile(d.entry.(plugin.Group), entry), nil
 }
 
 // ReadDirAll lists all children of the directory.
@@ -84,14 +84,14 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	log.Infof("FUSE: List %v in %v", len(entries), d)
 
-	res := make([]fuse.Dirent, len(entries))
-	for i, entry := range entries {
+	res := make([]fuse.Dirent, 0, len(entries))
+	for cname, entry := range entries {
 		var de fuse.Dirent
-		de.Name = plugin.CName(entry)
-		if plugin.ListAction.IsSupportedOn(d.entry) {
+		de.Name = cname
+		if plugin.ListAction.IsSupportedOn(entry) {
 			de.Type = fuse.DT_Dir
 		}
-		res[i] = de
+		res = append(res, de)
 	}
 	journal.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
 	return res, nil

@@ -136,7 +136,10 @@ func (c DuplicateCNameErr) Error() string {
 
 // CachedList caches a Group object's List method. It also sets the
 // children's IDs to <parent_id> + "/" + <child_cname>.
-func CachedList(ctx context.Context, g Group) ([]Entry, error) {
+//
+// CachedList returns a map of <entry_cname> => <entry_object> to optimize
+// querying a specific entry.
+func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 	cachedEntries, err := cachedDefaultOp(ListOp, g, func() (interface{}, error) {
 		entries, err := g.List(ctx)
 		if err != nil {
@@ -163,14 +166,14 @@ func CachedList(ctx context.Context, g Group) ([]Entry, error) {
 			entry.setID(id)
 		}
 
-		return entries, nil
+		return searchedEntries, nil
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return cachedEntries.([]Entry), nil
+	return cachedEntries.(map[string]Entry), nil
 }
 
 // CachedOpen caches a Readable object's Open method.
