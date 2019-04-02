@@ -39,7 +39,6 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	cmAttr := plugin.EntryAttributes{}
 	cmAttr.SetSize(uint64(meta["Size"].(int64)))
 	cm.SetInitialAttributes(cmAttr)
-	cm.Sync(plugin.SizeAttr(), "Size")
 
 	clf := &containerLogFile{plugin.NewEntry("log"), c.Name(), c.client}
 	clf.DisableCachingFor(plugin.MetadataOp)
@@ -50,7 +49,6 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	clfAttr := plugin.EntryAttributes{}
 	clfAttr.SetSize(uint64(meta["Size"].(int64)))
 	clf.SetInitialAttributes(clfAttr)
-	clf.Sync(plugin.SizeAttr(), "Size")
 
 	return []plugin.Entry{cm, clf}, nil
 }

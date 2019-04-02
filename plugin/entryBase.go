@@ -3,8 +3,6 @@ package plugin
 import (
 	"context"
 	"flag"
-	"fmt"
-	"sync"
 	"time"
 )
 
@@ -21,18 +19,11 @@ const (
 
 var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
-type syncedAttribute struct {
-	*SyncableAttribute
-	key string
-}
-
 // EntryBase implements Entry, making it easy to create new entries.
 // You should use plugin.NewEntry to create new EntryBase objects.
 type EntryBase struct {
 	entryName          string
-	attrMux            *sync.RWMutex
 	attr               EntryAttributes
-	syncedAttrs        []syncedAttribute
 	slashReplacementCh rune
 	// washID represents the entry's wash ID. It is set in CachedList.
 	washID string
@@ -47,7 +38,6 @@ func NewEntry(name string) EntryBase {
 
 	e := EntryBase{
 		entryName:          name,
-		attrMux:            &sync.RWMutex{},
 		slashReplacementCh: '#',
 	}
 	for op := range e.ttl {
@@ -73,9 +63,6 @@ func (e *EntryBase) name() string {
 }
 
 func (e *EntryBase) attributes() EntryAttributes {
-	e.attrMux.RLock()
-	defer e.attrMux.RUnlock()
-
 	return e.attr
 }
 
@@ -109,34 +96,6 @@ func (e *EntryBase) Name() string {
 // after creating the entry via a call to NewEntry.
 func (e *EntryBase) SetInitialAttributes(attr EntryAttributes) {
 	e.attr = attr
-}
-
-/*
-Sync syncs the attribute with the given key's value in the entry's
-metadata whenever the latter's refreshed via a call to plugin.CachedMetadata.
-Use Sync if you expect the attribute to change. It returns the entry, e,
-to facilitate the builder pattern, which lets you do something like
-
-	entry.
-		Sync(plugin.CtimeAttr(), "LastModified").
-		Sync(plugin.MtimeAttr(), "LastModified").
-		Sync(plugin.AtimeAttr(), "LastModified").
-		Sync(plugin.SizeAttr(), "ContentLength")
-
-TODO: Find a way to let plugin authors specify a munging function. We'll
-need this for the State attribute, and in case the metadata returns some of
-the other attributes in a different format (e.g. like an arbitrarily formatted
-string for one of the time fields)
-*/
-func (e *EntryBase) Sync(attr *SyncableAttribute, key string) *EntryBase {
-	// We use an array instead of a map because the latter takes up a lot of
-	// memory (~40 bytes for an empty map). That adds up quick when there's
-	// hundreds of thousands of entries.
-	e.syncedAttrs = append(
-		e.syncedAttrs,
-		syncedAttribute{attr, key},
-	)
-	return e
 }
 
 /*
@@ -179,34 +138,6 @@ func (e *EntryBase) SetTestID(id string) {
 	}
 
 	e.setID(id)
-}
-
-func (e *EntryBase) hasSyncedAttributes() bool {
-	return len(e.syncedAttrs) > 0
-}
-
-func (e *EntryBase) syncAttributesWith(meta EntryMetadata) error {
-	e.attrMux.Lock()
-	defer e.attrMux.Unlock()
-
-	var allErrs error
-	for _, attr := range e.syncedAttrs {
-		err := attr.sync(e, meta, attr.key)
-		if err != nil {
-			err := fmt.Errorf("failed to sync the %v attribute: %v", attr.name, err)
-			if allErrs != nil {
-				allErrs = fmt.Errorf("%v; %v", allErrs, err)
-			} else {
-				allErrs = err
-			}
-		}
-	}
-	if allErrs != nil {
-		return allErrs
-	}
-	e.attr.SetMeta(meta)
-
-	return nil
 }
 
 func notRunningTests() bool {
