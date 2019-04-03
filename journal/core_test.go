@@ -14,7 +14,7 @@ import (
 
 func TestRecord(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer journalCache.Flush()
+	defer CloseAll()
 
 	// Log to a journal
 	Record(context.WithValue(context.Background(), Key, "1"), "hello there")
@@ -27,7 +27,7 @@ func TestRecord(t *testing.T) {
 
 func TestLogExpired(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer journalCache.Flush()
+	defer CloseAll()
 
 	// Ensure entries use a very short
 	expires = 1 * time.Millisecond
@@ -46,7 +46,7 @@ func TestLogExpired(t *testing.T) {
 
 func TestLogReused(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
-	defer journalCache.Flush()
+	defer CloseAll()
 	ctx := context.WithValue(context.Background(), Key, "3")
 
 	// Log twice

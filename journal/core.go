@@ -36,6 +36,12 @@ var journalDir = func() string {
 }()
 var expires = 30 * time.Second
 
+// CloseAll ensures open journals are flushed to disk and closed.
+// Use when the application is shutting down.
+func CloseAll() {
+	journalCache.Flush()
+}
+
 // Dir gets the directory where journal entries are written.
 func Dir() string {
 	return journalDir
@@ -85,10 +91,8 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 			return nil, err
 		}
 
-		// Use a syncedFile to ensure each write is committed to the disk. The file is only guaranteed to
-		// be closed when it's evicted from the cache, which may not happen before shutdown.
 		l := &log.Logger{
-			Out:       &syncedFile{id: id, file: f},
+			Out:       f,
 			Level:     log.TraceLevel,
 			Formatter: &log.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		}
@@ -99,24 +103,6 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 	}
 
 	obj.(*log.Logger).Printf(msg, a...)
-}
-
-type syncedFile struct {
-	id   string
-	file *os.File
-}
-
-// Write syncs the data immediately after every write operation.
-func (sw *syncedFile) Write(b []byte) (n int, err error) {
-	n, err = sw.file.Write(b)
-	if err := sw.file.Sync(); err != nil {
-		log.Warnf("Error syncing journal %v to disk: %v", sw.id, err)
-	}
-	return n, err
-}
-
-func (sw *syncedFile) Close() error {
-	return sw.file.Close()
 }
 
 func closeJournal(id string, obj interface{}) {

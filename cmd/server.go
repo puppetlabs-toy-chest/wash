@@ -16,6 +16,7 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
+	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/plugin/aws"
 	"github.com/puppetlabs/wash/plugin/docker"
@@ -67,6 +68,11 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 			}
 		}()
 	}
+
+	// Close any open journals on shutdown to ensure remaining entries are flushed to disk.
+	defer func() {
+		journal.CloseAll()
+	}()
 
 	registry := plugin.NewRegistry()
 	loadInternalPlugins(registry)
