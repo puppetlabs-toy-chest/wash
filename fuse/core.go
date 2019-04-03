@@ -116,6 +116,8 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 }
 
 func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
+	journal.Record(ctx, "FUSE: Attr %v", f)
+
 	var attr plugin.EntryAttributes
 	if f.parent == nil {
 		attr = plugin.Attributes(f.entry)
@@ -127,13 +129,15 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 		entries, err := plugin.CachedList(ctx, f.parent)
 		if err != nil {
 			err := fmt.Errorf("could not refresh the attributes: %v", err)
-			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+			journal.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, journal.GetID(ctx), err)
 			return err
 		}
 		updatedEntry, ok := entries[plugin.CName(f.entry)]
 		if !ok {
 			err := fmt.Errorf("entry does not exist anymore")
-			log.Warnf("FUSE: Error[Attr,%v]: %v", f, err)
+			journal.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, journal.GetID(ctx), err)
 			return err
 		}
 		attr = plugin.Attributes(updatedEntry)
@@ -144,18 +148,19 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	}
 
 	f.applyAttr(a, &attr)
-	log.Infof("FUSE: Attr[%v] %v %v", f.ftype, f, a)
+	journal.Record(ctx, "FUSE: Attr finished %v", f)
+	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, journal.GetID(ctx), f, a)
 	return nil
 }
 
 func (f *fuseNode) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Infof("FUSE: Listxattr[%v,pid=%v] %v", f.ftype, req.Pid, f)
+	log.Infof("FUSE: Listxattr[%v,jid=%v] %v", f.ftype, journal.GetID(ctx), f)
 	resp.Append("wash.id")
 	return nil
 }
 
 func (f *fuseNode) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Infof("FUSE: Getxattr[%v,pid=%v] %v", f.ftype, req.Pid, f)
+	log.Infof("FUSE: Getxattr[%v,jid=%v] %v", f.ftype, journal.GetID(ctx), f)
 	switch req.Name {
 	case "wash.id":
 		resp.Xattr = []byte(f.String())

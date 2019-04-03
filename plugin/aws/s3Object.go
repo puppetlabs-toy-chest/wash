@@ -51,7 +51,7 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 }
 
 func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
-	resp, err := plugin.CachedOp("HeadObject", o, 15*time.Second, func() (interface{}, error) {
+	resp, err := plugin.CachedOp(ctx, "HeadObject", o, 15*time.Second, func() (interface{}, error) {
 		request := &s3Client.HeadObjectInput{
 			Bucket: awsSDK.String(o.bucket),
 			Key:    awsSDK.String(o.key),

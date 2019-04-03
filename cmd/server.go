@@ -153,7 +153,8 @@ func loadLogger(levelStr string, logfile string) (*os.File, error) {
 
 	log.SetLevel(level)
 	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
+		FullTimestamp:   true,
+		TimestampFormat: time.RFC3339Nano,
 	})
 
 	var logFH *os.File

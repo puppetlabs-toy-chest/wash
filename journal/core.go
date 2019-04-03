@@ -46,6 +46,11 @@ func SetDir(dir string) {
 	journalDir = dir
 }
 
+// GetID returns the Journal ID stored in the context.
+func GetID(ctx context.Context) string {
+	return ctx.Value(Key).(string)
+}
+
 // Record writes a new entry to the journal identified by the ID at `journal.Key` in
 // the provided context. It also writes to the server logs at the debug level. If no ID
 // is registered, the entry is written to the server logs at the warning level. If the
@@ -82,9 +87,11 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 
 		// Use a syncedFile to ensure each write is committed to the disk. The file is only guaranteed to
 		// be closed when it's evicted from the cache, which may not happen before shutdown.
-		l := log.New()
-		l.Out = &syncedFile{id: id, file: f}
-		l.Level = log.TraceLevel
+		l := &log.Logger{
+			Out:       &syncedFile{id: id, file: f},
+			Level:     log.TraceLevel,
+			Formatter: &log.JSONFormatter{TimestampFormat: time.RFC3339Nano},
+		}
 		return l, nil
 	})
 	if err != nil {

@@ -106,7 +106,7 @@ func (d describeInstanceResult) toMeta() plugin.EntryMetadata {
 }
 
 func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeInstanceResult, error) {
-	info, err := plugin.CachedOp("DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
+	info, err := plugin.CachedOp(ctx, "DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
 		request := &ec2Client.DescribeInstancesInput{
 			InstanceIds: []*string{
 				awsSDK.String(inst.Name()),
