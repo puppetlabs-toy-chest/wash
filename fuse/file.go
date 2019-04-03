@@ -31,7 +31,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	journal.Record(ctx, "FUSE: Open %v", f)
 
 	// Initiate content request and return a channel providing the results.
-	log.Infof("FUSE: Opening[pid=%v] %v", req.Pid, f)
+	log.Infof("FUSE: Opening[jid=%v] %v", journal.GetID(ctx), f)
 	if plugin.ReadAction.IsSupportedOn(f.entry) {
 		content, err := plugin.CachedOpen(ctx, f.entry.(plugin.Readable))
 		if err != nil {
@@ -40,11 +40,11 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 			return nil, err
 		}
 
-		log.Infof("FUSE: Opened[pid=%v] %v", req.Pid, f)
+		log.Infof("FUSE: Opened[jid=%v] %v", journal.GetID(ctx), f)
 		journal.Record(ctx, "FUSE: Opened %v", f)
 		return &fileHandle{r: content, id: f.String()}, nil
 	}
-	log.Warnf("FUSE: Error[Open,%v]: cannot open this entry", f)
+	log.Warnf("FUSE: Error[Open,%v,jid=%v]: cannot open this entry", f, journal.GetID(ctx))
 	journal.Record(ctx, "FUSE: Open unsupported on %v", f)
 	return nil, fuse.ENOTSUP
 }
@@ -60,7 +60,7 @@ var _ = fs.HandleReader(fileHandle{})
 
 // Release closes the open file.
 func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	log.Infof("FUSE: Release[pid=%v] %v", req.Pid, fh.id)
+	log.Infof("FUSE: Release[jid=%v] %v", journal.GetID(ctx), fh.id)
 	journal.Record(ctx, "FUSE: Release %v", fh.id)
 	if closer, ok := fh.r.(io.Closer); ok {
 		return closer.Close()
@@ -75,7 +75,7 @@ func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 	if err == io.EOF {
 		err = nil
 	}
-	log.Infof("FUSE: Read[pid=%v] %v, %v/%v bytes starting at %v: %v", fh.id, req.Pid, n, req.Size, req.Offset, err)
+	log.Infof("FUSE: Read[jid=%v] %v, %v/%v bytes starting at %v: %v", journal.GetID(ctx), fh.id, n, req.Size, req.Offset, err)
 	journal.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", n, req.Size, req.Offset, fh.id, err)
 	resp.Data = buf[:n]
 	return err

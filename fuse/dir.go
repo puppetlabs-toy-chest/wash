@@ -39,7 +39,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		log.Warnf("FUSE: Error[Find,%v,%v]: %v", d, req.Name, err)
+		log.Warnf("FUSE: Error[Find,%v,%v,jid=%v]: %v", d, req.Name, journal.GetID(ctx), err)
 		journal.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
@@ -51,7 +51,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, fuse.ENOENT
 	}
 
-	log.Infof("FUSE: Find[d,pid=%v] %v/%v", req.Pid, d, cname)
+	log.Infof("FUSE: Find[d,jid=%v] %v/%v", journal.GetID(ctx), d, cname)
 	if plugin.ListAction.IsSupportedOn(entry) {
 		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
 		journal.Record(ctx, "FUSE: Found directory %v", childdir)
@@ -77,12 +77,12 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		log.Warnf("FUSE: Error[List,%v]: %v", d, err)
+		log.Warnf("FUSE: Error[List,%v,jid=%v]: %v", d, journal.GetID(ctx), err)
 		journal.Record(ctx, "FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
 
-	log.Infof("FUSE: List %v in %v", len(entries), d)
+	log.Infof("FUSE: List[jid=%v] %v in %v", journal.GetID(ctx), len(entries), d)
 
 	res := make([]fuse.Dirent, 0, len(entries))
 	for cname, entry := range entries {

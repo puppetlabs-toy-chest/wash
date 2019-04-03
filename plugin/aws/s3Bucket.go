@@ -217,7 +217,7 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 	// Note that the callback to CachedOp also creates a new client for that region.
 	// We use CachedOp with a long expiration to ensure region is fetched infrequently.
 	// You can force a retry by deleting the cache entry if there was an error.
-	resp, err := plugin.CachedOp("Region", b, 24*time.Hour, func() (interface{}, error) {
+	resp, err := plugin.CachedOp(ctx, "Region", b, 24*time.Hour, func() (interface{}, error) {
 		locRequest := &s3Client.GetBucketLocationInput{Bucket: awsSDK.String(b.Name())}
 		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest)
 		if err != nil {

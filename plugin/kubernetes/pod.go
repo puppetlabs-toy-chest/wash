@@ -81,7 +81,7 @@ func (p *pod) fetchLogContent(ctx context.Context) ([]byte, error) {
 }
 
 func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
-	cachedPdInfo, err := plugin.CachedOp("PodInfo", p, 15*time.Second, func() (interface{}, error) {
+	cachedPdInfo, err := plugin.CachedOp(ctx, "PodInfo", p, 15*time.Second, func() (interface{}, error) {
 		result := podInfoResult{}
 		pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
 		if err != nil {

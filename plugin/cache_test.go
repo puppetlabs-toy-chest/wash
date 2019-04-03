@@ -148,7 +148,7 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	makePanicFunc := func(opName string, ttl time.Duration) func() {
 		return func() {
 			entry := newCacheTestsMockEntry("mock")
-			_, _ = CachedOp("List", entry, ttl, func() (interface{}, error) { return nil, nil })
+			_, _ = CachedOp(context.Background(), "List", entry, ttl, func() (interface{}, error) { return nil, nil })
 		}
 	}
 
@@ -178,7 +178,7 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	opKey := "Op::id"
 	generateValueMatcher := suite.makeGenerateValueMatcher("result")
 	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
-	v, err := CachedOp(opName, entry, opTTL, op)
+	v, err := CachedOp(context.Background(), opName, entry, opTTL, op)
 	if suite.NoError(err) {
 		suite.Equal("result", v)
 	}
