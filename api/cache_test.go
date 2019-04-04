@@ -82,7 +82,6 @@ func (suite *CacheHandlerTestSuite) TestRejectsGet() {
 func (suite *CacheHandlerTestSuite) TestClearCache() {
 	// Populate the cache with a mocked resource and plugin.Cached*
 	group := newMockedGroup()
-	group.SetTestID("/dir")
 	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
 	expectedChildren := make(map[string]plugin.Entry)
@@ -102,11 +101,11 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	}
 
 	// Test clearing the cache
-	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=dir", nil)
+	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=%2FmockGroup", nil)
 	w = httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 	suite.Equal(http.StatusOK, w.Code)
-	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
+	suite.Equal(`["List::/mockGroup"]`, strings.TrimSpace(w.Body.String()))
 
 	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
@@ -126,7 +125,7 @@ type mockedGroup struct {
 
 func newMockedGroup() *mockedGroup {
 	g := &mockedGroup{
-		EntryBase: plugin.NewEntry("mockGroup"),
+		EntryBase: plugin.NewRootEntry("mockGroup"),
 	}
 
 	return g

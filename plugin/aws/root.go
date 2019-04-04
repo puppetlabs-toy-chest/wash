@@ -74,7 +74,7 @@ func exists(path string) error {
 
 // Init for root
 func (r *Root) Init() error {
-	r.EntryBase = plugin.NewEntry("aws")
+	r.EntryBase = plugin.NewRootEntry("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
 
 	// Force authorizing profiles on startup
@@ -131,7 +131,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 			continue
 		}
 
-		profile, err := newProfile(ctx, name)
+		profile, err := newProfile(ctx, r, name)
 		if err != nil {
 			journal.Record(ctx, err.Error())
 			continue

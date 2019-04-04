@@ -25,7 +25,7 @@ func (ps *pods) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	entries := make([]plugin.Entry, len(podList.Items))
 	for i, p := range podList.Items {
-		pd, err := newPod(ctx, ps.client, ps.config, ps.ns, &p)
+		pd, err := newPod(ctx, ps, ps.client, ps.config, ps.ns, &p)
 		if err != nil {
 			return nil, err
 		}

@@ -24,9 +24,9 @@ type pod struct {
 	ns     string
 }
 
-func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
+func newPod(ctx context.Context, parent plugin.Entry, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
 	pd := &pod{
-		EntryBase: plugin.NewEntry(p.Name),
+		EntryBase: parent.NewEntry(p.Name),
 		client:    client,
 		config:    config,
 		ns:        ns,
@@ -81,7 +81,7 @@ func (p *pod) fetchLogContent(ctx context.Context) ([]byte, error) {
 }
 
 func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
-	cachedPdInfo, err := plugin.CachedOp(ctx, "PodInfo", p, 15*time.Second, func() (interface{}, error) {
+	cachedPdInfo, err := plugin.CachedOp("PodInfo", p, 15*time.Second, func() (interface{}, error) {
 		result := podInfoResult{}
 		pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
 		if err != nil {

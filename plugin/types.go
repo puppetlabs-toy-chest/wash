@@ -8,7 +8,7 @@ type, and initialize it via NewEntry. For example
 		plugin.EntryBase
 	}
 	...
-	rsc := myResource{plugin.NewEntry("a resource")}
+	rsc := myResource{parentResource.NewEntry("a resource")}
 EntryBase gives the resource a name - which is how it will be displayed in the filesystem
 or referenced via the API - and tools for controlling how its data is cached.
 
@@ -31,16 +31,15 @@ import (
 	"time"
 )
 
-// Entry is a basic named resource type. It is a sealed
-// interface, meaning you must use plugin.NewEntry when
-// creating your plugin objects.
+// Entry is a basic named resource type. It is a sealed interface meaning
+// you must use NewRootEntry, then NewEntry when creating your plugin objects.
 type Entry interface {
 	Metadata(ctx context.Context) (EntryMetadata, error)
+	NewEntry(string) EntryBase
 	name() string
 	attributes() EntryAttributes
 	slashReplacementChar() rune
 	id() string
-	setID(id string)
 	getTTLOf(op defaultOpCode) time.Duration
 }
 

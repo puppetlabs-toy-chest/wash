@@ -19,9 +19,9 @@ type s3ObjectPrefix struct {
 	client *s3Client.S3
 }
 
-func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
+func newS3ObjectPrefix(parent plugin.Entry, name string, bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
 	return &s3ObjectPrefix{
-		EntryBase: plugin.NewEntry(name),
+		EntryBase: parent.NewEntry(name),
 		bucket:    bucket,
 		prefix:    prefix,
 		client:    client,
@@ -31,5 +31,5 @@ func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Clie
 // List lists all S3 objects and S3 object prefixes that are
 // prefixed by the current S3 object prefix
 func (d *s3ObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) {
-	return listObjects(ctx, d.client, d.bucket, d.prefix)
+	return listObjects(ctx, d, d.client, d.bucket, d.prefix)
 }

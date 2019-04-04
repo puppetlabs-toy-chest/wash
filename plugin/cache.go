@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/datastore"
-	"github.com/puppetlabs/wash/journal"
 )
 
 var cache datastore.Cache
@@ -89,9 +88,7 @@ type opFunc func() (interface{}, error)
 // the existing CachedList, CachedOpen, and CachedMetadata methods provide.
 // For example, CachedOp could be useful to cache an API request whose response
 // lets you implement Attr() and Metadata() for the given entry.
-//
-// CachedOp uses the supplied context to determine which journal to log to.
-func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+func CachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
 	if !opNameRegex.MatchString(opName) {
 		panic(fmt.Sprintf("The opName %v does not match %v", opName, opNameRegex.String()))
 	}
@@ -106,7 +103,7 @@ func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 		panic("plugin.CachedOp: received a negative TTL")
 	}
 
-	return cachedOp(ctx, opName, entry, ttl, op)
+	return cachedOp(opName, entry, ttl, op)
 }
 
 // DuplicateCNameErr represents a duplicate cname error, which
@@ -143,7 +140,7 @@ func (c DuplicateCNameErr) Error() string {
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
 func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
-	cachedEntries, err := cachedDefaultOp(ctx, ListOp, g, func() (interface{}, error) {
+	cachedEntries, err := cachedDefaultOp(ListOp, g, func() (interface{}, error) {
 		entries, err := g.List(ctx)
 		if err != nil {
 			return nil, err
@@ -164,9 +161,6 @@ func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 				}
 			}
 			searchedEntries[cname] = entry
-
-			id := strings.TrimRight(g.id(), "/") + "/" + cname
-			entry.setID(id)
 		}
 
 		return searchedEntries, nil
@@ -184,7 +178,7 @@ func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
 func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
+	cachedContent, err := cachedDefaultOp(OpenOp, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
 
@@ -197,7 +191,7 @@ func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 
 // CachedMetadata caches an entry's Metadata method
 func CachedMetadata(ctx context.Context, e Entry) (EntryMetadata, error) {
-	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
+	cachedMetadata, err := cachedDefaultOp(MetadataOp, e, func() (interface{}, error) {
 		return e.Metadata(ctx)
 	})
 
@@ -209,15 +203,15 @@ func CachedMetadata(ctx context.Context, e Entry) (EntryMetadata, error) {
 }
 
 // Common helper for CachedList, CachedOpen and CachedMetadata
-func cachedDefaultOp(ctx context.Context, opCode defaultOpCode, entry Entry, op opFunc) (interface{}, error) {
+func cachedDefaultOp(opCode defaultOpCode, entry Entry, op opFunc) (interface{}, error) {
 	opName := defaultOpCodeToNameMap[opCode]
 	ttl := entry.getTTLOf(opCode)
 
-	return cachedOp(ctx, opName, entry, ttl, op)
+	return cachedOp(opName, entry, ttl, op)
 }
 
 // Common helper for CachedOp and cachedDefaultOp.
-func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
+func cachedOp(opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
 	if cache == nil {
 		if notRunningTests() {
 			panic("The cache was not initialized. You can initialize the cache by invoking plugin.InitCache()")
@@ -227,14 +221,7 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 	}
 
 	if entry.id() == "" {
-		journal.Record(ctx, "Cached op %v on %v had no cache ID", opName, entry.name())
-		// This can happen if the entry's just been created, and it calls one of the Cached*
-		// methods to query its Metadata so that it can set its initial attributes. In that case,
-		// just invoke op. Ideally we should panic here, but panicking makes it significantly more
-		// annoying for plugin authors to write their code. Since the plugin package manages the
-		// entry's ID, and the entry's ID is set in CachedList, an empty ID is such a rare edge case
-		// that it's better to not annoy people.
-		return op()
+		panic("entry has uninitialized id")
 	}
 
 	if ttl < 0 {

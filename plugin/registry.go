@@ -17,10 +17,9 @@ type Registry struct {
 // NewRegistry creates a new plugin registry object
 func NewRegistry() *Registry {
 	r := &Registry{
-		EntryBase: NewEntry("/"),
+		EntryBase: NewRootEntry("/"),
 		plugins:   make(map[string]Root),
 	}
-	r.setID("/")
 	r.DisableDefaultCaching()
 
 	return r

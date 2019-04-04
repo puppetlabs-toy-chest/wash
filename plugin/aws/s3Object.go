@@ -22,9 +22,9 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func newS3Object(o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
+func newS3Object(parent plugin.Entry, o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
 	s3Obj := &s3Object{
-		EntryBase: plugin.NewEntry(name),
+		EntryBase: parent.NewEntry(name),
 		bucket:    bucket,
 		key:       key,
 		client:    client,
@@ -51,7 +51,7 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 }
 
 func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
-	resp, err := plugin.CachedOp(ctx, "HeadObject", o, 15*time.Second, func() (interface{}, error) {
+	resp, err := plugin.CachedOp("HeadObject", o, 15*time.Second, func() (interface{}, error) {
 		request := &s3Client.HeadObjectInput{
 			Bucket: awsSDK.String(o.bucket),
 			Key:    awsSDK.String(o.key),

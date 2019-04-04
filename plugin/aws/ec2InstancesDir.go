@@ -21,9 +21,9 @@ type ec2InstancesDir struct {
 	client  *ec2Client.EC2
 }
 
-func newEC2InstancesDir(session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
+func newEC2InstancesDir(parent plugin.Entry, session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
 	ec2InstancesDir := &ec2InstancesDir{
-		EntryBase: plugin.NewEntry("instances"),
+		EntryBase: parent.NewEntry("instances"),
 		session:   session,
 		client:    client,
 	}
@@ -52,6 +52,7 @@ func (is *ec2InstancesDir) List(ctx context.Context) ([]plugin.Entry, error) {
 		for i, instance := range reservation.Instances {
 			instances[i] = newEC2Instance(
 				ctx,
+				is,
 				instance,
 				is.session,
 				is.client,

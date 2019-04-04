@@ -25,14 +25,14 @@ type volume struct {
 
 const mountpoint = "/mnt"
 
-func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
+func newVolume(parent plugin.Entry, c *client.Client, v *types.Volume) (*volume, error) {
 	startTime, err := time.Parse(time.RFC3339, v.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
 	vol := &volume{
-		EntryBase: plugin.NewEntry(v.Name),
+		EntryBase: parent.NewEntry(v.Name),
 		client:    c,
 	}
 	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
@@ -114,9 +114,9 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode().IsDir() {
-			entries = append(entries, vol.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
+			entries = append(entries, vol.NewDir(v, name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
-			entries = append(entries, vol.NewFile(name, attr, v.getContentCB(), "/"+name))
+			entries = append(entries, vol.NewFile(v, name, attr, v.getContentCB(), "/"+name))
 		}
 	}
 	return entries, nil

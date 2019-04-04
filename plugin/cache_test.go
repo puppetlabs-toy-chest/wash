@@ -121,10 +121,14 @@ type cacheTestsMockEntry struct {
 	mock.Mock
 }
 
+func newCacheTestsRootEntry(name string) *cacheTestsMockEntry {
+	return &cacheTestsMockEntry{EntryBase: NewRootEntry(name)}
+}
+
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
-	return &cacheTestsMockEntry{
-		EntryBase: NewEntry(name),
-	}
+	e := new(cacheTestsMockEntry)
+	e.EntryBase = e.NewEntry(name)
+	return e
 }
 
 func (e *cacheTestsMockEntry) List(ctx context.Context) ([]Entry, error) {
@@ -148,7 +152,7 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	makePanicFunc := func(opName string, ttl time.Duration) func() {
 		return func() {
 			entry := newCacheTestsMockEntry("mock")
-			_, _ = CachedOp(context.Background(), "List", entry, ttl, func() (interface{}, error) { return nil, nil })
+			_, _ = CachedOp("List", entry, ttl, func() (interface{}, error) { return nil, nil })
 		}
 	}
 
@@ -171,14 +175,14 @@ func (suite *CacheTestSuite) TestCachedOp() {
 
 	// Test that CachedOp calls cache#GetOrUpdate with the right parameters
 	entry := newCacheTestsMockEntry("mock")
-	entry.SetTestID("id")
+	entry.washID = "id"
 	opName := "Op"
 	opTTL := 5 * time.Second
 	op := func() (interface{}, error) { return "result", nil }
 	opKey := "Op::id"
 	generateValueMatcher := suite.makeGenerateValueMatcher("result")
 	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
-	v, err := CachedOp(context.Background(), opName, entry, opTTL, op)
+	v, err := CachedOp(opName, entry, opTTL, op)
 	if suite.NoError(err) {
 		suite.Equal("result", v)
 	}
@@ -220,22 +224,12 @@ func (suite *CacheTestSuite) testCachedDefaultOp(
 
 	entry := newCacheTestsMockEntry("mock")
 
-	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate if
-	// entry.id() == "" (possible if the entry's just been created and
-	// it needs to query its metadata to set its initial attributes).
-	suite.Panics(panicFunc, "entry.id() returned an empty ID")
-	entry.On(opName, ctx).Return(opValue, nil)
-	v, err := cachedDefaultOp(ctx, entry)
-	if suite.NoError(err) {
-		suite.Equal(mungedOpValue, v)
-	}
-
 	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate for an
 	// entry that's turned off caching
-	entry.SetTestID("id")
+	entry.washID = "id"
 	entry.On(opName, ctx).Return(opValue, nil)
 	entry.DisableCachingFor(op)
-	v, err = cachedDefaultOp(ctx, entry)
+	v, err := cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mungedOpValue, v)
 	}
@@ -278,7 +272,7 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	ctx := context.Background()
 	entry := newCacheTestsMockEntry("foo")
 	entry.DisableDefaultCaching()
-	entry.SetTestID("/my_plugin/foo")
+	entry.washID = "/my_plugin/foo"
 
 	// Test that CachedList returns an error if two children have the same
 	// cname
@@ -302,18 +296,19 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	}
 }
 
-func (suite *CacheTestSuite) TestCachedListSetEntryID() {
-	// Test that CachedList sets the children's cache IDs
+func (suite *CacheTestSuite) TestCachedListEntryID() {
+	// Test that items returned from CachedList include cache IDs
 	// to <parent_cache_id>/<child_cname>
 	ctx := context.Background()
-	child1 := newCacheTestsMockEntry("foo/child1")
-	child2 := newCacheTestsMockEntry("child2")
-	mockChildren := []Entry{child1, child2}
 
 	// When the parent's the root
-	entry := newCacheTestsMockEntry("/")
-	entry.SetTestID("/")
+	entry := newCacheTestsRootEntry("/")
 	entry.DisableDefaultCaching()
+
+	child1 := entry.NewEntry("foo/child1")
+	child2 := entry.NewEntry("child2")
+	mockChildren := []Entry{&child1, &child2}
+
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err := CachedList(ctx, entry)
 	if suite.NoError(err) {
@@ -324,9 +319,13 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	}
 
 	// When the parent's some other entry
-	entry = newCacheTestsMockEntry("parent")
-	entry.SetTestID("/parent")
+	entry = newCacheTestsRootEntry("parent")
 	entry.DisableDefaultCaching()
+
+	child1 = entry.NewEntry("foo/child1")
+	child2 = entry.NewEntry("child2")
+	mockChildren = []Entry{&child1, &child2}
+
 	entry.On("List", ctx).Return(mockChildren, nil).Once()
 	children, err = CachedList(ctx, entry)
 	if suite.NoError(err) {

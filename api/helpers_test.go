@@ -120,9 +120,9 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		}
 	}
 
-	foo := plugin.NewEntry("foo/bar")
-	group := &mockGroup{plugin.NewEntry("root"), []plugin.Entry{&foo}}
-	group.SetTestID("/root")
+	group := &mockGroup{EntryBase: plugin.NewRootEntry("root")}
+	foo := group.NewEntry("foo/bar")
+	group.entries = []plugin.Entry{&foo}
 	group.DisableDefaultCaching()
 	for _, c := range []testcase{
 		{[]string{"not found"}, "", entryNotFoundResponse("not found", "The not found entry does not exist")},
@@ -132,8 +132,9 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		runTestCase(group, c)
 	}
 
-	baz := plugin.NewEntry("baz")
-	nestedGroup := &mockGroup{plugin.NewEntry("bar"), []plugin.Entry{&baz}}
+	nestedGroup := &mockGroup{EntryBase: group.NewEntry("bar")}
+	baz := nestedGroup.NewEntry("baz")
+	nestedGroup.entries = []plugin.Entry{&baz}
 	nestedGroup.DisableDefaultCaching()
 	group.entries = append(group.entries, nestedGroup)
 	for _, c := range []testcase{
@@ -145,7 +146,7 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	}
 
 	// Finally, test the duplicate cname error response
-	duplicateFoo := plugin.NewEntry("foo#bar")
+	duplicateFoo := group.NewEntry("foo#bar")
 	group.entries = append(group.entries, &duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
 		ParentPath:                      plugin.Path(group),

@@ -27,9 +27,9 @@ const mountpoint = "/mnt"
 
 var errPodTerminated = errors.New("Pod terminated unexpectedly")
 
-func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, p *corev1.PersistentVolumeClaim) *pvc {
+func newPVC(parent plugin.Entry, pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, p *corev1.PersistentVolumeClaim) *pvc {
 	vol := &pvc{
-		EntryBase: plugin.NewEntry(p.Name),
+		EntryBase: parent.NewEntry(p.Name),
 		pvci:      pi,
 		podi:      pd,
 	}
@@ -98,9 +98,9 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode().IsDir() {
-			entries = append(entries, volume.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
+			entries = append(entries, volume.NewDir(v, name, attr, v.getContentCB(), "/"+name, dirs))
 		} else {
-			entries = append(entries, volume.NewFile(name, attr, v.getContentCB(), "/"+name))
+			entries = append(entries, volume.NewFile(v, name, attr, v.getContentCB(), "/"+name))
 		}
 	}
 	return entries, nil

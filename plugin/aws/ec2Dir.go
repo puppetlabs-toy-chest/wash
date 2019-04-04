@@ -17,16 +17,16 @@ type ec2Dir struct {
 	entries []plugin.Entry
 }
 
-func newEC2Dir(session *session.Session) *ec2Dir {
+func newEC2Dir(parent plugin.Entry, session *session.Session) *ec2Dir {
 	ec2Dir := &ec2Dir{
-		EntryBase: plugin.NewEntry("ec2"),
+		EntryBase: parent.NewEntry("ec2"),
 		session:   session,
 		client:    ec2Client.New(session),
 	}
 	ec2Dir.DisableDefaultCaching()
 
 	ec2Dir.entries = []plugin.Entry{
-		newEC2InstancesDir(ec2Dir.session, ec2Dir.client),
+		newEC2InstancesDir(parent, ec2Dir.session, ec2Dir.client),
 	}
 
 	return ec2Dir

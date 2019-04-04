@@ -26,12 +26,12 @@ func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 		if err != nil {
 			journal.Record(ctx, "Error loading default namespace, metadata will not be available: %v", err)
 		}
-		return []plugin.Entry{newNamespace(c.defaultns, ns, c.client, c.config)}, nil
+		return []plugin.Entry{newNamespace(c, c.defaultns, ns, c.client, c.config)}, nil
 	}
 
 	namespaces := make([]plugin.Entry, len(nsList.Items))
 	for i, ns := range nsList.Items {
-		namespaces[i] = newNamespace(ns.Name, &ns, c.client, c.config)
+		namespaces[i] = newNamespace(c, ns.Name, &ns, c.client, c.config)
 	}
 	journal.Record(ctx, "Listing namespaces: %+v", namespaces)
 	return namespaces, nil

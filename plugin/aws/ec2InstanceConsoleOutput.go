@@ -26,9 +26,9 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 	}
 
 	if cl.latest {
-		cl.EntryBase = plugin.NewEntry("console-latest.out")
+		cl.EntryBase = inst.NewEntry("console-latest.out")
 	} else {
-		cl.EntryBase = plugin.NewEntry("console.out")
+		cl.EntryBase = inst.NewEntry("console.out")
 	}
 	cl.DisableDefaultCaching()
 
@@ -62,7 +62,7 @@ func (o consoleOutput) toMeta() plugin.EntryMetadata {
 }
 
 func (cl *ec2InstanceConsoleOutput) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
-	output, err := plugin.CachedOp(ctx, "ConsoleOutput", cl, 30*time.Second, func() (interface{}, error) {
+	output, err := plugin.CachedOp("ConsoleOutput", cl, 30*time.Second, func() (interface{}, error) {
 		request := &ec2Client.GetConsoleOutputInput{
 			InstanceId: awsSDK.String(cl.inst.Name()),
 		}

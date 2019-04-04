@@ -26,7 +26,7 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 	keys := make([]plugin.Entry, len(containers))
 	for i, inst := range containers {
 		cont := &container{
-			EntryBase: plugin.NewEntry(inst.ID),
+			EntryBase: cs.NewEntry(inst.ID),
 			client:    cs.client,
 		}
 

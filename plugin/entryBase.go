@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"flag"
+	"strings"
 	"time"
 )
 
@@ -20,25 +21,27 @@ const (
 var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
 // EntryBase implements Entry, making it easy to create new entries.
-// You should use plugin.NewEntry to create new EntryBase objects.
+// You should use NewRootEntry or NewEntry to create new EntryBase objects.
 type EntryBase struct {
 	entryName          string
 	attr               EntryAttributes
 	slashReplacementCh rune
-	// washID represents the entry's wash ID. It is set in CachedList.
+	// washID represents the entry's wash ID.
 	washID string
 	ttl    [3]time.Duration
 }
 
-// NewEntry creates a new entry
-func NewEntry(name string) EntryBase {
+// NewRootEntry creates a new root entry. Use NewEntry for all subsequent
+// entries.
+func NewRootEntry(name string) EntryBase {
 	if name == "" {
-		panic("plugin.NewEntry: received an empty name")
+		panic("plugin.NewRootEntry: received an empty name")
 	}
 
 	e := EntryBase{
 		entryName:          name,
 		slashReplacementCh: '#',
+		washID:             "/" + strings.TrimPrefix(name, "/"),
 	}
 	for op := range e.ttl {
 		e.SetTTLOf(defaultOpCode(op), 15*time.Second)
@@ -74,10 +77,6 @@ func (e *EntryBase) id() string {
 	return e.washID
 }
 
-func (e *EntryBase) setID(id string) {
-	e.washID = id
-}
-
 func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 	return e.ttl[op]
 }
@@ -85,8 +84,15 @@ func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
 // AND TESTING
 
+// NewEntry creates a new child entry for the current entry.
+func (e *EntryBase) NewEntry(name string) EntryBase {
+	child := NewRootEntry(name)
+	child.washID = strings.TrimSuffix(e.washID, "/") + "/" + CName(&child)
+	return child
+}
+
 // Name returns the entry's name as it was passed into
-// plugin.NewEntry. You should use e.Name() when making
+// NewEntry. You should use e.Name() when making
 // the appropriate API calls within your plugin.
 func (e *EntryBase) Name() string {
 	return e.name()
@@ -128,16 +134,6 @@ func (e *EntryBase) DisableDefaultCaching() {
 	for op := range e.ttl {
 		e.DisableCachingFor(defaultOpCode(op))
 	}
-}
-
-// SetTestID sets the entry's cache ID for testing.
-// It can only be called by the tests.
-func (e *EntryBase) SetTestID(id string) {
-	if notRunningTests() {
-		panic("SetTestID can be only be called by the tests")
-	}
-
-	e.setID(id)
 }
 
 func notRunningTests() bool {

@@ -14,16 +14,16 @@ type resourcesDir struct {
 	resources []plugin.Entry
 }
 
-func newResourcesDir(session *session.Session) *resourcesDir {
+func newResourcesDir(parent plugin.Entry, session *session.Session) *resourcesDir {
 	resourcesDir := &resourcesDir{
-		EntryBase: plugin.NewEntry("resources"),
+		EntryBase: parent.NewEntry("resources"),
 		session:   session,
 	}
 	resourcesDir.DisableDefaultCaching()
 
 	resourcesDir.resources = []plugin.Entry{
-		newS3Dir(resourcesDir.session),
-		newEC2Dir(resourcesDir.session),
+		newS3Dir(parent, resourcesDir.session),
+		newEC2Dir(parent, resourcesDir.session),
 	}
 
 	return resourcesDir

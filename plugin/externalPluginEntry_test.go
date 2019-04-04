@@ -35,6 +35,7 @@ func (m *mockExternalPluginScript) OnInvokeAndWait(ctx interface{}, args ...stri
 
 type ExternalPluginEntryTestSuite struct {
 	suite.Suite
+	root Entry
 }
 
 func (suite *ExternalPluginEntryTestSuite) EqualTimeAttr(expected time.Time, actual time.Time, msgAndArgs ...interface{}) {
@@ -93,16 +94,15 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
-
-	_, err := decodedEntry.toExternalPluginEntry()
+	_, err := decodedEntry.toExternalPluginEntry(suite.root)
 	suite.Regexp(regexp.MustCompile("name"), err)
 	decodedEntry.Name = "decodedEntry"
 
-	_, err = decodedEntry.toExternalPluginEntry()
+	_, err = decodedEntry.toExternalPluginEntry(suite.root)
 	suite.Regexp(regexp.MustCompile("action"), err)
 	decodedEntry.SupportedActions = []string{"list"}
 
-	entry, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry(suite.root)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(decodedEntry.SupportedActions, entry.supportedActions)
@@ -119,7 +119,7 @@ func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithState() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.State = "some state"
-	entry, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry(suite.root)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.State, entry.state)
 	}
@@ -128,9 +128,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithStat
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCacheTTLs() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
-	entry, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry(suite.root)
 	if suite.NoError(err) {
-		expectedTTLs := NewEntry("mock").ttl
+		expectedTTLs := suite.root.NewEntry("mock").ttl
 		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
 		suite.Equal(expectedTTLs, entry.EntryBase.ttl)
 	}
@@ -140,11 +140,11 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.SlashReplacementChar = "a string"
 	suite.Panics(
-		func() { _, _ = decodedEntry.toExternalPluginEntry() },
+		func() { _, _ = decodedEntry.toExternalPluginEntry(suite.root) },
 		"e.SlashReplacementChar: received string a string instead of a character",
 	)
 	decodedEntry.SlashReplacementChar = ":"
-	entry, err := decodedEntry.toExternalPluginEntry()
+	entry, err := decodedEntry.toExternalPluginEntry(suite.root)
 	if suite.NoError(err) {
 		suite.Equal(':', entry.slashReplacementChar())
 	}
@@ -173,7 +173,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	}
 
 	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+		EntryBase: suite.root.NewEntry("foo"),
 	}
 	entry.setCacheTTLs(decodedTTLs)
 
@@ -191,10 +191,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+		EntryBase: NewRootEntry("foo"),
 		script:    mockScript,
 	}
-	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
@@ -222,7 +221,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	if suite.NoError(err) {
 		expectedEntries := []Entry{
 			&externalPluginEntry{
-				EntryBase:        NewEntry("foo"),
+				EntryBase:        entry.NewEntry("foo"),
 				supportedActions: []string{"list"},
 				script:           entry.script,
 			},
@@ -235,10 +234,9 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+		EntryBase: NewRootEntry("foo"),
 		script:    mockScript,
 	}
-	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
@@ -264,10 +262,9 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+		EntryBase: NewRootEntry("foo"),
 		script:    mockScript,
 	}
-	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
@@ -301,5 +298,6 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 // state.
 
 func TestExternalPluginEntry(t *testing.T) {
-	suite.Run(t, new(ExternalPluginEntryTestSuite))
+	root := NewRootEntry("/")
+	suite.Run(t, &ExternalPluginEntryTestSuite{root: &root})
 }

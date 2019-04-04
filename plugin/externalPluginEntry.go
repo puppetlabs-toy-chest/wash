@@ -74,7 +74,7 @@ type decodedExternalPluginEntry struct {
 	State                string            `json:"state"`
 }
 
-func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
+func (e decodedExternalPluginEntry) toExternalPluginEntry(parent Entry) (*externalPluginEntry, error) {
 	if e.Name == "" {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
@@ -83,7 +83,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 	}
 
 	entry := &externalPluginEntry{
-		EntryBase:        NewEntry(e.Name),
+		EntryBase:        parent.NewEntry(e.Name),
 		supportedActions: e.SupportedActions,
 		state:            e.State,
 	}
@@ -143,7 +143,7 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
-		entry, err := decodedExternalPluginEntry.toExternalPluginEntry()
+		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(e)
 		if err != nil {
 			return nil, err
 		}

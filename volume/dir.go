@@ -22,9 +22,9 @@ type Dir struct {
 }
 
 // NewDir creates a Dir populated from dirs.
-func NewDir(name string, attr plugin.EntryAttributes, cb ContentCB, path string, dirs DirMap) *Dir {
+func NewDir(parent plugin.Entry, name string, attr plugin.EntryAttributes, cb ContentCB, path string, dirs DirMap) *Dir {
 	vd := &Dir{
-		EntryBase: plugin.NewEntry(name),
+		EntryBase: parent.NewEntry(name),
 		contentcb: cb,
 		path:      path,
 		dirs:      dirs,
@@ -41,9 +41,9 @@ func (v *Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode().IsDir() {
-			entries = append(entries, NewDir(name, attr, v.contentcb, v.path+"/"+name, v.dirs))
+			entries = append(entries, NewDir(v, name, attr, v.contentcb, v.path+"/"+name, v.dirs))
 		} else {
-			entries = append(entries, NewFile(name, attr, v.contentcb, v.path+"/"+name))
+			entries = append(entries, NewFile(v, name, attr, v.contentcb, v.path+"/"+name))
 		}
 	}
 	return entries, nil

@@ -17,7 +17,7 @@ type ec2InstanceMetadataJSON struct {
 
 func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2InstanceMetadataJSON, error) {
 	im := &ec2InstanceMetadataJSON{
-		EntryBase: plugin.NewEntry("metadata.json"),
+		EntryBase: inst.NewEntry("metadata.json"),
 		inst:      inst,
 	}
 	im.DisableDefaultCaching()

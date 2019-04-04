@@ -30,7 +30,7 @@ func (c *container) Metadata(ctx context.Context) (plugin.EntryMetadata, error) 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: May be worth creating a helper that makes it easy to create
 	// read-only files. Lots of shared code between these two.
-	cm := &containerMetadata{plugin.NewEntry("metadata.json"), c}
+	cm := &containerMetadata{c.NewEntry("metadata.json"), c}
 	cm.DisableDefaultCaching()
 	meta, err := cm.Metadata(ctx)
 	if err != nil {
@@ -40,7 +40,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	cmAttr.SetSize(uint64(meta["Size"].(int64)))
 	cm.SetAttributes(cmAttr)
 
-	clf := &containerLogFile{plugin.NewEntry("log"), c.Name(), c.client}
+	clf := &containerLogFile{c.NewEntry("log"), c.Name(), c.client}
 	clf.DisableCachingFor(plugin.MetadataOp)
 	meta, err = clf.Metadata(ctx)
 	if err != nil {

@@ -23,7 +23,7 @@ import (
 // to pass-around an entire object just to access only one of its methods and (2),
 // it makes it difficult to refresh the shared s3Bucket object when the original object
 // is evicted from the cache.
-func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix string) ([]plugin.Entry, error) {
+func listObjects(ctx context.Context, parent plugin.Entry, client *s3Client.S3, bucket string, prefix string) ([]plugin.Entry, error) {
 	// TODO: Clarify this a bit more later. For now, this should be enough.
 	//
 	// Everything's an object in S3. There is no such thing as a "hierarchy", meaning
@@ -127,7 +127,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 			name = strings.TrimSuffix(name, "/")
 		}
 
-		entries = append(entries, newS3ObjectPrefix(name, bucket, commonPrefix, client))
+		entries = append(entries, newS3ObjectPrefix(parent, name, bucket, commonPrefix, client))
 	}
 
 	for _, o := range resp.Contents {
@@ -137,7 +137,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 			// key == <prefix> so skip it. This is what the AWS console does.
 			continue
 		}
-		entries = append(entries, newS3Object(o, name, bucket, key, client))
+		entries = append(entries, newS3Object(parent, o, name, bucket, key, client))
 	}
 
 	return entries, nil
@@ -151,9 +151,9 @@ type s3Bucket struct {
 	session *session.Session
 }
 
-func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Bucket {
+func newS3Bucket(parent plugin.Entry, name string, ctime time.Time, session *session.Session) *s3Bucket {
 	bucket := &s3Bucket{
-		EntryBase: plugin.NewEntry(name),
+		EntryBase: parent.NewEntry(name),
 		ctime:     ctime,
 		client:    s3Client.New(session),
 		session:   session,
@@ -173,7 +173,7 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	if _, err := b.getRegion(ctx); err != nil {
 		return nil, err
 	}
-	return listObjects(ctx, b.client, b.Name(), "")
+	return listObjects(ctx, b, b.client, b.Name(), "")
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
@@ -217,7 +217,7 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 	// Note that the callback to CachedOp also creates a new client for that region.
 	// We use CachedOp with a long expiration to ensure region is fetched infrequently.
 	// You can force a retry by deleting the cache entry if there was an error.
-	resp, err := plugin.CachedOp(ctx, "Region", b, 24*time.Hour, func() (interface{}, error) {
+	resp, err := plugin.CachedOp("Region", b, 24*time.Hour, func() (interface{}, error) {
 		locRequest := &s3Client.GetBucketLocationInput{Bucket: awsSDK.String(b.Name())}
 		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest)
 		if err != nil {

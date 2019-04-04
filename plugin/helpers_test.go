@@ -15,10 +15,13 @@ import (
 
 type HelpersTestSuite struct {
 	suite.Suite
+	root Entry
 }
 
 func (suite *HelpersTestSuite) SetupSuite() {
 	SetTestCache(datastore.NewMemCache())
+	root := NewRootEntry("root")
+	suite.root = &root
 }
 
 func (suite *HelpersTestSuite) TearDownSuite() {
@@ -26,12 +29,12 @@ func (suite *HelpersTestSuite) TearDownSuite() {
 }
 
 func (suite *HelpersTestSuite) TestName() {
-	e := NewEntry("foo")
+	e := suite.root.NewEntry("foo")
 	suite.Equal(Name(&e), "foo")
 }
 
 func (suite *HelpersTestSuite) TestCName() {
-	e := NewEntry("foo/bar/baz")
+	e := suite.root.NewEntry("foo/bar/baz")
 	suite.Equal("foo#bar#baz", CName(&e))
 
 	e.SetSlashReplacementChar(':')
@@ -39,10 +42,9 @@ func (suite *HelpersTestSuite) TestCName() {
 }
 
 func (suite *HelpersTestSuite) TestPath() {
-	e := NewEntry("foo")
-	e.setID("/foo/bar")
+	e := suite.root.NewEntry("bar")
 
-	suite.Equal(Path(&e), "/foo/bar")
+	suite.Equal(Path(&e), "/root/bar")
 }
 
 func (suite *HelpersTestSuite) TestParseMode() {
@@ -112,9 +114,8 @@ type helpersTestsMockEntry struct {
 
 func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 	e := &helpersTestsMockEntry{
-		EntryBase: NewEntry("mockEntry"),
+		EntryBase: NewRootEntry("mockEntry"),
 	}
-	e.SetTestID("id")
 	e.DisableDefaultCaching()
 
 	return e

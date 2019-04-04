@@ -24,15 +24,15 @@ func (suite *EntryBaseTestSuite) assertOpTTL(e EntryBase, op defaultOpCode, opNa
 	)
 }
 
-func (suite *EntryBaseTestSuite) TestNewEntry() {
+func (suite *EntryBaseTestSuite) TestNewRootEntry() {
 	suite.Panics(
-		func() { NewEntry("") },
-		"plugin.NewEntry: received an empty name",
+		func() { NewRootEntry("") },
+		"plugin.NewRootEntry: received an empty name",
 	)
 
 	initialAttr := EntryAttributes{}
 	initialAttr.SetCtime(time.Now())
-	e := NewEntry("foo")
+	e := NewRootEntry("foo")
 
 	e.SetAttributes(initialAttr)
 	suite.Equal(initialAttr, e.attr)
@@ -41,8 +41,6 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	suite.assertOpTTL(e, ListOp, "List", 15*time.Second)
 	suite.assertOpTTL(e, OpenOp, "Open", 15*time.Second)
 	suite.assertOpTTL(e, MetadataOp, "Metadata", 15*time.Second)
-
-	e.setID("/foo")
 	suite.Equal("/foo", e.id())
 
 	e.SetTTLOf(ListOp, 40*time.Second)
@@ -56,8 +54,15 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	suite.assertOpTTL(e, MetadataOp, "Metadata", -1)
 }
 
+func (suite *EntryBaseTestSuite) TestNewEntry() {
+	foo := NewRootEntry("foo")
+	bar := foo.NewEntry("bar")
+	suite.Equal("bar", bar.Name())
+	suite.Equal("/foo/bar", bar.id())
+}
+
 func (suite *EntryBaseTestSuite) TestMetadata() {
-	e := NewEntry("foo")
+	e := NewRootEntry("foo")
 
 	meta, err := e.Metadata(context.Background())
 	if suite.NoError(err) {
@@ -67,7 +72,8 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 }
 
 func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
-	e := NewEntry("foo/bar")
+	// TODO: NewRootEntry should reject slashes and we should test NewEntry.
+	e := NewRootEntry("foo/bar")
 
 	suite.Panics(
 		func() { e.SetSlashReplacementChar('/') },

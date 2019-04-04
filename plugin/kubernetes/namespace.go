@@ -18,11 +18,11 @@ type namespace struct {
 	resourcetypes []plugin.Entry
 }
 
-func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *rest.Config) *namespace {
-	ns := &namespace{EntryBase: plugin.NewEntry(name), metadata: meta, client: c, config: cfg}
+func newNamespace(parent plugin.Entry, name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *rest.Config) *namespace {
+	ns := &namespace{EntryBase: parent.NewEntry(name), metadata: meta, client: c, config: cfg}
 	ns.resourcetypes = []plugin.Entry{
-		&pods{plugin.NewEntry("pods"), c, cfg, name},
-		&pvcs{plugin.NewEntry("persistentvolumeclaims"), c, name},
+		&pods{ns.NewEntry("pods"), c, cfg, name},
+		&pvcs{ns.NewEntry("persistentvolumeclaims"), c, name},
 	}
 	return ns
 }

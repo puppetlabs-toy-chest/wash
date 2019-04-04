@@ -18,9 +18,9 @@ type File struct {
 }
 
 // NewFile creates a VolumeFile.
-func NewFile(name string, attr plugin.EntryAttributes, cb ContentCB, path string) *File {
+func NewFile(parent plugin.Entry, name string, attr plugin.EntryAttributes, cb ContentCB, path string) *File {
 	vf := &File{
-		EntryBase: plugin.NewEntry(name),
+		EntryBase: parent.NewEntry(name),
 		contentcb: cb,
 		path:      path,
 	}

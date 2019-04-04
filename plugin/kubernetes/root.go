@@ -22,7 +22,7 @@ type Root struct {
 	contexts []plugin.Entry
 }
 
-func createContext(raw clientcmdapi.Config, name string, access clientcmd.ConfigAccess) (plugin.Entry, error) {
+func (r *Root) createContext(raw clientcmdapi.Config, name string, access clientcmd.ConfigAccess) (plugin.Entry, error) {
 	config := clientcmd.NewNonInteractiveClientConfig(raw, name, &clientcmd.ConfigOverrides{}, access)
 	cfg, err := config.ClientConfig()
 	if err != nil {
@@ -36,7 +36,7 @@ func createContext(raw clientcmdapi.Config, name string, access clientcmd.Config
 	if err != nil {
 		return nil, err
 	}
-	return &k8context{plugin.NewEntry(name), clientset, cfg, defaultns}, nil
+	return &k8context{r.NewEntry(name), clientset, cfg, defaultns}, nil
 }
 
 // Init for root
@@ -48,12 +48,12 @@ func (r *Root) Init() error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntry("kubernetes")
+	r.EntryBase = plugin.NewRootEntry("kubernetes")
 	r.DisableDefaultCaching()
 
 	contexts := make([]plugin.Entry, 0)
 	for name := range raw.Contexts {
-		ctx, err := createContext(raw, name, config.ConfigAccess())
+		ctx, err := r.createContext(raw, name, config.ConfigAccess())
 		if err != nil {
 			journal.Record(context.Background(), "loading context %v failed: %+v", name, err)
 			continue

@@ -44,7 +44,7 @@ func (r *externalPluginRoot) Init() error {
 		return fmt.Errorf("could not decode the plugin root from stdout: %v", err)
 	}
 
-	entry, err := decodedRoot.toExternalPluginEntry()
+	entry, err := decodedRoot.toExternalPluginEntry(r)
 	if err != nil {
 		return err
 	}

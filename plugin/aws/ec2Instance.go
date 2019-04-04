@@ -41,9 +41,9 @@ const (
 	EC2InstanceStopped           = 80
 )
 
-func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *session.Session, client *ec2Client.EC2) *ec2Instance {
+func newEC2Instance(ctx context.Context, parent plugin.Entry, inst *ec2Client.Instance, session *session.Session, client *ec2Client.EC2) *ec2Instance {
 	ec2Instance := &ec2Instance{
-		EntryBase:        plugin.NewEntry(awsSDK.StringValue(inst.InstanceId)),
+		EntryBase:        parent.NewEntry(awsSDK.StringValue(inst.InstanceId)),
 		session:          session,
 		client:           client,
 		ssmClient:        ssm.New(session),
@@ -106,7 +106,7 @@ func (d describeInstanceResult) toMeta() plugin.EntryMetadata {
 }
 
 func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeInstanceResult, error) {
-	info, err := plugin.CachedOp(ctx, "DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
+	info, err := plugin.CachedOp("DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
 		request := &ec2Client.DescribeInstancesInput{
 			InstanceIds: []*string{
 				awsSDK.String(inst.Name()),

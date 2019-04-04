@@ -26,11 +26,11 @@ func (r *Root) Init() error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntry("docker")
+	r.EntryBase = plugin.NewRootEntry("docker")
 	r.DisableDefaultCaching()
 	r.resources = []plugin.Entry{
-		&containers{EntryBase: plugin.NewEntry("containers"), client: dockerCli},
-		&volumes{EntryBase: plugin.NewEntry("volumes"), client: dockerCli},
+		&containers{EntryBase: r.NewEntry("containers"), client: dockerCli},
+		&volumes{EntryBase: r.NewEntry("volumes"), client: dockerCli},
 	}
 
 	return nil

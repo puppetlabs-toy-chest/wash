@@ -18,9 +18,9 @@ type s3Dir struct {
 	client  *s3Client.S3
 }
 
-func newS3Dir(session *session.Session) *s3Dir {
+func newS3Dir(parent plugin.Entry, session *session.Session) *s3Dir {
 	return &s3Dir{
-		EntryBase: plugin.NewEntry("s3"),
+		EntryBase: parent.NewEntry("s3"),
 		session:   session,
 		client:    s3Client.New(session),
 	}
@@ -38,6 +38,7 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	buckets := make([]plugin.Entry, len(resp.Buckets))
 	for i, bucket := range resp.Buckets {
 		buckets[i] = newS3Bucket(
+			s,
 			awsSDK.StringValue(bucket.Name),
 			awsSDK.TimeValue(bucket.CreationDate),
 			s.session,

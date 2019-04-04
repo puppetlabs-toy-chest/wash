@@ -24,7 +24,7 @@ func (pv *pvcs) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	entries := make([]plugin.Entry, len(pvcList.Items))
 	for i, p := range pvcList.Items {
-		entries[i] = newPVC(pvcI, pv.client.CoreV1().Pods(pv.ns), &p)
+		entries[i] = newPVC(pv, pvcI, pv.client.CoreV1().Pods(pv.ns), &p)
 	}
 	return entries, nil
 }

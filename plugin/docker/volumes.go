@@ -24,7 +24,7 @@ func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
 	journal.Record(ctx, "Listing %v volumes in %v", len(volumes.Volumes), vs)
 	keys := make([]plugin.Entry, len(volumes.Volumes))
 	for i, inst := range volumes.Volumes {
-		if keys[i], err = newVolume(vs.client, inst); err != nil {
+		if keys[i], err = newVolume(vs, vs.client, inst); err != nil {
 			return nil, err
 		}
 	}
