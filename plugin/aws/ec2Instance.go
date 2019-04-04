@@ -50,6 +50,7 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 		cloudwatchClient: cloudwatchlogs.New(session),
 	}
 	ec2Instance.SetTTLOf(plugin.ListOp, 30*time.Second)
+	ec2Instance.DisableCachingFor(plugin.MetadataOp)
 
 	metaObj := newDescribeInstanceResult(inst)
 
