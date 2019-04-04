@@ -55,15 +55,6 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	if plugin.ListAction.IsSupportedOn(entry) {
 		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
 		journal.Record(ctx, "FUSE: Found directory %v", childdir)
-		// Prefetch directory entries into the cache
-		go func() {
-			// Need to use a different context here because we still want the prefetch
-			// to happen even when the current context is cancelled.
-			jid := journal.PIDToID(int(req.Pid))
-			ctx := context.WithValue(context.Background(), journal.Key, jid)
-			_, err := childdir.children(ctx)
-			journal.Record(ctx, "FUSE: Prefetching children of %v complete: %v", childdir, err)
-		}()
 		return childdir, nil
 	}
 
