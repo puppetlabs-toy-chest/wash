@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"strings"
 	"syscall"
 	"time"
@@ -44,6 +45,9 @@ func serverCommand() *cobra.Command {
 
 	serverCmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
 	errz.Fatal(viper.BindPFlag("external-plugins", serverCmd.Flags().Lookup("external-plugins")))
+
+	serverCmd.Flags().String("cpuprofile", "", "Write cpu profile to file")
+	errz.Fatal(viper.BindPFlag("cpuprofile", serverCmd.Flags().Lookup("cpuprofile")))
 
 	serverCmd.RunE = toRunE(serverMain)
 
@@ -116,6 +120,16 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	// server and unmounting the FS.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	cpuprofile := viper.GetString("cpuprofile")
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		errz.Fatal(pprof.StartCPUProfile(f))
+		defer pprof.StopCPUProfile()
+	}
 
 	select {
 	case <-sigCh:
