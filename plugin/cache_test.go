@@ -16,8 +16,8 @@ type cacheTestsMockCache struct {
 	mock.Mock
 }
 
-func (m *cacheTestsMockCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
-	args := m.Called(key, ttl, resetTTLOnHit, generateValue)
+func (m *cacheTestsMockCache) GetOrUpdate(cat, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+	args := m.Called(cat, key, ttl, resetTTLOnHit, generateValue)
 	return args.Get(0), args.Error(1)
 }
 
@@ -175,14 +175,13 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	opName := "Op"
 	opTTL := 5 * time.Second
 	op := func() (interface{}, error) { return "result", nil }
-	opKey := "Op::id"
 	generateValueMatcher := suite.makeGenerateValueMatcher("result")
-	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
+	suite.cache.On("GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
 	v, err := CachedOp(context.Background(), opName, entry, opTTL, op)
 	if suite.NoError(err) {
 		suite.Equal("result", v)
 	}
-	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
+	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
 func (suite *CacheTestSuite) TestDuplicateCNameErr() {
@@ -247,14 +246,13 @@ func (suite *CacheTestSuite) testCachedDefaultOp(
 	opTTL := 5 * time.Second
 	entry.SetTTLOf(op, opTTL)
 	entry.On(opName, ctx).Return(opValue, nil)
-	opKey := opName + "::" + "id"
 	generateValueMatcher := suite.makeGenerateValueMatcher(mungedOpValue)
-	suite.cache.On("GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mungedOpValue, nil).Once()
+	suite.cache.On("GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mungedOpValue, nil).Once()
 	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mungedOpValue, v)
 	}
-	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opKey, opTTL, false, mock.MatchedBy(generateValueMatcher))
+	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
 func toMap(children []Entry) map[string]Entry {

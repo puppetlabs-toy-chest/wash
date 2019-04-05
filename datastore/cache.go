@@ -3,6 +3,7 @@ package datastore
 
 import (
 	"regexp"
+	"sync"
 	"time"
 
 	// TODO: Once https://github.com/patrickmn/go-cache/pull/75
@@ -14,7 +15,7 @@ import (
 
 // Cache is an interface for a cache.
 type Cache interface {
-	GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error)
+	GetOrUpdate(category, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error)
 	Flush()
 	Delete(matcher *regexp.Regexp) []string
 }
@@ -23,7 +24,7 @@ type Cache interface {
 // to get-or-update cached data in a single transaction to avoid redundant update activity.
 type MemCache struct {
 	instance    *cache.Cache
-	locks       []*locksutil.LockEntry
+	locks       sync.Map
 	hasEviction bool
 }
 
@@ -34,7 +35,6 @@ func NewMemCache() *MemCache {
 	cache := cache.New(cache.NoExpiration, 1*time.Minute)
 	return &MemCache{
 		instance:    cache,
-		locks:       locksutil.CreateLocks(),
 		hasEviction: false,
 	}
 }
@@ -48,20 +48,28 @@ func NewMemCacheWithEvicted(f func(string, interface{})) *MemCache {
 	return cache
 }
 
-// LockForKey retrieve the lock used for a specific key.
-func (cache *MemCache) lockForKey(key string) *locksutil.LockEntry {
-	return locksutil.LockForKey(cache.locks, key)
+// LockForKey retrieve the lock used for a specific category/key pair.
+func (cache *MemCache) lockForKey(category, key string) *locksutil.LockEntry {
+	// If a lockset is present for the category, use it. Otherwise create one and add it.
+	obj, ok := cache.locks.Load(category)
+	if !ok {
+		obj, _ = cache.locks.LoadOrStore(category, locksutil.CreateLocks())
+	}
+	return locksutil.LockForKey(obj.([]*locksutil.LockEntry), key)
 }
 
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
 // If resetTTLOnHit is true, will reset the cache expiration for the entry.
-func (cache *MemCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
-	l := cache.lockForKey(key)
+func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+	l := cache.lockForKey(category, key)
 	l.Lock()
 	defer l.Unlock()
 
+	// From here on key is a composition of category and key so we can maintain
+	// a single cache.
+	key = category + "::" + key
 	value, found := cache.instance.Get(key)
 	if found {
 		log.Tracef("Cache hit on %v", key)

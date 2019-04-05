@@ -27,7 +27,8 @@ func newMockCache() *mockCache {
 	return &mockCache{items: make(map[string]interface{})}
 }
 
-func (m *mockCache) GetOrUpdate(key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+func (m *mockCache) GetOrUpdate(cat, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+	key = cat + "::" + key
 	if v, ok := m.items[key]; ok {
 		return v, nil
 	}

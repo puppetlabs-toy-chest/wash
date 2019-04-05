@@ -79,7 +79,8 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 
 	log.Debugf(msg, a...)
 
-	obj, err := journalCache.GetOrUpdate(id, expires, true, func() (interface{}, error) {
+	// This is a single-use cache, so pass in an empty category.
+	obj, err := journalCache.GetOrUpdate("", id, expires, true, func() (interface{}, error) {
 		jdir := Dir()
 		if err := os.MkdirAll(jdir, 0750); err != nil {
 			return nil, err
