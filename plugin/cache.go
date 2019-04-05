@@ -241,5 +241,5 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 		return op()
 	}
 
-	return cache.GetOrUpdate(opName+"::"+entry.id(), ttl, false, op)
+	return cache.GetOrUpdate(opName, entry.id(), ttl, false, op)
 }

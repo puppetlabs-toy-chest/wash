@@ -37,23 +37,23 @@ func (suite *MemCacheTestSuite) validate(item interface{}, err error) {
 func (suite *MemCacheTestSuite) TestGetOrUpdateNoReset() {
 	suite.thing.On("update").Return(anything, nil)
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Second, false, suite.update))
-	item, ok := suite.mem.instance.Get("an entry")
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Second, false, suite.update))
+	item, ok := suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Nanosecond, false, suite.update))
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Nanosecond, false, suite.update))
 	time.Sleep(time.Nanosecond)
-	item, ok = suite.mem.instance.Get("an entry")
+	item, ok = suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
 	suite.thing.AssertNumberOfCalls(suite.T(), "update", 1)
 
-	suite.mem.instance.Delete("an entry")
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Second, false, suite.update))
-	item, ok = suite.mem.instance.Get("an entry")
+	suite.mem.instance.Delete("cat::an entry")
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Second, false, suite.update))
+	item, ok = suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
@@ -63,13 +63,13 @@ func (suite *MemCacheTestSuite) TestGetOrUpdateNoReset() {
 func (suite *MemCacheTestSuite) TestGetOrUpdateExpire() {
 	suite.thing.On("update").Return(anything, nil)
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Nanosecond, false, suite.update))
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Nanosecond, false, suite.update))
 	time.Sleep(time.Nanosecond)
-	_, ok := suite.mem.instance.Get("an entry")
+	_, ok := suite.mem.instance.Get("cat::an entry")
 	suite.False(ok)
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Second, false, suite.update))
-	item, ok := suite.mem.instance.Get("an entry")
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Second, false, suite.update))
+	item, ok := suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
@@ -79,20 +79,20 @@ func (suite *MemCacheTestSuite) TestGetOrUpdateExpire() {
 func (suite *MemCacheTestSuite) TestGetOrUpdateWithReset() {
 	suite.thing.On("update").Return(anything, nil)
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Second, true, suite.update))
-	item, ok := suite.mem.instance.Get("an entry")
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Second, true, suite.update))
+	item, ok := suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Nanosecond, true, suite.update))
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Nanosecond, true, suite.update))
 	time.Sleep(time.Nanosecond)
-	_, ok = suite.mem.instance.Get("an entry")
+	_, ok = suite.mem.instance.Get("cat::an entry")
 	suite.False(ok)
 	suite.thing.AssertNumberOfCalls(suite.T(), "update", 1)
 
-	suite.validate(suite.mem.GetOrUpdate("an entry", time.Second, true, suite.update))
-	item, ok = suite.mem.instance.Get("an entry")
+	suite.validate(suite.mem.GetOrUpdate("cat", "an entry", time.Second, true, suite.update))
+	item, ok = suite.mem.instance.Get("cat::an entry")
 	if suite.True(ok) {
 		suite.Equal("anything", item)
 	}
@@ -158,11 +158,11 @@ func (suite *MemCacheEvictedTestSuite) TestExpired() {
 	suite.mem.instance.Set("an entry", struct{}{}, time.Nanosecond)
 	time.Sleep(time.Nanosecond)
 
-	_, err := suite.mem.GetOrUpdate("an entry", time.Second, false, func() (interface{}, error) {
+	_, err := suite.mem.GetOrUpdate("cat", "an entry", time.Second, false, func() (interface{}, error) {
 		return nil, errors.New("nope")
 	})
 	suite.Equal(errors.New("nope"), err)
-	if val, ok := suite.mem.instance.Get("an entry"); suite.True(ok) {
+	if val, ok := suite.mem.instance.Get("cat::an entry"); suite.True(ok) {
 		suite.Equal(errors.New("nope"), val)
 	}
 }
