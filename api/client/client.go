@@ -155,6 +155,27 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 	return events, nil
 }
 
+// Clear the cache at "path".
+func (c *DomainSocketClient) Clear(path string) ([]string, error) {
+	respBody, err := c.doRequest(http.MethodDelete, "/cache", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() { errz.Log(respBody.Close()) }()
+	body, err := ioutil.ReadAll(respBody)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("Non-JSON body at %v: %v", "/cache", string(body))
+	}
+
+	return result, nil
+}
+
 // APIKeyFromPath will take a path to an object within the wash filesystem,
 // and interrogate it to determine its path relative to the wash filesystem
 // root. This is stored in the extended attributes of every file in the wash fs.
