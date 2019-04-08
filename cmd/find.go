@@ -30,6 +30,9 @@ func findCommand() *cobra.Command {
 }
 
 func findMain(cmd *cobra.Command, args []string) exitCode {
+	// TODO: Have `wash find` default to recursing on "." (the cwd)
+	// if the path is not provided. Also have it handle non-Wash
+	// paths.
 	path := args[0]
 	if path[0] == '-' {
 		cmdutil.ErrPrintf("find expects a path")

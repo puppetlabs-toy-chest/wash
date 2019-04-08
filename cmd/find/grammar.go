@@ -53,6 +53,8 @@ var parensOp = &atom{
 	parsePredicate: func(tokens []string) (Predicate, []string, error) {
 		// Find the ")" that's paired with our "(". Use the algorithm
 		// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
+		// Note that we do not have to check for balanced parentheses here because
+		// that check was already done in the exported ParsePredicate method.
 		//
 		// TODO: Could optimize this by moving parens handling over to the evaluation
 		// stack. Not important right now because expressions to `wash find` will likely
