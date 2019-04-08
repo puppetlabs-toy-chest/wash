@@ -123,7 +123,7 @@ func (cache *MemCache) Delete(matcher *regexp.Regexp) []string {
 			cache.instance.Delete(k)
 			deleted = append(deleted, k)
 		} else {
-			log.Infof("Skipping %v", k)
+			log.Debugf("Skipping %v", k)
 		}
 	}
 	return deleted
