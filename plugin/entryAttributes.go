@@ -2,10 +2,12 @@ package plugin
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/Benchkram/errz"
+	"github.com/puppetlabs/wash/munge"
 )
 
 // EntryMetadata represents the entry's metadata
@@ -172,4 +174,90 @@ func (a *EntryAttributes) Meta() EntryMetadata {
 func (a *EntryAttributes) SetMeta(meta EntryMetadata) *EntryAttributes {
 	a.meta = meta
 	return a
+}
+
+// ToMap converts the entry's attributes to a map,
+// which makes it easier to write generic code on
+// them.
+func (a *EntryAttributes) ToMap() map[string]interface{} {
+	mp := make(map[string]interface{})
+	if a.HasAtime() {
+		mp["atime"] = a.Atime()
+	}
+	if a.HasMtime() {
+		mp["mtime"] = a.Mtime()
+	}
+	if a.HasCtime() {
+		mp["ctime"] = a.Ctime()
+	}
+	if a.HasMode() {
+		mp["mode"] = a.Mode()
+	}
+	if a.HasSize() {
+		mp["size"] = a.Size()
+	}
+	mp["meta"] = a.Meta()
+	return mp
+}
+
+// MarshalJSON marshals the entry's attributes to JSON.
+func (a *EntryAttributes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.ToMap())
+}
+
+// UnmarshalJSON unmarshals the entry's attributes from JSON.
+func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
+	mp := make(map[string]interface{})
+	err := json.Unmarshal(data, &mp)
+	if err != nil {
+		return fmt.Errorf("plugin.EntryAttributes.UnmarshalJSON received a non-JSON object")
+	}
+	if atime, ok := mp["atime"]; ok {
+		t, err := munge.ToTime(atime)
+		if err != nil {
+			return attrMungeError("atime", err)
+		}
+		a.SetAtime(t)
+	}
+	if mtime, ok := mp["mtime"]; ok {
+		t, err := munge.ToTime(mtime)
+		if err != nil {
+			return attrMungeError("mtime", err)
+		}
+		a.SetMtime(t)
+	}
+	if ctime, ok := mp["ctime"]; ok {
+		t, err := munge.ToTime(ctime)
+		if err != nil {
+			return attrMungeError("ctime", err)
+		}
+		a.SetCtime(t)
+	}
+	if mode, ok := mp["mode"]; ok {
+		m, err := munge.ToFileMode(mode)
+		if err != nil {
+			return attrMungeError("mode", err)
+		}
+		a.SetMode(m)
+	}
+	if size, ok := mp["size"]; ok {
+		sz, err := munge.ToSize(size)
+		if err != nil {
+			return attrMungeError("size", err)
+		}
+		a.SetSize(sz)
+	}
+	var meta EntryMetadata
+	if rawMeta, ok := mp["meta"]; ok {
+		meta, ok = rawMeta.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("meta is not a JSON object")
+		}
+	}
+	a.SetMeta(meta)
+	return nil
+}
+
+func attrMungeError(name string, err error) error {
+	return fmt.Errorf("plugin.EntryAttributes.UnmarshalJSON: could not munge the %v attribute: %v", name, err)
 }

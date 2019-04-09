@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 	"time"
@@ -29,45 +30,88 @@ func (suite *EntryAttributesTestSuite) TestToMeta() {
 	}
 }
 
-// Easier to have a single test for everything since they're
-// all redundant
+// Easier to have a single test for everything since there's a lot
+// of redundant, performance-optimized code.
 func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	attr := EntryAttributes{}
+	attr.meta = EntryMetadata{}
+	expectedMp := make(map[string]interface{})
+	expectedMp["meta"] = EntryMetadata{}
+	doUnmarshalJSONTests := func() {
+		attrJSON, err := json.Marshal(expectedMp)
+		if err != nil {
+			panic("assertUnmarshalJSON: could not marshal expectedMp, which is a map[string]interface{} object")
+		}
+		unmarshaledAttr := EntryAttributes{}
+		err = json.Unmarshal(attrJSON, &unmarshaledAttr)
+		if suite.NoError(err) {
+			suite.Equal(attr, unmarshaledAttr)
+		}
+	}
 
+	// Tests for Atime
 	suite.Equal(false, attr.HasAtime())
-	t := time.Now()
+	suite.Equal(expectedMp, attr.ToMap())
+	t := time.Now().Truncate(-1)
 	attr.SetAtime(t)
+	expectedMp["atime"] = t
 	suite.Equal(t, attr.Atime())
 	suite.Equal(true, attr.HasAtime())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 
+	// Tests for Mtime
 	suite.Equal(false, attr.HasMtime())
-	t = time.Now()
+	suite.Equal(expectedMp, attr.ToMap())
+	t = time.Now().Truncate(-1)
 	attr.SetMtime(t)
+	expectedMp["mtime"] = t
 	suite.Equal(t, attr.Mtime())
 	suite.Equal(true, attr.HasMtime())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 
+	// Tests for Ctime
 	suite.Equal(false, attr.HasCtime())
-	t = time.Now()
+	suite.Equal(expectedMp, attr.ToMap())
+	t = time.Now().Truncate(-1)
 	attr.SetCtime(t)
+	expectedMp["ctime"] = t
 	suite.Equal(t, attr.Ctime())
 	suite.Equal(true, attr.HasCtime())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 
+	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
+	suite.Equal(expectedMp, attr.ToMap())
 	m := os.FileMode(0777)
 	attr.SetMode(m)
+	expectedMp["mode"] = m
 	suite.Equal(m, attr.Mode())
 	suite.Equal(true, attr.HasMode())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 
+	// Tests for Size
 	suite.Equal(false, attr.HasSize())
+	suite.Equal(expectedMp, attr.ToMap())
 	sz := uint64(10)
 	attr.SetSize(sz)
+	expectedMp["size"] = sz
 	suite.Equal(sz, attr.Size())
 	suite.Equal(true, attr.HasSize())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 
+	// Tests for Meta
 	suite.Equal(EntryMetadata{}, attr.Meta())
 	meta := EntryMetadata{"foo": "bar"}
 	attr.SetMeta(meta)
+	expectedMp["meta"] = meta
 	suite.Equal(meta, attr.Meta())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
 }
 
 func TestEntryAttributes(t *testing.T) {

@@ -37,60 +37,6 @@ type ExternalPluginEntryTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ExternalPluginEntryTestSuite) EqualTimeAttr(expected time.Time, actual time.Time, msgAndArgs ...interface{}) {
-	suite.WithinDuration(expected, actual, 1*time.Second, msgAndArgs...)
-}
-
-func (suite *ExternalPluginEntryTestSuite) TestUnixSecondsToTimeAttr() {
-	suite.EqualTimeAttr(time.Time{}, unixSecondsToTimeAttr(0))
-
-	t := time.Now()
-	suite.EqualTimeAttr(t, unixSecondsToTimeAttr(t.Unix()))
-}
-
-/*
-func (suite *ExternalPluginEntryTestSuite) TestDecodeAttributes() {
-	atime := time.Now()
-	mtime := time.Now()
-	ctime := time.Now()
-
-	decodedAttributes := decodedAttributes{
-		Atime: atime.Unix(),
-		Mtime: mtime.Unix(),
-		Ctime: ctime.Unix(),
-		Size:  10,
-		Valid: 1 * time.Second,
-	}
-
-	// Test that the attributes are correctly decoded
-	attributes, err := decodedAttributes.toAttributes()
-	if suite.NoError(err) {
-		suite.EqualTimeAttr(atime, attributes.Atime)
-		suite.EqualTimeAttr(mtime, attributes.Mtime)
-		suite.EqualTimeAttr(ctime, attributes.Ctime)
-		suite.Equal(uint64(10), attributes.Size)
-		suite.Equal(
-			os.FileMode(0),
-			attributes.Mode,
-			"Expected the decoded attributes to have no mode field",
-		)
-	}
-
-	// Test that the mode is correctly decoded
-	decodedAttributes.Mode = "0xff"
-	attributes, err = decodedAttributes.toAttributes()
-	if suite.NoError(err) {
-		suite.Equal(os.FileMode(255), attributes.Mode)
-	}
-
-	// Test that toAttributes() returns an error when the mode
-	// cannot be decoded
-	decodedAttributes.Mode = "not a number"
-	attributes, err = decodedAttributes.toAttributes()
-	suite.Error(err)
-}
-*/
-
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
 
@@ -150,20 +96,17 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	}
 }
 
-/*
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttributes() {
 	decodedEntry := newMockDecodedEntry("name")
-	decodedEntry.Attributes = decodedAttributes{Size: 10}
+	t := time.Now()
+	decodedEntry.Attributes.SetCtime(t)
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(Attributes{Size: 10}, entry.attr)
+		expectedAttr := EntryAttributes{}
+		expectedAttr.SetCtime(t)
+		suite.Equal(expectedAttr, entry.attr)
 	}
-
-	decodedEntry.Attributes = decodedAttributes{Mode: "invalid mode"}
-	_, err = decodedEntry.toExternalPluginEntry()
-	suite.Error(err)
 }
-*/
 
 func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	decodedTTLs := decodedCacheTTLs{

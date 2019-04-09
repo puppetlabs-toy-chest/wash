@@ -60,7 +60,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 			Errors:  make(map[string]*apitypes.ErrorObj),
 		}
 
-		result.Attributes = toAPIAttr(plugin.Attributes(entry))
+		result.Attributes = plugin.Attributes(entry)
 		return result
 	}
 

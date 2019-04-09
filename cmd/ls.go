@@ -36,10 +36,10 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var ctimeStr string
-		if entry.Attributes.Ctime == nil {
-			ctimeStr = "<unknown>"
+		if entry.Attributes.HasCtime() {
+			ctimeStr = entry.Attributes.Ctime().Format(time.RFC822)
 		} else {
-			ctimeStr = entry.Attributes.Ctime.Format(time.RFC822)
+			ctimeStr = "<unknown>"
 		}
 
 		actions := entry.Actions

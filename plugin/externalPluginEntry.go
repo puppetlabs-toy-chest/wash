@@ -15,49 +15,6 @@ import (
 	"github.com/puppetlabs/wash/journal"
 )
 
-/*
-TODO: Come back and rethink attributes once all the attributes/metadata work is finished.
-*/
-type decodedAttributes struct {
-	// Atime, Mtime, and Ctime are in Unix time
-	Atime int64         `json:"atime"`
-	Mtime int64         `json:"mtime"`
-	Ctime int64         `json:"ctime"`
-	Mode  interface{}   `json:"mode"`
-	Size  uint64        `json:"size"`
-	Valid time.Duration `json:"valid"`
-}
-
-func unixSecondsToTimeAttr(seconds int64) time.Time {
-	if seconds <= 0 {
-		return time.Time{}
-	}
-
-	return time.Unix(seconds, 0)
-}
-
-/*
-func (a decodedAttributes) toAttributes() (Attributes, error) {
-	attr := Attributes{
-		Atime: unixSecondsToTimeAttr(a.Atime),
-		Mtime: unixSecondsToTimeAttr(a.Mtime),
-		Ctime: unixSecondsToTimeAttr(a.Ctime),
-		Size:  a.Size,
-		Valid: a.Valid,
-	}
-
-	if a.Mode != nil {
-		mode, err := ToFileMode(a.Mode)
-		if err != nil {
-			return Attributes{}, err
-		}
-		attr.Mode = mode
-	}
-
-	return attr, nil
-}
-*/
-
 type decodedCacheTTLs struct {
 	List     time.Duration `json:"list"`
 	Open     time.Duration `json:"open"`
@@ -66,12 +23,12 @@ type decodedCacheTTLs struct {
 
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
-	Name                 string            `json:"name"`
-	SupportedActions     []string          `json:"supported_actions"`
-	SlashReplacementChar string            `json:"slash_replacement_char"`
-	CacheTTLs            decodedCacheTTLs  `json:"cache_ttls"`
-	Attributes           decodedAttributes `json:"attributes"`
-	State                string            `json:"state"`
+	Name                 string           `json:"name"`
+	SupportedActions     []string         `json:"supported_actions"`
+	SlashReplacementChar string           `json:"slash_replacement_char"`
+	CacheTTLs            decodedCacheTTLs `json:"cache_ttls"`
+	Attributes           EntryAttributes  `json:"attributes"`
+	State                string           `json:"state"`
 }
 
 func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
@@ -87,6 +44,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		supportedActions: e.SupportedActions,
 		state:            e.State,
 	}
+	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
 	if e.SlashReplacementChar != "" {
 		if len([]rune(e.SlashReplacementChar)) > 1 {
