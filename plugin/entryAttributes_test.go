@@ -33,6 +33,18 @@ func (suite *EntryAttributesTestSuite) TestToMeta() {
 // Easier to have a single test for everything since there's a lot
 // of redundant, performance-optimized code.
 func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
+	// timeNow returns the current time by marshalling time.Now() into JSON
+	// and then unmarshalling it. We need this function for the unmarshal JSON
+	// tests on the time attributes, because time.Now() includes the monotonic
+	// clock + location information, both of which are lost when it is marshaled
+	// into JSON. Hence without timeNow, the unmarshal JSON tests would always fail.
+	timeNow := func() time.Time {
+		t := time.Now()
+		bytes, _ := json.Marshal(t)
+		unmarshaledTime := time.Time{}
+		_ = json.Unmarshal(bytes, &unmarshaledTime)
+		return unmarshaledTime
+	}
 	attr := EntryAttributes{}
 	attr.meta = EntryMetadata{}
 	expectedMp := make(map[string]interface{})
@@ -52,7 +64,7 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	// Tests for Atime
 	suite.Equal(false, attr.HasAtime())
 	suite.Equal(expectedMp, attr.ToMap())
-	t := time.Now().Truncate(-1)
+	t := timeNow()
 	attr.SetAtime(t)
 	expectedMp["atime"] = t
 	suite.Equal(t, attr.Atime())
@@ -63,7 +75,7 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	// Tests for Mtime
 	suite.Equal(false, attr.HasMtime())
 	suite.Equal(expectedMp, attr.ToMap())
-	t = time.Now().Truncate(-1)
+	t = timeNow()
 	attr.SetMtime(t)
 	expectedMp["mtime"] = t
 	suite.Equal(t, attr.Mtime())
@@ -74,7 +86,7 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	// Tests for Ctime
 	suite.Equal(false, attr.HasCtime())
 	suite.Equal(expectedMp, attr.ToMap())
-	t = time.Now().Truncate(-1)
+	t = timeNow()
 	attr.SetCtime(t)
 	expectedMp["ctime"] = t
 	suite.Equal(t, attr.Ctime())
