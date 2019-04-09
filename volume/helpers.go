@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/puppetlabs/wash/munge"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -71,7 +72,7 @@ func StatParse(line string) (plugin.EntryAttributes, string, error) {
 	}
 	attr.SetCtime(ctime)
 
-	mode, err := plugin.ToFileMode("0x" + segments[4])
+	mode, err := munge.ToFileMode("0x" + segments[4])
 	if err != nil {
 		return attr, "", err
 	}

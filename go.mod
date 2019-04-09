@@ -12,6 +12,7 @@ require (
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
+	github.com/araddon/dateparse v0.0.0-20190329160016-74dc0e29b01f
 	github.com/aws/aws-sdk-go v1.19.7
 	github.com/coreos/etcd v3.3.12+incompatible // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
