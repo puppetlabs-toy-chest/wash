@@ -15,6 +15,12 @@ Exploring, understanding, and inspecting modern infrastructure should be simple 
 * render into text that which can be rendered into text (cuz text is a universal interface!) for easy viewing, editing, and UNIXy slicing-and-dicing
 * build new versions of basic, UNIX tools to support the above goals (but reuse existing ones if they work!)
 
+## Community Feedback
+
+We're actively soliciting community feedback and input on our [roadmap](#roadmap)! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on [`#wash`](https://puppetcommunity.slack.com/app_redirect?channel=wash) on [Slack](https://slack.puppet.com/).
+
+See the [roadmap](#roadmap) below to see what we've got planned!
+
 ## Features
 
 We've implemented some neat features inside of `wash` to support the above goals:
@@ -172,8 +178,6 @@ All operations have their activity recorded to journals in `wash/activity` under
 If the `wash` daemon exits with a exit status of 255, that typically means that `wash` couldn't load the FUSE extensions. MacOS only allows for a certain (small) number of virtual devices on the system, and if all available slots are taken up by other programs then we won't be able to run. You can view loaded extensions with `kextstat`. More information in [this github issue for *FUSE for macOS*](https://github.com/osxfuse/osxfuse/issues/358).
 
 ## Roadmap
-
-We're actively soliciting community feedback and input on our roadmap! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on `#wash` on [Slack](https://slack.puppet.com/).
 
 Project maintainers are not actively working on all of these things, but any of these are directions we would support others in pursuing.
 
