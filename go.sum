@@ -14,6 +14,8 @@ github.com/InVisionApp/tabular v0.3.0 h1:4DGJoBZRTcgd/O+YgfG7/9bXAQy01tSJxrxWEuH
 github.com/InVisionApp/tabular v0.3.0/go.mod h1:/G6t7qe0ZULisB+FjMsB0Qu0mtJ2CZldq92nXWjfHGI=
 github.com/Microsoft/go-winio v0.4.12 h1:xAfWHN1IrQ0NJ9TBC0KBZoqLjzDTr1ML+4MywiUOryc=
 github.com/Microsoft/go-winio v0.4.12/go.mod h1:VhR8bwka0BXejwEJY73c50VrPtXAaKcyvVC4A4RozmA=
+github.com/MikaelSmith/aws-sdk-go v1.15.31-0.20190409174045-425882cd3d0c h1:/Frpxm8rj23gcQHixm6ludozkTdXrJuSH5N8tidmEV8=
+github.com/MikaelSmith/aws-sdk-go v1.15.31-0.20190409174045-425882cd3d0c/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 h1:TngWCqHvy9oXAN6lEVMRuU21PR1EtLVZJmdB18Gu3Rw=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 h1:G1bPvciwNyF7IUmKXNt9Ak3m6u9DE1rF+RmtIkBpVdA=
