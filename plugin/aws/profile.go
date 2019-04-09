@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
@@ -29,6 +30,9 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Profile:                 name,
 		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		// TODO: make this configurable. Different IAM configs may allow different durations.
+		// Use the minimum IAM limit of 1 hour.
+		AssumeRoleTokenDuration: 1 * time.Hour,
 		SharedConfigState:       session.SharedConfigEnable,
 	})
 	if err != nil {

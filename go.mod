@@ -3,6 +3,8 @@ module github.com/puppetlabs/wash
 // Ensures we get the correct client version, tied to v18.09.3
 replace github.com/docker/docker => github.com/docker/engine v0.0.0-20190226002956-8c91e9672cc8
 
+replace github.com/aws/aws-sdk-go => github.com/MikaelSmith/aws-sdk-go v1.15.31-0.20190409174045-425882cd3d0c
+
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	cloud.google.com/go v0.34.0 // indirect
