@@ -31,7 +31,7 @@ We've implemented some neat features inside of `wash` to support the above goals
     * serves up an HTTP API for everything
     * caches information, for better performance
 
-* Primitives - the basic building blocks that form the guts of `wash`, and dictate what kinds of things you can do to all the resources `wash` knows about
+* Primitives - the basic building blocks that form the foundation of `wash`, and dictate what kinds of things you can do to all the resources `wash` knows about
     * `list` - lets you ask any resource what's contained inside of it, and what primitives it supports. 
         - _e.g. listing a Kubernetes pod returns its constituent containers_
     * `metadata` - returns the metadata for any resource
@@ -47,7 +47,10 @@ We've implemented some neat features inside of `wash` to support the above goals
     * `wash ls` - a version of `ls` that uses our API to enhance directory listings with `wash`-specific info
         - _e.g. show you what primitives are supported for each resource_
     * `wash meta` - uses the `metadata` primitive to emit a resource's metadata to standard out
-    * `wash exec` - uses the `exec` primtitive to let you invoke commands against resources
+    * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
+    * `wash find` - find resources using powerful selection predicates (WIP)
+    * `wash ps` - lists running processes on indicated compute instances that support the `exec` primitive
+    * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
 
 * Core plugins (see the _Roadmap_ below for more details)
     * `docker` - presents a filesystem hierarchy of containers and volumes
@@ -57,7 +60,7 @@ We've implemented some neat features inside of `wash` to support the above goals
     * `aws` - presents a filesystem hierarchy for EC2 and S3
         - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
         - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). Note that currently `region` will also need to be specified with the profile.
-        - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 15 minutes. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
+        - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
 
 * [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
     * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
