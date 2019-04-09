@@ -54,6 +54,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(psCommand())
 	rootCmd.AddCommand(findCommand())
 	rootCmd.AddCommand(clearCommand())
+	rootCmd.AddCommand(tailCommand())
 
 	return rootCmd
 }

@@ -116,6 +116,16 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 	return metadata, nil
 }
 
+// Stream updates for the resource located at "path".
+func (c *DomainSocketClient) Stream(path string) (io.ReadCloser, error) {
+	respBody, err := c.doRequest(http.MethodGet, "/fs/stream", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return respBody, nil
+}
+
 // Exec invokes the given command + args on the resource located at "path".
 //
 // The resulting channel contains events, ordered as we receive them from the
