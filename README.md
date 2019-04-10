@@ -49,6 +49,7 @@ We've implemented some neat features inside of `wash` to support the above goals
     * `wash meta` - uses the `metadata` primitive to emit a resource's metadata to standard out
     * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
     * `wash find` - find resources using powerful selection predicates (WIP)
+    * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
     * `wash ps` - lists running processes on indicated compute instances that support the `exec` primitive
     * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
 

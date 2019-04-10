@@ -28,3 +28,15 @@ func (e *ErrorObj) Error() string {
 
 	return string(jsonBytes)
 }
+
+// Define error kinds returned by the API
+const (
+	UnsupportedAction  = "puppetlabs.wash/unsupported-action"
+	UnknownError       = "puppetlabs.wash/unknown-error"
+	StreamingError     = "puppetlabs.wash/streaming-error"
+	EntryNotFound      = "puppetlabs.wash/entry-not-found"
+	PluginDoesNotExist = "puppetlabs.wash/plugin-does-not-exist"
+	BadRequest         = "puppetlabs.wash/bad-request"
+	ErroredAction      = "puppetlabs.wash/errored-action"
+	DuplicateCName     = "puppetlabs.wash/duplicate-cname"
+)

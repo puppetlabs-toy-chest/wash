@@ -20,19 +20,19 @@ type errorResp struct {
 
 func newErrorObj(kind string, message string, fields apitypes.ErrorFields) *apitypes.ErrorObj {
 	return &apitypes.ErrorObj{
-		Kind:   "puppetlabs.wash/" + kind,
+		Kind:   kind,
 		Msg:    message,
 		Fields: fields,
 	}
 }
 
 func newUnknownErrorObj(err error) *apitypes.ErrorObj {
-	return newErrorObj("unknown-error", err.Error(), apitypes.ErrorFields{})
+	return newErrorObj(apitypes.UnknownError, err.Error(), apitypes.ErrorFields{})
 }
 
 func newStreamingErrorObj(stream string, reason string) *apitypes.ErrorObj {
 	return newErrorObj(
-		"streaming-error",
+		apitypes.StreamingError,
 		fmt.Sprintf("error streaming %v: %v", stream, reason),
 		apitypes.ErrorFields{"stream": stream},
 	)
@@ -62,7 +62,7 @@ func entryNotFoundResponse(path string, reason string) *errorResponse {
 
 	statusCode := http.StatusNotFound
 	body := newErrorObj(
-		"entry-not-found",
+		apitypes.EntryNotFound,
 		fmt.Sprintf("Could not find entry %v: %v", path, reason),
 		fields,
 	)
@@ -75,7 +75,7 @@ func pluginDoesNotExistResponse(plugin string) *errorResponse {
 
 	statusCode := http.StatusNotFound
 	body := newErrorObj(
-		"plugin-does-not-exist",
+		apitypes.PluginDoesNotExist,
 		fmt.Sprintf("Plugin %v does not exist", plugin),
 		fields,
 	)
@@ -92,7 +92,7 @@ func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	statusCode := http.StatusNotFound
 	msg := fmt.Sprintf("Entry %v does not support the %v action: It does not implement the %v protocol", path, a.Name, a.Protocol)
 	body := newErrorObj(
-		"unsupported-action",
+		apitypes.UnsupportedAction,
 		msg,
 		fields,
 	)
@@ -106,7 +106,7 @@ func badRequestResponse(path string, a plugin.Action, reason string) *errorRespo
 		"action": a.Name,
 	}
 	body := newErrorObj(
-		"bad-request",
+		apitypes.BadRequest,
 		fmt.Sprintf("Bad request for %v action on %v: %v", a.Name, path, reason),
 		fields,
 	)
@@ -121,7 +121,7 @@ func erroredActionResponse(path string, a plugin.Action, reason string) *errorRe
 
 	statusCode := http.StatusInternalServerError
 	body := newErrorObj(
-		"errored-action",
+		apitypes.ErroredAction,
 		fmt.Sprintf("The %v action errored on %v: %v", a.Name, path, reason),
 		fields,
 	)
@@ -140,7 +140,7 @@ func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
 	}
 
 	body := newErrorObj(
-		"duplicate-cname-error",
+		apitypes.DuplicateCName,
 		e.Error(),
 		fields,
 	)

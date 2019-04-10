@@ -13,7 +13,7 @@ import (
 func clearCommand() *cobra.Command {
 	clearCmd := &cobra.Command{
 		Use:   "clear [<path>]",
-		Short: "Clears the cache of the directory tree starting at <path>, or the current directory if not specified",
+		Short: "Clears the cache at <path>, or the current directory if not specified",
 		Args:  cobra.MaximumNArgs(1),
 	}
 
