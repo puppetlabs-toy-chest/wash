@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync"
 	"time"
 
@@ -270,7 +271,12 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 
 		// Handle Stdin by piping its content into our command.
 		// Note that this won't work well for large Stdin streams.
-		cmdStr = shellquote.Join("echo", "-n", string(input)) + " | " + cmdStr
+		quoted := shellquote.Join(string(input))
+		// Add extra escaping needed for some shells. This should probably be part of shellquote.
+		quoted = strings.Replace(quoted, "\\t", "\\\\t", -1)
+		quoted = strings.Replace(quoted, "\\n", "\\\\n", -1)
+		quoted = strings.Replace(quoted, "\\0", "\\\\0", -1)
+		cmdStr = "echo -n " + quoted + " | " + cmdStr
 	}
 
 	journal.Record(ctx, "Sending the following command to the SSM agent:\n%v", cmdStr)
