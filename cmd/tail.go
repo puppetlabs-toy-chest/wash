@@ -85,7 +85,7 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 			}(path)
 		} else {
 			if errObj, ok := err.(*apitypes.ErrorObj); ok {
-				if errObj.Kind == "puppetlabs.wash/unsupported-action" {
+				if errObj.Kind == apitypes.UnsupportedAction {
 					// The resource exists but does not support the streaming action, try to read it as a file.
 					files = append(files, path)
 				} else {
