@@ -34,8 +34,6 @@ We've implemented some neat features inside of `wash` to support the above goals
 * Primitives - the basic building blocks that form the foundation of `wash`, and dictate what kinds of things you can do to all the resources `wash` knows about
     * `list` - lets you ask any resource what's contained inside of it, and what primitives it supports. 
         - _e.g. listing a Kubernetes pod returns its constituent containers_
-    * `metadata` - returns the metadata for any resource
-        - _e.g. you can use this to get all the metadata for a docker container, or a file in an S3 bucket, etc._
     * `read` - lets you read the contents of a given resource
         - _e.g. represent an EC2 instance's console output as a regular file you can open in a regular editor_
     * `stream` - gives you streaming-read access to a resource
@@ -46,7 +44,7 @@ We've implemented some neat features inside of `wash` to support the above goals
 * CLI tools
     * `wash ls` - a version of `ls` that uses our API to enhance directory listings with `wash`-specific info
         - _e.g. show you what primitives are supported for each resource_
-    * `wash meta` - uses the `metadata` primitive to emit a resource's metadata to standard out
+    * `wash meta` - emits a resource's metadata to standard out
     * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
     * `wash find` - find resources using powerful selection predicates (WIP)
     * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
