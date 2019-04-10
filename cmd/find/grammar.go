@@ -13,7 +13,7 @@ type atom struct {
 	parsePredicate func(tokens []string) (Predicate, []string, error)
 }
 
-// Map of <token> => <atom>.
+// Map of <token> => <atom>. This is populated by newAtom.
 var atoms = make(map[string]*atom)
 
 // When creating a new atom with this function, be sure to comment nolint above the variable
@@ -86,7 +86,7 @@ type binaryOp struct {
 	combine    func(p1 Predicate, p2 Predicate) Predicate
 }
 
-// Map of <token> => <binaryOp>
+// Map of <token> => <binaryOp>. This is populated by newBinaryOp.
 var binaryOps = make(map[string]*binaryOp)
 
 // When creating a new binary op with this function, be sure to comment nolint above the variable
