@@ -13,6 +13,6 @@ func TestPIDTOID(t *testing.T) {
 	assert.Equal(t, "500000", id)
 
 	id = PIDToID(os.Getpid())
-	expected := strconv.FormatInt(int64(os.Getpid()), 10) + "-journal.test"
+	expected := strconv.Itoa(os.Getpid()) + "-journal.test"
 	assert.Equal(t, expected, id)
 }

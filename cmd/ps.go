@@ -148,7 +148,7 @@ func formatStats(stats []psresult) string {
 
 		table[i] = []string{
 			strings.Join(segments, "/"),
-			strconv.FormatInt(int64(st.pid), 10),
+			strconv.Itoa(st.pid),
 			cmdutil.FormatDuration(st.active),
 			st.command,
 		}

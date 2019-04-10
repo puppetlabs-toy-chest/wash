@@ -14,7 +14,7 @@ var pidToExec = datastore.NewMemCache()
 // PIDToID converts a process ID to a journal ID, appending the name of the executable
 // running that process if we can retrieve it.
 func PIDToID(pid int) string {
-	pidStr := strconv.FormatInt(int64(pid), 10)
+	pidStr := strconv.Itoa(pid)
 	result, err := pidToExec.GetOrUpdate("", pidStr, expires, true, func() (interface{}, error) {
 		journalid := pidStr
 		// Include the executable name if we can find it.
