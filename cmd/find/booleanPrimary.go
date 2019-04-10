@@ -6,6 +6,7 @@ import (
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
+//nolint
 func newBooleanPrimary(val bool) *atom {
 	return newAtom([]string{fmt.Sprintf("-%v", val)}, func(tokens []string) (Predicate, []string, error) {
 		return func(e *apitypes.ListEntry) bool {
@@ -15,7 +16,9 @@ func newBooleanPrimary(val bool) *atom {
 }
 
 // truePrimary => -true
+//nolint
 var truePrimary = newBooleanPrimary(true)
 
 // falsePrimary => -false
+//nolint
 var falsePrimary = newBooleanPrimary(false)

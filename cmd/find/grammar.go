@@ -16,6 +16,8 @@ type atom struct {
 // Map of <token> => <atom>.
 var atoms = make(map[string]*atom)
 
+// When creating a new atom with this function, be sure to comment nolint above the variable
+// so that CI does not mark it as unused. See notOp for an example.
 func newAtom(tokens []string, parsePredicate func(tokens []string) (Predicate, []string, error)) *atom {
 	a := &atom{
 		tokens:         tokens,
@@ -27,6 +29,7 @@ func newAtom(tokens []string, parsePredicate func(tokens []string) (Predicate, [
 	return a
 }
 
+//nolint
 var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (Predicate, []string, error) {
 	notToken := tokens[0]
 	tokens = tokens[1:]
@@ -46,6 +49,7 @@ var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (Predicate, []s
 	return nil, nil, fmt.Errorf("%v: no following expression", notToken)
 })
 
+//nolint
 var parensOp = newAtom([]string{"("}, func(tokens []string) (Predicate, []string, error) {
 	// Find the ")" that's paired with our "(". Use the algorithm
 	// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
@@ -85,6 +89,8 @@ type binaryOp struct {
 // Map of <token> => <binaryOp>
 var binaryOps = make(map[string]*binaryOp)
 
+// When creating a new binary op with this function, be sure to comment nolint above the variable
+// so that CI does not mark it as unused. See andOp for an example.
 func newBinaryOp(tokens []string, precedence int, combine func(p1 Predicate, p2 Predicate) Predicate) *binaryOp {
 	b := &binaryOp{
 		tokens:     tokens,
@@ -97,12 +103,14 @@ func newBinaryOp(tokens []string, precedence int, combine func(p1 Predicate, p2 
 	return b
 }
 
+//nolint
 var andOp = newBinaryOp([]string{"-a", "-and"}, 1, func(p1 Predicate, p2 Predicate) Predicate {
 	return func(e *apitypes.ListEntry) bool {
 		return p1(e) && p2(e)
 	}
 })
 
+//nolint
 var orOp = newBinaryOp([]string{"-o", "-or"}, 0, func(p1 Predicate, p2 Predicate) Predicate {
 	return func(e *apitypes.ListEntry) bool {
 		return p1(e) || p2(e)

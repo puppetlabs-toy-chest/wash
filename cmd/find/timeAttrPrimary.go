@@ -153,6 +153,11 @@ func newTimeAttrPrimary(name string) *atom {
 	})
 }
 
+//nolint
 var ctimePrimary = newTimeAttrPrimary("ctime")
+
+//nolint
 var mtimePrimary = newTimeAttrPrimary("mtime")
+
+//nolint
 var atimePrimary = newTimeAttrPrimary("atime")
