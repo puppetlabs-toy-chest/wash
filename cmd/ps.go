@@ -78,11 +78,11 @@ type psresult struct {
 }
 
 func parseEntry(line string) (psresult, error) {
-	tokens := strings.Split(strings.TrimSpace(line), "\t")
+	tokens := strings.Split(line, "\t")
 	if len(tokens) != 3 {
 		return psresult{}, fmt.Errorf("Line had %v, not 3 tokens: %#v", len(tokens), tokens)
 	}
-	stat := string(tokens[1])
+	stat := strings.TrimSpace(tokens[1])
 	// statm := tokens[2]
 	command := strings.TrimSpace(tokens[0])
 
@@ -99,6 +99,11 @@ func parseEntry(line string) (psresult, error) {
 	)
 	if err != nil {
 		return psresult{}, fmt.Errorf("Failed to parse token %v of scan output: %v", n+1, err)
+	}
+
+	// Some processes have an empty cmdline entry. In those cases, ps uses the comm field instead.
+	if command == "" {
+		command = comm
 	}
 
 	// statmf := ""
