@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"time"
 
@@ -34,13 +35,9 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	pd.DisableDefaultCaching()
 
 	pdInfo := podInfoResult{
-		pd: p,
+		pd:         p,
+		logContent: pd.fetchLogContent(ctx),
 	}
-	logContent, err := pd.fetchLogContent(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pdInfo.logContent = logContent
 
 	meta := pdInfo.toMeta()
 	attr := plugin.EntryAttributes{}
@@ -65,19 +62,19 @@ func (pdInfo podInfoResult) toMeta() plugin.EntryMetadata {
 	return meta
 }
 
-func (p *pod) fetchLogContent(ctx context.Context) ([]byte, error) {
+func (p *pod) fetchLogContent(ctx context.Context) []byte {
 	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
 	rdr, err := req.Stream()
 	if err != nil {
-		return nil, err
+		return []byte(fmt.Sprintf("unable to access logs: %v", err))
 	}
 	var buf bytes.Buffer
 	var n int64
 	if n, err = buf.ReadFrom(rdr); err != nil {
-		return nil, err
+		return []byte(fmt.Sprintf("unable to read logs: %v", err))
 	}
 	journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
@@ -88,11 +85,7 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 			return result, err
 		}
 		result.pd = pd
-		logContent, err := p.fetchLogContent(ctx)
-		if err != nil {
-			return result, err
-		}
-		result.logContent = logContent
+		result.logContent = p.fetchLogContent(ctx)
 		return result, nil
 	})
 	if err != nil {
