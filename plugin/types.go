@@ -84,8 +84,8 @@ type Execable interface {
 	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
 }
 
-// Pipe is an entry that returns a stream of updates.
-type Pipe interface {
+// Streamable is an entry that returns a stream of updates.
+type Streamable interface {
 	Entry
 	Stream(context.Context) (io.Reader, error)
 }
@@ -100,10 +100,4 @@ type SizedReader interface {
 type Readable interface {
 	Entry
 	Open(context.Context) (SizedReader, error)
-}
-
-// Writable is an entry that we can write new data to.
-type Writable interface {
-	Entry
-	Save(context.Context, io.Reader) error
 }

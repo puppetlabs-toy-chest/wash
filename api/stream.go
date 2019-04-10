@@ -45,7 +45,7 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p param
 	}
 
 	journal.Record(ctx, "API: Stream %v", path)
-	rdr, err := entry.(plugin.Pipe).Stream(ctx)
+	rdr, err := entry.(plugin.Streamable).Stream(ctx)
 
 	if err != nil {
 		journal.Record(ctx, "API: Stream %v errored: %v", path, err)
