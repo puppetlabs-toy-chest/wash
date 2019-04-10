@@ -74,8 +74,6 @@ func (f *fuseNode) String() string {
 	return plugin.Path(f.entry)
 }
 
-const sizeUnknown = ^uint64(0)
-
 // Applies attributes where non-default, and sets defaults otherwise.
 func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 	// Setting a.Valid to 1 second avoids frequent Attr calls.
@@ -92,7 +90,6 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 		a.Mode = 0440
 	}
 
-	a.Size = sizeUnknown
 	if attr.HasSize() {
 		a.Size = attr.Size()
 	}
