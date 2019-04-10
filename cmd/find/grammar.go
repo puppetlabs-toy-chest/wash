@@ -13,73 +13,68 @@ type atom struct {
 	parsePredicate func(tokens []string) (Predicate, []string, error)
 }
 
-var allAtoms = []*atom{
-	notOp,
-	parensOp,
-	namePrimary,
-	truePrimary,
-	falsePrimary,
-}
-
-// Map of <token> => <atom>. This is initialized in ParsePredicate. Unfortunately,
-// we cannot intialize atoms here because doing so would result in an initialization
-// loop compiler error (e.g. notOp => atoms => notOp).
+// Map of <token> => <atom>.
 var atoms = make(map[string]*atom)
 
-var notOp = &atom{
-	tokens: []string{"!", "-not"},
-	parsePredicate: func(tokens []string) (Predicate, []string, error) {
-		notToken := tokens[0]
-		tokens = tokens[1:]
-		if len(tokens) == 0 {
-			return nil, nil, fmt.Errorf("%v: no following expression", notToken)
-		}
-		token := tokens[0]
-		if atom, ok := atoms[token]; ok {
-			p, tokens, err := atom.parsePredicate(tokens)
-			if err != nil {
-				return nil, nil, err
-			}
-			return func(e *apitypes.ListEntry) bool {
-				return !p(e)
-			}, tokens, err
-		}
-		return nil, nil, fmt.Errorf("%v: no following expression", notToken)
-	},
+func newAtom(tokens []string, parsePredicate func(tokens []string) (Predicate, []string, error)) *atom {
+	a := &atom{
+		tokens:         tokens,
+		parsePredicate: parsePredicate,
+	}
+	for _, t := range tokens {
+		atoms[t] = a
+	}
+	return a
 }
 
-var parensOp = &atom{
-	tokens: []string{"("},
-	parsePredicate: func(tokens []string) (Predicate, []string, error) {
-		// Find the ")" that's paired with our "(". Use the algorithm
-		// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
-		// Note that we do not have to check for balanced parentheses here because
-		// that check was already done in the exported ParsePredicate method.
-		//
-		// TODO: Could optimize this by moving parens handling over to the evaluation
-		// stack. Not important right now because expressions to `wash find` will likely
-		// be simple.
-		tokens = tokens[1:]
-		ix := 0
-		counter := 1
-		for i, token := range tokens {
-			if token == "(" {
-				counter++
-			} else if token == ")" {
-				counter--
-				ix = i
-			}
-			if counter == 0 {
-				break
-			}
+var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (Predicate, []string, error) {
+	notToken := tokens[0]
+	tokens = tokens[1:]
+	if len(tokens) == 0 {
+		return nil, nil, fmt.Errorf("%v: no following expression", notToken)
+	}
+	token := tokens[0]
+	if atom, ok := atoms[token]; ok {
+		p, tokens, err := atom.parsePredicate(tokens)
+		if err != nil {
+			return nil, nil, err
 		}
-		if ix == 0 {
-			return nil, nil, fmt.Errorf("(): empty inner expression")
+		return func(e *apitypes.ListEntry) bool {
+			return !p(e)
+		}, tokens, err
+	}
+	return nil, nil, fmt.Errorf("%v: no following expression", notToken)
+})
+
+var parensOp = newAtom([]string{"("}, func(tokens []string) (Predicate, []string, error) {
+	// Find the ")" that's paired with our "(". Use the algorithm
+	// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
+	// Note that we do not have to check for balanced parentheses here because
+	// that check was already done in the exported ParsePredicate method.
+	//
+	// TODO: Could optimize this by moving parens handling over to the evaluation
+	// stack. Not important right now because expressions to `wash find` will likely
+	// be simple.
+	tokens = tokens[1:]
+	ix := 0
+	counter := 1
+	for i, token := range tokens {
+		if token == "(" {
+			counter++
+		} else if token == ")" {
+			counter--
+			ix = i
 		}
-		p, err := parsePredicate(tokens[:ix])
-		return p, tokens[ix+1:], err
-	},
-}
+		if counter == 0 {
+			break
+		}
+	}
+	if ix == 0 {
+		return nil, nil, fmt.Errorf("(): empty inner expression")
+	}
+	p, err := parsePredicate(tokens[:ix])
+	return p, tokens[ix+1:], err
+})
 
 type binaryOp struct {
 	tokens     []string
@@ -87,30 +82,29 @@ type binaryOp struct {
 	combine    func(p1 Predicate, p2 Predicate) Predicate
 }
 
-var allBinaryOps = []*binaryOp{
-	andOp,
-	orOp,
-}
-
 // Map of <token> => <binaryOp>
 var binaryOps = make(map[string]*binaryOp)
 
-var andOp = &binaryOp{
-	tokens:     []string{"-a", "-and"},
-	precedence: 1,
-	combine: func(p1 Predicate, p2 Predicate) Predicate {
-		return func(e *apitypes.ListEntry) bool {
-			return p1(e) && p2(e)
-		}
-	},
+func newBinaryOp(tokens []string, precedence int, combine func(p1 Predicate, p2 Predicate) Predicate) *binaryOp {
+	b := &binaryOp{
+		tokens:     tokens,
+		precedence: precedence,
+		combine:    combine,
+	}
+	for _, t := range tokens {
+		binaryOps[t] = b
+	}
+	return b
 }
 
-var orOp = &binaryOp{
-	tokens:     []string{"-o", "-or"},
-	precedence: 0,
-	combine: func(p1 Predicate, p2 Predicate) Predicate {
-		return func(e *apitypes.ListEntry) bool {
-			return p1(e) || p2(e)
-		}
-	},
-}
+var andOp = newBinaryOp([]string{"-a", "-and"}, 1, func(p1 Predicate, p2 Predicate) Predicate {
+	return func(e *apitypes.ListEntry) bool {
+		return p1(e) && p2(e)
+	}
+})
+
+var orOp = newBinaryOp([]string{"-o", "-or"}, 0, func(p1 Predicate, p2 Predicate) Predicate {
+	return func(e *apitypes.ListEntry) bool {
+		return p1(e) || p2(e)
+	}
+})

@@ -7,14 +7,11 @@ import (
 )
 
 func newBooleanPrimary(val bool) *atom {
-	return &atom{
-		tokens: []string{fmt.Sprintf("-%v", val)},
-		parsePredicate: func(tokens []string) (Predicate, []string, error) {
-			return func(e *apitypes.ListEntry) bool {
-				return val
-			}, tokens[1:], nil
-		},
-	}
+	return newAtom([]string{fmt.Sprintf("-%v", val)}, func(tokens []string) (Predicate, []string, error) {
+		return func(e *apitypes.ListEntry) bool {
+			return val
+		}, tokens[1:], nil
+	})
 }
 
 // truePrimary => -true
