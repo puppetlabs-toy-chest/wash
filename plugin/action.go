@@ -32,7 +32,7 @@ var ListAction = newAction("list", "Group")
 var ReadAction = newAction("read", "Readable")
 
 // StreamAction represents the stream action
-var StreamAction = newAction("stream", "Pipe")
+var StreamAction = newAction("stream", "Streamable")
 
 // ExecAction represents the exec action
 var ExecAction = newAction("exec", "Execable")
@@ -57,7 +57,7 @@ func SupportedActionsOf(entry Entry) []string {
 		if _, ok := entry.(Readable); ok {
 			actions = append(actions, ReadAction.Name)
 		}
-		if _, ok := entry.(Pipe); ok {
+		if _, ok := entry.(Streamable); ok {
 			actions = append(actions, StreamAction.Name)
 		}
 		if _, ok := entry.(Execable); ok {

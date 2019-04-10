@@ -84,8 +84,8 @@ type Execable interface {
 	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
 }
 
-// Pipe is an entry that returns a stream of updates.
-type Pipe interface {
+// Streamable is an entry that returns a stream of updates.
+type Streamable interface {
 	Entry
 	Stream(context.Context) (io.Reader, error)
 }
