@@ -101,9 +101,3 @@ type Readable interface {
 	Entry
 	Open(context.Context) (SizedReader, error)
 }
-
-// Writable is an entry that we can write new data to.
-type Writable interface {
-	Entry
-	Save(context.Context, io.Reader) error
-}
