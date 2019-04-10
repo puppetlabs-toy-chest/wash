@@ -4,7 +4,6 @@ package cmdfind
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/golang-collections/collections/stack"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -13,23 +12,9 @@ import (
 // Predicate represents a predicate used by wash find
 type Predicate func(entry *apitypes.ListEntry) bool
 
-var initOnce = sync.Once{}
-
 // ParsePredicate parses `wash find`'s predicate from the
 // given tokens
 func ParsePredicate(tokens []string) (Predicate, error) {
-	initOnce.Do(func() {
-		for _, atom := range allAtoms {
-			for _, token := range atom.tokens {
-				atoms[token] = atom
-			}
-		}
-		for _, binaryOp := range allBinaryOps {
-			for _, token := range binaryOp.tokens {
-				binaryOps[token] = binaryOp
-			}
-		}
-	})
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns

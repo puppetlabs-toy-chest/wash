@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/puppetlabs/wash/api/client"
 	cmdfind "github.com/puppetlabs/wash/cmd/find"
@@ -30,6 +31,8 @@ func findCommand() *cobra.Command {
 }
 
 func findMain(cmd *cobra.Command, args []string) exitCode {
+	cmdfind.SetStartTime(time.Now())
+
 	// TODO: Have `wash find` default to recursing on "." (the cwd)
 	// if the path is not provided. Also have it handle non-Wash
 	// paths.

@@ -17,27 +17,6 @@ type ParserTestSuite struct {
 	suite.Suite
 }
 
-func (suite *ParserTestSuite) TestParsePredicateInit() {
-	_, _ = ParsePredicate([]string{})
-	expectedAtoms := map[string]*atom{
-		"(":      parensOp,
-		"!":      notOp,
-		"-not":   notOp,
-		"-name":  namePrimary,
-		"-true":  truePrimary,
-		"-false": falsePrimary,
-	}
-	suite.Equal(expectedAtoms, atoms)
-
-	expectedBinaryOps := map[string]*binaryOp{
-		"-o":   orOp,
-		"-or":  orOp,
-		"-a":   andOp,
-		"-and": andOp,
-	}
-	suite.Equal(expectedBinaryOps, binaryOps)
-}
-
 type parserTestCase struct {
 	input    string
 	expected bool
