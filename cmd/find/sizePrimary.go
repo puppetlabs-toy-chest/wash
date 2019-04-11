@@ -30,13 +30,13 @@ var sizeValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[ckMGTP]))$`)
 
 // sizePrimary => -size (+|-)?((\d+)|(\d+[ckMGTP]))
 //
-// where c => character (byte), k => kibibyte, M => megabyte, G => gigabyte, T => terabyte, P => petabyte
+// where c => character (byte), k => kibibyte, M => mebibyte, G => gibibyte, T => tebibyte, P => pebibyte
 //
 // Example inputs:
 //   -size 2   (true if the entry's size in 512-byte blocks, rounded up, is 2)
 //   -size +2  (true if the entry's size in 512-byte blocks, rounded up, is greater than 2)
 //   -size -2  (true if the entry's size in 512-byte blocks, rounded up, is less than 2)
-//   -size +1k (true if the entry's size is greater than 1 kilobyte (1024 bytes))
+//   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
 //
 //nolint
 var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, []string, error) {
