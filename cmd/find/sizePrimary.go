@@ -63,19 +63,6 @@ var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, [
 
 	p := func(e *apitypes.ListEntry) bool {
 		if !e.Attributes.HasSize() {
-			// TODO: If the user enters an expression like "-size 5 -o -true", then
-			// `wash find` will still include 'e' in its output even if 'e' does not have
-			// a size attribute. This leads to a weird UX in cases like `wash find /aws -size 5 -o true`
-			// b/c the output will contain things that don't have a `size` attribute
-			// (like EC2 instances). When we add the `state` attribute, then an expression
-			// like `wash find /aws -state running -o true` will include entries that don't
-			// have state, like S3 buckets and S3 objects.
-			//
-			// The more general issue here is how we handle entries that do not have the attributes
-			// required by the user's specified primaries when those primaries are or'ed
-			// with other primaries that could potentially return true for that entry. Do
-			// we ignore them? Do we still apply the predicate on them, even if that predicate
-			// may return true? We should figure this out soon.
 			return false
 		}
 		size := e.Attributes.Size()
