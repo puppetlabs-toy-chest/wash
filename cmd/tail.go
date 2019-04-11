@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ import (
 
 func tailCommand() *cobra.Command {
 	tailCmd := &cobra.Command{
-		Use:   "tail -f <file> [<file>...]",
+		Use:   "tail -f [file...]",
 		Short: "Displays new output of files or resources that support the stream action",
 	}
 
@@ -49,6 +50,80 @@ func (w lineWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// Streams output via API to aggregator channel.
+// Returns nil if streaming's not supported on this path.
+func tailStream(conn client.DomainSocketClient, agg chan line, path string) io.Closer {
+	apiPath, err := client.APIKeyFromPath(path)
+	if err != nil {
+		// Not a resource
+		return nil
+	}
+
+	var stream io.ReadCloser
+	if stream, err = conn.Stream(apiPath); err != nil {
+		if errObj, ok := err.(*apitypes.ErrorObj); ok {
+			if errObj.Kind == apitypes.UnsupportedAction {
+				// The resource exists but does not support the streaming action
+				return nil
+			}
+			cmdutil.ErrPrintf("%v\n", errObj.Msg)
+		} else {
+			cmdutil.ErrPrintf("%v\n", err)
+		}
+		return ioutil.NopCloser(nil)
+	}
+
+	// Start copying the stream to the aggregate channel
+	go func() {
+		_, err := io.Copy(lineWriter{name: path, out: agg}, stream)
+		if err != nil {
+			agg <- line{Line: tail.Line{Time: time.Now(), Err: err}, source: path}
+		}
+	}()
+	return stream
+}
+
+var endOfFileLocation = tail.SeekInfo{Offset: 0, Whence: 2}
+
+type tailCloser struct{ *tail.Tail }
+
+func (c tailCloser) Close() error {
+	c.Cleanup()
+	return c.Stop()
+}
+
+func tailFile(agg chan line, path string) io.Closer {
+	// Error handling here mimics linux 'tail': it prints an error and continues for any other
+	// input. Note that the 'tail' package we use doesn't emit anything when it's called on a
+	// directory or non-existant file.
+	if finfo, err := os.Stat(path); err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return ioutil.NopCloser(nil)
+	} else if finfo.IsDir() {
+		cmdutil.ErrPrintf("tail %v: is a directory\n", path)
+		return ioutil.NopCloser(nil)
+	}
+
+	// Set Location so we start streaming at the end of the file
+	tailer, err := tail.TailFile(path, tail.Config{
+		Follow:   true,
+		Location: &endOfFileLocation,
+		Logger:   tail.DiscardingLogger,
+	})
+	if err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return ioutil.NopCloser(nil)
+	}
+
+	// Start copying the tail to the aggregate channel
+	go func() {
+		for ln := range tailer.Lines {
+			agg <- line{Line: *ln, source: path}
+		}
+	}()
+	return tailCloser{tailer}
+}
+
 func tailMain(cmd *cobra.Command, args []string) exitCode {
 	follow := viper.GetBool("follow")
 	if !follow {
@@ -64,73 +139,17 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 	conn := client.ForUNIXSocket(config.Socket)
 	agg := make(chan line)
 
-	// Separate paths into streamable resources and files
-	var files []string
+	// Try streaming as a resource, then as a file if that failed for predictable reasons
 	for _, path := range args {
-		apiPath, err := client.APIKeyFromPath(path)
-		if err != nil {
-			// Not a resource
-			files = append(files, path)
+		if closer := tailStream(conn, agg, path); closer != nil {
+			defer func() { errz.Log(closer.Close()) }()
 			continue
 		}
 
-		if stream, err := conn.Stream(apiPath); err == nil {
-			defer func() { errz.Log(stream.Close()) }()
-			// Start copying the stream to the aggregate channel
-			go func(src string) {
-				_, err := io.Copy(lineWriter{name: src, out: agg}, stream)
-				if err != nil {
-					agg <- line{Line: tail.Line{Time: time.Now(), Err: err}, source: src}
-				}
-			}(path)
-		} else {
-			if errObj, ok := err.(*apitypes.ErrorObj); ok {
-				if errObj.Kind == apitypes.UnsupportedAction {
-					// The resource exists but does not support the streaming action, try to read it as a file.
-					files = append(files, path)
-				} else {
-					cmdutil.ErrPrintf("%v\n", errObj.Msg)
-				}
-			} else {
-				cmdutil.ErrPrintf("%v\n", err)
-			}
+		// Unable to read as a stream, try as a file.
+		if closer := tailFile(agg, path); closer != nil {
+			defer func() { errz.Log(closer.Close()) }()
 		}
-	}
-
-	// Set Location so we start streaming at the end of the file
-	tailConf := tail.Config{
-		Follow:   true,
-		Location: &tail.SeekInfo{Offset: 0, Whence: 2},
-		Logger:   tail.DiscardingLogger,
-	}
-	for _, path := range files {
-		// Error handling here mimics linux 'tail': it prints an error and continues for any other
-		// input. Note that the 'tail' package we use doesn't emit anything when it's called on a
-		// directory or non-existant file.
-		if finfo, err := os.Stat(path); err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			continue
-		} else if finfo.IsDir() {
-			cmdutil.ErrPrintf("tail %v: is a directory\n", path)
-			continue
-		}
-
-		tailer, err := tail.TailFile(path, tailConf)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			continue
-		}
-
-		defer func() {
-			errz.Log(tailer.Stop())
-			tailer.Cleanup()
-		}()
-		// Start copying the tail to the aggregate channel
-		go func(src string) {
-			for ln := range tailer.Lines {
-				agg <- line{Line: *ln, source: src}
-			}
-		}(path)
 	}
 
 	// Print from aggregate channel
