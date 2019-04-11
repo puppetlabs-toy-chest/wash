@@ -22,15 +22,17 @@ func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
-	testCases := map[byte]time.Duration{
-		's': time.Second,
-		'm': time.Minute,
-		'h': time.Hour,
-		'd': 24 * time.Hour,
-		'w': 7 * 24 * time.Hour,
+	// Use array of bytes instead of a string to make it easier
+	// to add other, longer units in the future
+	testCases := []byte{
+		's',
+		'm',
+		'h',
+		'd',
+		'w',
 	}
-	for input, expected := range testCases {
-		suite.Equal(expected, durationOf(input))
+	for _, input := range testCases {
+		suite.Equal(durationsMap[input], durationOf(input))
 	}
 }
 

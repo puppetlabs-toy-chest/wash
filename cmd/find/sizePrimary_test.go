@@ -13,16 +13,18 @@ type SizePrimaryTestSuite struct {
 }
 
 func (suite *SizePrimaryTestSuite) TestBytesOf() {
-	testCases := map[byte]uint64{
-		'c': 1,
-		'k': 1024,
-		'M': 1024 * 1024,
-		'G': 1024 * 1024 * 1024,
-		'T': 1024 * 1024 * 1024 * 1024,
-		'P': 1024 * 1024 * 1024 * 1024 * 1024,
+	// Use array of bytes instead of a string to make it easier
+	// to add other, longer units in the future
+	testCases := []byte{
+		'c',
+		'k',
+		'M',
+		'G',
+		'T',
+		'P',
 	}
-	for input, expected := range testCases {
-		suite.Equal(expected, bytesOf(input))
+	for _, input := range testCases {
+		suite.Equal(bytesMap[input], bytesOf(input))
 	}
 }
 
