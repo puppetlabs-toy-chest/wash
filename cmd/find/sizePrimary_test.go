@@ -35,6 +35,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryIllegalTimeValueError() {
 	illegalValues := []string{
 		"foo",
 		"+",
+		"+++++1",
 		"1kb",
 		"+1kb",
 	}

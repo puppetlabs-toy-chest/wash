@@ -98,8 +98,10 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryIllegalTimeValueError(
 	illegalValues := []string{
 		"foo",
 		"+",
+		"+++++1",
 		"1hr",
 		"+1hr",
+		"++++++1hr",
 		"1h30min",
 		"+1h30min",
 	}
