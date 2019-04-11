@@ -5,7 +5,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -123,7 +122,7 @@ func newTimeAttrPrimary(name string) *atom {
 
 		cmp := v[0]
 		if cmp == '+' || cmp == '-' {
-			v = strings.TrimPrefix(v, string(cmp))
+			v = v[1:]
 		} else {
 			cmp = '='
 		}

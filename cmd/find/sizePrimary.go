@@ -5,7 +5,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-	"strings"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
@@ -56,7 +55,7 @@ var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, [
 
 	cmp := v[0]
 	if cmp == '+' || cmp == '-' {
-		v = strings.TrimPrefix(v, string(cmp))
+		v = v[1:]
 	} else {
 		cmp = '='
 	}
