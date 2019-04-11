@@ -19,23 +19,21 @@ func SetStartTime(time time.Time) {
 	startTime = time
 }
 
+var durationsMap = map[byte]time.Duration{
+	's': time.Second,
+	'm': time.Minute,
+	'h': time.Hour,
+	'd': 24 * time.Hour,
+	'w': 7 * 24 * time.Hour,
+}
+
 // Use durationOf instead of a hash so that we generate a more readable
 // panic message
 func durationOf(unit byte) time.Duration {
-	switch unit {
-	case 's':
-		return time.Second
-	case 'm':
-		return time.Minute
-	case 'h':
-		return time.Hour
-	case 'd':
-		return 24 * time.Hour
-	case 'w':
-		return 7 * 24 * time.Hour
-	default:
-		panic(fmt.Sprintf("cmdfind.durationOf received an unexpected unit %v", unit))
+	if d, ok := durationsMap[unit]; ok {
+		return d
 	}
+	panic(fmt.Sprintf("cmdfind.durationOf received an unexpected unit %v", unit))
 }
 
 // We use getTimeAttrValue to retrieve the time attribute's value for performance

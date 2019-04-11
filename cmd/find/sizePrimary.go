@@ -9,25 +9,21 @@ import (
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
-// Use bytesOf instead of a hash so that we generate a more readable
-// panic message
+var bytesMap = map[byte]uint64{
+	'c': 1,
+	'k': 1024,
+	'M': 1024 * 1024,
+	'G': 1024 * 1024 * 1024,
+	'T': 1024 * 1024 * 1024 * 1024,
+	'P': 1024 * 1024 * 1024 * 1024 * 1024,
+}
+
+// Use bytesOf to generate a more readable panic message
 func bytesOf(unit byte) uint64 {
-	switch unit {
-	case 'c':
-		return 1
-	case 'k':
-		return 1024
-	case 'M':
-		return 1024 * 1024
-	case 'G':
-		return 1024 * 1024 * 1024
-	case 'T':
-		return 1024 * 1024 * 1024 * 1024
-	case 'P':
-		return 1024 * 1024 * 1024 * 1024 * 1024
-	default:
-		panic(fmt.Sprintf("cmdfind.bytesOf received an unexpected unit %v", unit))
+	if b, ok := bytesMap[unit]; ok {
+		return b
 	}
+	panic(fmt.Sprintf("cmdfind.bytesOf received an unexpected unit %v", unit))
 }
 
 var sizeValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[ckMGTP]))$`)
