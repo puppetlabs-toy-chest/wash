@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Benchkram/errz"
 	"github.com/spf13/cobra"
 
 	"github.com/puppetlabs/wash/api/client"
@@ -29,19 +30,26 @@ func listCommand() *cobra.Command {
 	return listCmd
 }
 
-func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
-	headers := []cmdutil.ColumnHeader{
+func headers() []cmdutil.ColumnHeader {
+	return []cmdutil.ColumnHeader{
 		{ShortName: "name", FullName: "NAME"},
-		{ShortName: "ctime", FullName: "CREATED"},
+		{ShortName: "mtime", FullName: "MODIFIED"},
 		{ShortName: "verbs", FullName: "ACTIONS"},
 	}
+}
+
+func format(t time.Time) string {
+	return t.Format(time.RFC822)
+}
+
+func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
-		var ctimeStr string
-		if entry.Attributes.HasCtime() {
-			ctimeStr = entry.Attributes.Ctime().Format(time.RFC822)
+		var mtimeStr string
+		if entry.Attributes.HasMtime() {
+			mtimeStr = format(entry.Attributes.Mtime())
 		} else {
-			ctimeStr = "<unknown>"
+			mtimeStr = "<unknown>"
 		}
 
 		verbs := strings.Join(entry.Actions, ", ")
@@ -56,9 +64,9 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 			name += "/"
 		}
 
-		table[i] = []string{name, ctimeStr, verbs}
+		table[i] = []string{name, mtimeStr, verbs}
 	}
-	return cmdutil.FormatTable(headers, table)
+	return cmdutil.FormatTable(headers(), table)
 }
 
 func findEntry(entries []apitypes.ListEntry, name string) apitypes.ListEntry {
@@ -117,7 +125,36 @@ func listResource(apiPath string) error {
 }
 
 func listPath(path string) error {
-	return errors.New("Listing non-resource types not yet supported")
+	finfo, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	var table [][]string
+	if finfo.IsDir() {
+		matches, err := filepath.Glob(filepath.Join(path, "*"))
+		errz.Fatal(err)
+		table = make([][]string, len(matches)+1)
+		table[0] = []string{".", format(finfo.ModTime()), "list"}
+		for i, match := range matches {
+			finfo, err := os.Stat(match)
+			if err != nil {
+				return err
+			}
+			actions := "read"
+			if finfo.IsDir() {
+				actions = "list"
+			}
+			table[i+1] = []string{finfo.Name(), format(finfo.ModTime()), actions}
+		}
+	} else {
+		table = [][]string{[]string{finfo.Name(), format(finfo.ModTime()), "read"}}
+	}
+	// Most operating systems don't track when a thing was created, just the last time it was
+	// modified. Some filesystems track the inode birth time, but Go doesn't expose that. List
+	// modification time for now, and note that this differs from what `ls -l` shows on macOS.
+	fmt.Print(cmdutil.FormatTable(headers(), table))
+	return nil
 }
 
 func listMain(cmd *cobra.Command, args []string) exitCode {
