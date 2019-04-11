@@ -49,7 +49,7 @@ func rootCommand() *cobra.Command {
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(metaCommand())
-	rootCmd.AddCommand(lsCommand())
+	rootCmd.AddCommand(listCommand())
 	rootCmd.AddCommand(execCommand())
 	rootCmd.AddCommand(psCommand())
 	rootCmd.AddCommand(findCommand())

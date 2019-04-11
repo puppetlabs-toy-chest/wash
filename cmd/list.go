@@ -15,16 +15,17 @@ import (
 	"github.com/puppetlabs/wash/config"
 )
 
-func lsCommand() *cobra.Command {
-	lsCmd := &cobra.Command{
-		Use:   "ls [file]",
-		Short: "Lists the resources at the indicated path.",
-		Args:  cobra.MaximumNArgs(1),
+func listCommand() *cobra.Command {
+	listCmd := &cobra.Command{
+		Use:     "list [file]",
+		Aliases: []string{"ls"},
+		Short:   "Lists the resources at the indicated path.",
+		Args:    cobra.MaximumNArgs(1),
 	}
 
-	lsCmd.RunE = toRunE(lsMain)
+	listCmd.RunE = toRunE(listMain)
 
-	return lsCmd
+	return listCmd
 }
 
 func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
@@ -62,7 +63,7 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	return cmdutil.FormatTable(headers, table)
 }
 
-func lsMain(cmd *cobra.Command, args []string) exitCode {
+func listMain(cmd *cobra.Command, args []string) exitCode {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
