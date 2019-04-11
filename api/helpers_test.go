@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -88,6 +89,56 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		group,
 		testcase{[]string{"foo#bar"}, "", duplicateCNameResponse(expectedErr)},
 	)
+}
+
+type mockRoot struct {
+	plugin.EntryBase
+	mock.Mock
+}
+
+func (m *mockRoot) Init() error {
+	return nil
+}
+
+func (m *mockRoot) List(ctx context.Context) ([]plugin.Entry, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]plugin.Entry), args.Error(1)
+}
+
+func (suite *HelpersTestSuite) TestGetEntryFromPath() {
+	reg := plugin.NewRegistry()
+	plug := &mockRoot{EntryBase: plugin.NewEntry("mine")}
+	plug.SetTestID("/mine")
+	suite.NoError(reg.RegisterPlugin(plug))
+	ctx := context.WithValue(context.Background(), pluginRegistryKey, reg)
+
+	entry, err := getEntryFromPath(ctx, "/")
+	if suite.Nil(err) {
+		suite.Equal(reg.Name(), plugin.Name(entry))
+	}
+
+	entry, err = getEntryFromPath(ctx, "/mine")
+	if suite.Nil(err) {
+		suite.Equal(plug.Name(), plugin.Name(entry))
+	}
+
+	_, err = getEntryFromPath(ctx, "/yours")
+	suite.Error(err)
+
+	file := plugin.NewEntry("a file")
+	file.SetTestID("/mine/a file")
+	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
+
+	entry, err = getEntryFromPath(ctx, "/mine/a file")
+	if suite.Nil(err) {
+		suite.Equal(file.Name(), plugin.Name(entry))
+	}
+	plug.AssertExpectations(suite.T())
+
+	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
+	_, err = getEntryFromPath(ctx, "/mine/a dir")
+	suite.Error(err)
+	plug.AssertExpectations(suite.T())
 }
 
 func TestHelpers(t *testing.T) {

@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"os"
-	"sort"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +13,7 @@ import (
 	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 func listCommand() *cobra.Command {
@@ -30,7 +31,7 @@ func listCommand() *cobra.Command {
 
 func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	headers := []cmdutil.ColumnHeader{
-		{ShortName: "size", FullName: "NAME"},
+		{ShortName: "name", FullName: "NAME"},
 		{ShortName: "ctime", FullName: "CREATED"},
 		{ShortName: "verbs", FullName: "ACTIONS"},
 	}
@@ -43,18 +44,15 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 			ctimeStr = "<unknown>"
 		}
 
-		actions := entry.Actions
-		sort.Strings(actions)
-		verbs := strings.Join(actions, ", ")
+		verbs := strings.Join(entry.Actions, ", ")
 
-		if entry.Path == apiPath {
-			// Represent the pwd as "."
-			entry.CName = "."
-		}
 		name := entry.CName
+		if len(ls) > 1 && entry.Path == apiPath {
+			// Represent the pwd as "."
+			name = "."
+		}
 
-		isDir := actions[sort.SearchStrings(actions, "list")] == "list"
-		if isDir {
+		if isListable(entry) {
 			name += "/"
 		}
 
@@ -63,34 +61,83 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	return cmdutil.FormatTable(headers, table)
 }
 
-func listMain(cmd *cobra.Command, args []string) exitCode {
-	var path string
-	if len(args) > 0 {
-		path = args[0]
-	} else {
-		cwd, err := os.Getwd()
+func findEntry(entries []apitypes.ListEntry, name string) apitypes.ListEntry {
+	for _, entry := range entries {
+		if entry.CName == name {
+			return entry
+		}
+	}
+	return apitypes.ListEntry{}
+}
+
+func isListable(entry apitypes.ListEntry) bool {
+	for _, action := range entry.Actions {
+		if action == plugin.ListAction.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func listResource(apiPath string) error {
+	conn := client.ForUNIXSocket(config.Socket)
+
+	var entries []apitypes.ListEntry
+	if apiPath == "/" {
+		// The root, definitely listable
+		ls, err := conn.List(apiPath)
 		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
+			return err
+		}
+		entries = ls
+	} else {
+		// List the parent to see whether it's a single entry or a listable resource
+		parent, base := filepath.Split(apiPath)
+		parentEntries, err := conn.List(parent)
+		if err != nil {
+			return err
 		}
 
-		path = cwd
+		target := findEntry(parentEntries, base)
+		if target.CName != base || isListable(target) {
+			// If we didn't find a parent entry, just try listing it. Can happen if the type has changed
+			// or disappeared, and List will give a reasonable error in that case.
+			ls, err := conn.List(apiPath)
+			if err != nil {
+				return err
+			}
+			entries = ls
+		} else {
+			entries = []apitypes.ListEntry{target}
+		}
+	}
+
+	fmt.Print(formatListEntries(apiPath, entries))
+	return nil
+}
+
+func listPath(path string) error {
+	return errors.New("Listing non-resource types not yet supported")
+}
+
+func listMain(cmd *cobra.Command, args []string) exitCode {
+	// If no path is declared, try to list the current directory/resource
+	path := "."
+	if len(args) > 0 {
+		path = args[0]
 	}
 
 	apiPath, err := client.APIKeyFromPath(path)
+	if err == nil {
+		err = listResource(apiPath)
+	} else {
+		err = listPath(path)
+	}
+
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
-
-	ls, err := conn.List(apiPath)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
-	fmt.Print(formatListEntries(apiPath, ls))
 	return exitCode{0}
 }
