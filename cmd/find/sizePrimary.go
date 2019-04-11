@@ -30,7 +30,7 @@ var sizeValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[ckMGTP]))$`)
 
 // sizePrimary => -size (+|-)?((\d+)|(\d+[ckMGTP]))
 //
-// where c => character (byte), k => kilobyte, M => megabyte, G => gigabyte, T => terabyte, P => petabyte
+// where c => character (byte), k => kibibyte, M => megabyte, G => gigabyte, T => terabyte, P => petabyte
 //
 // Example inputs:
 //   -size 2   (true if the entry's size in 512-byte blocks, rounded up, is 2)
