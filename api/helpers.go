@@ -53,6 +53,13 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 		panic("path should never be empty")
 	}
 
+	// Get the registry from context (added by registry middleware).
+	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
+	if path == "/" {
+		// Return the registry
+		return registry, nil
+	}
+
 	// Don't interpret trailing slash as a new segment, and ignore optional leading slash
 	path = strings.Trim(path, "/")
 	// Split into plugin name and an optional list of segments.
@@ -60,11 +67,13 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 	pluginName := segments[0]
 	segments = segments[1:]
 
-	// Get the registry from context (added by registry middleware).
-	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
 	root, ok := registry.Plugins()[pluginName]
 	if !ok {
 		return nil, pluginDoesNotExistResponse(pluginName)
+	}
+	if len(segments) == 0 {
+		// Listing the plugin itself, so return it's root
+		return root, nil
 	}
 
 	return findEntry(ctx, root, segments)
