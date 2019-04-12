@@ -14,7 +14,7 @@ import (
 //
 // Lists children of a path
 //
-// Returns a list of ListEntry objects describing children of the given path.
+// Returns a list of Entry objects describing children of the given path.
 //
 //     Produces:
 //     - application/json
@@ -22,7 +22,7 @@ import (
 //     Schemes: http
 //
 //     Responses:
-//       200: ListEntry
+//       200: Entry
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
@@ -51,24 +51,9 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
-	info := func(entry plugin.Entry) apitypes.ListEntry {
-		result := apitypes.ListEntry{
-			Path:    plugin.Path(entry),
-			Name:    plugin.Name(entry),
-			CName:   plugin.CName(entry),
-			Actions: plugin.SupportedActionsOf(entry),
-			Errors:  make(map[string]*apitypes.ErrorObj),
-		}
-
-		result.Attributes = plugin.Attributes(entry)
-		return result
-	}
-
-	result := make([]apitypes.ListEntry, 0, len(entries)+1)
-	result = append(result, info(group))
-
+	result := make([]apitypes.Entry, 0, len(entries))
 	for _, entry := range entries {
-		result = append(result, info(entry))
+		result = append(result, toAPIEntry(entry))
 	}
 	journal.Record(ctx, "API: List %v %+v", path, result)
 

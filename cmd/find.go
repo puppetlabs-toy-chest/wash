@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/api/client"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdfind "github.com/puppetlabs/wash/cmd/find"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/plugin"
 	"github.com/spf13/cobra"
 )
 
@@ -53,10 +55,20 @@ func findMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	conn := client.ForUNIXSocket(config.Socket)
-	entries, err := conn.List(apiPath)
+
+	e, err := conn.Info(apiPath)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
+	}
+	entries := []apitypes.Entry{e}
+	if e.Supports(plugin.ListAction) {
+		children, err := conn.List(apiPath)
+		if err != nil {
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		entries = append(entries, children...)
 	}
 
 	for _, entry := range entries {

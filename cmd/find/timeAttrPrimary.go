@@ -39,7 +39,7 @@ func durationOf(unit byte) time.Duration {
 // We use getTimeAttrValue to retrieve the time attribute's value for performance
 // reasons. Using e.Attributes.ToMap()[name] would be slower because it would
 // require an additional type assertion to extract the time.Time object.
-func getTimeAttrValue(name string, e *apitypes.ListEntry) (time.Time, bool) {
+func getTimeAttrValue(name string, e *apitypes.Entry) (time.Time, bool) {
 	switch name {
 	case "ctime":
 		return e.Attributes.Ctime(), e.Attributes.HasCtime()
@@ -126,7 +126,7 @@ func newTimeAttrPrimary(name string) *atom {
 		}
 
 		duration, roundDiff := parseDuration(v)
-		p := func(e *apitypes.ListEntry) bool {
+		p := func(e *apitypes.Entry) bool {
 			t, ok := getTimeAttrValue(name, e)
 			if !ok {
 				return false

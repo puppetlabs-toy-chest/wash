@@ -9,7 +9,7 @@ import (
 //nolint
 func newBooleanPrimary(val bool) *atom {
 	return newAtom([]string{fmt.Sprintf("-%v", val)}, func(tokens []string) (Predicate, []string, error) {
-		return func(e *apitypes.ListEntry) bool {
+		return func(e *apitypes.Entry) bool {
 			return val
 		}, tokens[1:], nil
 	})

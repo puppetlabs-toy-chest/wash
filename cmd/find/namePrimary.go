@@ -19,7 +19,7 @@ var namePrimary = newAtom([]string{"-name"}, func(tokens []string) (Predicate, [
 		return nil, nil, fmt.Errorf("-name: invalid glob: %v", err)
 	}
 
-	return func(e *apitypes.ListEntry) bool {
+	return func(e *apitypes.Entry) bool {
 		return g.Match(e.CName)
 	}, tokens[1:], nil
 })

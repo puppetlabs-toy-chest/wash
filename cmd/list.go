@@ -42,7 +42,7 @@ func format(t time.Time) string {
 	return t.Format(time.RFC822)
 }
 
-func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
+func formatListEntries(apiPath string, ls []apitypes.Entry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var mtimeStr string
@@ -60,7 +60,7 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 			name = "."
 		}
 
-		if isListable(entry) {
+		if entry.Supports(plugin.ListAction) {
 			name += "/"
 		}
 
@@ -69,55 +69,19 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	return cmdutil.FormatTable(headers(), table)
 }
 
-func findEntry(entries []apitypes.ListEntry, name string) apitypes.ListEntry {
-	for _, entry := range entries {
-		if entry.CName == name {
-			return entry
-		}
-	}
-	return apitypes.ListEntry{}
-}
-
-func isListable(entry apitypes.ListEntry) bool {
-	for _, action := range entry.Actions {
-		if action == plugin.ListAction.Name {
-			return true
-		}
-	}
-	return false
-}
-
 func listResource(apiPath string) error {
 	conn := client.ForUNIXSocket(config.Socket)
-
-	var entries []apitypes.ListEntry
-	if apiPath == "/" {
-		// The root, definitely listable
-		ls, err := conn.List(apiPath)
+	e, err := conn.Info(apiPath)
+	if err != nil {
+		return err
+	}
+	entries := []apitypes.Entry{e}
+	if e.Supports(plugin.ListAction) {
+		children, err := conn.List(apiPath)
 		if err != nil {
 			return err
 		}
-		entries = ls
-	} else {
-		// List the parent to see whether it's a single entry or a listable resource
-		parent, base := filepath.Split(apiPath)
-		parentEntries, err := conn.List(parent)
-		if err != nil {
-			return err
-		}
-
-		target := findEntry(parentEntries, base)
-		if target.CName != base || isListable(target) {
-			// If we didn't find a parent entry, just try listing it. Can happen if the type has changed
-			// or disappeared, and List will give a reasonable error in that case.
-			ls, err := conn.List(apiPath)
-			if err != nil {
-				return err
-			}
-			entries = ls
-		} else {
-			entries = []apitypes.ListEntry{target}
-		}
+		entries = append(entries, children...)
 	}
 
 	fmt.Print(formatListEntries(apiPath, entries))

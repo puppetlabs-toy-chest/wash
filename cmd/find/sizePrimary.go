@@ -56,7 +56,7 @@ var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, [
 		cmp = '='
 	}
 
-	p := func(e *apitypes.ListEntry) bool {
+	p := func(e *apitypes.Entry) bool {
 		if !e.Attributes.HasSize() {
 			return false
 		}

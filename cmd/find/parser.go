@@ -10,7 +10,7 @@ import (
 )
 
 // Predicate represents a predicate used by wash find
-type Predicate func(entry *apitypes.ListEntry) bool
+type Predicate func(entry *apitypes.Entry) bool
 
 // ParsePredicate parses `wash find`'s predicate from the
 // given tokens
@@ -19,7 +19,7 @@ func ParsePredicate(tokens []string) (Predicate, error) {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
 		// true.
-		return func(entry *apitypes.ListEntry) bool {
+		return func(entry *apitypes.Entry) bool {
 			return true
 		}, nil
 	}
