@@ -103,6 +103,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 
 	r := mux.NewRouter()
 
+	r.Handle("/fs/info", infoHandler).Methods(http.MethodGet)
 	r.Handle("/fs/list", listHandler).Methods(http.MethodGet)
 	r.Handle("/fs/metadata", metadataHandler).Methods(http.MethodGet)
 	r.Handle("/fs/read", readHandler).Methods(http.MethodGet)

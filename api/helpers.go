@@ -5,8 +5,19 @@ import (
 	"fmt"
 	"strings"
 
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 )
+
+func toAPIEntry(e plugin.Entry) apitypes.Entry {
+	return apitypes.Entry{
+		Path:       plugin.Path(e),
+		Name:       plugin.Name(e),
+		CName:      plugin.CName(e),
+		Actions:    plugin.SupportedActionsOf(e),
+		Attributes: plugin.Attributes(e),
+	}
+}
 
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
 	path := strings.Join(segments, "/")
