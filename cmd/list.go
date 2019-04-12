@@ -55,7 +55,7 @@ func formatListEntries(apiPath string, ls []apitypes.Entry) string {
 		verbs := strings.Join(entry.Actions, ", ")
 
 		name := entry.CName
-		if len(ls) > 1 && entry.Path == apiPath {
+		if len(ls) > 1 && i == 0 {
 			// Represent the pwd as "."
 			name = "."
 		}
@@ -128,13 +128,23 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		path = args[0]
 	}
 
-	apiPath, err := client.APIKeyFromPath(path)
+	err := listResource(path)
 	if err == nil {
-		err = listResource(apiPath)
-	} else {
-		err = listPath(path)
+		return exitCode{0}
+	}
+	// err != nil
+
+	apiErr, ok := err.(*apitypes.ErrorObj)
+	if !ok {
+		cmdutil.ErrPrintf("%v\n", err)
+		return exitCode{1}
+	}
+	if apiErr.Kind != apitypes.NonWashEntry {
+		cmdutil.ErrPrintf("%v\n", err)
+		return exitCode{1}
 	}
 
+	err = listPath(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}

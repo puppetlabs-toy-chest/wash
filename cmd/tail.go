@@ -53,15 +53,13 @@ func (w lineWriter) Write(b []byte) (int, error) {
 // Streams output via API to aggregator channel.
 // Returns nil if streaming's not supported on this path.
 func tailStream(conn client.DomainSocketClient, agg chan line, path string) io.Closer {
-	apiPath, err := client.APIKeyFromPath(path)
+	stream, err := conn.Stream(path)
 	if err != nil {
-		// Not a resource
-		return nil
-	}
-
-	var stream io.ReadCloser
-	if stream, err = conn.Stream(apiPath); err != nil {
 		if errObj, ok := err.(*apitypes.ErrorObj); ok {
+			if errObj.Kind == apitypes.NonWashEntry {
+				// Not a resource
+				return nil
+			}
 			if errObj.Kind == apitypes.UnsupportedAction {
 				// The resource exists but does not support the streaming action
 				return nil

@@ -186,7 +186,7 @@ func (suite *CacheTestSuite) TestCachedOp() {
 
 func (suite *CacheTestSuite) TestDuplicateCNameErr() {
 	err := DuplicateCNameErr{
-		ParentPath:                      "/my_plugin/foo",
+		ParentID:                        "/my_plugin/foo",
 		FirstChildName:                  "foo/bar/",
 		FirstChildSlashReplacementChar:  '#',
 		SecondChildName:                 "foo#bar/",
@@ -282,7 +282,7 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	_, err := CachedList(ctx, entry)
 	if suite.Error(err) {
 		expectedErr := DuplicateCNameErr{
-			ParentPath:                      "/my_plugin/foo",
+			ParentID:                        "/my_plugin/foo",
 			FirstChildName:                  "foo/bar/",
 			FirstChildSlashReplacementChar:  '#',
 			SecondChildName:                 "foo#bar/",

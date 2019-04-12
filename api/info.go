@@ -21,6 +21,7 @@ var infoHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	apiEntry := toAPIEntry(entry)
+	apiEntry.Path = path
 	if err := jsonEncoder.Encode(&apiEntry); err != nil {
 		journal.Record(ctx, "API: Info: marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", path, err))

@@ -37,11 +37,11 @@ func (suite *HelpersTestSuite) TestCName() {
 	suite.Equal("foo:bar:baz", CName(&e))
 }
 
-func (suite *HelpersTestSuite) TestPath() {
+func (suite *HelpersTestSuite) TestID() {
 	e := NewEntry("foo")
 	e.setID("/foo/bar")
 
-	suite.Equal(Path(&e), "/foo/bar")
+	suite.Equal(ID(&e), "/foo/bar")
 }
 
 type helpersTestsMockEntry struct {

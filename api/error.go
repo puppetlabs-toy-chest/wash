@@ -131,7 +131,7 @@ func erroredActionResponse(path string, a plugin.Action, reason string) *errorRe
 
 func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
 	fields := apitypes.ErrorFields{
-		"parent_path":                         e.ParentPath,
+		"parent_id":                           e.ParentID,
 		"first_child_name":                    e.FirstChildName,
 		"first_child_slash_replacement_char":  e.FirstChildSlashReplacementChar,
 		"second_child_name":                   e.SecondChildName,
@@ -146,4 +146,32 @@ func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
 	)
 
 	return &errorResponse{http.StatusInternalServerError, body}
+}
+
+func relativePathResponse(path string) *errorResponse {
+	fields := apitypes.ErrorFields{
+		"path": path,
+	}
+
+	body := newErrorObj(
+		apitypes.RelativePath,
+		fmt.Sprintf("%v is a relative path. The Wash API only accepts absolute paths.", path),
+		fields,
+	)
+
+	return &errorResponse{http.StatusBadRequest, body}
+}
+
+func nonWashEntryResponse(path string) *errorResponse {
+	fields := apitypes.ErrorFields{
+		"path": path,
+	}
+
+	body := newErrorObj(
+		apitypes.NonWashEntry,
+		fmt.Sprintf("%v is not a Wash entry.", path),
+		fields,
+	)
+
+	return &errorResponse{http.StatusBadRequest, body}
 }

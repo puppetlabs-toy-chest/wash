@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -11,7 +12,6 @@ import (
 
 func toAPIEntry(e plugin.Entry) apitypes.Entry {
 	return apitypes.Entry{
-		Path:       plugin.Path(e),
 		Name:       plugin.Name(e),
 		CName:      plugin.CName(e),
 		Actions:    plugin.SupportedActionsOf(e),
@@ -63,6 +63,17 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 	if path == "" {
 		panic("path should never be empty")
 	}
+	if !filepath.IsAbs(path) {
+		return nil, relativePathResponse(path)
+	}
+
+	mountpoint := ctx.Value(mountpointKey).(string)
+	trimmedPath := strings.TrimPrefix(path, mountpoint)
+	if trimmedPath == path {
+		// TODO: Handle these later by wrapping them into entries
+		return nil, nonWashEntryResponse(path)
+	}
+	path = trimmedPath
 
 	// Get the registry from context (added by registry middleware).
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)

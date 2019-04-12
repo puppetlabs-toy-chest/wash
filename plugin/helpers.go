@@ -56,13 +56,13 @@ func CName(e Entry) string {
 	)
 }
 
-// Path returns the entry's path rooted at Wash's mountpoint. This is what
-// the API consumes. An entry's path is described as
+// ID returns the entry's ID, which is just its path rooted at Wash's mountpoint.
+// An entry's ID is described as
 //     /<plugin_name>/<group1_cname>/<group2_cname>/.../<entry_cname>
 //
 // NOTE: <plugin_name> is really <plugin_cname>. However since <plugin_name>
 // can never contain a '/', <plugin_cname> reduces to <plugin_name>.
-func Path(e Entry) string {
+func ID(e Entry) string {
 	return e.id()
 }
 

@@ -39,4 +39,6 @@ const (
 	BadRequest         = "puppetlabs.wash/bad-request"
 	ErroredAction      = "puppetlabs.wash/errored-action"
 	DuplicateCName     = "puppetlabs.wash/duplicate-cname"
+	RelativePath       = "puppetlabs.wash/relative-path"
+	NonWashEntry       = "puppetlabs.wash/non-wash-entry"
 )

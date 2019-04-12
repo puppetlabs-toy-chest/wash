@@ -34,14 +34,8 @@ func clearMain(cmd *cobra.Command, args []string) exitCode {
 	}
 	verbose := viper.GetBool("verbose")
 
-	apiPath, err := client.APIKeyFromPath(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
 	conn := client.ForUNIXSocket(config.Socket)
-	cleared, err := conn.Clear(apiPath)
+	cleared, err := conn.Clear(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
@@ -52,7 +46,7 @@ func clearMain(cmd *cobra.Command, args []string) exitCode {
 			fmt.Println("Cleared", p)
 		}
 	} else {
-		fmt.Println("Cleared", apiPath)
+		fmt.Println("Cleared", path)
 	}
 
 	return exitCode{0}

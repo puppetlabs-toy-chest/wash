@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/puppetlabs/wash/api/client"
-	"github.com/puppetlabs/wash/cmd/util"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,15 +44,9 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	apiPath, err := client.APIKeyFromPath(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
 	conn := client.ForUNIXSocket(config.Socket)
 
-	metadata, err := conn.Metadata(apiPath)
+	metadata, err := conn.Metadata(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}

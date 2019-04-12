@@ -49,21 +49,16 @@ func findMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	apiPath, err := client.APIKeyFromPath(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
 	conn := client.ForUNIXSocket(config.Socket)
 
-	e, err := conn.Info(apiPath)
+	e, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 	entries := []apitypes.Entry{e}
 	if e.Supports(plugin.ListAction) {
-		children, err := conn.List(apiPath)
+		children, err := conn.List(path)
 		if err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}

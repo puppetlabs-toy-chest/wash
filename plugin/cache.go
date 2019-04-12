@@ -117,7 +117,7 @@ func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 // DuplicateCNameErr represents a duplicate cname error, which
 // occurs when at least two children have the same cname.
 type DuplicateCNameErr struct {
-	ParentPath                      string
+	ParentID                        string
 	FirstChildName                  string
 	FirstChildSlashReplacementChar  rune
 	SecondChildName                 string
@@ -127,14 +127,14 @@ type DuplicateCNameErr struct {
 
 func (c DuplicateCNameErr) Error() string {
 	pluginName := strings.SplitN(
-		strings.TrimLeft(c.ParentPath, "/"),
+		strings.TrimLeft(c.ParentID, "/"),
 		"/",
 		2,
 	)[0]
 
 	return fmt.Sprintf(
 		"error listing %v: children %v and %v have the same cname of %v. This means that either the %v plugin's API returns duplicate names, or that you need to use a different slash replacement character (see EntryBase#SetSlashReplacementCharar)",
-		c.ParentPath,
+		c.ParentID,
 		c.FirstChildName,
 		c.SecondChildName,
 		c.CName,
@@ -167,7 +167,7 @@ func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 
 			if duplicateEntry, ok := searchedEntries[cname]; ok {
 				return nil, DuplicateCNameErr{
-					ParentPath:                      g.id(),
+					ParentID:                        g.id(),
 					FirstChildName:                  duplicateEntry.name(),
 					FirstChildSlashReplacementChar:  duplicateEntry.slashReplacementChar(),
 					SecondChildName:                 entry.name(),
