@@ -66,11 +66,14 @@ func findMain(cmd *cobra.Command, args []string) exitCode {
 		entries = append(entries, children...)
 	}
 
-	for _, entry := range entries {
+	for i, entry := range entries {
 		if p(&entry) {
-			// TODO: Include the cwd's directory in path (so that find
-			// prints out absolute paths).
-			fmt.Printf("%v\n", entry.Path)
+			entryPath := path
+			if len(entries) > 1 && i != 0 {
+				entryPath += "/"
+				entryPath += entry.CName
+			}
+			fmt.Printf("%v\n", entryPath)
 		}
 	}
 	return exitCode{0}
