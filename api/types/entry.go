@@ -12,3 +12,14 @@ type Entry struct {
 	CName      string                 `json:"cname"`
 	Attributes plugin.EntryAttributes `json:"attributes"`
 }
+
+// Supports returns true if e supports the given action, false
+// otherwise.
+func (e *Entry) Supports(action plugin.Action) bool {
+	for _, a := range e.Actions {
+		if action.Name == a {
+			return true
+		}
+	}
+	return false
+}

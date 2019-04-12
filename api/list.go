@@ -51,9 +51,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		return erroredActionResponse(path, plugin.ListAction, err.Error())
 	}
 
-	result := make([]apitypes.Entry, 0, len(entries)+1)
-	result = append(result, toAPIEntry(group))
-
+	result := make([]apitypes.Entry, 0, len(entries))
 	for _, entry := range entries {
 		result = append(result, toAPIEntry(entry))
 	}
