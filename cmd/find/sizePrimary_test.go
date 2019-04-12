@@ -77,7 +77,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 		p, tokens, err := sizePrimary.parsePredicate([]string{"-size", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
-			e := &apitypes.ListEntry{}
+			e := &apitypes.Entry{}
 			// Ensure p(e) is always false for an entry that doesn't have a size attribute
 			suite.False(p(e), inputStr())
 

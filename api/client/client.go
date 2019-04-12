@@ -97,8 +97,8 @@ func (c *DomainSocketClient) getRequest(endpoint, path string, result interface{
 }
 
 // List lists the resources located at "path".
-func (c *DomainSocketClient) List(path string) ([]apitypes.ListEntry, error) {
-	var ls []apitypes.ListEntry
+func (c *DomainSocketClient) List(path string) ([]apitypes.Entry, error) {
+	var ls []apitypes.Entry
 	if err := c.getRequest("/fs/list", path, &ls); err != nil {
 		return nil, err
 	}

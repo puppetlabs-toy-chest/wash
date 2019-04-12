@@ -104,7 +104,7 @@
     },
     "/fs/list": {
       "get": {
-        "description": "Returns a list of ListEntry objects describing children of the given path.",
+        "description": "Returns a list of Entry objects describing children of the given path.",
         "produces": [
           "application/json"
         ],
@@ -126,7 +126,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ListEntry"
+            "$ref": "#/responses/Entry"
           },
           "400": {
             "$ref": "#/responses/errorResp"
@@ -373,8 +373,8 @@
         "type": {}
       }
     },
-    "ListEntry": {
-      "description": "ListEntry represents a single entry from the result of issuing a wash 'list' request.",
+    "Entry": {
+      "description": "Entry represents a single entry from the result of issuing a wash 'list' request.",
       "schema": {
         "type": "object",
         "additionalProperties": {

@@ -20,8 +20,8 @@ func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := &apitypes.ListEntry{CName: "a"}
-	e2 := &apitypes.ListEntry{CName: "b"}
+	e1 := &apitypes.Entry{CName: "a"}
+	e2 := &apitypes.Entry{CName: "b"}
 	p, tokens, err := namePrimary.parsePredicate([]string{"-name", "a"})
 	if suite.NoError(err) {
 		suite.Equal([]string{}, tokens)

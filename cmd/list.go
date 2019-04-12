@@ -42,7 +42,7 @@ func format(t time.Time) string {
 	return t.Format(time.RFC822)
 }
 
-func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
+func formatListEntries(apiPath string, ls []apitypes.Entry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var mtimeStr string
@@ -69,16 +69,16 @@ func formatListEntries(apiPath string, ls []apitypes.ListEntry) string {
 	return cmdutil.FormatTable(headers(), table)
 }
 
-func findEntry(entries []apitypes.ListEntry, name string) apitypes.ListEntry {
+func findEntry(entries []apitypes.Entry, name string) apitypes.Entry {
 	for _, entry := range entries {
 		if entry.CName == name {
 			return entry
 		}
 	}
-	return apitypes.ListEntry{}
+	return apitypes.Entry{}
 }
 
-func isListable(entry apitypes.ListEntry) bool {
+func isListable(entry apitypes.Entry) bool {
 	for _, action := range entry.Actions {
 		if action == plugin.ListAction.Name {
 			return true
@@ -90,7 +90,7 @@ func isListable(entry apitypes.ListEntry) bool {
 func listResource(apiPath string) error {
 	conn := client.ForUNIXSocket(config.Socket)
 
-	var entries []apitypes.ListEntry
+	var entries []apitypes.Entry
 	if apiPath == "/" {
 		// The root, definitely listable
 		ls, err := conn.List(apiPath)
@@ -116,7 +116,7 @@ func listResource(apiPath string) error {
 			}
 			entries = ls
 		} else {
-			entries = []apitypes.ListEntry{target}
+			entries = []apitypes.Entry{target}
 		}
 	}
 
