@@ -161,17 +161,3 @@ func relativePathResponse(path string) *errorResponse {
 
 	return &errorResponse{http.StatusBadRequest, body}
 }
-
-func nonWashEntryResponse(path string) *errorResponse {
-	fields := apitypes.ErrorFields{
-		"path": path,
-	}
-
-	body := newErrorObj(
-		apitypes.NonWashEntry,
-		fmt.Sprintf("%v is not a Wash entry.", path),
-		fields,
-	)
-
-	return &errorResponse{http.StatusBadRequest, body}
-}

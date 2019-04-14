@@ -149,10 +149,6 @@ func (c DuplicateCNameErr) Error() string {
 // querying a specific entry.
 func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 	cachedEntries, err := cachedDefaultOp(ctx, ListOp, g, func() (interface{}, error) {
-		if g.id() == "" {
-			panic("cannot List an entry that you just created")
-		}
-
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
 		// to calculate its attributes. Note that the child's ID is set in cachedOp.
@@ -240,6 +236,10 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 		}
 	}
 
+	if ttl < 0 {
+		return op()
+	}
+
 	if entry.id() == "" {
 		// Try to set the ID based on parent ID
 		if obj := ctx.Value(parentID); obj != nil {
@@ -248,10 +248,6 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 		} else {
 			panic(fmt.Sprintf("Cached op %v on %v had no cache ID and context did not include parent ID", opName, entry.name()))
 		}
-	}
-
-	if ttl < 0 {
-		return op()
 	}
 
 	return cache.GetOrUpdate(opName, entry.id(), ttl, false, op)

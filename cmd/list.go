@@ -2,12 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/Benchkram/errz"
 	"github.com/spf13/cobra"
 
 	"github.com/puppetlabs/wash/api/client"
@@ -42,7 +39,7 @@ func format(t time.Time) string {
 	return t.Format(time.RFC822)
 }
 
-func formatListEntries(apiPath string, ls []apitypes.Entry) string {
+func formatListEntries(ls []apitypes.Entry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
 		var mtimeStr string
@@ -69,58 +66,6 @@ func formatListEntries(apiPath string, ls []apitypes.Entry) string {
 	return cmdutil.FormatTable(headers(), table)
 }
 
-func listResource(apiPath string) error {
-	conn := client.ForUNIXSocket(config.Socket)
-	e, err := conn.Info(apiPath)
-	if err != nil {
-		return err
-	}
-	entries := []apitypes.Entry{e}
-	if e.Supports(plugin.ListAction) {
-		children, err := conn.List(apiPath)
-		if err != nil {
-			return err
-		}
-		entries = append(entries, children...)
-	}
-
-	fmt.Print(formatListEntries(apiPath, entries))
-	return nil
-}
-
-func listPath(path string) error {
-	finfo, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	var table [][]string
-	if finfo.IsDir() {
-		matches, err := filepath.Glob(filepath.Join(path, "*"))
-		errz.Fatal(err)
-		table = make([][]string, len(matches)+1)
-		table[0] = []string{".", format(finfo.ModTime()), "list"}
-		for i, match := range matches {
-			finfo, err := os.Stat(match)
-			if err != nil {
-				return err
-			}
-			actions := "read"
-			if finfo.IsDir() {
-				actions = "list"
-			}
-			table[i+1] = []string{finfo.Name(), format(finfo.ModTime()), actions}
-		}
-	} else {
-		table = [][]string{[]string{finfo.Name(), format(finfo.ModTime()), "read"}}
-	}
-	// Most operating systems don't track when a thing was created, just the last time it was
-	// modified. Some filesystems track the inode birth time, but Go doesn't expose that. List
-	// modification time for now, and note that this differs from what `ls -l` shows on macOS.
-	fmt.Print(cmdutil.FormatTable(headers(), table))
-	return nil
-}
-
 func listMain(cmd *cobra.Command, args []string) exitCode {
 	// If no path is declared, try to list the current directory/resource
 	path := "."
@@ -128,27 +73,22 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		path = args[0]
 	}
 
-	err := listResource(path)
-	if err == nil {
-		return exitCode{0}
-	}
-	// err != nil
-
-	apiErr, ok := err.(*apitypes.ErrorObj)
-	if !ok {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-	if apiErr.Kind != apitypes.NonWashEntry {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
-	err = listPath(path)
+	conn := client.ForUNIXSocket(config.Socket)
+	e, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
+	entries := []apitypes.Entry{e}
+	if e.Supports(plugin.ListAction) {
+		children, err := conn.List(path)
+		if err != nil {
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		entries = append(entries, children...)
+	}
 
+	fmt.Print(formatListEntries(entries))
 	return exitCode{0}
 }

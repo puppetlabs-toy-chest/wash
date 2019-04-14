@@ -219,13 +219,8 @@ func (suite *CacheTestSuite) testCachedDefaultOp(
 
 	entry := newCacheTestsMockEntry("mock")
 
-	// Test that cachedDefaultOp panics if entry.id() == "" if not passed
-	// a suitable context.
-	suite.Panics(panicFunc, "entry.id() returned an empty ID")
-
 	// Test that cachedDefaultOp does _not_ call cache#GetOrUpdate for an
 	// entry that's turned off caching
-	entry.SetTestID("id")
 	entry.On(opName, mock.Anything).Return(opValue, nil)
 	entry.DisableCachingFor(op)
 	v, err := cachedDefaultOp(ctx, entry)
@@ -233,6 +228,11 @@ func (suite *CacheTestSuite) testCachedDefaultOp(
 		suite.Equal(mungedOpValue, v)
 	}
 	suite.cache.AssertNotCalled(suite.T(), "GetOrUpdate")
+
+	// Test that cachedDefaultOp panics if entry.id() == "" if not passed
+	// a suitable context.
+	suite.Panics(panicFunc, "entry.id() returned an empty ID")
+	entry.SetTestID("id")
 
 	// Test that cachedDefaultOp does call cache#GetOrUpdate for an
 	// entry that's enabled caching, and that it passes-in the
