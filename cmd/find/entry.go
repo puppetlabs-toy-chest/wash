@@ -5,43 +5,41 @@ import (
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
-// Entry represents an entry as interpreted by `wash find`.
-// It is primarily needed for its NormalizedPath field
-type Entry struct {
+type entry struct {
 	*apitypes.Entry
 	NormalizedPath string
 }
 
-func newEntry() Entry {
-	return Entry{Entry: &apitypes.Entry{}}
+func newEntry() entry {
+	return entry{Entry: &apitypes.Entry{}}
 }
 
-// Info is a wrapper to c.Info
-func Info(c *client.DomainSocketClient, path string) (Entry, error) {
+// info is a wrapper to c.Info
+func info(c *client.DomainSocketClient, path string) (entry, error) {
 	e, err := c.Info(path)
 	if err != nil {
-		return Entry{}, err
+		return entry{}, err
 	}
-	return Entry{
+	return entry{
 		Entry:          &e,
 		NormalizedPath: path,
 	}, nil
 }
 
-// List is a wrapper to c.List that handles normalizing the children's
+// list is a wrapper to c.List that handles normalizing the children's
 // path relative to e's normalized path
-func List(c *client.DomainSocketClient, e Entry) ([]Entry, error) {
+func list(c *client.DomainSocketClient, e entry) ([]entry, error) {
 	rawChildren, err := c.List(e.Path)
 	if err != nil {
 		return nil, err
 	}
-	children := make([]Entry, len(rawChildren))
+	children := make([]entry, len(rawChildren))
 	for i, ch := range rawChildren {
 		normalizedPath := e.NormalizedPath
 		normalizedPath += "/"
 		normalizedPath += ch.CName
 
-		children[i] = Entry{
+		children[i] = entry{
 			Entry:          &ch,
 			NormalizedPath: normalizedPath,
 		}

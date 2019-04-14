@@ -13,11 +13,11 @@ type TimeAttrPrimaryTestSuite struct {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) SetupTest() {
-	SetStartTime(time.Now())
+	startTime = time.Now()
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
-	SetStartTime(time.Time{})
+	startTime = time.Time{}
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
