@@ -121,7 +121,12 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	_, err = getEntryFromPath(ctx, "/file")
 	suite.Error(nonWashEntryResponse("/file"), err)
 
-	entry, err := getEntryFromPath(ctx, mountpoint+"/")
+	entry, err := getEntryFromPath(ctx, mountpoint)
+	if suite.Nil(err) {
+		suite.Equal(reg.Name(), plugin.Name(entry))
+	}
+
+	entry, err = getEntryFromPath(ctx, mountpoint+"/")
 	if suite.Nil(err) {
 		suite.Equal(reg.Name(), plugin.Name(entry))
 	}
