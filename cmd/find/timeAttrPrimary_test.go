@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -37,7 +36,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
-	e := &apitypes.Entry{}
+	e := newEntry()
 
 	// Test ctime
 	_, ok := getTimeAttrValue("ctime", e)
@@ -143,7 +142,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 		p, tokens, err := ctimePrimary.parsePredicate([]string{"-ctime", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
-			e := &apitypes.Entry{}
+			e := newEntry()
 			// Ensure p(e) is always false for an entry that doesn't have a ctime attribute
 			suite.False(p(e), inputStr())
 

@@ -5,8 +5,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 var bytesMap = map[byte]uint64{
@@ -56,7 +54,7 @@ var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, [
 		cmp = '='
 	}
 
-	p := func(e *apitypes.Entry) bool {
+	p := func(e Entry) bool {
 		if !e.Attributes.HasSize() {
 			return false
 		}

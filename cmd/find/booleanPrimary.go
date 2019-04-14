@@ -2,14 +2,12 @@ package cmdfind
 
 import (
 	"fmt"
-
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 //nolint
 func newBooleanPrimary(val bool) *atom {
 	return newAtom([]string{fmt.Sprintf("-%v", val)}, func(tokens []string) (Predicate, []string, error) {
-		return func(e *apitypes.Entry) bool {
+		return func(e Entry) bool {
 			return val
 		}, tokens[1:], nil
 	})

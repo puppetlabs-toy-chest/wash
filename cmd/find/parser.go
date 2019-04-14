@@ -6,11 +6,10 @@ import (
 	"fmt"
 
 	"github.com/golang-collections/collections/stack"
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 // Predicate represents a predicate used by wash find
-type Predicate func(entry *apitypes.Entry) bool
+type Predicate func(entry Entry) bool
 
 // ParsePredicate parses `wash find`'s predicate from the
 // given tokens
@@ -19,7 +18,7 @@ func ParsePredicate(tokens []string) (Predicate, error) {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
 		// true.
-		return func(entry *apitypes.Entry) bool {
+		return func(entry Entry) bool {
 			return true
 		}, nil
 	}

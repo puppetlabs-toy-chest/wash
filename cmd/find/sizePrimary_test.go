@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -77,7 +76,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 		p, tokens, err := sizePrimary.parsePredicate([]string{"-size", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
-			e := &apitypes.Entry{}
+			e := newEntry()
 			// Ensure p(e) is always false for an entry that doesn't have a size attribute
 			suite.False(p(e), inputStr())
 

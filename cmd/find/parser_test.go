@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -53,7 +52,7 @@ func (suite *ParserTestSuite) runTestCases(testCases ...parserTestCase) {
 			suite.Equal(c.err, err.Error(), "Input was '%v'", input)
 		} else {
 			if suite.NoError(err) {
-				suite.Equal(c.expected, p(&apitypes.Entry{}), "Input was '%v'", input)
+				suite.Equal(c.expected, p(newEntry()), "Input was '%v'", input)
 			}
 		}
 	}

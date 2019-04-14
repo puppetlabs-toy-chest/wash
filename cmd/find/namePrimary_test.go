@@ -3,7 +3,6 @@ package cmdfind
 import (
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -20,8 +19,10 @@ func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := &apitypes.Entry{CName: "a"}
-	e2 := &apitypes.Entry{CName: "b"}
+	e1 := newEntry()
+	e1.CName = "a"
+	e2 := newEntry()
+	e2.CName = "b"
 	p, tokens, err := namePrimary.parsePredicate([]string{"-name", "a"})
 	if suite.NoError(err) {
 		suite.Equal([]string{}, tokens)

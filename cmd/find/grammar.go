@@ -2,8 +2,6 @@ package cmdfind
 
 import (
 	"fmt"
-
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 type atom struct {
@@ -42,7 +40,7 @@ var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (Predicate, []s
 		if err != nil {
 			return nil, nil, err
 		}
-		return func(e *apitypes.Entry) bool {
+		return func(e Entry) bool {
 			return !p(e)
 		}, tokens, err
 	}
@@ -105,14 +103,14 @@ func newBinaryOp(tokens []string, precedence int, combine func(p1 Predicate, p2 
 
 //nolint
 var andOp = newBinaryOp([]string{"-a", "-and"}, 1, func(p1 Predicate, p2 Predicate) Predicate {
-	return func(e *apitypes.Entry) bool {
+	return func(e Entry) bool {
 		return p1(e) && p2(e)
 	}
 })
 
 //nolint
 var orOp = newBinaryOp([]string{"-o", "-or"}, 0, func(p1 Predicate, p2 Predicate) Predicate {
-	return func(e *apitypes.Entry) bool {
+	return func(e Entry) bool {
 		return p1(e) || p2(e)
 	}
 })

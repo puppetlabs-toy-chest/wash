@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 // namePrimary => -name ShellGlob
@@ -19,7 +18,7 @@ var namePrimary = newAtom([]string{"-name"}, func(tokens []string) (Predicate, [
 		return nil, nil, fmt.Errorf("-name: invalid glob: %v", err)
 	}
 
-	return func(e *apitypes.Entry) bool {
+	return func(e Entry) bool {
 		return g.Match(e.CName)
 	}, tokens[1:], nil
 })
