@@ -39,10 +39,14 @@ func list(c *client.DomainSocketClient, e entry) ([]entry, error) {
 		normalizedPath += "/"
 		normalizedPath += ch.CName
 
-		children[i] = entry{
-			Entry:          &ch,
-			NormalizedPath: normalizedPath,
-		}
+		e := newEntry()
+		// Something like `e.Entry = &ch` will not work because the value of
+		// 'ch' will change on each iteration. Thus, we need to explicitly set
+		// its value.
+		(*e.Entry) = ch
+		e.NormalizedPath = normalizedPath
+
+		children[i] = e
 	}
 	return children, nil
 }

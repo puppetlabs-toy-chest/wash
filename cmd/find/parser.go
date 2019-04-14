@@ -65,7 +65,7 @@ evaluation stack.
 */
 func parsePredicateHelper(tokens []string) (predicate, error) {
 	if len(tokens) == 0 {
-		panic("parsepredicate: called with len(tokens) == 0")
+		panic("parsePredicateHelper: called with len(tokens) == 0")
 	}
 
 	s := newEvalStack()
