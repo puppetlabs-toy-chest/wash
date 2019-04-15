@@ -8,7 +8,22 @@ import (
 	"github.com/puppetlabs/wash/journal"
 )
 
-// TODO: Include the entry's full metadata?
+// swagger:route GET /fs/info info entryInfo
+//
+// Info about entry at path
+//
+// Returns an Entry object describing the given path.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: Entry
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
 var infoHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
 	path := p.Path
 	ctx := r.Context()
@@ -20,6 +35,7 @@ var infoHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	journal.Record(ctx, "API: Info %v", path)
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
+	// TODO: Include the entry's full metadata?
 	apiEntry := toAPIEntry(entry)
 	apiEntry.Path = path
 	if err := jsonEncoder.Encode(&apiEntry); err != nil {

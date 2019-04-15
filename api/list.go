@@ -10,6 +10,13 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
+// swagger:response
+//nolint:deadcode,unused
+type entryList struct {
+	// in: body
+	Entries []apitypes.Entry
+}
+
 // swagger:route GET /fs/list list listEntries
 //
 // Lists children of a path
@@ -22,7 +29,7 @@ import (
 //     Schemes: http
 //
 //     Responses:
-//       200: Entry
+//       200: entryList
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp

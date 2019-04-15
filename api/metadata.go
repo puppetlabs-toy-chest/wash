@@ -27,7 +27,7 @@ type entryMetadata struct {
 //     Schemes: http
 //
 //     Responses:
-//       200: metadataMap
+//       200: entryMetadata
 //       404: errorResp
 //       500: errorResp
 var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {

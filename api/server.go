@@ -24,7 +24,7 @@ const (
 	mountpointKey
 )
 
-// swagger:parameters cacheDelete listEntries executeCommand getMetadata readContent streamUpdates
+// swagger:parameters cacheDelete listEntries entryInfo executeCommand getMetadata readContent streamUpdates
 type params struct {
 	// uniquely identifies an entry
 	//
