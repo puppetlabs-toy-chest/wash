@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 	"syscall"
@@ -60,6 +61,12 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	logfile := viper.GetString("logfile")
 	externalPluginsPath := viper.GetString("external-plugins")
 
+	mountpoint, err := filepath.Abs(mountpoint)
+	if err != nil {
+		cmdutil.ErrPrintf("Could not compute the absolute path of the mountpoint %v: %v", mountpoint, err)
+		return exitCode{1}
+	}
+
 	logFH, err := loadLogger(loglevel, logfile)
 	if err != nil {
 		cmdutil.ErrPrintf("Failed to load the logger: %v\n", err)
@@ -90,7 +97,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, mountpoint, config.Socket)
 	if err != nil {
 		log.Warn(err)
 		return exitCode{1}

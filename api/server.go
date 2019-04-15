@@ -19,7 +19,10 @@ import (
 
 type key int
 
-const pluginRegistryKey key = iota
+const (
+	pluginRegistryKey key = iota
+	mountpointKey
+)
 
 // swagger:parameters cacheDelete listEntries executeCommand getMetadata readContent streamUpdates
 type params struct {
@@ -70,7 +73,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //   2. A read-only channel that signals whether the server was shutdown.
 //
 //   3. An error object
-func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Context, <-chan struct{}, error) {
+func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (chan<- context.Context, <-chan struct{}, error) {
 	log.Infof("API: started")
 
 	if _, err := os.Stat(socketPath); err == nil {
@@ -91,9 +94,10 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 		return nil, nil, err
 	}
 
-	addPluginRegistryAndJournalIDMiddleware := func(next http.Handler) http.Handler {
+	prepareContextMiddleWare := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
+			newctx = context.WithValue(newctx, mountpointKey, mountpoint)
 			newctx = context.WithValue(newctx, journal.Key, r.Header.Get(apitypes.JournalIDHeader))
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
@@ -111,7 +115,7 @@ func StartAPI(registry *plugin.Registry, socketPath string) (chan<- context.Cont
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
 
-	r.Use(addPluginRegistryAndJournalIDMiddleware)
+	r.Use(prepareContextMiddleWare)
 
 	httpServer := http.Server{Handler: r}
 

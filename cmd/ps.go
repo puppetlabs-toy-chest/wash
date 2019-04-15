@@ -170,31 +170,17 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 		paths = []string{cwd}
 	}
 
-	var keys []string
-	for _, path := range paths {
-		apiKey, err := client.APIKeyFromPath(path)
-		if err != nil {
-			cmdutil.ErrPrintf("Unable to get API key for %v: %v\n", path, err)
-		} else {
-			keys = append(keys, apiKey)
-		}
-	}
-	if len(keys) == 0 {
-		cmdutil.ErrPrintf("Error: no valid nodes found\n")
-		return exitCode{1}
-	}
-
 	conn := client.ForUNIXSocket(config.Socket)
 
 	results := make(map[string][]psresult)
 	// Prepulate the map so it doesn't change size while all the goroutines are adding data.
-	for _, key := range keys {
-		results[key] = []psresult{}
+	for _, path := range paths {
+		results[path] = []psresult{}
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(keys))
-	for i, key := range keys {
+	wg.Add(len(paths))
+	for i, path := range paths {
 		go func(k string, idx int) {
 			defer wg.Done()
 			ch, err := conn.Exec(k, "sh", []string{}, apitypes.ExecOptions{Input: psScript})
@@ -208,14 +194,14 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			} else {
 				results[k] = parseLines(k, out)
 			}
-		}(key, i)
+		}(path, i)
 	}
 
 	wg.Wait()
 
 	var stats []psresult
-	for _, key := range keys {
-		stats = append(stats, results[key]...)
+	for _, path := range paths {
+		stats = append(stats, results[path]...)
 	}
 
 	fmt.Print(formatStats(stats))

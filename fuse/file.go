@@ -19,8 +19,6 @@ type file struct {
 
 var _ fs.Node = (*file)(nil)
 var _ = fs.NodeOpener(&file{})
-var _ = fs.NodeGetxattrer(&file{})
-var _ = fs.NodeListxattrer(&file{})
 
 func newFile(p plugin.Group, e plugin.Entry) *file {
 	return &file{newFuseNode("f", p, e)}

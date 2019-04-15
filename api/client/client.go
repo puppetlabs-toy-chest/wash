@@ -17,12 +17,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/journal"
-
-	"github.com/pkg/xattr"
 )
 
 // A DomainSocketClient is a wash API client.
@@ -46,6 +45,11 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 }
 
 func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate the absolute path of %v: %v", path, err)
+	}
+
 	req, err := http.NewRequest(method, domainSocketBaseURL, body)
 	if err != nil {
 		return nil, err
@@ -194,15 +198,4 @@ func (c *DomainSocketClient) Clear(path string) ([]string, error) {
 	}
 
 	return result, nil
-}
-
-// APIKeyFromPath will take a path to an object within the wash filesystem,
-// and interrogate it to determine its path relative to the wash filesystem
-// root. This is stored in the extended attributes of every file in the wash fs.
-func APIKeyFromPath(fspath string) (string, error) {
-	p, err := xattr.Get(fspath, "wash.id")
-	if err != nil {
-		return "", err
-	}
-	return string(p), nil
 }

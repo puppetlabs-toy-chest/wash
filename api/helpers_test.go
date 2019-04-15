@@ -78,7 +78,7 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	duplicateFoo := plugin.NewEntry("foo#bar")
 	group.entries = append(group.entries, &duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
-		ParentPath:                      plugin.Path(group),
+		ParentID:                        plugin.ID(group),
 		FirstChildName:                  foo.Name(),
 		FirstChildSlashReplacementChar:  '#',
 		SecondChildName:                 duplicateFoo.Name(),
@@ -112,31 +112,45 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	suite.NoError(reg.RegisterPlugin(plug))
 	ctx := context.WithValue(context.Background(), pluginRegistryKey, reg)
 
-	entry, err := getEntryFromPath(ctx, "/")
+	mountpoint := "/mountpoint"
+	ctx = context.WithValue(ctx, mountpointKey, mountpoint)
+
+	_, err := getEntryFromPath(ctx, "relative")
+	suite.Error(relativePathResponse("relative"), err)
+
+	_, err = getEntryFromPath(ctx, "/file")
+	suite.Error(nonWashEntryResponse("/file"), err)
+
+	entry, err := getEntryFromPath(ctx, mountpoint)
 	if suite.Nil(err) {
 		suite.Equal(reg.Name(), plugin.Name(entry))
 	}
 
-	entry, err = getEntryFromPath(ctx, "/mine")
+	entry, err = getEntryFromPath(ctx, mountpoint+"/")
+	if suite.Nil(err) {
+		suite.Equal(reg.Name(), plugin.Name(entry))
+	}
+
+	entry, err = getEntryFromPath(ctx, mountpoint+"/mine")
 	if suite.Nil(err) {
 		suite.Equal(plug.Name(), plugin.Name(entry))
 	}
 
-	_, err = getEntryFromPath(ctx, "/yours")
+	_, err = getEntryFromPath(ctx, mountpoint+"/yours")
 	suite.Error(err)
 
 	file := plugin.NewEntry("a file")
 	file.SetTestID("/mine/a file")
 	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
 
-	entry, err = getEntryFromPath(ctx, "/mine/a file")
+	entry, err = getEntryFromPath(ctx, mountpoint+"/mine/a file")
 	if suite.Nil(err) {
 		suite.Equal(file.Name(), plugin.Name(entry))
 	}
 	plug.AssertExpectations(suite.T())
 
 	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
-	_, err = getEntryFromPath(ctx, "/mine/a dir")
+	_, err = getEntryFromPath(ctx, mountpoint+"/mine/a dir")
 	suite.Error(err)
 	plug.AssertExpectations(suite.T())
 }

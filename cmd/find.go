@@ -49,21 +49,16 @@ func findMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	apiPath, err := client.APIKeyFromPath(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
 	conn := client.ForUNIXSocket(config.Socket)
 
-	e, err := conn.Info(apiPath)
+	e, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 	entries := []apitypes.Entry{e}
 	if e.Supports(plugin.ListAction) {
-		children, err := conn.List(apiPath)
+		children, err := conn.List(path)
 		if err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}
@@ -71,11 +66,14 @@ func findMain(cmd *cobra.Command, args []string) exitCode {
 		entries = append(entries, children...)
 	}
 
-	for _, entry := range entries {
+	for i, entry := range entries {
 		if p(&entry) {
-			// TODO: Include the cwd's directory in path (so that find
-			// prints out absolute paths).
-			fmt.Printf("%v\n", entry.Path)
+			entryPath := path
+			if len(entries) > 1 && i != 0 {
+				entryPath += "/"
+				entryPath += entry.CName
+			}
+			fmt.Printf("%v\n", entryPath)
 		}
 	}
 	return exitCode{0}

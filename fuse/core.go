@@ -71,7 +71,7 @@ func newFuseNode(ftype string, parent plugin.Group, entry plugin.Entry) *fuseNod
 }
 
 func (f *fuseNode) String() string {
-	return plugin.Path(f.entry)
+	return plugin.ID(f.entry)
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
@@ -147,22 +147,6 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	f.applyAttr(a, &attr)
 	journal.Record(ctx, "FUSE: Attr finished %v", f)
 	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, journal.GetID(ctx), f, a)
-	return nil
-}
-
-func (f *fuseNode) Listxattr(ctx context.Context, req *fuse.ListxattrRequest, resp *fuse.ListxattrResponse) error {
-	log.Infof("FUSE: Listxattr[%v,jid=%v] %v", f.ftype, journal.GetID(ctx), f)
-	resp.Append("wash.id")
-	return nil
-}
-
-func (f *fuseNode) Getxattr(ctx context.Context, req *fuse.GetxattrRequest, resp *fuse.GetxattrResponse) error {
-	log.Infof("FUSE: Getxattr[%v,jid=%v] %v", f.ftype, journal.GetID(ctx), f)
-	switch req.Name {
-	case "wash.id":
-		resp.Xattr = []byte(f.String())
-	}
-
 	return nil
 }
 

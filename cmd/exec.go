@@ -75,15 +75,9 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 	command = args[1]
 	commandArgs = args[2:]
 
-	apiPath, err := client.APIKeyFromPath(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
 	conn := client.ForUNIXSocket(config.Socket)
 
-	ch, err := conn.Exec(apiPath, command, commandArgs, apitypes.ExecOptions{})
+	ch, err := conn.Exec(path, command, commandArgs, apitypes.ExecOptions{})
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}

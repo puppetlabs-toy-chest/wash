@@ -53,7 +53,9 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 
 	result := make([]apitypes.Entry, 0, len(entries))
 	for _, entry := range entries {
-		result = append(result, toAPIEntry(entry))
+		apiEntry := toAPIEntry(entry)
+		apiEntry.Path = path + "/" + apiEntry.CName
+		result = append(result, apiEntry)
 	}
 	journal.Record(ctx, "API: List %v %+v", path, result)
 
