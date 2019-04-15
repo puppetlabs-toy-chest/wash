@@ -4,8 +4,6 @@ package apifs
 
 import (
 	"os"
-	"syscall"
-	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -17,15 +15,13 @@ type fsnode struct {
 }
 
 func newFSNode(finfo os.FileInfo, path string) *fsnode {
-	// TODO: Need to case this on platform since finfo.Sys()
-	// contains platform-specific data
-	statT := finfo.Sys().(*syscall.Stat_t)
+	// TODO: finfo.Sys() contains more detailed file attributes,
+	// but it's platform-specific. We should eventually use it for
+	// a more complete implementation of apifs.
 	attr := plugin.EntryAttributes{}
 	attr.
-		SetCtime(timespecToTime(statT.Ctimespec)).
-		SetAtime(timespecToTime(statT.Atimespec)).
-		SetMtime(timespecToTime(statT.Mtimespec)).
-		SetMode(os.FileMode(statT.Mode)).
+		SetMtime(finfo.ModTime()).
+		SetMode(finfo.Mode()).
 		SetSize(uint64(finfo.Size())).
 		SetMeta(plugin.ToMeta(finfo))
 
@@ -49,8 +45,4 @@ func NewEntry(path string) (plugin.Entry, error) {
 		return newDir(finfo, path), nil
 	}
 	return newFile(finfo, path), nil
-}
-
-func timespecToTime(t syscall.Timespec) time.Time {
-	return time.Unix(t.Sec, t.Nsec)
 }
