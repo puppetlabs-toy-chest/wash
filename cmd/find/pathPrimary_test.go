@@ -19,9 +19,9 @@ func (suite *PathPrimaryTestSuite) TestPathPrimaryErrors() {
 }
 
 func (suite *PathPrimaryTestSuite) TestPathPrimaryValidInput() {
-	e1 := newEntry()
+	e1 := entry{}
 	e1.NormalizedPath = "a"
-	e2 := newEntry()
+	e2 := entry{}
 	e2.NormalizedPath = "b"
 	p, tokens, err := pathPrimary.parse([]string{"-path", "a"})
 	if suite.NoError(err) {

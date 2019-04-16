@@ -6,12 +6,8 @@ import (
 )
 
 type entry struct {
-	*apitypes.Entry
+	apitypes.Entry
 	NormalizedPath string
-}
-
-func newEntry() entry {
-	return entry{Entry: &apitypes.Entry{}}
 }
 
 // info is a wrapper to c.Info
@@ -21,7 +17,7 @@ func info(c *client.DomainSocketClient, path string) (entry, error) {
 		return entry{}, err
 	}
 	return entry{
-		Entry:          &e,
+		Entry:          e,
 		NormalizedPath: path,
 	}, nil
 }
@@ -35,13 +31,10 @@ func list(c *client.DomainSocketClient, e entry) ([]entry, error) {
 	}
 	children := make([]entry, len(rawChildren))
 	for i, rawChild := range rawChildren {
-		child := newEntry()
-		// Something like `child.Entry = &rawChild` will not work because the value of
-		// 'rawChild' will change on each iteration. Thus, we need to explicitly set
-		// its value.
-		(*child.Entry) = rawChild
-		child.NormalizedPath = e.NormalizedPath + "/" + child.CName
-		children[i] = child
+		children[i] = entry{
+			Entry:          rawChild,
+			NormalizedPath: e.NormalizedPath + "/" + rawChild.CName,
+		}
 	}
 	return children, nil
 }

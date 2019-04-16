@@ -19,9 +19,9 @@ func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := newEntry()
+	e1 := entry{}
 	e1.CName = "a"
-	e2 := newEntry()
+	e2 := entry{}
 	e2.CName = "b"
 	p, tokens, err := namePrimary.parse([]string{"-name", "a"})
 	if suite.NoError(err) {
