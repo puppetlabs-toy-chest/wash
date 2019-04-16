@@ -1,12 +1,12 @@
-// Package journal provides tools for recording wash operations to journals stored
+// Package activity provides tools for recording wash operations to journals stored
 // in the user's cache directory. The cache directory is created at 'wash/activity'
 // in the directory found via https://golang.org/pkg/os/#UserCacheDir. Journals are
 // separated by Journal ID.
 //
 // Wash plugins should use
-//	journal.Record(ctx context.Context, msg string, a ...interface{})
+//	activity.Record(ctx context.Context, msg string, a ...interface{})
 // to record entries. The context contains the Journal ID.
-package journal
+package activity
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 // KeyType is used to type keys for looking up context values.
 type KeyType int
 
-// Key is used to identify a Journal ID in a context.
-const Key KeyType = iota
+// JournalKey is used to identify a Journal ID in a context.
+const JournalKey KeyType = iota
 
 var journalCache = datastore.NewMemCacheWithEvicted(closeJournal)
 var journalDir = func() string {
@@ -42,22 +42,22 @@ func CloseAll() {
 	journalCache.Flush()
 }
 
-// Dir gets the directory where journal entries are written.
+// Dir gets the directory where journals are stored.
 func Dir() string {
 	return journalDir
 }
 
-// SetDir sets the directory where journal entries are written.
+// SetDir sets the directory where journals are stored.
 func SetDir(dir string) {
 	journalDir = dir
 }
 
 // GetID returns the Journal ID stored in the context.
 func GetID(ctx context.Context) string {
-	return ctx.Value(Key).(string)
+	return ctx.Value(JournalKey).(string)
 }
 
-// Record writes a new entry to the journal identified by the ID at `journal.Key` in
+// Record writes a new entry to the journal identified by the ID at `activity.JournalKey` in
 // the provided context. It also writes to the server logs at the debug level. If no ID
 // is registered, the entry is written to the server logs at the warning level. If the
 // ID is an empty string, it uses the ID 'dead-letter-office'.
@@ -66,7 +66,7 @@ func GetID(ctx context.Context) string {
 // Records are journaled in the user's cache directory under `wash/activity/ID.log`.
 func Record(ctx context.Context, msg string, a ...interface{}) {
 	var id string
-	if jid, ok := ctx.Value(Key).(string); ok {
+	if jid, ok := ctx.Value(JournalKey).(string); ok {
 		if jid == "" {
 			id = "dead-letter-office"
 		} else {

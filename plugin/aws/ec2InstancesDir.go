@@ -6,7 +6,7 @@ import (
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	ec2Client "github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -37,11 +37,11 @@ func (is *ec2InstancesDir) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Listing %v EC2 reservations", len(resp.Reservations))
+	activity.Record(ctx, "Listing %v EC2 reservations", len(resp.Reservations))
 
 	var entries []plugin.Entry
 	for _, reservation := range resp.Reservations {
-		journal.Record(
+		activity.Record(
 			ctx,
 			"Listing %v instances in reservation %v",
 			len(reservation.Instances),

@@ -3,7 +3,7 @@ package aws
 import (
 	"context"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
@@ -33,7 +33,7 @@ func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Listing %v S3 buckets", len(resp.Buckets))
+	activity.Record(ctx, "Listing %v S3 buckets", len(resp.Buckets))
 
 	buckets := make([]plugin.Entry, len(resp.Buckets))
 	for i, bucket := range resp.Buckets {

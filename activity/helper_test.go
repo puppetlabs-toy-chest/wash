@@ -1,4 +1,4 @@
-package journal
+package activity
 
 import (
 	"os"
@@ -13,6 +13,6 @@ func TestPIDTOID(t *testing.T) {
 	assert.Equal(t, "500000", id)
 
 	id = PIDToID(os.Getpid())
-	expected := strconv.Itoa(os.Getpid()) + "-journal.test"
+	expected := strconv.Itoa(os.Getpid()) + "-activity.test"
 	assert.Equal(t, expected, id)
 }

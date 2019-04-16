@@ -1,4 +1,4 @@
-package journal
+package activity
 
 import (
 	"context"
@@ -17,7 +17,7 @@ func TestRecord(t *testing.T) {
 	defer CloseAll()
 
 	// Log to a journal
-	Record(context.WithValue(context.Background(), Key, "1"), "hello there")
+	Record(context.WithValue(context.Background(), JournalKey, "1"), "hello there")
 
 	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "1.log"))
 	if assert.Nil(t, err) {
@@ -31,7 +31,7 @@ func TestLogExpired(t *testing.T) {
 
 	// Ensure entries use a very short
 	expires = 1 * time.Millisecond
-	ctx := context.WithValue(context.Background(), Key, "2")
+	ctx := context.WithValue(context.Background(), JournalKey, "2")
 
 	// Log twice, second after cache entry has expired
 	Record(ctx, "first write")
@@ -47,7 +47,7 @@ func TestLogExpired(t *testing.T) {
 func TestLogReused(t *testing.T) {
 	// Ensure the cache is cleaned up afterward.
 	defer CloseAll()
-	ctx := context.WithValue(context.Background(), Key, "3")
+	ctx := context.WithValue(context.Background(), JournalKey, "3")
 
 	// Log twice
 	Record(ctx, "first write")
@@ -60,7 +60,7 @@ func TestLogReused(t *testing.T) {
 }
 
 func TestDeadLetterOffice(t *testing.T) {
-	Record(context.WithValue(context.Background(), Key, ""), "hello %v", "world")
+	Record(context.WithValue(context.Background(), JournalKey, ""), "hello %v", "world")
 
 	bits, err := ioutil.ReadFile(filepath.Join(Dir(), "dead-letter-office.log"))
 	if assert.Nil(t, err) {

@@ -21,7 +21,7 @@ import (
 
 	"github.com/Benchkram/errz"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 )
 
 // A DomainSocketClient is a wash API client.
@@ -58,7 +58,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Re
 	req.URL.Path = endpoint
 	req.URL.RawQuery = url.Values{"path": []string{path}}.Encode()
 
-	req.Header.Set(apitypes.JournalIDHeader, journal.PIDToID(os.Getpid()))
+	req.Header.Set(apitypes.JournalIDHeader, activity.PIDToID(os.Getpid()))
 	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err

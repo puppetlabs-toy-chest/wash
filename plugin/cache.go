@@ -95,7 +95,7 @@ type opFunc func() (interface{}, error)
 // For example, CachedOp could be useful to cache an API request whose response
 // lets you implement Attr() and Metadata() for the given entry.
 //
-// CachedOp uses the supplied context to determine which journal to log to.
+// CachedOp uses the supplied context to determine which activity to log to.
 func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
 	if !opNameRegex.MatchString(opName) {
 		panic(fmt.Sprintf("The opName %v does not match %v", opName, opNameRegex.String()))

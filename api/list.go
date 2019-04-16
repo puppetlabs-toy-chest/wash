@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -44,11 +44,11 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ListAction)
 	}
 
-	journal.Record(ctx, "API: List %v", path)
+	activity.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
 	entries, err := plugin.CachedList(ctx, group)
 	if err != nil {
-		journal.Record(ctx, "API: List %v errored: %v", path, err)
+		activity.Record(ctx, "API: List %v errored: %v", path, err)
 
 		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 			return duplicateCNameResponse(cnameErr)
@@ -63,15 +63,15 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		apiEntry.Path = path + "/" + apiEntry.CName
 		result = append(result, apiEntry)
 	}
-	journal.Record(ctx, "API: List %v %+v", path, result)
+	activity.Record(ctx, "API: List %v %+v", path, result)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		journal.Record(ctx, "API: List marshalling %v errored: %v", path, err)
+		activity.Record(ctx, "API: List marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
 
-	journal.Record(ctx, "API: List %v complete", path)
+	activity.Record(ctx, "API: List %v complete", path)
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -113,7 +113,7 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 }
 
 func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
-	journal.Record(ctx, "FUSE: Attr %v", f)
+	activity.Record(ctx, "FUSE: Attr %v", f)
 
 	var attr plugin.EntryAttributes
 	if f.parent == nil {
@@ -126,15 +126,15 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 		entries, err := plugin.CachedList(ctx, f.parent)
 		if err != nil {
 			err := fmt.Errorf("could not refresh the attributes: %v", err)
-			journal.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, journal.GetID(ctx), err)
+			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetID(ctx), err)
 			return err
 		}
 		updatedEntry, ok := entries[plugin.CName(f.entry)]
 		if !ok {
 			err := fmt.Errorf("entry does not exist anymore")
-			journal.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, journal.GetID(ctx), err)
+			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetID(ctx), err)
 			return err
 		}
 		attr = plugin.Attributes(updatedEntry)
@@ -145,8 +145,8 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	}
 
 	f.applyAttr(a, &attr)
-	journal.Record(ctx, "FUSE: Attr finished %v", f)
-	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, journal.GetID(ctx), f, a)
+	activity.Record(ctx, "FUSE: Attr finished %v", f)
+	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, activity.GetID(ctx), f, a)
 	return nil
 }
 
@@ -184,7 +184,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 		serverConfig := &fs.Config{
 			WithContext: func(ctx context.Context, req fuse.Request) context.Context {
 				pid := int(req.Hdr().Pid)
-				return context.WithValue(ctx, journal.Key, journal.PIDToID(pid))
+				return context.WithValue(ctx, activity.JournalKey, activity.PIDToID(pid))
 			},
 		}
 		server := fs.New(fuseConn, serverConfig)

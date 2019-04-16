@@ -6,7 +6,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -22,7 +22,7 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Listing %v containers in %v", len(containers), cs)
+	activity.Record(ctx, "Listing %v containers in %v", len(containers), cs)
 	keys := make([]plugin.Entry, len(containers))
 	for i, inst := range containers {
 		cont := &container{

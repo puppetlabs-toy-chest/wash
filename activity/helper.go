@@ -1,4 +1,4 @@
-package journal
+package activity
 
 import (
 	"strconv"

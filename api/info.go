@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 )
 
 // swagger:route GET /fs/info info entryInfo
@@ -31,17 +31,17 @@ var infoHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	journal.Record(ctx, "API: Info %v", path)
+	activity.Record(ctx, "API: Info %v", path)
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	// TODO: Include the entry's full metadata?
 	apiEntry := toAPIEntry(entry)
 	apiEntry.Path = path
 	if err := jsonEncoder.Encode(&apiEntry); err != nil {
-		journal.Record(ctx, "API: Info: marshalling %v errored: %v", path, err)
+		activity.Record(ctx, "API: Info: marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", path, err))
 	}
 
-	journal.Record(ctx, "API: Info %v complete", path)
+	activity.Record(ctx, "API: Info %v complete", path)
 	return nil
 }

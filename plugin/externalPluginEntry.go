@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 )
 
 type decodedCacheTTLs struct {
@@ -89,7 +89,7 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		journal.Record(
+		activity.Record(
 			ctx,
 			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
@@ -132,7 +132,7 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (EntryMetadata, erro
 
 	var metadata EntryMetadata
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		journal.Record(
+		activity.Record(
 			ctx,
 			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),
@@ -193,10 +193,10 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 
 	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.id(), e.state)
 
-	journal.Record(ctx, "Starting command: %v", cmdStr)
+	activity.Record(ctx, "Starting command: %v", cmdStr)
 	if err := cmd.Start(); err != nil {
-		journal.Record(ctx, "Closed command stdout: %v", stdoutR.Close())
-		journal.Record(ctx, "Closed command stderr: %v", stderrR.Close())
+		activity.Record(ctx, "Closed command stdout: %v", stdoutR.Close())
+		activity.Record(ctx, "Closed command stderr: %v", stderrR.Close())
 		return nil, err
 	}
 
@@ -232,10 +232,10 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 	// whether we should kill the command or not. Should we
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
-		journal.Record(ctx, "Waiting for command: %v", cmdStr)
+		activity.Record(ctx, "Waiting for command: %v", cmdStr)
 		_, err := ExitCodeFromErr(cmd.Wait())
 		if err != nil {
-			journal.Record(ctx, "Failed waiting for command: %v", err)
+			activity.Record(ctx, "Failed waiting for command: %v", err)
 		}
 	}
 
@@ -258,7 +258,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
 		// blocked when its buffer is full.
 		go func() {
 			defer func() {
-				journal.Record(ctx, "Closed stream stderr: %v", stderrR.Close())
+				activity.Record(ctx, "Closed stream stderr: %v", stderrR.Close())
 			}()
 
 			buf := make([]byte, 4096)
@@ -324,7 +324,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj.Stderr = stderr
 
 	// Start the command
-	journal.Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
+	activity.Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
 	if err := cmdObj.Start(); err != nil {
 		stdout.Close()
 		stderr.Close()
