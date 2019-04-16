@@ -186,7 +186,7 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 }
 
 // History returns the command history for the current wash server session.
-func (c *DomainSocketClient) History() ([]string, error) {
+func (c *DomainSocketClient) History() ([]apitypes.Activity, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
 	resp, err := c.Get(domainSocketBaseURL + "/history")
 	if err != nil {
@@ -203,12 +203,12 @@ func (c *DomainSocketClient) History() ([]string, error) {
 		return nil, err
 	}
 
-	var result []string
-	if err := json.Unmarshal(body, &result); err != nil {
+	var result apitypes.HistoryResponse
+	if err := json.Unmarshal(body, &result.Activities); err != nil {
 		return nil, fmt.Errorf("Non-JSON body at %v: %v", "/history", string(body))
 	}
 
-	return result, nil
+	return result.Activities, nil
 }
 
 // Journal returns a reader for the journal associated with a particular command in history.

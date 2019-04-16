@@ -54,9 +54,9 @@ func printHistory() error {
 
 	// Use 1-indexing for history entries
 	indexColumnLength := len(strconv.Itoa(len(history)))
-	formatStr := "%" + strconv.Itoa(indexColumnLength) + "d  %s\n"
+	formatStr := "%" + strconv.Itoa(indexColumnLength) + "d  %s  %s\n"
 	for i, item := range history {
-		fmt.Printf(formatStr, i+1, item)
+		fmt.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
 	}
 	return nil
 }

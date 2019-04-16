@@ -15,7 +15,15 @@ import (
 // listed in activity history.
 type Journal struct {
 	ID, Description string
-	Start           time.Time
+	start           time.Time
+}
+
+// NewJournal creates a new journal entry with start time set to 'now'.
+func NewJournal(id, desc string) Journal {
+	// We set Start based on the time we first encounter the process, not when the process was
+	// started. This makes history make a little more sense when interacting with things like
+	// the shell, which was likely started before wash was.
+	return Journal{ID: id, Description: desc, start: time.Now()}
 }
 
 type historyBlob struct {
@@ -97,6 +105,11 @@ func (j Journal) filepath() string {
 
 func (j Journal) String() string {
 	return j.ID
+}
+
+// Start returns when the activity related to this journal started.
+func (j Journal) Start() time.Time {
+	return j.start
 }
 
 // History returns the entire history.

@@ -301,7 +301,7 @@
         "operationId": "retrieveHistory",
         "responses": {
           "200": {
-            "$ref": "#/responses/historyEntries"
+            "$ref": "#/responses/HistoryResponse"
           },
           "400": {
             "$ref": "#/responses/errorResp"
@@ -348,6 +348,22 @@
     }
   },
   "definitions": {
+    "Activity": {
+      "type": "object",
+      "title": "Activity describes an activity from wash's `activity.History`.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "start": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Start"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
     "Entry": {
       "type": "object",
       "title": "Entry represents a Wash entry as interpreted by the API.",
@@ -485,6 +501,15 @@
         "type": {}
       }
     },
+    "HistoryResponse": {
+      "description": "HistoryResponse describes the result returned by the `/history` endpoint.",
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Activity"
+        }
+      }
+    },
     "entryList": {
       "schema": {
         "type": "array",
@@ -522,14 +547,6 @@
       },
       "headers": {
         "Body": {}
-      }
-    },
-    "historyEntries": {
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Entry"
-        }
       }
     },
     "octetResponse": {

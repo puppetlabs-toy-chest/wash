@@ -22,7 +22,7 @@ func TestHistory(t *testing.T) {
 	assert.Equal(t, []Journal{}, History())
 
 	tick := time.Now()
-	journal := Journal{ID: "anything", Description: "did something", Start: tick}
+	journal := Journal{ID: "anything", Description: "did something", start: tick}
 	journal.addToHistory()
 
 	assert.Equal(t, []Journal{journal}, History())

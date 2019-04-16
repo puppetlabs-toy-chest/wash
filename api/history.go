@@ -9,15 +9,9 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	log "github.com/sirupsen/logrus"
 )
-
-// swagger:response
-//nolint:deadcode,unused
-type journals struct {
-	// in: body
-	Journals []activity.Journal
-}
 
 // swagger:route GET /history history retrieveHistory
 //
@@ -31,7 +25,7 @@ type journals struct {
 //     Schemes: http
 //
 //     Responses:
-//       200: journals
+//       200: HistoryResponse
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
@@ -40,10 +34,10 @@ var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *error
 
 	w.WriteHeader(http.StatusOK)
 
-	commands := make([]string, len(history))
+	commands := make([]apitypes.Activity, len(history))
 	for i, item := range history {
-		// TODO: send structured data instead of a pre-formatted string
-		commands[i] = item.Start.Format("2006-01-02 15:04") + "  " + item.Description
+		commands[i].Description = item.Description
+		commands[i].Start = item.Start()
 	}
 	jsonEncoder := json.NewEncoder(w)
 	if err := jsonEncoder.Encode(&commands); err != nil {

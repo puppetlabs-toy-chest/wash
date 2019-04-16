@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
@@ -93,13 +92,10 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
 			newctx = context.WithValue(newctx, mountpointKey, mountpoint)
-			journal := activity.Journal{ID: r.Header.Get(apitypes.JournalIDHeader), Start: time.Now()}
-			if journal.ID != "" {
-				journal.Description = r.Header.Get(apitypes.JournalDescHeader)
-				if journal.Description == "" {
-					journal.Description = "<unknown>"
-				}
-			}
+			journal := activity.NewJournal(
+				r.Header.Get(apitypes.JournalIDHeader),
+				r.Header.Get(apitypes.JournalDescHeader),
+			)
 			newctx = context.WithValue(newctx, activity.JournalKey, journal)
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.

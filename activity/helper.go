@@ -2,7 +2,6 @@ package activity
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/shirou/gopsutil/process"
@@ -19,12 +18,11 @@ func JournalForPID(pid int) Journal {
 	pidStr := strconv.Itoa(pid)
 	result, err := pidJournalCache.GetOrUpdate("", pidStr, expires, true, func() (interface{}, error) {
 		proc, err := process.NewProcess(int32(pid))
-		var out Journal
+		out := NewJournal(pidStr, "")
 		if err != nil {
 			return out, err
 		}
 
-		out.ID = pidStr
 		if name, err := proc.Name(); err == nil && name != "" {
 			out.ID += "-" + name
 		} else {
@@ -33,7 +31,6 @@ func JournalForPID(pid int) Journal {
 
 		if created, err := proc.CreateTime(); err == nil {
 			out.ID += "-" + strconv.FormatInt(created, 10)
-			out.Start = time.Unix(created, 0)
 		} else {
 			log.Infof("Unable to get creation time for pid %v: %v", pid, err)
 		}
@@ -43,17 +40,12 @@ func JournalForPID(pid int) Journal {
 		} else {
 			log.Infof("Unable to get command-line for pid %v: %v", pid, err)
 		}
-
-		// We set Start based on the time we first encounter the process, not when the process was
-		// started. This makes history make a little more sense when interacting with things like
-		// the shell, which was likely started before wash was.
-		out.Start = time.Now()
 		return out, nil
 	})
 
 	if err != nil {
 		log.Warnf("Unable to find pid %v: %v", pid, err)
-		return Journal{ID: pidStr, Start: time.Now()}
+		return NewJournal(pidStr, "")
 	}
 
 	return result.(Journal)
