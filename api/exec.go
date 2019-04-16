@@ -86,10 +86,9 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}

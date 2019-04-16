@@ -27,10 +27,9 @@ import (
 //       200: octetResponse
 //       404: errorResp
 //       500: errorResp
-var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}

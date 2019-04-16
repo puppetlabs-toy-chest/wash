@@ -113,6 +113,16 @@ func badRequestResponse(path string, a plugin.Action, reason string) *errorRespo
 	return &errorResponse{http.StatusBadRequest, body}
 }
 
+func invalidPathsResponse(paths []string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.InvalidPaths,
+		fmt.Sprintf("Request must include one 'path' query parameter, not %v", len(paths)),
+		apitypes.ErrorFields{
+			"paths": paths,
+		},
+	)}
+}
+
 func erroredActionResponse(path string, a plugin.Action, reason string) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,

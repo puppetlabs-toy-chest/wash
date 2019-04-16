@@ -40,4 +40,5 @@ const (
 	ErroredAction      = "puppetlabs.wash/errored-action"
 	DuplicateCName     = "puppetlabs.wash/duplicate-cname"
 	RelativePath       = "puppetlabs.wash/relative-path"
+	InvalidPaths       = "puppetlabs.wash/invalid-paths"
 )

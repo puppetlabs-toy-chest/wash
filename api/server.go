@@ -25,6 +25,7 @@ const (
 )
 
 // swagger:parameters cacheDelete listEntries entryInfo executeCommand getMetadata readContent streamUpdates
+//nolint:deadcode,unused
 type params struct {
 	// uniquely identifies an entry
 	//
@@ -39,19 +40,12 @@ type octetResponse struct {
 	Reader io.Reader
 }
 
-type handler func(http.ResponseWriter, *http.Request, params) *errorResponse
+type handler func(http.ResponseWriter, *http.Request) *errorResponse
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infof("API: %v %v", r.Method, r.URL)
 
-	paths := r.URL.Query()["path"]
-	if len(paths) != 1 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "Request must include one 'path' query parameter")
-		return
-	}
-
-	if err := handle(w, r, params{Path: paths[0]}); err != nil {
+	if err := handle(w, r); err != nil {
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not

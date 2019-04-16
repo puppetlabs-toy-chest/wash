@@ -30,10 +30,9 @@ type entryMetadata struct {
 //       200: entryMetadata
 //       404: errorResp
 //       500: errorResp
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}

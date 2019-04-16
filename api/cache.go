@@ -23,8 +23,12 @@ import (
 //     Responses:
 //       200:
 //       500: errorResp
-var cacheHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+	path, errResp := getPathFromRequest(r)
+	if errResp != nil {
+		return errResp
+	}
+
 	ctx := r.Context()
 	journal.Record(ctx, "API: Cache DELETE %v", path)
 	deleted, err := plugin.ClearCacheFor(path)
