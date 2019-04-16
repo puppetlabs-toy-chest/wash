@@ -284,6 +284,67 @@
           }
         }
       }
+    },
+    "/history": {
+      "get": {
+        "description": "Get a list of commands that have been run via 'wash' and when they were run.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "history"
+        ],
+        "summary": "Get command history",
+        "operationId": "retrieveHistory",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/historyEntries"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/history/{id}": {
+      "get": {
+        "description": "Get the logs related to a particular command run via 'wash', requested by\nindex within its activity history.",
+        "produces": [
+          "application/json",
+          "application/octet-stream"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "journal"
+        ],
+        "summary": "Get logs for a particular entry in history",
+        "operationId": "getJournal",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/octetResponse"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -461,6 +522,14 @@
       },
       "headers": {
         "Body": {}
+      }
+    },
+    "historyEntries": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Entry"
+        }
       }
     },
     "octetResponse": {

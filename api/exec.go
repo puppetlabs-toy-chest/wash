@@ -98,12 +98,12 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	if r.Body == nil {
-		return badRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
+		return badActionRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
 	}
 
 	var body apitypes.ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return badRequestResponse(path, plugin.ExecAction, err.Error())
+		return badActionRequestResponse(path, plugin.ExecAction, err.Error())
 	}
 
 	fw, ok := w.(flushableWriter)

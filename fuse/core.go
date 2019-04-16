@@ -127,14 +127,14 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 		if err != nil {
 			err := fmt.Errorf("could not refresh the attributes: %v", err)
 			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetID(ctx), err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetJournal(ctx), err)
 			return err
 		}
 		updatedEntry, ok := entries[plugin.CName(f.entry)]
 		if !ok {
 			err := fmt.Errorf("entry does not exist anymore")
 			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetID(ctx), err)
+			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetJournal(ctx), err)
 			return err
 		}
 		attr = plugin.Attributes(updatedEntry)
@@ -146,7 +146,7 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 
 	f.applyAttr(a, &attr)
 	activity.Record(ctx, "FUSE: Attr finished %v", f)
-	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, activity.GetID(ctx), f, a)
+	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, activity.GetJournal(ctx), f, a)
 	return nil
 }
 
@@ -184,7 +184,7 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 		serverConfig := &fs.Config{
 			WithContext: func(ctx context.Context, req fuse.Request) context.Context {
 				pid := int(req.Hdr().Pid)
-				return context.WithValue(ctx, activity.JournalKey, activity.PIDToID(pid))
+				return context.WithValue(ctx, activity.JournalKey, activity.JournalForPID(pid))
 			},
 		}
 		server := fs.New(fuseConn, serverConfig)

@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gorilla/mux"
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/activity"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -92,7 +93,14 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
 			newctx = context.WithValue(newctx, mountpointKey, mountpoint)
-			newctx = context.WithValue(newctx, activity.JournalKey, r.Header.Get(apitypes.JournalIDHeader))
+			journal := activity.Journal{ID: r.Header.Get(apitypes.JournalIDHeader), Start: time.Now()}
+			if journal.ID != "" {
+				journal.Description = r.Header.Get(apitypes.JournalDescHeader)
+				if journal.Description == "" {
+					journal.Description = "<unknown>"
+				}
+			}
+			newctx = context.WithValue(newctx, activity.JournalKey, journal)
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(w, r.WithContext(newctx))
@@ -108,6 +116,8 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 	r.Handle("/fs/stream", streamHandler).Methods(http.MethodGet)
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
+	r.Handle("/history", historyHandler).Methods(http.MethodGet)
+	r.Handle("/history/{index:[0-9]+}", journalHandler).Methods(http.MethodGet)
 
 	r.Use(prepareContextMiddleWare)
 

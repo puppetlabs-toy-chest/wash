@@ -8,11 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPIDTOID(t *testing.T) {
-	id := PIDToID(500000)
-	assert.Equal(t, "500000", id)
+func TestPIDToJournalEntry(t *testing.T) {
+	journal := JournalForPID(500000)
+	assert.Equal(t, "500000", journal.ID)
+	assert.Empty(t, journal.Description)
 
-	id = PIDToID(os.Getpid())
-	expected := strconv.Itoa(os.Getpid()) + "-activity.test"
-	assert.Equal(t, expected, id)
+	journal = JournalForPID(os.Getpid())
+	expected := strconv.Itoa(os.Getpid()) + "-activity\\.test-[0-9]+"
+	assert.Regexp(t, expected, journal.ID)
+	assert.Contains(t, journal.Description, "/activity.test -test.testlogfile=")
 }

@@ -23,7 +23,7 @@ import (
 // KeyType is used to type keys for looking up context values.
 type KeyType int
 
-// JournalKey is used to identify a Journal ID in a context.
+// JournalKey is used to identify a Journal in a context.
 const JournalKey KeyType = iota
 
 var journalCache = datastore.NewMemCacheWithEvicted(closeJournal)
@@ -52,28 +52,29 @@ func SetDir(dir string) {
 	journalDir = dir
 }
 
-// GetID returns the Journal ID stored in the context.
-func GetID(ctx context.Context) string {
-	return ctx.Value(JournalKey).(string)
+// GetJournal returns the Journal stored in the context.
+func GetJournal(ctx context.Context) Journal {
+	return ctx.Value(JournalKey).(Journal)
 }
 
 // Record writes a new entry to the journal identified by the ID at `activity.JournalKey` in
 // the provided context. It also writes to the server logs at the debug level. If no ID
-// is registered, the entry is written to the server logs at the warning level. If the
+// is registered, the entry is written to the server logs at the info level. If the
 // ID is an empty string, it uses the ID 'dead-letter-office'.
 //
 // Record creates a new journal for ID if needed, then appends the message to that journal.
 // Records are journaled in the user's cache directory under `wash/activity/ID.log`.
 func Record(ctx context.Context, msg string, a ...interface{}) {
 	var id string
-	if jid, ok := ctx.Value(JournalKey).(string); ok {
-		if jid == "" {
+	if journal, ok := ctx.Value(JournalKey).(Journal); ok {
+		if journal.ID == "" {
 			id = "dead-letter-office"
 		} else {
-			id = jid
+			id = journal.ID
+			journal.registerCommand()
 		}
 	} else {
-		log.Warnf(msg, a...)
+		log.Infof(msg, a...)
 		return
 	}
 
@@ -95,7 +96,7 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 		l := &log.Logger{
 			Out:       f,
 			Level:     log.TraceLevel,
-			Formatter: &log.JSONFormatter{TimestampFormat: time.RFC3339Nano},
+			Formatter: &log.TextFormatter{TimestampFormat: time.RFC3339Nano},
 		}
 		return l, nil
 	})

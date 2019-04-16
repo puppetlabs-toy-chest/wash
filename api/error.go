@@ -100,17 +100,35 @@ func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
-func badRequestResponse(path string, a plugin.Action, reason string) *errorResponse {
+func badActionRequestResponse(path string, a plugin.Action, reason string) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,
 		"action": a.Name,
 	}
 	body := newErrorObj(
-		apitypes.BadRequest,
+		apitypes.BadActionRequest,
 		fmt.Sprintf("Bad request for %v action on %v: %v", a.Name, path, reason),
 		fields,
 	)
 	return &errorResponse{http.StatusBadRequest, body}
+}
+
+func journalUnavailableResponse(journalID string, reason string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.JournalUnavailable,
+		fmt.Sprintf("Journal %v could not be opened: %v", journalID, reason),
+		apitypes.ErrorFields{
+			"journal": journalID,
+		},
+	)}
+}
+
+func outOfBoundsRequest(size int, reason string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.OutOfBounds,
+		fmt.Sprintf("Invalid index requested: %v", reason),
+		apitypes.ErrorFields{"size": size},
+	)}
 }
 
 func invalidPathsResponse(paths []string) *errorResponse {

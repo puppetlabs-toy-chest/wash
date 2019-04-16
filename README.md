@@ -49,6 +49,7 @@ We've implemented some neat features inside of `wash` to support the above goals
     * `wash find` - find resources using powerful selection predicates (WIP)
     * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
     * `wash ps` - lists running processes on indicated compute instances that support the `exec` primitive
+    * `wash history` - lists all activity through `wash`; `wash history <id>` can be used to view logs for a specific activity
     * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
 
 * Core plugins (see the _Roadmap_ below for more details)
@@ -204,7 +205,6 @@ Project maintainers are not actively working on all of these things, but any of 
 * [ ] make `ls` emit something useful when used against non-`wash` resources
 * [ ] `tail` that works for `wash` resources that support `stream`
 * [ ] `exec` should work in parallel across multiple target resources
-* [ ] `history` that lets you explore `wash`'s log/journal
 * [ ] `find` that lets you refer to `wash` primitives _(e.g. find all the resources under `/docker` that support `exec`)_
 * [ ] build an interactive shell that works over `exec` _(need to update plugins API to support this, most likely)_
 * [ ] a version of `top` that works using `wash` primitives to get information to display from multiple targets
