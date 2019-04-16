@@ -3,7 +3,6 @@ package cmdfind
 import (
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -12,17 +11,19 @@ type NamePrimaryTestSuite struct {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
-	_, _, err := namePrimary.parsePredicate([]string{"-name"})
+	_, _, err := namePrimary.parse([]string{"-name"})
 	suite.Regexp("-name: requires additional arguments", err)
 
-	_, _, err = namePrimary.parsePredicate([]string{"-name", "[a"})
+	_, _, err = namePrimary.parse([]string{"-name", "[a"})
 	suite.Regexp("-name: invalid glob: unexpected end of input", err)
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := &apitypes.Entry{CName: "a"}
-	e2 := &apitypes.Entry{CName: "b"}
-	p, tokens, err := namePrimary.parsePredicate([]string{"-name", "a"})
+	e1 := entry{}
+	e1.CName = "a"
+	e2 := entry{}
+	e2.CName = "b"
+	p, tokens, err := namePrimary.parse([]string{"-name", "a"})
 	if suite.NoError(err) {
 		suite.Equal([]string{}, tokens)
 		suite.Equal(true, p(e1))

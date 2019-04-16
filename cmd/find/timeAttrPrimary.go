@@ -6,18 +6,9 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 var startTime time.Time
-
-// SetStartTime sets `wash find`'s start time. This is primarily
-// needed by the ctime, mtime, and atime primaries, which base their
-// predicates off the set value.
-func SetStartTime(time time.Time) {
-	startTime = time
-}
 
 var durationsMap = map[byte]time.Duration{
 	's': time.Second,
@@ -39,7 +30,7 @@ func durationOf(unit byte) time.Duration {
 // We use getTimeAttrValue to retrieve the time attribute's value for performance
 // reasons. Using e.Attributes.ToMap()[name] would be slower because it would
 // require an additional type assertion to extract the time.Time object.
-func getTimeAttrValue(name string, e *apitypes.Entry) (time.Time, bool) {
+func getTimeAttrValue(name string, e entry) (time.Time, bool) {
 	switch name {
 	case "ctime":
 		return e.Attributes.Ctime(), e.Attributes.HasCtime()
@@ -104,7 +95,7 @@ func parseDuration(v string) (time.Duration, bool) {
 // example, a difference of 1.5 days will be rounded to 2 days.
 func newTimeAttrPrimary(name string) *atom {
 	tk := "-" + name
-	return newAtom([]string{tk}, func(tokens []string) (Predicate, []string, error) {
+	return newAtom([]string{tk}, func(tokens []string) (predicate, []string, error) {
 		if startTime == (time.Time{}) {
 			panic("Attempting to parse a time primary without calling cmdfind.SetStartTime")
 		}
@@ -126,7 +117,7 @@ func newTimeAttrPrimary(name string) *atom {
 		}
 
 		duration, roundDiff := parseDuration(v)
-		p := func(e *apitypes.Entry) bool {
+		p := func(e entry) bool {
 			t, ok := getTimeAttrValue(name, e)
 			if !ok {
 				return false

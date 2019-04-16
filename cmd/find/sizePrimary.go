@@ -5,8 +5,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-
-	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 var bytesMap = map[byte]uint64{
@@ -39,7 +37,7 @@ var sizeValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[ckMGTP]))$`)
 //   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
 //
 //nolint
-var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, []string, error) {
+var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (predicate, []string, error) {
 	tokens = tokens[1:]
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("-size: requires additional arguments")
@@ -56,7 +54,7 @@ var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (Predicate, [
 		cmp = '='
 	}
 
-	p := func(e *apitypes.Entry) bool {
+	p := func(e entry) bool {
 		if !e.Attributes.HasSize() {
 			return false
 		}

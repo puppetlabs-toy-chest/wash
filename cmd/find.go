@@ -1,15 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/puppetlabs/wash/api/client"
-	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdfind "github.com/puppetlabs/wash/cmd/find"
-	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/config"
-	"github.com/puppetlabs/wash/plugin"
 	"github.com/spf13/cobra"
 )
 
@@ -33,48 +25,5 @@ func findCommand() *cobra.Command {
 }
 
 func findMain(cmd *cobra.Command, args []string) exitCode {
-	cmdfind.SetStartTime(time.Now())
-
-	// TODO: Have `wash find` default to recursing on "." (the cwd)
-	// if the path is not provided. Also have it handle non-Wash
-	// paths.
-	path := args[0]
-	if path[0] == '-' {
-		cmdutil.ErrPrintf("find expects a path")
-		return exitCode{1}
-	}
-	p, err := cmdfind.ParsePredicate(args[1:])
-	if err != nil {
-		cmdutil.ErrPrintf("find: %v\n", err)
-		return exitCode{1}
-	}
-
-	conn := client.ForUNIXSocket(config.Socket)
-
-	e, err := conn.Info(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-	entries := []apitypes.Entry{e}
-	if e.Supports(plugin.ListAction) {
-		children, err := conn.List(path)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
-		}
-		entries = append(entries, children...)
-	}
-
-	for i, entry := range entries {
-		if p(&entry) {
-			entryPath := path
-			if len(entries) > 1 && i != 0 {
-				entryPath += "/"
-				entryPath += entry.CName
-			}
-			fmt.Printf("%v\n", entryPath)
-		}
-	}
-	return exitCode{0}
+	return exitCode{cmdfind.Main(cmd, args)}
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,7 +28,7 @@ func (suite *SizePrimaryTestSuite) TestBytesOf() {
 }
 
 func (suite *SizePrimaryTestSuite) TestSizePrimaryInsufficientArgsError() {
-	_, _, err := sizePrimary.parsePredicate([]string{"-size"})
+	_, _, err := sizePrimary.parse([]string{"-size"})
 	suite.Equal("-size: requires additional arguments", err.Error())
 }
 
@@ -42,7 +41,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryIllegalTimeValueError() {
 		"+1kb",
 	}
 	for _, v := range illegalValues {
-		_, _, err := sizePrimary.parsePredicate([]string{"-size", v})
+		_, _, err := sizePrimary.parse([]string{"-size", v})
 		msg := fmt.Sprintf("-size: %v: illegal size value", v)
 		suite.Equal(msg, err.Error())
 	}
@@ -74,10 +73,10 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 		inputStr := func() string {
 			return fmt.Sprintf("Input was '%v'", testCase.input)
 		}
-		p, tokens, err := sizePrimary.parsePredicate([]string{"-size", testCase.input})
+		p, tokens, err := sizePrimary.parse([]string{"-size", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
-			e := &apitypes.Entry{}
+			e := entry{}
 			// Ensure p(e) is always false for an entry that doesn't have a size attribute
 			suite.False(p(e), inputStr())
 

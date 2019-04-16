@@ -5,13 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
 // The primaries are tested separately in their individual *Primary.go files, so they
 // will not be tested here. Instead, the tests here serve as "integration tests" for
-// the exported ParsePredicate function. They're meant to test parser errors, each of
+// the top-level parse function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced.
 type ParserTestSuite struct {
 	suite.Suite
@@ -48,22 +47,22 @@ func (suite *ParserTestSuite) runTestCases(testCases ...parserTestCase) {
 		if input != "" {
 			tks = strings.Split(input, " ")
 		}
-		p, err := ParsePredicate(tks)
+		p, err := parse(tks)
 		if c.err != "" {
 			suite.Equal(c.err, err.Error(), "Input was '%v'", input)
 		} else {
 			if suite.NoError(err) {
-				suite.Equal(c.expected, p(&apitypes.Entry{}), "Input was '%v'", input)
+				suite.Equal(c.expected, p(entry{}), "Input was '%v'", input)
 			}
 		}
 	}
 }
 
-func (suite *ParserTestSuite) TestParsePredicateEmptyTokens() {
+func (suite *ParserTestSuite) TestParsepredicateEmptyTokens() {
 	suite.runTestCases(nPTC("", true))
 }
 
-func (suite *ParserTestSuite) TestParsePredicateNotOpParseErrors() {
+func (suite *ParserTestSuite) TestParsepredicateNotOpParseErrors() {
 	suite.runTestCases(
 		// Test error when "-not" is supplied without an expression
 		nPTC("-not", "-not: no following expression"),
@@ -74,7 +73,7 @@ func (suite *ParserTestSuite) TestParsePredicateNotOpParseErrors() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateNotOpEval() {
+func (suite *ParserTestSuite) TestParsepredicateNotOpEval() {
 	suite.runTestCases(
 		nPTC("-not -true", false),
 		nPTC("-not -not -true", true),
@@ -82,7 +81,7 @@ func (suite *ParserTestSuite) TestParsePredicateNotOpEval() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateBinOpParseErrors() {
+func (suite *ParserTestSuite) TestParsepredicateBinOpParseErrors() {
 	suite.runTestCases(
 		// Tests for -and
 		nPTC("-a", "-a: no expression before -a"),
@@ -95,7 +94,7 @@ func (suite *ParserTestSuite) TestParsePredicateBinOpParseErrors() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateAndOpEval() {
+func (suite *ParserTestSuite) TestParsepredicateAndOpEval() {
 	suite.runTestCases(
 		nPTC("-true -a -false", false),
 		nPTC("-true -false", false),
@@ -103,14 +102,14 @@ func (suite *ParserTestSuite) TestParsePredicateAndOpEval() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateOrOpEval() {
+func (suite *ParserTestSuite) TestParsepredicateOrOpEval() {
 	suite.runTestCases(
 		nPTC("-true -o -false", true),
 		nPTC("-false -o -true", true),
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateBinOpPrecedence() {
+func (suite *ParserTestSuite) TestParsepredicateBinOpPrecedence() {
 	suite.runTestCases(
 		// Should be parsed as (-true -o (-true -a -false)), which evaluates to true.
 		// Without precedence, this would be parsed as ((-true -o -true) -a false) which
@@ -119,11 +118,11 @@ func (suite *ParserTestSuite) TestParsePredicateBinOpPrecedence() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateUnknownPrimaryOrOperatorError() {
+func (suite *ParserTestSuite) TestParsepredicateUnknownPrimaryOrOperatorError() {
 	suite.runTestCases(nPTC("-foo", "-foo: unknown primary or operator"))
 }
 
-func (suite *ParserTestSuite) TestParsePredicateParensErrors() {
+func (suite *ParserTestSuite) TestParsepredicateParensErrors() {
 	suite.runTestCases(
 		// Test the simple error cases
 		nPTC(")", "): no beginning '('"),
@@ -140,7 +139,7 @@ func (suite *ParserTestSuite) TestParsePredicateParensErrors() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateParensEval() {
+func (suite *ParserTestSuite) TestParsepredicateParensEval() {
 	suite.runTestCases(
 		// Note that w/o the parentheses, this would be parsed as "(-true -o (-true -a -false))"
 		// which would evaluate to true.
@@ -153,13 +152,13 @@ func (suite *ParserTestSuite) TestParsePredicateParensEval() {
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateComplexErrors() {
+func (suite *ParserTestSuite) TestParsepredicateComplexErrors() {
 	suite.runTestCases(
 		nPTC("( -true ) -a )", "): no beginning '('"),
 	)
 }
 
-func (suite *ParserTestSuite) TestParsePredicateComplexEval() {
+func (suite *ParserTestSuite) TestParsepredicateComplexEval() {
 	suite.runTestCases(
 		nPTC("( -true -o -true ) -false", false),
 		// Should be parsed as (-true -a -false) -o -true which evaluates to true.
