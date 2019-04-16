@@ -38,9 +38,13 @@ func (suite *HelpersTestSuite) TestCName() {
 }
 
 func (suite *HelpersTestSuite) TestID() {
-	e := NewEntry("foo")
-	e.setID("/foo/bar")
+	e := NewEntry("foo/bar")
 
+	suite.Panics(
+		func() { ID(&e) },
+		"plugin.ID: entry foo (cname foo#bar) has no ID",
+	)
+	e.setID("/foo/bar")
 	suite.Equal(ID(&e), "/foo/bar")
 }
 

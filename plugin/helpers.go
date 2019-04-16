@@ -63,6 +63,10 @@ func CName(e Entry) string {
 // NOTE: <plugin_name> is really <plugin_cname>. However since <plugin_name>
 // can never contain a '/', <plugin_cname> reduces to <plugin_name>.
 func ID(e Entry) string {
+	if e.id() == "" {
+		msg := fmt.Sprintf("plugin.ID: entry %v (cname %v) has no ID", e.name(), CName(e))
+		panic(msg)
+	}
 	return e.id()
 }
 
