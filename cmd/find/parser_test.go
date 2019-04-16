@@ -10,7 +10,7 @@ import (
 
 // The primaries are tested separately in their individual *Primary.go files, so they
 // will not be tested here. Instead, the tests here serve as "integration tests" for
-// the top-level parsePredicate function. They're meant to test parser errors, each of
+// the top-level parse function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced.
 type ParserTestSuite struct {
 	suite.Suite
@@ -47,7 +47,7 @@ func (suite *ParserTestSuite) runTestCases(testCases ...parserTestCase) {
 		if input != "" {
 			tks = strings.Split(input, " ")
 		}
-		p, err := parsePredicate(tks)
+		p, err := parse(tks)
 		if c.err != "" {
 			suite.Equal(c.err, err.Error(), "Input was '%v'", input)
 		} else {

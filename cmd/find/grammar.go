@@ -8,7 +8,7 @@ type atom struct {
 	tokens []string
 	// tokens[0] will always include the atom's token that the user
 	// passed-in
-	parsePredicate func(tokens []string) (predicate, []string, error)
+	parse func(tokens []string) (predicate, []string, error)
 }
 
 // Map of <token> => <atom>. This is populated by newAtom.
@@ -16,10 +16,10 @@ var atoms = make(map[string]*atom)
 
 // When creating a new atom with this function, be sure to comment nolint above the variable
 // so that CI does not mark it as unused. See notOp for an example.
-func newAtom(tokens []string, parsePredicate func(tokens []string) (predicate, []string, error)) *atom {
+func newAtom(tokens []string, parse func(tokens []string) (predicate, []string, error)) *atom {
 	a := &atom{
-		tokens:         tokens,
-		parsePredicate: parsePredicate,
+		tokens: tokens,
+		parse:  parse,
 	}
 	for _, t := range tokens {
 		atoms[t] = a
@@ -36,7 +36,7 @@ var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (predicate, []s
 	}
 	token := tokens[0]
 	if atom, ok := atoms[token]; ok {
-		p, tokens, err := atom.parsePredicate(tokens)
+		p, tokens, err := atom.parse(tokens)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -52,7 +52,7 @@ var parensOp = newAtom([]string{"("}, func(tokens []string) (predicate, []string
 	// Find the ")" that's paired with our "(". Use the algorithm
 	// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
 	// Note that we do not have to check for balanced parentheses here because
-	// that check was already done in the top-level parsePredicate method.
+	// that check was already done in the top-level parse method.
 	//
 	// TODO: Could optimize this by moving parens handling over to the evaluation
 	// stack. Not important right now because expressions to `wash find` will likely
@@ -74,7 +74,7 @@ var parensOp = newAtom([]string{"("}, func(tokens []string) (predicate, []string
 	if ix == 0 {
 		return nil, nil, fmt.Errorf("(): empty inner expression")
 	}
-	p, err := parsePredicateHelper(tokens[:ix])
+	p, err := parseExpression(tokens[:ix])
 	return p, tokens[ix+1:], err
 })
 

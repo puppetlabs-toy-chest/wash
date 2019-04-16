@@ -9,7 +9,7 @@ import (
 // predicate represents a predicate used by wash find
 type predicate func(entry entry) bool
 
-func parsePredicate(tokens []string) (predicate, error) {
+func parse(tokens []string) (predicate, error) {
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
@@ -19,7 +19,7 @@ func parsePredicate(tokens []string) (predicate, error) {
 		}, nil
 	}
 	// Validate that the parentheses are correctly balanced.
-	// We do this outside of parsePredicateHelper to avoid
+	// We do this outside of parseExpression to avoid
 	// redundant validation when parensOp recurses into it.
 	s := stack.New()
 	for _, token := range tokens {
@@ -35,7 +35,7 @@ func parsePredicate(tokens []string) (predicate, error) {
 	if s.Len() > 0 {
 		return nil, fmt.Errorf("(: missing closing ')'")
 	}
-	return parsePredicateHelper(tokens)
+	return parseExpression(tokens)
 }
 
 /*
@@ -63,9 +63,9 @@ The precedence of the () and -not operators is already enforced by the grammar.
 Precedence of the binary operators -and and -or is enforced by maintaining an
 evaluation stack.
 */
-func parsePredicateHelper(tokens []string) (predicate, error) {
+func parseExpression(tokens []string) (predicate, error) {
 	if len(tokens) == 0 {
-		panic("parsePredicateHelper: called with len(tokens) == 0")
+		panic("parseExpression: called with len(tokens) == 0")
 	}
 
 	s := newEvalStack()
@@ -91,7 +91,7 @@ func parsePredicateHelper(tokens []string) (predicate, error) {
 		var p predicate
 		var err error
 		if atom, ok := atoms[token]; ok {
-			p, tokens, err = atom.parsePredicate(tokens)
+			p, tokens, err = atom.parse(tokens)
 			if err != nil {
 				return nil, err
 			}

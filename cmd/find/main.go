@@ -26,7 +26,7 @@ func Main(cmd *cobra.Command, args []string) int {
 		cmdutil.ErrPrintf("find expects a path")
 		return 1
 	}
-	p, err := parsePredicate(args[1:])
+	p, err := parse(args[1:])
 	if err != nil {
 		cmdutil.ErrPrintf("find: %v\n", err)
 		return 1
