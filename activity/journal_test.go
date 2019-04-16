@@ -11,11 +11,11 @@ import (
 
 func TestHistory(t *testing.T) {
 	// Ensure history is empty
-	history, jidToHistory = initHistory()
+	history = initHistory()
 
 	// Clean up tests at the end.
 	defer func() {
-		history, jidToHistory = initHistory()
+		history = initHistory()
 		CloseAll()
 	}()
 
@@ -23,11 +23,11 @@ func TestHistory(t *testing.T) {
 
 	tick := time.Now()
 	journal := Journal{ID: "anything", Description: "did something", Start: tick}
-	journal.registerCommand()
+	journal.addToHistory()
 
 	assert.Equal(t, []Journal{journal}, History())
 
-	journal.registerCommand()
+	journal.addToHistory()
 	assert.Equal(t, []Journal{journal}, History())
 
 	_, err := journal.Open()
@@ -36,11 +36,11 @@ func TestHistory(t *testing.T) {
 
 func TestHistoryWithJournal(t *testing.T) {
 	// Ensure history is empty
-	history, jidToHistory = initHistory()
+	history = initHistory()
 
 	// Clean up tests at the end.
 	defer func() {
-		history, jidToHistory = initHistory()
+		history = initHistory()
 		CloseAll()
 	}()
 

@@ -26,7 +26,7 @@ type KeyType int
 // JournalKey is used to identify a Journal in a context.
 const JournalKey KeyType = iota
 
-var journalCache = datastore.NewMemCacheWithEvicted(closeJournal)
+var journalFileCache = datastore.NewMemCacheWithEvicted(closeJournal)
 var journalDir = func() string {
 	cdir, err := os.UserCacheDir()
 	if err != nil {
@@ -39,7 +39,7 @@ var expires = 30 * time.Second
 // CloseAll ensures open journals are flushed to disk and closed.
 // Use when the application is shutting down.
 func CloseAll() {
-	journalCache.Flush()
+	journalFileCache.Flush()
 }
 
 // Dir gets the directory where journals are stored.
@@ -57,54 +57,27 @@ func GetJournal(ctx context.Context) Journal {
 	return ctx.Value(JournalKey).(Journal)
 }
 
+var deadLetterOfficeJournal = Journal{ID: "dead-letter-office"}
+
 // Record writes a new entry to the journal identified by the ID at `activity.JournalKey` in
 // the provided context. It also writes to the server logs at the debug level. If no ID
 // is registered, the entry is written to the server logs at the info level. If the
-// ID is an empty string, it uses the ID 'dead-letter-office'.
-//
-// Record creates a new journal for ID if needed, then appends the message to that journal.
-// Records are journaled in the user's cache directory under `wash/activity/ID.log`.
+// ID is an empty string - which can happen when the JournalID header is missing from an
+// API call - it uses the ID 'dead-letter-office'.
 func Record(ctx context.Context, msg string, a ...interface{}) {
-	var id string
-	if journal, ok := ctx.Value(JournalKey).(Journal); ok {
-		if journal.ID == "" {
-			id = "dead-letter-office"
-		} else {
-			id = journal.ID
-			journal.registerCommand()
-		}
-	} else {
+	journal, ok := ctx.Value(JournalKey).(Journal)
+	if !ok {
 		log.Infof(msg, a...)
 		return
 	}
 
-	log.Debugf(msg, a...)
-
-	// This is a single-use cache, so pass in an empty category.
-	obj, err := journalCache.GetOrUpdate("", id, expires, true, func() (interface{}, error) {
-		jdir := Dir()
-		if err := os.MkdirAll(jdir, 0750); err != nil {
-			return nil, err
-		}
-
-		lpath := filepath.Join(jdir, id+".log")
-		f, err := os.OpenFile(lpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
-		if err != nil {
-			return nil, err
-		}
-
-		l := &log.Logger{
-			Out:       f,
-			Level:     log.TraceLevel,
-			Formatter: &log.TextFormatter{TimestampFormat: time.RFC3339Nano},
-		}
-		return l, nil
-	})
-	if err != nil {
-		log.Warnf("Error creating journal %v: %v", id, err)
+	if journal.ID == "" {
+		journal = deadLetterOfficeJournal
+	} else {
+		journal.addToHistory()
 	}
 
-	obj.(*log.Logger).Printf(msg, a...)
+	journal.Record(msg, a...)
 }
 
 func closeJournal(id string, obj interface{}) {

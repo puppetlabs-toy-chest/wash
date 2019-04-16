@@ -117,7 +117,7 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
 	r.Handle("/history", historyHandler).Methods(http.MethodGet)
-	r.Handle("/history/{index:[0-9]+}", journalHandler).Methods(http.MethodGet)
+	r.Handle("/history/{index:[0-9]+}", historyEntryHandler).Methods(http.MethodGet)
 
 	r.Use(prepareContextMiddleWare)
 

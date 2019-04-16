@@ -71,7 +71,7 @@ var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *error
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var journalHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	history := activity.History()
 	index := mux.Vars(r)["index"]
 

@@ -9,16 +9,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Cache pid to process names. This may end up getting the wrong process name if there are
+// Cache pid to journals. This may end up getting the wrong process name if there are
 // lots of new processes being created constantly, but makes fast things a *lot* faster.
-var pidToExec = datastore.NewMemCache()
+var pidJournalCache = datastore.NewMemCache()
 
-// JournalForPID converts a process ID to a journal ID, and the command invocation of that
-// process ID. The journal ID includes executable name to make it easier to identify, and creation
-// timestamp to make it unique.
+// JournalForPID creates a journal that can be used to record all wash-related activity induced
+// by the given process ID. Journal ID is formatted as `<pid>-<name>-<createtime>`.
 func JournalForPID(pid int) Journal {
 	pidStr := strconv.Itoa(pid)
-	result, err := pidToExec.GetOrUpdate("", pidStr, expires, true, func() (interface{}, error) {
+	result, err := pidJournalCache.GetOrUpdate("", pidStr, expires, true, func() (interface{}, error) {
 		proc, err := process.NewProcess(int32(pid))
 		var out Journal
 		if err != nil {
@@ -34,6 +33,7 @@ func JournalForPID(pid int) Journal {
 
 		if created, err := proc.CreateTime(); err == nil {
 			out.ID += "-" + strconv.FormatInt(created, 10)
+			out.Start = time.Unix(created, 0)
 		} else {
 			log.Infof("Unable to get creation time for pid %v: %v", pid, err)
 		}
@@ -43,13 +43,17 @@ func JournalForPID(pid int) Journal {
 		} else {
 			log.Infof("Unable to get command-line for pid %v: %v", pid, err)
 		}
+
+		// We set Start based on the time we first encounter the process, not when the process was
+		// started. This makes history make a little more sense when interacting with things like
+		// the shell, which was likely started before wash was.
 		out.Start = time.Now()
 		return out, nil
 	})
 
 	if err != nil {
 		log.Warnf("Unable to find pid %v: %v", pid, err)
-		return Journal{ID: pidStr}
+		return Journal{ID: pidStr, Start: time.Now()}
 	}
 
 	return result.(Journal)
