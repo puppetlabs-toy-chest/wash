@@ -56,10 +56,6 @@ func tailStream(conn client.DomainSocketClient, agg chan line, path string) io.C
 	stream, err := conn.Stream(path)
 	if err != nil {
 		if errObj, ok := err.(*apitypes.ErrorObj); ok {
-			if errObj.Kind == apitypes.NonWashEntry {
-				// Not a resource
-				return nil
-			}
 			if errObj.Kind == apitypes.UnsupportedAction {
 				// The resource exists but does not support the streaming action
 				return nil

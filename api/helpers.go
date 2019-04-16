@@ -3,9 +3,11 @@ package api
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
+	apifs "github.com/puppetlabs/wash/api/fs"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -70,8 +72,22 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 	mountpoint := ctx.Value(mountpointKey).(string)
 	trimmedPath := strings.TrimPrefix(path, mountpoint)
 	if trimmedPath == path {
-		// TODO: Handle these later by wrapping them into entries
-		return nil, nonWashEntryResponse(path)
+		// Local file/directory, so convert it to a Wash entry
+		//
+		// TODO: The code here means that the Wash server cannot be
+		// mounted on a remote machine. This is not an immediate issue,
+		// but it does mean that we'll need to re-evaluate this code once
+		// we get to the point where supporting remote Wash servers is
+		// desirable.
+		e, err := apifs.NewEntry(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, entryNotFoundResponse(path, err.Error())
+			}
+			err = fmt.Errorf("could not stat the regular file/dir pointed to by %v: %v", path, err)
+			return nil, unknownErrorResponse(err)
+		}
+		return e, nil
 	}
 	// Don't interpret trailing slash as a new segment, and ignore optional leading slash
 	path = strings.Trim(trimmedPath, "/")

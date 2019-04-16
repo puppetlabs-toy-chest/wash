@@ -118,8 +118,7 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	_, err := getEntryFromPath(ctx, "relative")
 	suite.Error(relativePathResponse("relative"), err)
 
-	_, err = getEntryFromPath(ctx, "/file")
-	suite.Error(nonWashEntryResponse("/file"), err)
+	// TODO: Add tests for non-Wash entries (i.e. for apifs)
 
 	entry, err := getEntryFromPath(ctx, mountpoint)
 	if suite.Nil(err) {
