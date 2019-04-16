@@ -34,19 +34,14 @@ func list(c *client.DomainSocketClient, e entry) ([]entry, error) {
 		return nil, err
 	}
 	children := make([]entry, len(rawChildren))
-	for i, ch := range rawChildren {
-		normalizedPath := e.NormalizedPath
-		normalizedPath += "/"
-		normalizedPath += ch.CName
-
-		e := newEntry()
-		// Something like `e.Entry = &ch` will not work because the value of
-		// 'ch' will change on each iteration. Thus, we need to explicitly set
+	for i, rawChild := range rawChildren {
+		child := newEntry()
+		// Something like `child.Entry = &rawChild` will not work because the value of
+		// 'rawChild' will change on each iteration. Thus, we need to explicitly set
 		// its value.
-		(*e.Entry) = ch
-		e.NormalizedPath = normalizedPath
-
-		children[i] = e
+		(*child.Entry) = rawChild
+		child.NormalizedPath = e.NormalizedPath + "/" + child.CName
+		children[i] = child
 	}
 	return children, nil
 }
