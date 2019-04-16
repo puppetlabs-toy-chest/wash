@@ -10,7 +10,7 @@ import (
 
 // The primaries are tested separately in their individual *Primary.go files, so they
 // will not be tested here. Instead, the tests here serve as "integration tests" for
-// the exported Parsepredicate function. They're meant to test parser errors, each of
+// the top-level parsePredicate function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced.
 type ParserTestSuite struct {
 	suite.Suite

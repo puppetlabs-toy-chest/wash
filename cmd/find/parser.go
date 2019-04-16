@@ -42,12 +42,12 @@ func parsePredicate(tokens []string) (predicate, error) {
 An expression is described by the following grammar
 	Expression => Expression (-a|-and) Atom |
 	              Expression Atom           |
-		      Expression (-o|-or) Atom  |
-		      Atom                      |
+		          Expression (-o|-or) Atom  |
+		          Atom                      |
 
 	      Atom => (!|-not) Atom             |
 	              '(' Expression ')'        |
-		      Primary
+		          Primary
 
 where 'Expression Atom' is semantically equivalent to 'Expression -a Atom'.
 Primaries have their own grammar. See the corresponding *Primary.go files
