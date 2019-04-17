@@ -1,4 +1,4 @@
-package cmdfind
+package find
 
 import (
 	"testing"

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	cmdfind "github.com/puppetlabs/wash/cmd/find"
+	"github.com/puppetlabs/wash/cmd/internal/find"
 	"github.com/spf13/cobra"
 )
 
@@ -25,5 +25,5 @@ func findCommand() *cobra.Command {
 }
 
 func findMain(cmd *cobra.Command, args []string) exitCode {
-	return exitCode{cmdfind.Main(cmd, args)}
+	return exitCode{find.Main(cmd, args)}
 }

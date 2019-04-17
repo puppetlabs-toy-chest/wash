@@ -1,4 +1,4 @@
-package cmdfind
+package find
 
 import (
 	"github.com/puppetlabs/wash/api/client"

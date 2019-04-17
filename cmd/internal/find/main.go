@@ -1,6 +1,6 @@
-// Package cmdfind stores all the logic for `wash find`. We make it a separate package
+// Package find stores all the logic for `wash find`. We make it a separate package
 // to decouple it from cmd. This makes testing easier.
-package cmdfind
+package find
 
 import (
 	"fmt"
