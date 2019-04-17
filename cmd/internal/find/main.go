@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/plugin"
@@ -43,7 +44,7 @@ func Main(cmd *cobra.Command, args []string) int {
 	s := stack.New()
 	s.Push(e)
 	for s.Len() > 0 {
-		e := s.Pop().(entry)
+		e := s.Pop().(types.Entry)
 		if p(e) {
 			fmt.Printf("%v\n", e.NormalizedPath)
 		}

@@ -4,17 +4,15 @@ import (
 	"fmt"
 
 	"github.com/golang-collections/collections/stack"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
-// predicate represents a predicate used by wash find
-type predicate func(entry entry) bool
-
-func parse(tokens []string) (predicate, error) {
+func parse(tokens []string) (types.Predicate, error) {
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
-		// to `wash find`. Thus, we default to a predicate that always returns
+		// to `wash find`. Thus, we default to a types.Predicate that always returns
 		// true.
-		return func(e entry) bool {
+		return func(e types.Entry) bool {
 			return true
 		}, nil
 	}
@@ -63,7 +61,7 @@ The precedence of the () and -not operators is already enforced by the grammar.
 Precedence of the binary operators -and and -or is enforced by maintaining an
 evaluation stack.
 */
-func parseExpression(tokens []string) (predicate, error) {
+func parseExpression(tokens []string) (types.Predicate, error) {
 	if len(tokens) == 0 {
 		panic("parseExpression: called with len(tokens) == 0")
 	}
@@ -72,7 +70,7 @@ func parseExpression(tokens []string) (predicate, error) {
 	var mostRecentOp *binaryOp
 	var mostRecentOpToken string
 	pushBinaryOp := func(token string, b *binaryOp) {
-		// Invariant: s.Peek() returns a predicate
+		// Invariant: s.Peek() returns a types.Predicate
 		if mostRecentOp != nil {
 			if b.precedence <= mostRecentOp.precedence {
 				s.evaluate()
@@ -88,14 +86,14 @@ func parseExpression(tokens []string) (predicate, error) {
 		// Declare these as variables so that we can cleanly update the
 		// tokens parameter for each iteration. Otherwise, := will create a
 		// new tokens variable within the if statement's scope.
-		var p predicate
+		var p types.Predicate
 		var err error
 		if atom, ok := atoms[token]; ok {
 			p, tokens, err = atom.parse(tokens)
 			if err != nil {
 				return nil, err
 			}
-			if _, ok := s.Peek().(predicate); ok {
+			if _, ok := s.Peek().(types.Predicate); ok {
 				// We have p1 p2, where p1 == s.Peek() and p2 = p. Since p1 p2 == p1 -and p2,
 				// push andOp before pushing p2.
 				pushBinaryOp("-a", andOp)
@@ -104,7 +102,7 @@ func parseExpression(tokens []string) (predicate, error) {
 		} else if b, ok := binaryOps[token]; ok {
 			tokens = tokens[1:]
 			if mostRecentOp == nil {
-				if _, ok := s.Peek().(predicate); !ok {
+				if _, ok := s.Peek().(types.Predicate); !ok {
 					return nil, fmt.Errorf("%v: no expression before %v", token, token)
 				}
 				pushBinaryOp(token, b)
@@ -127,7 +125,7 @@ func parseExpression(tokens []string) (predicate, error) {
 	}
 	// Call s.evaluate() to handle cases like "p1 -and p2"
 	s.evaluate()
-	return s.Pop().(predicate), nil
+	return s.Pop().(types.Predicate), nil
 }
 
 type evalStack struct {
@@ -141,9 +139,9 @@ func newEvalStack() *evalStack {
 func (s *evalStack) evaluate() {
 	// Invariant: s's layout is something like "p (<op> p)*"
 	for s.Len() > 1 {
-		p2 := s.Pop().(predicate)
+		p2 := s.Pop().(types.Predicate)
 		op := s.Pop().(*binaryOp)
-		p1 := s.Pop().(predicate)
+		p1 := s.Pop().(types.Predicate)
 		s.Push(op.combine(p1, p2))
 	}
 }

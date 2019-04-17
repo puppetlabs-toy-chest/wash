@@ -3,6 +3,7 @@ package find
 import (
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,9 +20,9 @@ func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := entry{}
+	e1 := types.Entry{}
 	e1.CName = "a"
-	e2 := entry{}
+	e2 := types.Entry{}
 	e2.CName = "b"
 	p, tokens, err := namePrimary.parse([]string{"-name", "a"})
 	if suite.NoError(err) {

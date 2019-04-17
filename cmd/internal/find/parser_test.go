@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -52,7 +53,7 @@ func (suite *ParserTestSuite) runTestCases(testCases ...parserTestCase) {
 			suite.Equal(c.err, err.Error(), "Input was '%v'", input)
 		} else {
 			if suite.NoError(err) {
-				suite.Equal(c.expected, p(entry{}), "Input was '%v'", input)
+				suite.Equal(c.expected, p(types.Entry{}), "Input was '%v'", input)
 			}
 		}
 	}

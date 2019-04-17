@@ -2,13 +2,15 @@ package find
 
 import (
 	"fmt"
+
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 type atom struct {
 	tokens []string
 	// tokens[0] will always include the atom's token that the user
 	// passed-in
-	parse func(tokens []string) (predicate, []string, error)
+	parse func(tokens []string) (types.Predicate, []string, error)
 }
 
 // Map of <token> => <atom>. This is populated by newAtom.
@@ -16,7 +18,7 @@ var atoms = make(map[string]*atom)
 
 // When creating a new atom with this function, be sure to comment nolint above the variable
 // so that CI does not mark it as unused. See notOp for an example.
-func newAtom(tokens []string, parse func(tokens []string) (predicate, []string, error)) *atom {
+func newAtom(tokens []string, parse func(tokens []string) (types.Predicate, []string, error)) *atom {
 	a := &atom{
 		tokens: tokens,
 		parse:  parse,
@@ -28,7 +30,7 @@ func newAtom(tokens []string, parse func(tokens []string) (predicate, []string, 
 }
 
 //nolint
-var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (predicate, []string, error) {
+var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (types.Predicate, []string, error) {
 	notToken := tokens[0]
 	tokens = tokens[1:]
 	if len(tokens) == 0 {
@@ -40,7 +42,7 @@ var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (predicate, []s
 		if err != nil {
 			return nil, nil, err
 		}
-		return func(e entry) bool {
+		return func(e types.Entry) bool {
 			return !p(e)
 		}, tokens, err
 	}
@@ -48,7 +50,7 @@ var notOp = newAtom([]string{"!", "-not"}, func(tokens []string) (predicate, []s
 })
 
 //nolint
-var parensOp = newAtom([]string{"("}, func(tokens []string) (predicate, []string, error) {
+var parensOp = newAtom([]string{"("}, func(tokens []string) (types.Predicate, []string, error) {
 	// Find the ")" that's paired with our "(". Use the algorithm
 	// described in https://stackoverflow.com/questions/12752225/how-do-i-find-the-position-of-matching-parentheses-or-braces-in-a-given-piece-of
 	// Note that we do not have to check for balanced parentheses here because
@@ -81,7 +83,7 @@ var parensOp = newAtom([]string{"("}, func(tokens []string) (predicate, []string
 type binaryOp struct {
 	tokens     []string
 	precedence int
-	combine    func(p1 predicate, p2 predicate) predicate
+	combine    func(p1 types.Predicate, p2 types.Predicate) types.Predicate
 }
 
 // Map of <token> => <binaryOp>. This is populated by newBinaryOp.
@@ -89,7 +91,7 @@ var binaryOps = make(map[string]*binaryOp)
 
 // When creating a new binary op with this function, be sure to comment nolint above the variable
 // so that CI does not mark it as unused. See andOp for an example.
-func newBinaryOp(tokens []string, precedence int, combine func(p1 predicate, p2 predicate) predicate) *binaryOp {
+func newBinaryOp(tokens []string, precedence int, combine func(p1 types.Predicate, p2 types.Predicate) types.Predicate) *binaryOp {
 	b := &binaryOp{
 		tokens:     tokens,
 		precedence: precedence,
@@ -102,15 +104,15 @@ func newBinaryOp(tokens []string, precedence int, combine func(p1 predicate, p2 
 }
 
 //nolint
-var andOp = newBinaryOp([]string{"-a", "-and"}, 1, func(p1 predicate, p2 predicate) predicate {
-	return func(e entry) bool {
+var andOp = newBinaryOp([]string{"-a", "-and"}, 1, func(p1 types.Predicate, p2 types.Predicate) types.Predicate {
+	return func(e types.Entry) bool {
 		return p1(e) && p2(e)
 	}
 })
 
 //nolint
-var orOp = newBinaryOp([]string{"-o", "-or"}, 0, func(p1 predicate, p2 predicate) predicate {
-	return func(e entry) bool {
+var orOp = newBinaryOp([]string{"-o", "-or"}, 0, func(p1 types.Predicate, p2 types.Predicate) types.Predicate {
+	return func(e types.Entry) bool {
 		return p1(e) || p2(e)
 	}
 })

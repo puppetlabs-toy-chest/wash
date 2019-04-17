@@ -3,6 +3,7 @@ package find
 import (
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -19,9 +20,9 @@ func (suite *PathPrimaryTestSuite) TestPathPrimaryErrors() {
 }
 
 func (suite *PathPrimaryTestSuite) TestPathPrimaryValidInput() {
-	e1 := entry{}
+	e1 := types.Entry{}
 	e1.NormalizedPath = "a"
-	e2 := entry{}
+	e2 := types.Entry{}
 	e2.NormalizedPath = "b"
 	p, tokens, err := pathPrimary.parse([]string{"-path", "a"})
 	if suite.NoError(err) {

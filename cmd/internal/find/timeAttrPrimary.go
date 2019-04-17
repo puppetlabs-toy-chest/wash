@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 var startTime time.Time
@@ -30,7 +32,7 @@ func durationOf(unit byte) time.Duration {
 // We use getTimeAttrValue to retrieve the time attribute's value for performance
 // reasons. Using e.Attributes.ToMap()[name] would be slower because it would
 // require an additional type assertion to extract the time.Time object.
-func getTimeAttrValue(name string, e entry) (time.Time, bool) {
+func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 	switch name {
 	case "ctime":
 		return e.Attributes.Ctime(), e.Attributes.HasCtime()
@@ -95,7 +97,7 @@ func parseDuration(v string) (time.Duration, bool) {
 // example, a difference of 1.5 days will be rounded to 2 days.
 func newTimeAttrPrimary(name string) *atom {
 	tk := "-" + name
-	return newAtom([]string{tk}, func(tokens []string) (predicate, []string, error) {
+	return newAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
 		if startTime == (time.Time{}) {
 			panic("Attempting to parse a time primary without calling cmdfind.SetStartTime")
 		}
@@ -117,7 +119,7 @@ func newTimeAttrPrimary(name string) *atom {
 		}
 
 		duration, roundDiff := parseDuration(v)
-		p := func(e entry) bool {
+		p := func(e types.Entry) bool {
 			t, ok := getTimeAttrValue(name, e)
 			if !ok {
 				return false

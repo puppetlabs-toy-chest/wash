@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // pathPrimary => -path ShellGlob
-var pathPrimary = newAtom([]string{"-path"}, func(tokens []string) (predicate, []string, error) {
+var pathPrimary = newAtom([]string{"-path"}, func(tokens []string) (types.Predicate, []string, error) {
 	tokens = tokens[1:]
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("-path: requires additional arguments")
@@ -18,7 +19,7 @@ var pathPrimary = newAtom([]string{"-path"}, func(tokens []string) (predicate, [
 		return nil, nil, fmt.Errorf("-path: invalid glob: %v", err)
 	}
 
-	return func(e entry) bool {
+	return func(e types.Entry) bool {
 		return g.Match(e.NormalizedPath)
 	}, tokens[1:], nil
 })
