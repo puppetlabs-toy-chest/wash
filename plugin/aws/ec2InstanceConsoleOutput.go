@@ -64,7 +64,7 @@ func (o consoleOutput) toMeta() plugin.EntryMetadata {
 func (cl *ec2InstanceConsoleOutput) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
 	output, err := plugin.CachedOp(ctx, "ConsoleOutput", cl, 30*time.Second, func() (interface{}, error) {
 		request := &ec2Client.GetConsoleOutputInput{
-			InstanceId: awsSDK.String(cl.inst.Name()),
+			InstanceId: awsSDK.String(cl.inst.id),
 		}
 		if cl.latest {
 			request.Latest = awsSDK.Bool(cl.latest)

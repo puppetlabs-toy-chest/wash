@@ -22,6 +22,7 @@ import (
 // ec2Instance represents an EC2 instance
 type ec2Instance struct {
 	plugin.EntryBase
+	id                      string
 	session                 *session.Session
 	client                  *ec2Client.EC2
 	ssmClient               *ssm.SSM
@@ -43,8 +44,21 @@ const (
 )
 
 func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *session.Session, client *ec2Client.EC2) *ec2Instance {
+	id := awsSDK.StringValue(inst.InstanceId)
+	name := id
+	// AWS has a practice of using a tag with the key 'Name' as the display name in the console, so
+	// it's common for resources to be given a (non-unique) name. Use that to mimic the console, but
+	// append the instance ID to ensure it's unique. We start with name so that things with the same
+	// name will be grouped when sorted.
+	for _, tag := range inst.Tags {
+		if awsSDK.StringValue(tag.Key) == "Name" {
+			name = awsSDK.StringValue(tag.Value) + "_" + id
+			break
+		}
+	}
 	ec2Instance := &ec2Instance{
-		EntryBase:        plugin.NewEntry(awsSDK.StringValue(inst.InstanceId)),
+		EntryBase:        plugin.NewEntry(name),
+		id:               id,
 		session:          session,
 		client:           client,
 		ssmClient:        ssm.New(session),
@@ -111,7 +125,7 @@ func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeIn
 	info, err := plugin.CachedOp(ctx, "DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
 		request := &ec2Client.DescribeInstancesInput{
 			InstanceIds: []*string{
-				awsSDK.String(inst.Name()),
+				awsSDK.String(inst.id),
 			},
 		}
 
@@ -291,7 +305,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		// AWS-RunPowerShellScript for Windows.
 		DocumentName: awsSDK.String("AWS-RunShellScript"),
 		InstanceIds: []*string{
-			awsSDK.String(inst.Name()),
+			awsSDK.String(inst.id),
 		},
 		// See https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-plugins.html#aws-runShellScript
 		// for a list of all the parameters that AWS-RunShellScript
@@ -319,7 +333,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	commandID := awsSDK.StringValue(resp.Command.CommandId)
 	activity.Record(ctx, "Successfully sent the command. Command ID: %v", commandID)
 
-	outputCh, outputStreamer := newOutputStreamer(ctx, inst.cloudwatchClient, commandID, inst.Name())
+	outputCh, outputStreamer := newOutputStreamer(ctx, inst.cloudwatchClient, commandID, inst.id)
 	var exitCode int
 	var exitCodeErr error
 	go func() {
@@ -334,7 +348,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			request := &ssm.CancelCommandInput{
 				CommandId: awsSDK.String(commandID),
 				InstanceIds: awsSDK.StringSlice(
-					[]string{inst.Name()},
+					[]string{inst.id},
 				),
 			}
 
@@ -366,7 +380,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			activity.Record(ctx, "Getting the command status")
 			request := &ssm.GetCommandInvocationInput{
 				CommandId:  awsSDK.String(commandID),
-				InstanceId: awsSDK.String(inst.Name()),
+				InstanceId: awsSDK.String(inst.id),
 			}
 
 			resp, err := inst.ssmClient.GetCommandInvocationWithContext(ctx, request)
