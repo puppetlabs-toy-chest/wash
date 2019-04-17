@@ -33,7 +33,7 @@ func printJournalEntry(index string) error {
 
 	conn := client.ForUNIXSocket(config.Socket)
 	// Translate from 1-indexing for history entries
-	rdr, err := conn.Journal(idx - 1)
+	rdr, err := conn.ActivityJournal(idx - 1)
 	if err != nil {
 		return err
 	}

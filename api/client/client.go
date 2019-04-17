@@ -211,8 +211,8 @@ func (c *DomainSocketClient) History() ([]apitypes.Activity, error) {
 	return result.Activities, nil
 }
 
-// Journal returns a reader for the journal associated with a particular command in history.
-func (c *DomainSocketClient) Journal(index int) (io.ReadCloser, error) {
+// ActivityJournal returns a reader for the journal associated with a particular command in history.
+func (c *DomainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
 	resp, err := c.Get(domainSocketBaseURL + "/history/" + strconv.Itoa(index))
 	if err != nil {
