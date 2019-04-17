@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -44,8 +45,15 @@ type errorResponse struct {
 	body       *apitypes.ErrorObj
 }
 
+// Used when formatting to write an HTTP response, so serialize as JSON.
 func (e *errorResponse) Error() string {
-	return e.body.Error()
+	jsonBytes, err := json.Marshal(e.body)
+	if err != nil {
+		// We should never hit this code-path, but better safe than sorry
+		return fmt.Sprintf("Kind: %v, Msg: %v, Fields: %v", e.body.Kind, e.body.Msg, e.body.Fields)
+	}
+
+	return string(jsonBytes)
 }
 
 // Below are all of Wash's API error responses
