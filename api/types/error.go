@@ -2,7 +2,6 @@
 package apitypes
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -20,13 +19,7 @@ type ErrorObj struct {
 }
 
 func (e *ErrorObj) Error() string {
-	jsonBytes, err := json.Marshal(e)
-	if err != nil {
-		// We should never hit this code-path, but better safe than sorry
-		return fmt.Sprintf("Kind: %v, Msg: %v, Fields: %v", e.Kind, e.Msg, e.Fields)
-	}
-
-	return string(jsonBytes)
+	return fmt.Sprintf("%v: %v", e.Kind, e.Msg)
 }
 
 // Define error kinds returned by the API
