@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 )
 
 // FileCacheProvider is a credentials.Provider implementation that wraps an underlying Provider
@@ -45,7 +45,7 @@ func newFileCacheProvider(ctx context.Context, profile string, creds *credential
 			return FileCacheProvider{}, fmt.Errorf("cache file %s is not private, please ensure only current user has access", filename)
 		}
 
-		journal.Record(ctx, "Loading cached credentials from %v", filename)
+		activity.Record(ctx, "Loading cached credentials from %v", filename)
 		cachedCredential, err = readCache(filename)
 		if err != nil {
 			// can't read or parse cache, refuse to use it.
@@ -80,14 +80,14 @@ func (f *FileCacheProvider) Retrieve() (credentials.Value, error) {
 	// underlying provider supports Expirer interface, so we can cache
 	filename, err := cacheFilename(f.profile)
 	if err != nil {
-		journal.Record(context.Background(), "Unable to determine cache location for %s: %v", f.profile, err)
+		activity.Record(context.Background(), "Unable to determine cache location for %s: %v", f.profile, err)
 		return credential, nil
 	}
 
 	// update cached credential and save to disk
 	f.cachedCredential = cachedCredential{credential, expiration}
 	if err = writeCache(filename, f.cachedCredential); err != nil {
-		journal.Record(context.Background(), "Unable to update credential cache %s: %v", filename, err)
+		activity.Record(context.Background(), "Unable to update credential cache %s: %v", filename, err)
 	}
 	return credential, err
 }

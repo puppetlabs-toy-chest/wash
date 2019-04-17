@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
@@ -112,7 +112,7 @@ type s3ObjectReader struct {
 
 func (s *s3ObjectReader) closeContent(content io.ReadCloser) {
 	if err := content.Close(); err != nil {
-		journal.Record(context.Background(), "aws.s3ObjectReader.ReadAt: failed to close %v's content: %v", s.o.key, err)
+		activity.Record(context.Background(), "aws.s3ObjectReader.ReadAt: failed to close %v's content: %v", s.o.key, err)
 	}
 }
 

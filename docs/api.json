@@ -102,6 +102,44 @@
         }
       }
     },
+    "/fs/info": {
+      "get": {
+        "description": "Returns an Entry object describing the given path.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "info"
+        ],
+        "summary": "Info about entry at path",
+        "operationId": "entryInfo",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Entry"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
     "/fs/list": {
       "get": {
         "description": "Returns a list of Entry objects describing children of the given path.",
@@ -126,7 +164,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/Entry"
+            "$ref": "#/responses/entryList"
           },
           "400": {
             "$ref": "#/responses/errorResp"
@@ -164,7 +202,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/metadataMap"
+            "$ref": "#/responses/entryMetadata"
           },
           "404": {
             "$ref": "#/responses/errorResp"
@@ -246,47 +284,128 @@
           }
         }
       }
+    },
+    "/history": {
+      "get": {
+        "description": "Get a list of commands that have been run via 'wash' and when they were run.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "history"
+        ],
+        "summary": "Get command history",
+        "operationId": "retrieveHistory",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/HistoryResponse"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/history/{id}": {
+      "get": {
+        "description": "Get the logs related to a particular command run via 'wash', requested by\nindex within its activity history.",
+        "produces": [
+          "application/json",
+          "application/octet-stream"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "journal"
+        ],
+        "summary": "Get logs for a particular entry in history",
+        "operationId": "getJournal",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/octetResponse"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
     }
   },
   "definitions": {
-    "Attributes": {
+    "Activity": {
       "type": "object",
-      "title": "Attributes of resources.",
+      "title": "Activity describes an activity from wash's `activity.History`.",
       "properties": {
-        "atime": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "start": {
           "type": "string",
           "format": "date-time",
-          "x-go-name": "Atime"
-        },
-        "ctime": {
-          "type": "string",
-          "format": "date-time",
-          "x-go-name": "Ctime"
-        },
-        "mode": {
-          "$ref": "#/definitions/FileMode"
-        },
-        "mtime": {
-          "type": "string",
-          "format": "date-time",
-          "x-go-name": "Mtime"
-        },
-        "size": {
-          "type": "integer",
-          "format": "uint64",
-          "x-go-name": "Size"
-        },
-        "valid": {
-          "$ref": "#/definitions/Duration"
+          "x-go-name": "Start"
         }
       },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "Entry": {
+      "type": "object",
+      "title": "Entry represents a Wash entry as interpreted by the API.",
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Actions"
+        },
+        "attributes": {
+          "$ref": "#/definitions/EntryAttributes"
+        },
+        "cname": {
+          "type": "string",
+          "x-go-name": "CName"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "path": {
+          "type": "string",
+          "x-go-name": "Path"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "EntryAttributes": {
+      "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCtime(ctime).\nSetMtime(mtime).\nSetMeta(meta)\nentry.SetAttributes(attr)",
+      "type": "object",
+      "title": "EntryAttributes represents an entry's attributes. We use a struct\ninstead of a map for efficient memory allocation/deallocation,\nwhich is needed to make Group#List fast.",
       "x-go-package": "github.com/puppetlabs/wash/plugin"
     },
-    "Duration": {
-      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
-      "type": "integer",
-      "format": "int64",
-      "x-go-package": "time"
+    "EntryMetadata": {
+      "description": "EntryMetadata represents the entry's metadata\nas returned by Entry#Metadata.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      },
+      "x-go-package": "github.com/puppetlabs/wash/plugin"
     },
     "ErrorFields": {
       "description": "ErrorFields represents the fields of an ErrorObj",
@@ -334,21 +453,6 @@
       "title": "ExecPacketType identifies the packet type.",
       "x-go-package": "github.com/puppetlabs/wash/api/types"
     },
-    "FileMode": {
-      "description": "The bits have the same definition on all systems, so that\ninformation about files can be moved from one system\nto another portably. Not all bits apply to all systems.\nThe only required bit is ModeDir for directories.",
-      "type": "integer",
-      "format": "uint32",
-      "title": "A FileMode represents a file's mode and permission bits.",
-      "x-go-package": "os"
-    },
-    "MetadataMap": {
-      "type": "object",
-      "title": "MetadataMap maps keys to arbitrary structured data.",
-      "additionalProperties": {
-        "type": "object"
-      },
-      "x-go-package": "github.com/puppetlabs/wash/plugin"
-    },
     "Reader": {
       "description": "Read reads up to len(p) bytes into p. It returns the number of bytes\nread (0 \u003c= n \u003c= len(p)) and any error encountered. Even if Read\nreturns n \u003c len(p), it may use all of p as scratch space during the call.\nIf some data is available but not len(p) bytes, Read conventionally\nreturns what is available instead of waiting for more.\n\nWhen Read encounters an error or end-of-file condition after\nsuccessfully reading n \u003e 0 bytes, it returns the number of\nbytes read. It may return the (non-nil) error from the same call\nor return the error (and n == 0) from a subsequent call.\nAn instance of this general case is that a Reader returning\na non-zero number of bytes at the end of the input stream may\nreturn either err == EOF or err == nil. The next Read should\nreturn 0, EOF.\n\nCallers should always process the n \u003e 0 bytes returned before\nconsidering the error err. Doing so correctly handles I/O errors\nthat happen after reading some bytes and also both of the\nallowed EOF behaviors.\n\nImplementations of Read are discouraged from returning a\nzero byte count with a nil error, except when len(p) == 0.\nCallers should treat a return of 0 and nil as indicating that\nnothing happened; in particular it does not indicate EOF.\n\nImplementations must not retain p.",
       "type": "object",
@@ -357,6 +461,30 @@
     }
   },
   "responses": {
+    "Entry": {
+      "description": "Entry represents a Wash entry as interpreted by the API.",
+      "schema": {
+        "$ref": "#/definitions/EntryAttributes"
+      },
+      "headers": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "attributes": {},
+        "cname": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
     "ExecPacket": {
       "description": "ExecPacket is a single packet of results from an exec.\nIf TypeField is Stdout or Stderr, Data will be a string.\nIf TypeField is Exitcode, Data will be an int (or float64 if deserialized from JSON).",
       "schema": {
@@ -373,27 +501,29 @@
         "type": {}
       }
     },
-    "Entry": {
-      "description": "Entry represents a single entry from the result of issuing a wash 'list' request.",
+    "HistoryResponse": {
+      "description": "HistoryResponse describes the result returned by the `/history` endpoint.",
       "schema": {
-        "type": "object",
-        "additionalProperties": {
-          "$ref": "#/definitions/ErrorObj"
-        },
-        "$ref": "#/definitions/Attributes"
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Activity"
+        }
+      }
+    },
+    "entryList": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Entry"
+        }
+      }
+    },
+    "entryMetadata": {
+      "schema": {
+        "$ref": "#/definitions/EntryMetadata"
       },
       "headers": {
-        "actions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "attributes": {},
-        "errors": {},
-        "name": {
-          "type": "string"
-        }
+        "EntryMetadata": {}
       }
     },
     "errorResp": {
@@ -417,14 +547,6 @@
       },
       "headers": {
         "Body": {}
-      }
-    },
-    "metadataMap": {
-      "schema": {
-        "$ref": "#/definitions/MetadataMap"
-      },
-      "headers": {
-        "MetadataMap": {}
       }
     },
     "octetResponse": {

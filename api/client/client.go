@@ -18,10 +18,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Benchkram/errz"
+	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
 )
 
 // A DomainSocketClient is a wash API client.
@@ -44,6 +45,19 @@ func ForUNIXSocket(pathToSocket string) DomainSocketClient {
 		}}
 }
 
+func unmarshalErrorResp(resp *http.Response) error {
+	var errorObj apitypes.ErrorObj
+	respBody, err := ioutil.ReadAll(resp.Body)
+	errz.Log(resp.Body.Close())
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(respBody, &errorObj); err != nil {
+		return fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", resp.StatusCode, resp.Request.URL.Path, string(respBody))
+	}
+	return &errorObj
+}
+
 func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
@@ -58,7 +72,9 @@ func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Re
 	req.URL.Path = endpoint
 	req.URL.RawQuery = url.Values{"path": []string{path}}.Encode()
 
-	req.Header.Set(apitypes.JournalIDHeader, journal.PIDToID(os.Getpid()))
+	journal := activity.JournalForPID(os.Getpid())
+	req.Header.Set(apitypes.JournalIDHeader, journal.ID)
+	req.Header.Set(apitypes.JournalDescHeader, journal.Description)
 	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
@@ -68,17 +84,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Re
 		return resp.Body, nil
 	}
 
-	var errorObj apitypes.ErrorObj
-	respBody, err := ioutil.ReadAll(resp.Body)
-	errz.Log(resp.Body.Close())
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(respBody, &errorObj); err != nil {
-		return nil, fmt.Errorf("Not-OK status: %v, URL: %v, Body: %v", resp.StatusCode, endpoint, string(respBody))
-	}
-
-	return nil, &errorObj
+	return nil, unmarshalErrorResp(resp)
 }
 
 func (c *DomainSocketClient) getRequest(endpoint, path string, result interface{}) error {
@@ -177,6 +183,47 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 	events := make(chan apitypes.ExecPacket, 1)
 	go readJSONFromBody(respBody, events)
 	return events, nil
+}
+
+// History returns the command history for the current wash server session.
+func (c *DomainSocketClient) History() ([]apitypes.Activity, error) {
+	// Intentionally skip journaling activity associated with history because that would modify it.
+	resp, err := c.Get(domainSocketBaseURL + "/history")
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, unmarshalErrorResp(resp)
+	}
+
+	defer func() { errz.Log(resp.Body.Close()) }()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result apitypes.HistoryResponse
+	if err := json.Unmarshal(body, &result.Activities); err != nil {
+		return nil, fmt.Errorf("Non-JSON body at %v: %v", "/history", string(body))
+	}
+
+	return result.Activities, nil
+}
+
+// ActivityJournal returns a reader for the journal associated with a particular command in history.
+func (c *DomainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
+	// Intentionally skip journaling activity associated with history because that would modify it.
+	resp, err := c.Get(domainSocketBaseURL + "/history/" + strconv.Itoa(index))
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, unmarshalErrorResp(resp)
+	}
+
+	return resp.Body, nil
 }
 
 // Clear the cache at "path".

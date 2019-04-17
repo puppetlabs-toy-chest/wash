@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,10 +25,9 @@ import (
 //       200: octetResponse
 //       404: errorResp
 //       500: errorResp
-var readHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}
@@ -37,26 +36,26 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		return unsupportedActionResponse(path, plugin.ReadAction)
 	}
 
-	journal.Record(ctx, "API: Read %v", path)
+	activity.Record(ctx, "API: Read %v", path)
 	content, err := plugin.CachedOpen(ctx, entry.(plugin.Readable))
 
 	if err != nil {
-		journal.Record(ctx, "API: Read %v errored: %v", path, err)
+		activity.Record(ctx, "API: Read %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
-	journal.Record(ctx, "API: Reading %v", path)
+	activity.Record(ctx, "API: Reading %v", path)
 
 	w.WriteHeader(http.StatusOK)
 	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 	if n != content.Size() {
 		log.Warnf("Read incomplete %v/%v", n, content.Size())
-		journal.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
+		activity.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
 	}
 	if err != nil {
-		journal.Record(ctx, "API: Reading %v errored: %v", path, err)
+		activity.Record(ctx, "API: Reading %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction, err.Error())
 	}
 
-	journal.Record(ctx, "API: Reading %v complete", path)
+	activity.Record(ctx, "API: Reading %v complete", path)
 	return nil
 }

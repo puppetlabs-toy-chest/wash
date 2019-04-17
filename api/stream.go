@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -27,10 +27,9 @@ import (
 //       200: octetResponse
 //       404: errorResp
 //       500: errorResp
-var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}
@@ -44,14 +43,14 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p param
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	journal.Record(ctx, "API: Stream %v", path)
+	activity.Record(ctx, "API: Stream %v", path)
 	rdr, err := entry.(plugin.Streamable).Stream(ctx)
 
 	if err != nil {
-		journal.Record(ctx, "API: Stream %v errored: %v", path, err)
+		activity.Record(ctx, "API: Stream %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.StreamAction, err.Error())
 	}
-	journal.Record(ctx, "API: Streaming %v", path)
+	activity.Record(ctx, "API: Streaming %v", path)
 
 	w.WriteHeader(http.StatusOK)
 	// Ensure every write is a flush, and do an initial flush to send the header.
@@ -62,15 +61,15 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request, p param
 		// If a ReadCloser, ensure it's closed when the context is cancelled.
 		go func() {
 			<-r.Context().Done()
-			journal.Record(ctx, "API: Stream %v closed by completed context: %v", path, closer.Close())
+			activity.Record(ctx, "API: Stream %v closed by completed context: %v", path, closer.Close())
 		}()
 	}
 	if _, err := io.Copy(wf, rdr); err != nil {
 		// Common for copy to error when the caller closes the connection.
 		log.Debugf("Errored streaming response for entry %v: %v", path, err)
-		journal.Record(ctx, "API: Streaming %v errored: %v", path, err)
+		activity.Record(ctx, "API: Streaming %v errored: %v", path, err)
 	}
 
-	journal.Record(ctx, "API: Streaming %v complete", path)
+	activity.Record(ctx, "API: Streaming %v complete", path)
 	return nil
 }

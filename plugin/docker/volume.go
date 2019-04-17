@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	vol "github.com/puppetlabs/wash/volume"
 )
@@ -64,15 +64,15 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	defer func() {
 		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		journal.Record(ctx, "Deleted container %v: %v", cid, err)
+		activity.Record(ctx, "Deleted container %v: %v", cid, err)
 	}()
 
-	journal.Record(ctx, "Starting container %v", cid)
+	activity.Record(ctx, "Starting container %v", cid)
 	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Waiting for container %v", cid)
+	activity.Record(ctx, "Waiting for container %v", cid)
 	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
 	var statusCode int64
 	select {
@@ -80,7 +80,7 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	case result := <-waitC:
 		statusCode = result.StatusCode
-		journal.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
 	}
 
 	opts := types.ContainerLogsOptions{ShowStdout: true}
@@ -88,13 +88,13 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		opts.ShowStderr = true
 	}
 
-	journal.Record(ctx, "Gathering log for %v", cid)
+	activity.Record(ctx, "Gathering log for %v", cid)
 	output, err := v.client.ContainerLogs(ctx, cid, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		journal.Record(ctx, "Closed log for %v: %v", cid, output.Close())
+		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
 	}()
 
 	if statusCode != 0 {
@@ -139,7 +139,7 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 		return "", err
 	}
 	for _, warn := range created.Warnings {
-		journal.Record(ctx, "Warning creating %v: %v", created.ID, warn)
+		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
 	}
 	return created.ID, nil
 }
@@ -153,16 +153,16 @@ func (v *volume) getContentCB() vol.ContentCB {
 		}
 		defer func() {
 			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-			journal.Record(ctx, "Deleted temporary container %v: %v", cid, err)
+			activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
 		}()
 
-		journal.Record(ctx, "Starting container %v", cid)
+		activity.Record(ctx, "Starting container %v", cid)
 		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
 			return nil, err
 		}
 		defer func() {
 			err := v.client.ContainerKill(ctx, cid, "SIGKILL")
-			journal.Record(ctx, "Stopped temporary container %v: %v", cid, err)
+			activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
 		}()
 
 		// Download file, then kill container.
@@ -171,7 +171,7 @@ func (v *volume) getContentCB() vol.ContentCB {
 			return nil, err
 		}
 		defer func() {
-			journal.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
+			activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
 		}()
 
 		tarReader := tar.NewReader(rdr)

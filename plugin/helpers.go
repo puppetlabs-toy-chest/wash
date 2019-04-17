@@ -29,11 +29,11 @@ func Name(e Entry) string {
 }
 
 /*
-CName returns the entry's canonical name, which is what Wash uses
-to construct the entry's path (see plugin.Path). The entry's cname
-is plugin.Name(e), but with all '/' characters replaced by a '#' character.
-CNames are necessary because it is possible for entry names to have '/'es
-in them, which is illegal in bourne shells and UNIX-y filesystems.
+CName returns the entry's canonical name, which is what Wash uses to
+construct the entry's path. The entry's cname is plugin.Name(e), but with
+all '/' characters replaced by a '#' character. CNames are necessary
+because it is possible for entry names to have '/'es in them, which is
+illegal in bourne shells and UNIX-y filesystems.
 
 CNames are unique. CName uniqueness is checked in plugin.CachedList.
 

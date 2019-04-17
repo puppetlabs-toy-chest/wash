@@ -9,7 +9,7 @@ import (
 	"time"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -86,10 +86,9 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}
@@ -99,12 +98,12 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	}
 
 	if r.Body == nil {
-		return badRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
+		return badActionRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
 	}
 
 	var body apitypes.ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return badRequestResponse(path, plugin.ExecAction, err.Error())
+		return badActionRequestResponse(path, plugin.ExecAction, err.Error())
 	}
 
 	fw, ok := w.(flushableWriter)
@@ -112,14 +111,14 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	journal.Record(ctx, "API: Exec %v %+v", path, body)
+	activity.Record(ctx, "API: Exec %v %+v", path, body)
 	opts := plugin.ExecOptions{}
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
 	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
-		journal.Record(ctx, "API: Exec %v errored: %v", path, err)
+		activity.Record(ctx, "API: Exec %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ExecAction, err.Error())
 	}
 
@@ -130,6 +129,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 	streamOutput(ctx, enc, result.OutputCh)
 	streamExitCode(ctx, enc, result.ExitCodeCB)
 
-	journal.Record(ctx, "API: Exec %v complete", path)
+	activity.Record(ctx, "API: Exec %v complete", path)
 	return nil
 }

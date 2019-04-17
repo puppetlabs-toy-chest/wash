@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -23,7 +23,7 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	if err == nil {
 		return meta.Config.Tty
 	}
-	journal.Record(ctx, "Error reading info for container %v: %v", clf.containerName, err)
+	activity.Record(ctx, "Error reading info for container %v: %v", clf.containerName, err)
 	// Assume true so we don't try to process output if there was an error.
 	return true
 }
@@ -58,7 +58,7 @@ func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, erro
 			return nil, err
 		}
 	}
-	journal.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
+	activity.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
 
 	return bytes.NewReader(buf.Bytes()), nil
 }
@@ -77,9 +77,9 @@ func (clf *containerLogFile) Stream(ctx context.Context) (io.Reader, error) {
 	r, w := io.Pipe()
 	go func() {
 		if _, err = stdcopy.StdCopy(w, w, rdr); err != nil {
-			journal.Record(ctx, "Errored reading container %v: %v", clf.containerName, err)
+			activity.Record(ctx, "Errored reading container %v: %v", clf.containerName, err)
 		}
-		journal.Record(ctx, "Closing write pipe: %v", w.Close())
+		activity.Record(ctx, "Closing write pipe: %v", w.Close())
 	}()
 	return r, nil
 }

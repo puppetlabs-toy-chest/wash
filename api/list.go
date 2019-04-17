@@ -6,9 +6,16 @@ import (
 	"net/http"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
+
+// swagger:response
+//nolint:deadcode,unused
+type entryList struct {
+	// in: body
+	Entries []apitypes.Entry
+}
 
 // swagger:route GET /fs/list list listEntries
 //
@@ -22,14 +29,13 @@ import (
 //     Schemes: http
 //
 //     Responses:
-//       200: Entry
+//       200: entryList
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}
@@ -38,11 +44,11 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		return unsupportedActionResponse(path, plugin.ListAction)
 	}
 
-	journal.Record(ctx, "API: List %v", path)
+	activity.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
 	entries, err := plugin.CachedList(ctx, group)
 	if err != nil {
-		journal.Record(ctx, "API: List %v errored: %v", path, err)
+		activity.Record(ctx, "API: List %v errored: %v", path, err)
 
 		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 			return duplicateCNameResponse(cnameErr)
@@ -57,15 +63,15 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request, p params)
 		apiEntry.Path = path + "/" + apiEntry.CName
 		result = append(result, apiEntry)
 	}
-	journal.Record(ctx, "API: List %v %+v", path, result)
+	activity.Record(ctx, "API: List %v %+v", path, result)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		journal.Record(ctx, "API: List marshalling %v errored: %v", path, err)
+		activity.Record(ctx, "API: List marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
 
-	journal.Record(ctx, "API: List %v complete", path)
+	activity.Record(ctx, "API: List %v complete", path)
 	return nil
 }

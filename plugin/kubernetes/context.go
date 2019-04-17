@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -21,10 +21,10 @@ func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 	nsi := c.client.CoreV1().Namespaces()
 	nsList, err := nsi.List(metav1.ListOptions{})
 	if err != nil {
-		journal.Record(ctx, "Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
+		activity.Record(ctx, "Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
 		ns, err := nsi.Get(c.defaultns, metav1.GetOptions{})
 		if err != nil {
-			journal.Record(ctx, "Error loading default namespace, metadata will not be available: %v", err)
+			activity.Record(ctx, "Error loading default namespace, metadata will not be available: %v", err)
 		}
 		return []plugin.Entry{newNamespace(c.defaultns, ns, c.client, c.config)}, nil
 	}
@@ -33,6 +33,6 @@ func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 	for i, ns := range nsList.Items {
 		namespaces[i] = newNamespace(ns.Name, &ns, c.client, c.config)
 	}
-	journal.Record(ctx, "Listing namespaces: %+v", namespaces)
+	activity.Record(ctx, "Listing namespaces: %+v", namespaces)
 	return namespaces, nil
 }

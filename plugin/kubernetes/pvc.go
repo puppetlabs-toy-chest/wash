@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/volume"
 	corev1 "k8s.io/api/core/v1"
@@ -50,7 +50,7 @@ func (v *pvc) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	journal.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
+	activity.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
 
 	return plugin.ToMeta(obj), nil
 }
@@ -62,22 +62,22 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 	defer func() {
-		journal.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
 	}()
 
-	journal.Record(ctx, "Waiting for pod %v to start", pid)
+	activity.Record(ctx, "Waiting for pod %v to start", pid)
 	// Start watching for new events related to the pod we created.
 	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Gathering log for %v", pid)
+	activity.Record(ctx, "Gathering log for %v", pid)
 	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 	if lerr != nil {
 		return nil, lerr
 	}
 	defer func() {
-		journal.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
 	}()
 
 	if err == errPodTerminated {
@@ -92,7 +92,7 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	journal.Record(ctx, "Files found in persistent volume claim %v: %+v", v.Name(), dirs)
+	activity.Record(ctx, "Files found in persistent volume claim %v: %+v", v.Name(), dirs)
 
 	root := dirs[""]
 	entries := make([]plugin.Entry, 0, len(root))
@@ -171,7 +171,7 @@ func (v *pvc) waitForPod(ctx context.Context, pid string) error {
 				case corev1.PodFailed:
 					return errPodTerminated
 				case corev1.PodUnknown:
-					journal.Record(ctx, "Unknown state for pod %v: %v", pid, e.Object)
+					activity.Record(ctx, "Unknown state for pod %v: %v", pid, e.Object)
 				}
 			case watch.Error:
 				return fmt.Errorf("Pod %v errored: %v", pid, e.Object)
@@ -186,35 +186,35 @@ func (v *pvc) getContentCB() volume.ContentCB {
 	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
 		// Create a container that mounts a pvc and waits. Use it to download a file.
 		pid, err := v.createPod([]string{"cat", mountpoint + path})
-		journal.Record(ctx, "Reading from: %v", mountpoint+path)
+		activity.Record(ctx, "Reading from: %v", mountpoint+path)
 		if err != nil {
 			return nil, err
 		}
 		defer func() {
-			journal.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+			activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
 		}()
 
-		journal.Record(ctx, "Waiting for pod %v", pid)
+		activity.Record(ctx, "Waiting for pod %v", pid)
 		// Start watching for new events related to the pod we created.
 		if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
 			return nil, err
 		}
 		podErr := err
 
-		journal.Record(ctx, "Gathering log for %v", pid)
+		activity.Record(ctx, "Gathering log for %v", pid)
 		output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
 		if err != nil {
 			return nil, err
 		}
 		defer func() {
-			journal.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+			activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
 		}()
 
 		bits, err := ioutil.ReadAll(output)
 		if err != nil {
 			return nil, err
 		}
-		journal.Record(ctx, "Read: %v", bits)
+		activity.Record(ctx, "Read: %v", bits)
 
 		if podErr == errPodTerminated {
 			return nil, errors.New(string(bits))

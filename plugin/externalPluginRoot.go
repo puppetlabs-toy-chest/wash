@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 )
 
 // externalPluginRoot represents an external plugin's root.
@@ -34,7 +34,7 @@ func (r *externalPluginRoot) Init() error {
 
 	var decodedRoot decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
-		journal.Record(
+		activity.Record(
 			ctx,
 			"could not decode the plugin root from stdout\nreceived:\n%v\nexpected something like:\n%v",
 			strings.TrimSpace(string(stdout)),

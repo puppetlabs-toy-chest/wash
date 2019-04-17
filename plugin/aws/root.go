@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"gopkg.in/go-ini/ini.v1"
 )
@@ -102,7 +102,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	journal.Record(ctx, "Loading profiles from %v and %v", awsConfig, awsCredentials)
+	activity.Record(ctx, "Loading profiles from %v and %v", awsConfig, awsCredentials)
 
 	cred, err := ini.Load(awsCredentials)
 	if err != nil {
@@ -133,7 +133,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 		profile, err := newProfile(ctx, name)
 		if err != nil {
-			journal.Record(ctx, err.Error())
+			activity.Record(ctx, err.Error())
 			continue
 		}
 

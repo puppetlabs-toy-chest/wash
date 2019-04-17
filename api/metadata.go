@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -27,33 +27,32 @@ type entryMetadata struct {
 //     Schemes: http
 //
 //     Responses:
-//       200: metadataMap
+//       200: entryMetadata
 //       404: errorResp
 //       500: errorResp
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request, p params) *errorResponse {
-	path := p.Path
+var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, errResp := getEntryFromPath(ctx, path)
+	entry, path, errResp := getEntryFromRequest(ctx, r)
 	if errResp != nil {
 		return errResp
 	}
 
-	journal.Record(ctx, "API: Metadata %v", path)
+	activity.Record(ctx, "API: Metadata %v", path)
 	metadata, err := plugin.CachedMetadata(ctx, entry)
 
 	if err != nil {
-		journal.Record(ctx, "API: Metadata %v errored: %v", path, err)
+		activity.Record(ctx, "API: Metadata %v errored: %v", path, err)
 		return unknownErrorResponse(err)
 	}
-	journal.Record(ctx, "API: Metadata %v %+v", path, metadata)
+	activity.Record(ctx, "API: Metadata %v %+v", path, metadata)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(metadata); err != nil {
-		journal.Record(ctx, "API: Metadata marshalling %v errored: %v", path, err)
+		activity.Record(ctx, "API: Metadata marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))
 	}
 
-	journal.Record(ctx, "API: Metadata %v complete", path)
+	activity.Record(ctx, "API: Metadata %v complete", path)
 	return nil
 }

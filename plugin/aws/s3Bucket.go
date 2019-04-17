@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -110,7 +110,7 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	numObjects := len(resp.Contents)
 	entries := make([]plugin.Entry, 0, numPrefixes+numObjects)
 
-	journal.Record(
+	activity.Record(
 		ctx,
 		"(Bucket %v, Prefix %v): Retrieved %v prefixes and %v objects",
 		bucket,

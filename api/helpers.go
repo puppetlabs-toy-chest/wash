@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,12 +62,25 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 	return curEntry, nil
 }
 
-func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorResponse) {
+func getPathFromRequest(r *http.Request) (string, *errorResponse) {
+	paths := r.URL.Query()["path"]
+	if len(paths) != 1 {
+		return "", invalidPathsResponse(paths)
+	}
+	return paths[0], nil
+}
+
+func getEntryFromRequest(ctx context.Context, r *http.Request) (plugin.Entry, string, *errorResponse) {
+	path, errResp := getPathFromRequest(r)
+	if errResp != nil {
+		return nil, "", errResp
+	}
+
 	if path == "" {
 		panic("path should never be empty")
 	}
 	if !filepath.IsAbs(path) {
-		return nil, relativePathResponse(path)
+		return nil, "", relativePathResponse(path)
 	}
 
 	mountpoint := ctx.Value(mountpointKey).(string)
@@ -82,36 +96,37 @@ func getEntryFromPath(ctx context.Context, path string) (plugin.Entry, *errorRes
 		e, err := apifs.NewEntry(path)
 		if err != nil {
 			if os.IsNotExist(err) {
-				return nil, entryNotFoundResponse(path, err.Error())
+				return nil, "", entryNotFoundResponse(path, err.Error())
 			}
 			err = fmt.Errorf("could not stat the regular file/dir pointed to by %v: %v", path, err)
-			return nil, unknownErrorResponse(err)
+			return nil, "", unknownErrorResponse(err)
 		}
-		return e, nil
+		return e, path, nil
 	}
 	// Don't interpret trailing slash as a new segment, and ignore optional leading slash
-	path = strings.Trim(trimmedPath, "/")
+	trimmedPath = strings.Trim(trimmedPath, "/")
 
 	// Get the registry from context (added by registry middleware).
 	registry := ctx.Value(pluginRegistryKey).(*plugin.Registry)
-	if path == "" {
+	if trimmedPath == "" {
 		// Return the registry
-		return registry, nil
+		return registry, path, nil
 	}
 
 	// Split into plugin name and an optional list of segments.
-	segments := strings.Split(path, "/")
+	segments := strings.Split(trimmedPath, "/")
 	pluginName := segments[0]
 	segments = segments[1:]
 
 	root, ok := registry.Plugins()[pluginName]
 	if !ok {
-		return nil, pluginDoesNotExistResponse(pluginName)
+		return nil, "", pluginDoesNotExistResponse(pluginName)
 	}
 	if len(segments) == 0 {
 		// Listing the plugin itself, so return it's root
-		return root, nil
+		return root, path, nil
 	}
 
-	return findEntry(ctx, root, segments)
+	entry, err := findEntry(ctx, root, segments)
+	return entry, path, err
 }

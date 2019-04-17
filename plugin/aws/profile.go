@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -23,7 +23,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	profile := profile{EntryBase: plugin.NewEntry(name)}
 	profile.DisableDefaultCaching()
 
-	journal.Record(ctx, "Creating a new AWS session for the %v profile", name)
+	activity.Record(ctx, "Creating a new AWS session for the %v profile", name)
 
 	// Create the session. SharedConfigEnable tells AWS to load the profile
 	// config from the ~/.aws/credentials and ~/.aws/config files
@@ -42,7 +42,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	if cacheProvider, err := newFileCacheProvider(ctx, name, sess.Config.Credentials); err == nil {
 		sess.Config.Credentials = credentials.NewCredentials(&cacheProvider)
 	} else {
-		journal.Record(ctx, "Unable to use cached credentials for %v profile: %v", name, err)
+		activity.Record(ctx, "Unable to use cached credentials for %v profile: %v", name, err)
 	}
 
 	// Force retrieving credentials now to expose errors early.

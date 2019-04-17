@@ -15,7 +15,7 @@ import (
 	ec2Client "github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/kballard/go-shellquote"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -279,7 +279,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		cmdStr = "echo -n " + quoted + " | " + cmdStr
 	}
 
-	journal.Record(ctx, "Sending the following command to the SSM agent:\n%v", cmdStr)
+	activity.Record(ctx, "Sending the following command to the SSM agent:\n%v", cmdStr)
 	request := &ssm.SendCommandInput{
 		CloudWatchOutputConfig: &ssm.CloudWatchOutputConfig{
 			// When CloudWatch output is enabled, AWS will send stdout/stderr
@@ -317,7 +317,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	}
 
 	commandID := awsSDK.StringValue(resp.Command.CommandId)
-	journal.Record(ctx, "Successfully sent the command. Command ID: %v", commandID)
+	activity.Record(ctx, "Successfully sent the command. Command ID: %v", commandID)
 
 	outputCh, outputStreamer := newOutputStreamer(ctx, inst.cloudwatchClient, commandID, inst.Name())
 	var exitCode int
@@ -329,7 +329,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			exitCodeErr = err
 		}
 		cancelCommand := func(reason string) {
-			journal.Record(ctx, "Cancelling the command. Reason: %v", reason)
+			activity.Record(ctx, "Cancelling the command. Reason: %v", reason)
 
 			request := &ssm.CancelCommandInput{
 				CommandId: awsSDK.String(commandID),
@@ -348,9 +348,9 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			// so we can discard it.
 			_, err := inst.ssmClient.CancelCommandWithContext(cancelCtx, request)
 			if err != nil {
-				journal.Record(ctx, "Failed to cancel the command: %v", err)
+				activity.Record(ctx, "Failed to cancel the command: %v", err)
 			} else {
-				journal.Record(ctx, "Successfully cancelled the command")
+				activity.Record(ctx, "Successfully cancelled the command")
 			}
 		}
 
@@ -363,7 +363,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		for {
 			time.Sleep(sleepDuration)
 
-			journal.Record(ctx, "Getting the command status")
+			activity.Record(ctx, "Getting the command status")
 			request := &ssm.GetCommandInvocationInput{
 				CommandId:  awsSDK.String(commandID),
 				InstanceId: awsSDK.String(inst.Name()),
@@ -378,7 +378,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			}
 
 			status := awsSDK.StringValue(resp.StatusDetails)
-			journal.Record(ctx, "Command status: %v", status)
+			activity.Record(ctx, "Command status: %v", status)
 
 			switch status {
 			case CommandPending, CommandDelayed:
@@ -393,11 +393,11 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 				exitCode = int(awsSDK.Int64Value(resp.ResponseCode))
 
 				// Write the remaining output chunks (if any)
-				journal.Record(ctx, "Command finished. Sending over its remaining output...")
+				activity.Record(ctx, "Command finished. Sending over its remaining output...")
 				for {
 					chunksWereSent, err := outputStreamer.sendNextChunks()
 					if err != nil {
-						journal.Record(ctx, "Failed to send over the remaining output: %v", err)
+						activity.Record(ctx, "Failed to send over the remaining output: %v", err)
 						closeOutputStreamer(err)
 						return
 					}
@@ -407,7 +407,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 					} else {
 						// No new chunks were written. Assume that this means
 						// we've finished writing the output
-						journal.Record(ctx, "Finished sending the output.")
+						activity.Record(ctx, "Finished sending the output.")
 						closeOutputStreamer(nil)
 						return
 					}
@@ -464,7 +464,7 @@ func newOutputStreamer(
 }
 
 func (s *outputStreamer) sendNextChunks() (bool, error) {
-	journal.Record(s.ctx, "Attempting to send the next set of output chunks to stdout and stderr")
+	activity.Record(s.ctx, "Attempting to send the next set of output chunks to stdout and stderr")
 
 	// Unfortunately, we can't use FilterLogEvents to get this info in a single
 	// stream because AWS gives no guarantee that the interleaved events will be
@@ -485,7 +485,7 @@ func (s *outputStreamer) sendNextChunks() (bool, error) {
 	}
 
 	if len(stdoutEvents) == 0 && len(stderrEvents) == 0 {
-		journal.Record(s.ctx, "Did not send any chunks: the stdout/stderr log streams did not have any new events")
+		activity.Record(s.ctx, "Did not send any chunks: the stdout/stderr log streams did not have any new events")
 		return false, nil
 	}
 
@@ -594,7 +594,7 @@ func newOutputLogStream(
 }
 
 func (s *outputLogStream) nextEvents(ctx context.Context) ([]*cloudwatchlogs.OutputLogEvent, error) {
-	journal.Record(
+	activity.Record(
 		ctx,
 		"Fetching the next CloudWatch log events for %v. Log group name: %v. Log stream name: %v",
 		s.name,
@@ -624,7 +624,7 @@ func (s *outputLogStream) nextEvents(ctx context.Context) ([]*cloudwatchlogs.Out
 				// The stream hasn't been created. This is OK. It means that
 				// AWS hasn't sent them over yet, OR the command hasn't printed
 				// anything to this stream.
-				journal.Record(
+				activity.Record(
 					ctx,
 					"Did not fetch any events for %v: the log stream hasn't been created yet",
 					s.name,
@@ -639,7 +639,7 @@ func (s *outputLogStream) nextEvents(ctx context.Context) ([]*cloudwatchlogs.Out
 	s.created = true
 	s.nextToken = awsSDK.StringValue(resp.NextForwardToken)
 
-	journal.Record(ctx, "Fetched %v new events for %v", len(resp.Events), s.name)
+	activity.Record(ctx, "Fetched %v new events for %v", len(resp.Events), s.name)
 	return resp.Events, nil
 }
 
@@ -648,7 +648,7 @@ func (s *outputLogStream) Close(ctx context.Context) {
 		return
 	}
 
-	journal.Record(
+	activity.Record(
 		ctx,
 		"Deleting the logs for %v. Log group name: %v. Log stream name: %v",
 		s.name,
@@ -671,6 +671,6 @@ func (s *outputLogStream) Close(ctx context.Context) {
 	// so we can discard it
 	_, err := s.client.DeleteLogStreamWithContext(deleteCtx, request)
 	if err != nil {
-		journal.Record(ctx, "Failed to delete the logs for %v: %v", s.name, err)
+		activity.Record(ctx, "Failed to delete the logs for %v: %v", s.name, err)
 	}
 }

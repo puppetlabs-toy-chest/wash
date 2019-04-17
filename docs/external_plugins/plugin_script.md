@@ -128,7 +128,7 @@ The `exec` action is invoked as `<plugin_script> exec <path> <state> <cmd> <args
 Because the `exec` action effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
 ## Errors <a name="errors"></a>
-All errors are printed to `stderr`. An action invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of `stderr` into an error object, then documents that error in the process' journal and the server logs.
+All errors are printed to `stderr`. An action invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of `stderr` into an error object, then documents that error in the process' activity and the server logs.
 
 **NOTE:** Not all actions adopt this error handling convention (e.g. `exec`). The error handling for these "snowflake" actions is described in their respective sections.
 

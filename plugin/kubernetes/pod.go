@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/puppetlabs/wash/journal"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +73,7 @@ func (p *pod) fetchLogContent(ctx context.Context) []byte {
 	if n, err = buf.ReadFrom(rdr); err != nil {
 		return []byte(fmt.Sprintf("unable to read logs: %v", err))
 	}
-	journal.Record(ctx, "Read %v bytes of %v log", n, p.Name())
+	activity.Record(ctx, "Read %v bytes of %v log", n, p.Name())
 	return buf.Bytes()
 }
 
@@ -149,7 +149,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	go func() {
 		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: opts.Stdin}
 		err = executor.Stream(streamOpts)
-		journal.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
+		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
 			exitcode = exerr.ExitStatus()
 			err = nil

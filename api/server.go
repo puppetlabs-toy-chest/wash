@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/gorilla/mux"
+	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/journal"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -24,7 +24,8 @@ const (
 	mountpointKey
 )
 
-// swagger:parameters cacheDelete listEntries executeCommand getMetadata readContent streamUpdates
+// swagger:parameters cacheDelete listEntries entryInfo executeCommand getMetadata readContent streamUpdates
+//nolint:deadcode,unused
 type params struct {
 	// uniquely identifies an entry
 	//
@@ -39,19 +40,12 @@ type octetResponse struct {
 	Reader io.Reader
 }
 
-type handler func(http.ResponseWriter, *http.Request, params) *errorResponse
+type handler func(http.ResponseWriter, *http.Request) *errorResponse
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Infof("API: %v %v", r.Method, r.URL)
 
-	paths := r.URL.Query()["path"]
-	if len(paths) != 1 {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "Request must include one 'path' query parameter")
-		return
-	}
-
-	if err := handle(w, r, params{Path: paths[0]}); err != nil {
+	if err := handle(w, r); err != nil {
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
@@ -98,7 +92,11 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			newctx := context.WithValue(r.Context(), pluginRegistryKey, registry)
 			newctx = context.WithValue(newctx, mountpointKey, mountpoint)
-			newctx = context.WithValue(newctx, journal.Key, r.Header.Get(apitypes.JournalIDHeader))
+			journal := activity.NewJournal(
+				r.Header.Get(apitypes.JournalIDHeader),
+				r.Header.Get(apitypes.JournalDescHeader),
+			)
+			newctx = context.WithValue(newctx, activity.JournalKey, journal)
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(w, r.WithContext(newctx))
@@ -114,6 +112,8 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 	r.Handle("/fs/stream", streamHandler).Methods(http.MethodGet)
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
+	r.Handle("/history", historyHandler).Methods(http.MethodGet)
+	r.Handle("/history/{index:[0-9]+}", historyEntryHandler).Methods(http.MethodGet)
 
 	r.Use(prepareContextMiddleWare)
 
