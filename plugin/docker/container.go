@@ -14,12 +14,13 @@ import (
 
 type container struct {
 	plugin.EntryBase
+	id     string
 	client *client.Client
 }
 
 func (c *container) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 	// Use raw to also get the container size.
-	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.Name(), true)
+	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.id, true)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	cmAttr.SetSize(uint64(meta["Size"].(int64)))
 	cm.SetAttributes(cmAttr)
 
-	clf := &containerLogFile{plugin.NewEntry("log"), c.Name(), c.client}
+	clf := &containerLogFile{plugin.NewEntry("log"), c.id, c.client}
 	clf.DisableCachingFor(plugin.MetadataOp)
 	meta, err = clf.Metadata(ctx)
 	if err != nil {
@@ -61,7 +62,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	if opts.Stdin != nil {
 		cfg.AttachStdin = true
 	}
-	created, err := c.client.ContainerExecCreate(ctx, c.Name(), cfg)
+	created, err := c.client.ContainerExecCreate(ctx, c.id, cfg)
 	if err != nil {
 		return execResult, err
 	}
