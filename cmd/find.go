@@ -7,11 +7,13 @@ import (
 
 func findCommand() *cobra.Command {
 	findCmd := &cobra.Command{
-		Use: "find <path> [expression]",
+		// `wash find` parses its own flags to keep its syntax consistent with the
+		// existing `find` command
+		DisableFlagParsing: true,
+		Use:                "find <path> [expression]",
 		// TODO: More detailed usage. Will need to use custom help text in order to
 		// properly enumerate all the primaries.
 		Short: "Finds stuff",
-		Args:  cobra.MinimumNArgs(1),
 	}
 
 	// This tells Cobra to stop parsing CLI flags after the first positional

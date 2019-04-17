@@ -39,17 +39,18 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 	// be loaded when the primary package is loaded. The primary package
 	// is only loaded if it is consumed by another package, so we
 	// force it to load here by calling primary.LoadAll(). primary.LoadAll()
-	// noops, so it is safe to call this multiple times.
+	// noops, so it is safe to call it multiple times.
 	primary.LoadAll()
 
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
-		// to `wash find`. Thus, we default to a types.Predicate that always returns
+		// to `wash find`. Thus, we default to a predicate that always returns
 		// true.
 		return func(e types.Entry) bool {
 			return true
 		}, nil
 	}
+
 	// Validate that the parentheses are correctly balanced.
 	// We do this outside of parseExpressionHelper to avoid
 	// redundant validation when parensOp recurses into it.

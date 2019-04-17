@@ -21,19 +21,12 @@ import (
 func Main(cmd *cobra.Command, args []string) int {
 	primary.FindStartTime = time.Now()
 
-	// TODO: Have `wash find` default to recursing on "." (the cwd)
-	// if the path is not provided. Also have it handle non-Wash
-	// paths.
-	path := args[0]
-	if path[0] == '-' {
-		cmdutil.ErrPrintf("find expects a path")
-		return 1
-	}
-	result, err := parser.Parse(args[1:])
+	result, err := parser.Parse(args)
 	if err != nil {
 		cmdutil.ErrPrintf("find: %v\n", err)
 		return 1
 	}
+	path := result.Path
 	p := result.Predicate
 
 	conn := client.ForUNIXSocket(config.Socket)
