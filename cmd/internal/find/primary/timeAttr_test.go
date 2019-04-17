@@ -1,10 +1,11 @@
-package cmdfind
+package primary
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -13,11 +14,11 @@ type TimeAttrPrimaryTestSuite struct {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) SetupTest() {
-	startTime = time.Now()
+	FindStartTime = time.Now()
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
-	startTime = time.Time{}
+	FindStartTime = time.Time{}
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
@@ -36,7 +37,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
-	e := entry{}
+	e := types.Entry{}
 
 	// Test ctime
 	_, ok := getTimeAttrValue("ctime", e)
@@ -91,7 +92,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestParseDuration() {
 // These tests use the ctimePrimary as the representative test case
 
 func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryInsufficientArgsError() {
-	_, _, err := ctimePrimary.parse([]string{"-ctime"})
+	_, _, err := ctimePrimary.Parse([]string{"-ctime"})
 	suite.Equal("-ctime: requires additional arguments", err.Error())
 }
 
@@ -107,7 +108,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryIllegalTimeValueError(
 		"+1h30min",
 	}
 	for _, v := range illegalValues {
-		_, _, err := ctimePrimary.parse([]string{"-ctime", v})
+		_, _, err := ctimePrimary.Parse([]string{"-ctime", v})
 		msg := fmt.Sprintf("-ctime: %v: illegal time value", v)
 		suite.Equal(msg, err.Error())
 	}
@@ -139,17 +140,17 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 		inputStr := func() string {
 			return fmt.Sprintf("Input was '%v'", testCase.input)
 		}
-		p, tokens, err := ctimePrimary.parse([]string{"-ctime", testCase.input})
+		p, tokens, err := ctimePrimary.Parse([]string{"-ctime", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
-			e := entry{}
+			e := types.Entry{}
 			// Ensure p(e) is always false for an entry that doesn't have a ctime attribute
 			suite.False(p(e), inputStr())
 
-			e.Attributes.SetCtime(startTime.Add(-testCase.trueCtime))
+			e.Attributes.SetCtime(FindStartTime.Add(-testCase.trueCtime))
 			suite.True(p(e), inputStr())
 
-			e.Attributes.SetCtime(startTime.Add(-testCase.falseCtime))
+			e.Attributes.SetCtime(FindStartTime.Add(-testCase.falseCtime))
 			suite.False(p(e), inputStr())
 		}
 	}

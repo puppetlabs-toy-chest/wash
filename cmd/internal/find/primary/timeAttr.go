@@ -1,4 +1,4 @@
-package cmdfind
+package primary
 
 import (
 	"fmt"
@@ -6,9 +6,14 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
-var startTime time.Time
+// FindStartTime represents `wash find`'s start time. This is set by
+// `wash find`'s main function.
+var FindStartTime time.Time
 
 var durationsMap = map[byte]time.Duration{
 	's': time.Second,
@@ -30,7 +35,7 @@ func durationOf(unit byte) time.Duration {
 // We use getTimeAttrValue to retrieve the time attribute's value for performance
 // reasons. Using e.Attributes.ToMap()[name] would be slower because it would
 // require an additional type assertion to extract the time.Time object.
-func getTimeAttrValue(name string, e entry) (time.Time, bool) {
+func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 	switch name {
 	case "ctime":
 		return e.Attributes.Ctime(), e.Attributes.HasCtime()
@@ -93,11 +98,11 @@ func parseDuration(v string) (time.Duration, bool) {
 //
 // NOTE: For non-unit time values (e.g. 1, +1, -1), the difference is rounded to the next 24-hour period. For
 // example, a difference of 1.5 days will be rounded to 2 days.
-func newTimeAttrPrimary(name string) *atom {
+func newTimeAttrPrimary(name string) *grammar.Atom {
 	tk := "-" + name
-	return newAtom([]string{tk}, func(tokens []string) (predicate, []string, error) {
-		if startTime == (time.Time{}) {
-			panic("Attempting to parse a time primary without calling cmdfind.SetStartTime")
+	return grammar.NewAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
+		if FindStartTime == (time.Time{}) {
+			panic("Attempting to parse a time primary without setting primary.StartTime")
 		}
 
 		tokens = tokens[1:]
@@ -117,12 +122,12 @@ func newTimeAttrPrimary(name string) *atom {
 		}
 
 		duration, roundDiff := parseDuration(v)
-		p := func(e entry) bool {
+		p := func(e types.Entry) bool {
 			t, ok := getTimeAttrValue(name, e)
 			if !ok {
 				return false
 			}
-			diff := startTime.Sub(t)
+			diff := FindStartTime.Sub(t)
 			if roundDiff {
 				// Round-up diff to the next 24-hour period
 				roundedDays := time.Duration(math.Ceil(float64(diff) / float64(durationOf('d'))))

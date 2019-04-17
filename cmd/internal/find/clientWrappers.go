@@ -1,22 +1,17 @@
-package cmdfind
+package find
 
 import (
 	"github.com/puppetlabs/wash/api/client"
-	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
-type entry struct {
-	apitypes.Entry
-	NormalizedPath string
-}
-
 // info is a wrapper to c.Info
-func info(c *client.DomainSocketClient, path string) (entry, error) {
+func info(c *client.DomainSocketClient, path string) (types.Entry, error) {
 	e, err := c.Info(path)
 	if err != nil {
-		return entry{}, err
+		return types.Entry{}, err
 	}
-	return entry{
+	return types.Entry{
 		Entry:          e,
 		NormalizedPath: path,
 	}, nil
@@ -24,14 +19,14 @@ func info(c *client.DomainSocketClient, path string) (entry, error) {
 
 // list is a wrapper to c.List that handles normalizing the children's
 // path relative to e's normalized path
-func list(c *client.DomainSocketClient, e entry) ([]entry, error) {
+func list(c *client.DomainSocketClient, e types.Entry) ([]types.Entry, error) {
 	rawChildren, err := c.List(e.Path)
 	if err != nil {
 		return nil, err
 	}
-	children := make([]entry, len(rawChildren))
+	children := make([]types.Entry, len(rawChildren))
 	for i, rawChild := range rawChildren {
-		children[i] = entry{
+		children[i] = types.Entry{
 			Entry:          rawChild,
 			NormalizedPath: e.NormalizedPath + "/" + rawChild.CName,
 		}
