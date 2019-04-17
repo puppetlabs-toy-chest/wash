@@ -1,4 +1,4 @@
-package find
+package parser
 
 import (
 	"fmt"
@@ -8,42 +8,6 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
-
-func parse(tokens []string) (types.Predicate, error) {
-	// Each primary's declared as a package variable, so they'll
-	// be loaded when the primary package is loaded. The primary package
-	// is only loaded if it is consumed by another package, so we
-	// force it to load here by calling primary.LoadAll(). primary.LoadAll()
-	// noops, so it is safe to call this multiple times.
-	primary.LoadAll()
-
-	if len(tokens) == 0 {
-		// tokens is empty, meaning the user did not provide an expression
-		// to `wash find`. Thus, we default to a types.Predicate that always returns
-		// true.
-		return func(e types.Entry) bool {
-			return true
-		}, nil
-	}
-	// Validate that the parentheses are correctly balanced.
-	// We do this outside of parseExpression to avoid
-	// redundant validation when parensOp recurses into it.
-	s := stack.New()
-	for _, token := range tokens {
-		if token == "(" {
-			s.Push(token)
-		} else if token == ")" {
-			if s.Len() == 0 {
-				return nil, fmt.Errorf("): no beginning '('")
-			}
-			s.Pop()
-		}
-	}
-	if s.Len() > 0 {
-		return nil, fmt.Errorf("(: missing closing ')'")
-	}
-	return parseExpression(tokens)
-}
 
 /*
 An expression is described by the following grammar
@@ -71,8 +35,44 @@ Precedence of the binary operators -and and -or is enforced by maintaining an
 evaluation stack.
 */
 func parseExpression(tokens []string) (types.Predicate, error) {
+	// Each primary's declared as a package variable, so they'll
+	// be loaded when the primary package is loaded. The primary package
+	// is only loaded if it is consumed by another package, so we
+	// force it to load here by calling primary.LoadAll(). primary.LoadAll()
+	// noops, so it is safe to call this multiple times.
+	primary.LoadAll()
+
 	if len(tokens) == 0 {
-		panic("parseExpression: called with len(tokens) == 0")
+		// tokens is empty, meaning the user did not provide an expression
+		// to `wash find`. Thus, we default to a types.Predicate that always returns
+		// true.
+		return func(e types.Entry) bool {
+			return true
+		}, nil
+	}
+	// Validate that the parentheses are correctly balanced.
+	// We do this outside of parseExpressionHelper to avoid
+	// redundant validation when parensOp recurses into it.
+	s := stack.New()
+	for _, token := range tokens {
+		if token == "(" {
+			s.Push(token)
+		} else if token == ")" {
+			if s.Len() == 0 {
+				return nil, fmt.Errorf("): no beginning '('")
+			}
+			s.Pop()
+		}
+	}
+	if s.Len() > 0 {
+		return nil, fmt.Errorf("(: missing closing ')'")
+	}
+	return parseExpressionHelper(tokens)
+}
+
+func parseExpressionHelper(tokens []string) (types.Predicate, error) {
+	if len(tokens) == 0 {
+		panic("parseExpressionHelper: called with len(tokens) == 0")
 	}
 
 	s := newEvalStack()

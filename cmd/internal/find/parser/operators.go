@@ -1,4 +1,4 @@
-package find
+package parser
 
 import (
 	"fmt"
@@ -54,7 +54,7 @@ var parensOp = grammar.NewAtom([]string{"("}, func(tokens []string) (types.Predi
 	if ix == 0 {
 		return nil, nil, fmt.Errorf("(): empty inner expression")
 	}
-	p, err := parseExpression(tokens[:ix])
+	p, err := parseExpressionHelper(tokens[:ix])
 	return p, tokens[ix+1:], err
 })
 

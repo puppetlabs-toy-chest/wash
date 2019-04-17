@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
@@ -28,11 +29,12 @@ func Main(cmd *cobra.Command, args []string) int {
 		cmdutil.ErrPrintf("find expects a path")
 		return 1
 	}
-	p, err := parse(args[1:])
+	result, err := parser.Parse(args[1:])
 	if err != nil {
 		cmdutil.ErrPrintf("find: %v\n", err)
 		return 1
 	}
+	p := result.Predicate
 
 	conn := client.ForUNIXSocket(config.Socket)
 
