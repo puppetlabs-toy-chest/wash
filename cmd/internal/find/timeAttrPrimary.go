@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -95,9 +96,9 @@ func parseDuration(v string) (time.Duration, bool) {
 //
 // NOTE: For non-unit time values (e.g. 1, +1, -1), the difference is rounded to the next 24-hour period. For
 // example, a difference of 1.5 days will be rounded to 2 days.
-func newTimeAttrPrimary(name string) *atom {
+func newTimeAttrPrimary(name string) *grammar.Atom {
 	tk := "-" + name
-	return newAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
+	return grammar.NewAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
 		if startTime == (time.Time{}) {
 			panic("Attempting to parse a time primary without calling cmdfind.SetStartTime")
 		}

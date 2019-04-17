@@ -12,10 +12,10 @@ type NamePrimaryTestSuite struct {
 }
 
 func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
-	_, _, err := namePrimary.parse([]string{"-name"})
+	_, _, err := namePrimary.Parse([]string{"-name"})
 	suite.Regexp("-name: requires additional arguments", err)
 
-	_, _, err = namePrimary.parse([]string{"-name", "[a"})
+	_, _, err = namePrimary.Parse([]string{"-name", "[a"})
 	suite.Regexp("-name: invalid glob: unexpected end of input", err)
 }
 
@@ -24,7 +24,7 @@ func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
 	e1.CName = "a"
 	e2 := types.Entry{}
 	e2.CName = "b"
-	p, tokens, err := namePrimary.parse([]string{"-name", "a"})
+	p, tokens, err := namePrimary.Parse([]string{"-name", "a"})
 	if suite.NoError(err) {
 		suite.Equal([]string{}, tokens)
 		suite.Equal(true, p(e1))

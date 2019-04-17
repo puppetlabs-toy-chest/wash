@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
+	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // namePrimary => -name ShellGlob
-var namePrimary = newAtom([]string{"-name"}, func(tokens []string) (types.Predicate, []string, error) {
+var namePrimary = grammar.NewAtom([]string{"-name"}, func(tokens []string) (types.Predicate, []string, error) {
 	tokens = tokens[1:]
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("-name: requires additional arguments")

@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -39,7 +40,7 @@ var sizeValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[ckMGTP]))$`)
 //   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
 //
 //nolint
-var sizePrimary = newAtom([]string{"-size"}, func(tokens []string) (types.Predicate, []string, error) {
+var sizePrimary = grammar.NewAtom([]string{"-size"}, func(tokens []string) (types.Predicate, []string, error) {
 	tokens = tokens[1:]
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("-size: requires additional arguments")

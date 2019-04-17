@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/golang-collections/collections/stack"
+	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -67,12 +68,12 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 	}
 
 	s := newEvalStack()
-	var mostRecentOp *binaryOp
+	var mostRecentOp *grammar.BinaryOp
 	var mostRecentOpToken string
-	pushBinaryOp := func(token string, b *binaryOp) {
+	pushBinaryOp := func(token string, b *grammar.BinaryOp) {
 		// Invariant: s.Peek() returns a types.Predicate
 		if mostRecentOp != nil {
-			if b.precedence <= mostRecentOp.precedence {
+			if b.Precedence <= mostRecentOp.Precedence {
 				s.evaluate()
 			}
 		}
@@ -88,8 +89,8 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 		// new tokens variable within the if statement's scope.
 		var p types.Predicate
 		var err error
-		if atom, ok := atoms[token]; ok {
-			p, tokens, err = atom.parse(tokens)
+		if atom, ok := grammar.Atoms[token]; ok {
+			p, tokens, err = atom.Parse(tokens)
 			if err != nil {
 				return nil, err
 			}
@@ -99,7 +100,7 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 				pushBinaryOp("-a", andOp)
 			}
 			s.Push(p)
-		} else if b, ok := binaryOps[token]; ok {
+		} else if b, ok := grammar.BinaryOps[token]; ok {
 			tokens = tokens[1:]
 			if mostRecentOp == nil {
 				if _, ok := s.Peek().(types.Predicate); !ok {
@@ -108,7 +109,7 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 				pushBinaryOp(token, b)
 				continue
 			}
-			if _, ok := s.Peek().(*binaryOp); ok {
+			if _, ok := s.Peek().(*grammar.BinaryOp); ok {
 				// mostRecentOp's on the stack, and the parser's asking us to
 				// push b. This means that mostRecentOp did not have an expression
 				// after it, so report the error.
@@ -119,7 +120,7 @@ func parseExpression(tokens []string) (types.Predicate, error) {
 			return nil, fmt.Errorf("%v: unknown primary or operator", token)
 		}
 	}
-	if _, ok := s.Peek().(*binaryOp); ok {
+	if _, ok := s.Peek().(*grammar.BinaryOp); ok {
 		// This codepath is possible via something like "p1 -and"
 		return nil, fmt.Errorf("%v: no expression after %v", mostRecentOpToken, mostRecentOpToken)
 	}
@@ -140,8 +141,8 @@ func (s *evalStack) evaluate() {
 	// Invariant: s's layout is something like "p (<op> p)*"
 	for s.Len() > 1 {
 		p2 := s.Pop().(types.Predicate)
-		op := s.Pop().(*binaryOp)
+		op := s.Pop().(*grammar.BinaryOp)
 		p1 := s.Pop().(types.Predicate)
-		s.Push(op.combine(p1, p2))
+		s.Push(op.Combine(p1, p2))
 	}
 }

@@ -12,10 +12,10 @@ type PathPrimaryTestSuite struct {
 }
 
 func (suite *PathPrimaryTestSuite) TestPathPrimaryErrors() {
-	_, _, err := pathPrimary.parse([]string{"-path"})
+	_, _, err := pathPrimary.Parse([]string{"-path"})
 	suite.Regexp("-path: requires additional arguments", err)
 
-	_, _, err = pathPrimary.parse([]string{"-path", "[a"})
+	_, _, err = pathPrimary.Parse([]string{"-path", "[a"})
 	suite.Regexp("-path: invalid glob: unexpected end of input", err)
 }
 
@@ -24,7 +24,7 @@ func (suite *PathPrimaryTestSuite) TestPathPrimaryValidInput() {
 	e1.NormalizedPath = "a"
 	e2 := types.Entry{}
 	e2.NormalizedPath = "b"
-	p, tokens, err := pathPrimary.parse([]string{"-path", "a"})
+	p, tokens, err := pathPrimary.Parse([]string{"-path", "a"})
 	if suite.NoError(err) {
 		suite.Equal([]string{}, tokens)
 		suite.Equal(true, p(e1))
