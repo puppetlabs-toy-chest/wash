@@ -1,4 +1,4 @@
-package find
+package primary
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 )
 
 // namePrimary => -name ShellGlob
+//nolint
 var namePrimary = grammar.NewAtom([]string{"-name"}, func(tokens []string) (types.Predicate, []string, error) {
 	tokens = tokens[1:]
 	if len(tokens) == 0 {

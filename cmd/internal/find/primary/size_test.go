@@ -1,4 +1,4 @@
-package find
+package primary
 
 import (
 	"fmt"

@@ -5,10 +5,18 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 func parse(tokens []string) (types.Predicate, error) {
+	// Each primary's declared as a package variable, so they'll
+	// be loaded when the primary package is loaded. The primary package
+	// is only loaded if it is consumed by another package, so we
+	// force it to load here by calling primary.LoadAll(). primary.LoadAll()
+	// noops, so it is safe to call this multiple times.
+	primary.LoadAll()
+
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a types.Predicate that always returns
@@ -49,7 +57,7 @@ An expression is described by the following grammar
 		          Primary
 
 where 'Expression Atom' is semantically equivalent to 'Expression -a Atom'.
-Primaries have their own grammar. See the corresponding *Primary.go files
+Primaries have their own grammar. See the corresponding primary/*.go files
 for more details.
 
 Operator precedence is (from highest to lowest):

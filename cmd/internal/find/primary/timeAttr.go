@@ -1,4 +1,4 @@
-package find
+package primary
 
 import (
 	"fmt"
@@ -11,7 +11,9 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
-var startTime time.Time
+// FindStartTime represents `wash find`'s start time. This is set by
+// `wash find`'s main function.
+var FindStartTime time.Time
 
 var durationsMap = map[byte]time.Duration{
 	's': time.Second,
@@ -99,8 +101,8 @@ func parseDuration(v string) (time.Duration, bool) {
 func newTimeAttrPrimary(name string) *grammar.Atom {
 	tk := "-" + name
 	return grammar.NewAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
-		if startTime == (time.Time{}) {
-			panic("Attempting to parse a time primary without calling cmdfind.SetStartTime")
+		if FindStartTime == (time.Time{}) {
+			panic("Attempting to parse a time primary without setting primary.StartTime")
 		}
 
 		tokens = tokens[1:]
@@ -125,7 +127,7 @@ func newTimeAttrPrimary(name string) *grammar.Atom {
 			if !ok {
 				return false
 			}
-			diff := startTime.Sub(t)
+			diff := FindStartTime.Sub(t)
 			if roundDiff {
 				// Round-up diff to the next 24-hour period
 				roundedDays := time.Duration(math.Ceil(float64(diff) / float64(durationOf('d'))))

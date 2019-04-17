@@ -1,4 +1,4 @@
-package find
+package primary
 
 import (
 	"fmt"
@@ -14,11 +14,11 @@ type TimeAttrPrimaryTestSuite struct {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) SetupTest() {
-	startTime = time.Now()
+	FindStartTime = time.Now()
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
-	startTime = time.Time{}
+	FindStartTime = time.Time{}
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
@@ -147,10 +147,10 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 			// Ensure p(e) is always false for an entry that doesn't have a ctime attribute
 			suite.False(p(e), inputStr())
 
-			e.Attributes.SetCtime(startTime.Add(-testCase.trueCtime))
+			e.Attributes.SetCtime(FindStartTime.Add(-testCase.trueCtime))
 			suite.True(p(e), inputStr())
 
-			e.Attributes.SetCtime(startTime.Add(-testCase.falseCtime))
+			e.Attributes.SetCtime(FindStartTime.Add(-testCase.falseCtime))
 			suite.False(p(e), inputStr())
 		}
 	}

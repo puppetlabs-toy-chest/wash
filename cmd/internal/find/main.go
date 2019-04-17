@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang-collections/collections/stack"
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
@@ -17,7 +18,7 @@ import (
 
 // Main is `wash find`'s main function.
 func Main(cmd *cobra.Command, args []string) int {
-	startTime = time.Now()
+	primary.FindStartTime = time.Now()
 
 	// TODO: Have `wash find` default to recursing on "." (the cwd)
 	// if the path is not provided. Also have it handle non-Wash
