@@ -115,6 +115,7 @@ func (cache *MemCache) Flush() {
 
 // Delete removes entries from the cache that match the provided regexp.
 func (cache *MemCache) Delete(matcher *regexp.Regexp) []string {
+	log.Debugf("Deleting matches for %v", matcher)
 	items := cache.instance.Items()
 	deleted := make([]string, 0, len(items))
 	for k := range items {

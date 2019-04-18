@@ -197,3 +197,11 @@ func relativePathResponse(path string) *errorResponse {
 
 	return &errorResponse{http.StatusBadRequest, body}
 }
+
+func nonWashPathResponse(path string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.NonWashPath,
+		"Request path is not managed by wash",
+		apitypes.ErrorFields{"path": path},
+	)}
+}

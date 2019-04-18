@@ -107,8 +107,8 @@ func (m *mockRoot) List(ctx context.Context) ([]plugin.Entry, error) {
 	return args.Get(0).([]plugin.Entry), args.Error(1)
 }
 
-func getRequest(path string) *http.Request {
-	return &http.Request{URL: &url.URL{RawQuery: url.Values{"path": []string{path}}.Encode()}}
+func getRequest(ctx context.Context, path string) *http.Request {
+	return (&http.Request{URL: &url.URL{RawQuery: url.Values{"path": []string{path}}.Encode()}}).WithContext(ctx)
 }
 
 func (suite *HelpersTestSuite) TestGetEntryFromPath() {
@@ -121,37 +121,37 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	mountpoint := "/mountpoint"
 	ctx = context.WithValue(ctx, mountpointKey, mountpoint)
 
-	_, _, err := getEntryFromRequest(ctx, getRequest("relative"))
+	_, _, err := getEntryFromRequest(getRequest(ctx, "relative"))
 	suite.Error(relativePathResponse("relative"), err)
 
 	// TODO: Add tests for non-Wash entries (i.e. for apifs)
 
-	entry, path, err := getEntryFromRequest(ctx, getRequest(mountpoint))
+	entry, path, err := getEntryFromRequest(getRequest(ctx, mountpoint))
 	if suite.Nil(err) {
 		suite.Equal(mountpoint, path)
 		suite.Equal(reg.Name(), plugin.Name(entry))
 	}
 
-	entry, path, err = getEntryFromRequest(ctx, getRequest(mountpoint+"/"))
+	entry, path, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/"))
 	if suite.Nil(err) {
 		suite.Equal(mountpoint+"/", path)
 		suite.Equal(reg.Name(), plugin.Name(entry))
 	}
 
-	entry, path, err = getEntryFromRequest(ctx, getRequest(mountpoint+"/mine"))
+	entry, path, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/mine"))
 	if suite.Nil(err) {
 		suite.Equal(mountpoint+"/mine", path)
 		suite.Equal(plug.Name(), plugin.Name(entry))
 	}
 
-	_, _, err = getEntryFromRequest(ctx, getRequest(mountpoint+"/yours"))
+	_, _, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/yours"))
 	suite.Error(err)
 
 	file := plugin.NewEntry("a file")
 	file.SetTestID("/mine/a file")
 	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
 
-	entry, path, err = getEntryFromRequest(ctx, getRequest(mountpoint+"/mine/a file"))
+	entry, path, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/mine/a file"))
 	if suite.Nil(err) {
 		suite.Equal(mountpoint+"/mine/a file", path)
 		suite.Equal(file.Name(), plugin.Name(entry))
@@ -159,7 +159,7 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	plug.AssertExpectations(suite.T())
 
 	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
-	_, _, err = getEntryFromRequest(ctx, getRequest(mountpoint+"/mine/a dir"))
+	_, _, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/mine/a dir"))
 	suite.Error(err)
 	plug.AssertExpectations(suite.T())
 }

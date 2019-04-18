@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -86,13 +88,15 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	group.SetTestID("/dir")
 	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
+	reqCtx := context.WithValue(context.Background(), mountpointKey, "/")
+
 	expectedChildren := make(map[string]plugin.Entry)
-	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
+	if children, err := plugin.CachedList(reqCtx, group); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
 	// Test clearing a different cache
-	req := httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=file", nil)
+	req := httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=/file", nil).WithContext(reqCtx)
 	w := httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 	suite.Equal(http.StatusOK, w.Code)
@@ -103,7 +107,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	}
 
 	// Test clearing the cache
-	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=dir", nil)
+	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=/dir", nil).WithContext(reqCtx)
 	w = httptest.NewRecorder()
 	suite.router.ServeHTTP(w, req)
 	suite.Equal(http.StatusOK, w.Code)
@@ -114,6 +118,27 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	}
 
 	group.AssertNumberOfCalls(suite.T(), "List", 2)
+}
+
+func (suite *CacheHandlerTestSuite) TestClearCacheErrors() {
+	reqCtx := context.WithValue(context.Background(), mountpointKey, "/mnt")
+
+	// Test clearing cache by a relative path
+	req := httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=mnt/file", nil).WithContext(reqCtx)
+	w := httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+	suite.Equal(http.StatusBadRequest, w.Code)
+	var errResp apitypes.ErrorObj
+	suite.NoError(json.Unmarshal(w.Body.Bytes(), &errResp))
+	suite.Equal(apitypes.RelativePath, errResp.Kind)
+
+	// Test clearing cache outside the mountpoint
+	req = httptest.NewRequest(http.MethodDelete, "http://example.com/cache?path=/a/file", nil).WithContext(reqCtx)
+	w = httptest.NewRecorder()
+	suite.router.ServeHTTP(w, req)
+	suite.Equal(http.StatusBadRequest, w.Code)
+	suite.NoError(json.Unmarshal(w.Body.Bytes(), &errResp))
+	suite.Equal(apitypes.NonWashPath, errResp.Kind)
 }
 
 func TestCacheHandler(t *testing.T) {
