@@ -28,7 +28,7 @@ func StatCmd(path string) []string {
 	// %Z - Time of last status change as seconds since Epoch
 	// %f - Raw mode in hex
 	// %n - File name
-	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", ";"}
+	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
 }
 
 // TODO: Should move this over to plugin as a helper at some point
