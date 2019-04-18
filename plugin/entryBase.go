@@ -49,7 +49,9 @@ func NewEntry(name string) EntryBase {
 // ENTRY INTERFACE
 
 // Metadata returns the entry's meta attribute (see plugin.EntryAttributes).
-// Do not override this if the entry's metadata will never change.
+// This should be overridden if e's full metadata does not match the meta
+// attribute, which is true if the plugin API's List endpoint returns only a
+// subset of the full metadata.
 func (e *EntryBase) Metadata(ctx context.Context) (EntryMetadata, error) {
 	// Disable Metadata's caching in case the plugin author forgot to do this
 	e.DisableCachingFor(MetadataOp)

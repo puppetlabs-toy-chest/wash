@@ -13,9 +13,9 @@ type file struct {
 	*fsnode
 }
 
-func newFile(finfo os.FileInfo, path string) *file {
+func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
 	return &file{
-		newFSNode(finfo, path),
+		newFSNode(ctx, finfo, path),
 	}
 }
 

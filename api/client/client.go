@@ -25,18 +25,30 @@ import (
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
-// A DomainSocketClient is a wash API client.
-type DomainSocketClient struct {
-	http.Client
+// Client represents a Wash API client.
+type Client interface {
+	Info(path string) (apitypes.Entry, error)
+	List(path string) ([]apitypes.Entry, error)
+	Metadata(path string) (map[string]interface{}, error)
+	Stream(path string) (io.ReadCloser, error)
+	Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error)
+	History() ([]apitypes.Activity, error)
+	ActivityJournal(index int) (io.ReadCloser, error)
+	Clear(path string) ([]string, error)
+}
+
+// A domainSocketClient is a wash API client.
+type domainSocketClient struct {
+	*http.Client
 }
 
 var domainSocketBaseURL = "http://localhost"
 
 // ForUNIXSocket returns a client suitable for making wash API calls over a UNIX
 // domain socket.
-func ForUNIXSocket(pathToSocket string) DomainSocketClient {
-	return DomainSocketClient{
-		http.Client{
+func ForUNIXSocket(pathToSocket string) Client {
+	return &domainSocketClient{
+		&http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
 					return net.Dial("unix", pathToSocket)
@@ -58,7 +70,7 @@ func unmarshalErrorResp(resp *http.Response) error {
 	return &errorObj
 }
 
-func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
+func (c *domainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not calculate the absolute path of %v: %v", path, err)
@@ -87,7 +99,7 @@ func (c *DomainSocketClient) doRequest(method, endpoint, path string, body io.Re
 	return nil, unmarshalErrorResp(resp)
 }
 
-func (c *DomainSocketClient) getRequest(endpoint, path string, result interface{}) error {
+func (c *domainSocketClient) getRequest(endpoint, path string, result interface{}) error {
 	respBody, err := c.doRequest(http.MethodGet, endpoint, path, nil)
 	if err != nil {
 		return err
@@ -107,7 +119,7 @@ func (c *DomainSocketClient) getRequest(endpoint, path string, result interface{
 }
 
 // Info retrieves the information of the resource located at "path"
-func (c *DomainSocketClient) Info(path string) (apitypes.Entry, error) {
+func (c *domainSocketClient) Info(path string) (apitypes.Entry, error) {
 	var e apitypes.Entry
 	if err := c.getRequest("/fs/info", path, &e); err != nil {
 		return e, err
@@ -117,7 +129,7 @@ func (c *DomainSocketClient) Info(path string) (apitypes.Entry, error) {
 }
 
 // List lists the resources located at "path".
-func (c *DomainSocketClient) List(path string) ([]apitypes.Entry, error) {
+func (c *domainSocketClient) List(path string) ([]apitypes.Entry, error) {
 	var ls []apitypes.Entry
 	if err := c.getRequest("/fs/list", path, &ls); err != nil {
 		return nil, err
@@ -127,7 +139,7 @@ func (c *DomainSocketClient) List(path string) ([]apitypes.Entry, error) {
 }
 
 // Metadata gets the metadata of the resource located at "path".
-func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, error) {
+func (c *domainSocketClient) Metadata(path string) (map[string]interface{}, error) {
 	var metadata map[string]interface{}
 	if err := c.getRequest("/fs/metadata", path, &metadata); err != nil {
 		return nil, err
@@ -137,7 +149,7 @@ func (c *DomainSocketClient) Metadata(path string) (map[string]interface{}, erro
 }
 
 // Stream updates for the resource located at "path".
-func (c *DomainSocketClient) Stream(path string) (io.ReadCloser, error) {
+func (c *domainSocketClient) Stream(path string) (io.ReadCloser, error) {
 	respBody, err := c.doRequest(http.MethodGet, "/fs/stream", path, nil)
 	if err != nil {
 		return nil, err
@@ -150,7 +162,7 @@ func (c *DomainSocketClient) Stream(path string) (io.ReadCloser, error) {
 //
 // The resulting channel contains events, ordered as we receive them from the
 // server. The channel will be closed when there are no more events.
-func (c *DomainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
+func (c *domainSocketClient) Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error) {
 	payload := apitypes.ExecBody{Cmd: command, Args: args, Opts: opts}
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
@@ -186,7 +198,7 @@ func (c *DomainSocketClient) Exec(path string, command string, args []string, op
 }
 
 // History returns the command history for the current wash server session.
-func (c *DomainSocketClient) History() ([]apitypes.Activity, error) {
+func (c *domainSocketClient) History() ([]apitypes.Activity, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
 	resp, err := c.Get(domainSocketBaseURL + "/history")
 	if err != nil {
@@ -212,7 +224,7 @@ func (c *DomainSocketClient) History() ([]apitypes.Activity, error) {
 }
 
 // ActivityJournal returns a reader for the journal associated with a particular command in history.
-func (c *DomainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
+func (c *domainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
 	resp, err := c.Get(domainSocketBaseURL + "/history/" + strconv.Itoa(index))
 	if err != nil {
@@ -227,7 +239,7 @@ func (c *DomainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
 }
 
 // Clear the cache at "path".
-func (c *DomainSocketClient) Clear(path string) ([]string, error) {
+func (c *domainSocketClient) Clear(path string) ([]string, error) {
 	respBody, err := c.doRequest(http.MethodDelete, "/cache", path, nil)
 	if err != nil {
 		return nil, err

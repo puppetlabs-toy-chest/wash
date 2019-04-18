@@ -25,11 +25,11 @@ func Main(cmd *cobra.Command, args []string) int {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	e, err := info(&conn, result.Path)
+	e, err := info(conn, result.Path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return 1
 	}
-	newWalker(result, &conn).Walk(e)
+	newWalker(result, conn).Walk(e)
 	return 0
 }

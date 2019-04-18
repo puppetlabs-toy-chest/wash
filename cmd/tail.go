@@ -52,7 +52,7 @@ func (w lineWriter) Write(b []byte) (int, error) {
 
 // Streams output via API to aggregator channel.
 // Returns nil if streaming's not supported on this path.
-func tailStream(conn client.DomainSocketClient, agg chan line, path string) io.Closer {
+func tailStream(conn client.Client, agg chan line, path string) io.Closer {
 	stream, err := conn.Stream(path)
 	if err != nil {
 		if errObj, ok := err.(*apitypes.ErrorObj); ok {

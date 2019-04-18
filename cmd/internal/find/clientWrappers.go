@@ -6,7 +6,7 @@ import (
 )
 
 // info is a wrapper to c.Info
-func info(c *client.DomainSocketClient, path string) (types.Entry, error) {
+func info(c client.Client, path string) (types.Entry, error) {
 	e, err := c.Info(path)
 	if err != nil {
 		return types.Entry{}, err
@@ -19,7 +19,7 @@ func info(c *client.DomainSocketClient, path string) (types.Entry, error) {
 
 // list is a wrapper to c.List that handles normalizing the children's
 // path relative to e's normalized path
-func list(c *client.DomainSocketClient, e types.Entry) ([]types.Entry, error) {
+func list(c client.Client, e types.Entry) ([]types.Entry, error) {
 	rawChildren, err := c.List(e.Path)
 	if err != nil {
 		return nil, err

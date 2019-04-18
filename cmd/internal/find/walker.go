@@ -13,10 +13,10 @@ import (
 type walker struct {
 	p    types.Predicate
 	opts types.Options
-	conn *client.DomainSocketClient
+	conn client.Client
 }
 
-func newWalker(r parser.Result, conn *client.DomainSocketClient) *walker {
+func newWalker(r parser.Result, conn client.Client) *walker {
 	return &walker{
 		p:    r.Predicate,
 		opts: r.Options,

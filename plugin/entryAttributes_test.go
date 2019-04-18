@@ -63,57 +63,57 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 
 	// Tests for Atime
 	suite.Equal(false, attr.HasAtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	t := timeNow()
 	attr.SetAtime(t)
 	expectedMp["atime"] = t
 	suite.Equal(t, attr.Atime())
 	suite.Equal(true, attr.HasAtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
 	// Tests for Mtime
 	suite.Equal(false, attr.HasMtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	t = timeNow()
 	attr.SetMtime(t)
 	expectedMp["mtime"] = t
 	suite.Equal(t, attr.Mtime())
 	suite.Equal(true, attr.HasMtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
 	// Tests for Ctime
 	suite.Equal(false, attr.HasCtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	t = timeNow()
 	attr.SetCtime(t)
 	expectedMp["ctime"] = t
 	suite.Equal(t, attr.Ctime())
 	suite.Equal(true, attr.HasCtime())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
 	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	m := os.FileMode(0777)
 	attr.SetMode(m)
 	expectedMp["mode"] = m
 	suite.Equal(m, attr.Mode())
 	suite.Equal(true, attr.HasMode())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
 	// Tests for Size
 	suite.Equal(false, attr.HasSize())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	sz := uint64(10)
 	attr.SetSize(sz)
 	expectedMp["size"] = sz
 	suite.Equal(sz, attr.Size())
 	suite.Equal(true, attr.HasSize())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
 	// Tests for Meta
@@ -122,7 +122,7 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	attr.SetMeta(meta)
 	expectedMp["meta"] = meta
 	suite.Equal(meta, attr.Meta())
-	suite.Equal(expectedMp, attr.ToMap())
+	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 }
 

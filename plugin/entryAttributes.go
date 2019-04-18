@@ -160,11 +160,15 @@ func (a *EntryAttributes) SetSize(size uint64) *EntryAttributes {
 	return a
 }
 
-// Meta returns the entry's metadata. All entries have a
-// meta attribute, which by default is an empty map.
+// Meta returns the portion of the entry's metadata that's returned by the
+// plugin API's List endpoint. This may or may not match what's returned by
+// e.Metadata (i.e. the entry's full metadata). That detail is plugin-specific.
+//
+// If a.SetMeta(m) was called, then this returns m. Otherwise, it returns
+// a.ToMap(false).
 func (a *EntryAttributes) Meta() EntryMetadata {
 	if a.meta == nil {
-		return EntryMetadata{}
+		return a.ToMap(false)
 	}
 
 	return a.meta
@@ -176,10 +180,9 @@ func (a *EntryAttributes) SetMeta(meta EntryMetadata) *EntryAttributes {
 	return a
 }
 
-// ToMap converts the entry's attributes to a map,
-// which makes it easier to write generic code on
-// them.
-func (a *EntryAttributes) ToMap() map[string]interface{} {
+// ToMap converts the entry's attributes to a map, which makes it easier to write
+// generic code on them.
+func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 	mp := make(map[string]interface{})
 	if a.HasAtime() {
 		mp["atime"] = a.Atime()
@@ -196,13 +199,15 @@ func (a *EntryAttributes) ToMap() map[string]interface{} {
 	if a.HasSize() {
 		mp["size"] = a.Size()
 	}
-	mp["meta"] = a.Meta()
+	if includeMeta {
+		mp["meta"] = a.Meta()
+	}
 	return mp
 }
 
 // MarshalJSON marshals the entry's attributes to JSON.
 func (a *EntryAttributes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.ToMap())
+	return json.Marshal(a.ToMap(true))
 }
 
 // UnmarshalJSON unmarshals the entry's attributes from JSON.
