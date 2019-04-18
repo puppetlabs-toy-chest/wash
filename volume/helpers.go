@@ -8,6 +8,7 @@ package volume
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"path"
@@ -116,4 +117,26 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 		return nil, err
 	}
 	return attrs, nil
+}
+
+// MakeEntries constructs an array of entries for the given path from a DirMap.
+// The root path is an empty string.
+func MakeEntries(ctx context.Context, cacheEntry plugin.Entry, path string, listcb ListCB, contentcb ContentCB) ([]plugin.Entry, error) {
+	result, err := plugin.CachedOp(ctx, "VolumeListCB", cacheEntry, 30*time.Second, func() (interface{}, error) {
+		return listcb(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	root := result.(DirMap)[path]
+	entries := make([]plugin.Entry, 0, len(root))
+	for name, attr := range root {
+		if attr.Mode().IsDir() {
+			entries = append(entries, NewDir(name, attr, cacheEntry, listcb, contentcb, path+"/"+name))
+		} else {
+			entries = append(entries, NewFile(name, attr, contentcb, path+"/"+name))
+		}
+	}
+	return entries, nil
 }

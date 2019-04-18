@@ -7,44 +7,36 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// Dir represents a directory in a volume. It retains access to a map of directories
-// to their children and attribute data to populate subdirectories.
-//
-// TODO: by tying DirMap to the Node, it doesn't refresh until something triggers listing the resource
-// that produced the DirMap. Need to explore making this a callback that retrieves fresh data. How
-// should that interact with caching? We pass in DirMap so that we only have to retrieve it once
-// when constructing an entire hierarchy.
+// ListCB returns a map of volume nodes to their stats, such as that returned by StatParseAll.
+type ListCB = func(context.Context) (DirMap, error)
+
+// Dir represents a directory in a volume. It populates a subtree with listcb as needed.
 type Dir struct {
 	plugin.EntryBase
-	contentcb ContentCB
-	path      string
-	dirs      DirMap
+	cacheEntry plugin.Entry
+	listcb     ListCB
+	contentcb  ContentCB
+	path       string
 }
 
 // NewDir creates a Dir populated from dirs.
-func NewDir(name string, attr plugin.EntryAttributes, cb ContentCB, path string, dirs DirMap) *Dir {
+func NewDir(name string, attr plugin.EntryAttributes, cacheEntry plugin.Entry, lb ListCB, cb ContentCB, path string) *Dir {
 	vd := &Dir{
-		EntryBase: plugin.NewEntry(name),
-		contentcb: cb,
-		path:      path,
-		dirs:      dirs,
+		EntryBase:  plugin.NewEntry(name),
+		cacheEntry: cacheEntry,
+		listcb:     lb,
+		contentcb:  cb,
+		path:       path,
 	}
 	vd.SetAttributes(attr)
 	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
+	// Caching handled in MakeEntries on the 'cacheEntry'.
+	vd.DisableCachingFor(plugin.ListOp)
 
 	return vd
 }
 
 // List lists the children of the directory.
 func (v *Dir) List(ctx context.Context) ([]plugin.Entry, error) {
-	root := v.dirs[v.path]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			entries = append(entries, NewDir(name, attr, v.contentcb, v.path+"/"+name, v.dirs))
-		} else {
-			entries = append(entries, NewFile(name, attr, v.contentcb, v.path+"/"+name))
-		}
-	}
-	return entries, nil
+	return MakeEntries(ctx, v.cacheEntry, v.path, v.listcb, v.contentcb)
 }

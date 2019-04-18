@@ -35,7 +35,6 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		EntryBase: plugin.NewEntry(v.Name),
 		client:    c,
 	}
-	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
 
 	attr := plugin.EntryAttributes{}
 	attr.
@@ -57,69 +56,7 @@ func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
-	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		activity.Record(ctx, "Deleted container %v: %v", cid, err)
-	}()
-
-	activity.Record(ctx, "Starting container %v", cid)
-	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		return nil, err
-	}
-
-	activity.Record(ctx, "Waiting for container %v", cid)
-	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-	var statusCode int64
-	select {
-	case err := <-errC:
-		return nil, err
-	case result := <-waitC:
-		statusCode = result.StatusCode
-		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-	}
-
-	opts := types.ContainerLogsOptions{ShowStdout: true}
-	if statusCode != 0 {
-		opts.ShowStderr = true
-	}
-
-	activity.Record(ctx, "Gathering log for %v", cid)
-	output, err := v.client.ContainerLogs(ctx, cid, opts)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
-	}()
-
-	if statusCode != 0 {
-		bytes, err := ioutil.ReadAll(output)
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New(string(bytes))
-	}
-
-	dirs, err := vol.StatParseAll(output, mountpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	root := dirs[""]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			entries = append(entries, vol.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
-		} else {
-			entries = append(entries, vol.NewFile(name, attr, v.getContentCB(), "/"+name))
-		}
-	}
-	return entries, nil
+	return vol.MakeEntries(ctx, v, "", v.getListCB(), v.getContentCB())
 }
 
 // Create a container that mounts a volume to a default mountpoint and runs a command.
@@ -142,6 +79,60 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
 	}
 	return created.ID, nil
+}
+
+func (v *volume) getListCB() vol.ListCB {
+	return func(ctx context.Context) (vol.DirMap, error) {
+		// Create a container that mounts a volume and inspects it. Run it and capture the output.
+		cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+			activity.Record(ctx, "Deleted container %v: %v", cid, err)
+		}()
+
+		activity.Record(ctx, "Starting container %v", cid)
+		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+			return nil, err
+		}
+
+		activity.Record(ctx, "Waiting for container %v", cid)
+		waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+		var statusCode int64
+		select {
+		case err := <-errC:
+			return nil, err
+		case result := <-waitC:
+			statusCode = result.StatusCode
+			activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+		}
+
+		opts := types.ContainerLogsOptions{ShowStdout: true}
+		if statusCode != 0 {
+			opts.ShowStderr = true
+		}
+
+		activity.Record(ctx, "Gathering log for %v", cid)
+		output, err := v.client.ContainerLogs(ctx, cid, opts)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
+		}()
+
+		if statusCode != 0 {
+			bytes, err := ioutil.ReadAll(output)
+			if err != nil {
+				return nil, err
+			}
+			return nil, errors.New(string(bytes))
+		}
+
+		return vol.StatParseAll(output, mountpoint)
+	}
 }
 
 func (v *volume) getContentCB() vol.ContentCB {
