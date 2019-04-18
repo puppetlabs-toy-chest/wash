@@ -12,9 +12,9 @@ type dir struct {
 	*fsnode
 }
 
-func newDir(finfo os.FileInfo, path string) *dir {
+func newDir(ctx context.Context, finfo os.FileInfo, path string) *dir {
 	return &dir{
-		newFSNode(finfo, path),
+		newFSNode(ctx, finfo, path),
 	}
 }
 
@@ -26,7 +26,7 @@ func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(matches))
 	for i, match := range matches {
-		entry, err := NewEntry(match)
+		entry, err := NewEntry(ctx, match)
 		if err != nil {
 			return nil, err
 		}
