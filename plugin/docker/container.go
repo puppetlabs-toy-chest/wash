@@ -33,22 +33,22 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	// read-only files. Lots of shared code between these two.
 	cm := &containerMetadata{plugin.NewEntry("metadata.json"), c}
 	cm.DisableDefaultCaching()
-	meta, err := cm.Metadata(ctx)
+	content, err := cm.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 	cmAttr := plugin.EntryAttributes{}
-	cmAttr.SetSize(uint64(meta["Size"].(int64)))
+	cmAttr.SetSize(uint64(content.Size()))
 	cm.SetAttributes(cmAttr)
 
 	clf := &containerLogFile{plugin.NewEntry("log"), c.id, c.client}
 	clf.DisableCachingFor(plugin.MetadataOp)
-	meta, err = clf.Metadata(ctx)
+	content, err = clf.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 	clfAttr := plugin.EntryAttributes{}
-	clfAttr.SetSize(uint64(meta["Size"].(int64)))
+	clfAttr.SetSize(uint64(content.Size()))
 	clf.SetAttributes(clfAttr)
 
 	return []plugin.Entry{cm, clf}, nil
