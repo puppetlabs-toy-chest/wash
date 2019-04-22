@@ -18,6 +18,9 @@ type ErrorObj struct {
 	Fields ErrorFields `json:"fields"`
 }
 
+// Provides a nicely formatted string representation of the error. Omits Fields.
+// If you want to use fields, either access them directly or serialize the whole thing
+// to JSON as part of a larger set of JSON output.
 func (e *ErrorObj) Error() string {
 	return fmt.Sprintf("%v: %v", e.Kind, e.Msg)
 }
