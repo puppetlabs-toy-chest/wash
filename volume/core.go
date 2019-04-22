@@ -20,6 +20,16 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
+// Interface presents methods to access the volume.
+type Interface interface {
+	plugin.Entry
+
+	// Returns a map of volume nodes to their stats, such as that returned by StatParseAll.
+	VolumeList(context.Context) (DirMap, error)
+	// Accepts a path and returns the content associated with that path.
+	VolumeRead(context.Context, string) (plugin.SizedReader, error)
+}
+
 // StatCmd returns the command required to stat all the files in a directory.
 func StatCmd(path string) []string {
 	// size, atime, mtime, ctime, mode, name
@@ -32,7 +42,7 @@ func StatCmd(path string) []string {
 	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
 }
 
-// TODO: Should move this over to plugin as a helper at some point
+// Keep as its own specialized function as it will be faster than munge.ToTime.
 func parseTime(t string) (time.Time, error) {
 	epoch, err := strconv.ParseInt(t, 10, 64)
 	if err != nil {
@@ -119,11 +129,11 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 	return attrs, nil
 }
 
-// MakeEntries constructs an array of entries for the given path from a DirMap.
+// List constructs an array of entries for the given path from a DirMap.
 // The root path is an empty string.
-func MakeEntries(ctx context.Context, cacheEntry plugin.Entry, path string, listcb ListCB, contentcb ContentCB) ([]plugin.Entry, error) {
-	result, err := plugin.CachedOp(ctx, "VolumeListCB", cacheEntry, 30*time.Second, func() (interface{}, error) {
-		return listcb(ctx)
+func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, error) {
+	result, err := plugin.CachedOp(ctx, "VolumeListCB", impl, 30*time.Second, func() (interface{}, error) {
+		return impl.VolumeList(ctx)
 	})
 	if err != nil {
 		return nil, err
@@ -133,9 +143,9 @@ func MakeEntries(ctx context.Context, cacheEntry plugin.Entry, path string, list
 	entries := make([]plugin.Entry, 0, len(root))
 	for name, attr := range root {
 		if attr.Mode().IsDir() {
-			entries = append(entries, NewDir(name, attr, cacheEntry, listcb, contentcb, path+"/"+name))
+			entries = append(entries, newDir(name, attr, impl, path+"/"+name))
 		} else {
-			entries = append(entries, NewFile(name, attr, contentcb, path+"/"+name))
+			entries = append(entries, newFile(name, attr, impl.VolumeRead, path+"/"+name))
 		}
 	}
 	return entries, nil

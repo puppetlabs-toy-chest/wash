@@ -56,7 +56,7 @@ func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
-	return vol.MakeEntries(ctx, v, "", v.getListCB(), v.getContentCB())
+	return vol.List(ctx, v, "")
 }
 
 // Create a container that mounts a volume to a default mountpoint and runs a command.
@@ -81,99 +81,95 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	return created.ID, nil
 }
 
-func (v *volume) getListCB() vol.ListCB {
-	return func(ctx context.Context) (vol.DirMap, error) {
-		// Create a container that mounts a volume and inspects it. Run it and capture the output.
-		cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-			activity.Record(ctx, "Deleted container %v: %v", cid, err)
-		}()
-
-		activity.Record(ctx, "Starting container %v", cid)
-		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-			return nil, err
-		}
-
-		activity.Record(ctx, "Waiting for container %v", cid)
-		waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-		var statusCode int64
-		select {
-		case err := <-errC:
-			return nil, err
-		case result := <-waitC:
-			statusCode = result.StatusCode
-			activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-		}
-
-		opts := types.ContainerLogsOptions{ShowStdout: true}
-		if statusCode != 0 {
-			opts.ShowStderr = true
-		}
-
-		activity.Record(ctx, "Gathering log for %v", cid)
-		output, err := v.client.ContainerLogs(ctx, cid, opts)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
-		}()
-
-		if statusCode != 0 {
-			bytes, err := ioutil.ReadAll(output)
-			if err != nil {
-				return nil, err
-			}
-			return nil, errors.New(string(bytes))
-		}
-
-		return vol.StatParseAll(output, mountpoint)
+func (v *volume) VolumeList(ctx context.Context) (vol.DirMap, error) {
+	// Create a container that mounts a volume and inspects it. Run it and capture the output.
+	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
+	if err != nil {
+		return nil, err
 	}
+	defer func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted container %v: %v", cid, err)
+	}()
+
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+
+	activity.Record(ctx, "Waiting for container %v", cid)
+	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+	var statusCode int64
+	select {
+	case err := <-errC:
+		return nil, err
+	case result := <-waitC:
+		statusCode = result.StatusCode
+		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+	}
+
+	opts := types.ContainerLogsOptions{ShowStdout: true}
+	if statusCode != 0 {
+		opts.ShowStderr = true
+	}
+
+	activity.Record(ctx, "Gathering log for %v", cid)
+	output, err := v.client.ContainerLogs(ctx, cid, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
+	}()
+
+	if statusCode != 0 {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(string(bytes))
+	}
+
+	return vol.StatParseAll(output, mountpoint)
 }
 
-func (v *volume) getContentCB() vol.ContentCB {
-	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
-		// Create a container that mounts a volume and waits. Use it to download a file.
-		cid, err := v.createContainer(ctx, []string{"sleep", "60"})
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-			activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
-		}()
-
-		activity.Record(ctx, "Starting container %v", cid)
-		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-			return nil, err
-		}
-		defer func() {
-			err := v.client.ContainerKill(ctx, cid, "SIGKILL")
-			activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
-		}()
-
-		// Download file, then kill container.
-		rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
-		}()
-
-		tarReader := tar.NewReader(rdr)
-		// Only expect one file.
-		if _, err := tarReader.Next(); err != nil {
-			return nil, err
-		}
-		bits, err := ioutil.ReadAll(tarReader)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewReader(bits), nil
+func (v *volume) VolumeRead(ctx context.Context, path string) (plugin.SizedReader, error) {
+	// Create a container that mounts a volume and waits. Use it to download a file.
+	cid, err := v.createContainer(ctx, []string{"sleep", "60"})
+	if err != nil {
+		return nil, err
 	}
+	defer func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
+	}()
+
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return nil, err
+	}
+	defer func() {
+		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
+	}()
+
+	// Download file, then kill container.
+	rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
+	}()
+
+	tarReader := tar.NewReader(rdr)
+	// Only expect one file.
+	if _, err := tarReader.Next(); err != nil {
+		return nil, err
+	}
+	bits, err := ioutil.ReadAll(tarReader)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.NewReader(bits), nil
 }

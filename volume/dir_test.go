@@ -11,27 +11,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type mockEntry struct {
+	plugin.EntryBase
+	dmap DirMap
+}
+
+func (m *mockEntry) VolumeList(context.Context) (DirMap, error) {
+	return m.dmap, nil
+}
+
+func (m *mockEntry) VolumeRead(context.Context, string) (plugin.SizedReader, error) {
+	return nil, nil
+}
+
 func TestVolumeDir(t *testing.T) {
 	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint)
 	assert.Nil(t, err)
-	listcb := func(ctx context.Context) (DirMap, error) {
-		return dmap, nil
-	}
-	contentcb := func(ctx context.Context, path string) (plugin.SizedReader, error) {
-		return nil, nil
-	}
 
 	plugin.SetTestCache(datastore.NewMemCache())
-	entry := plugin.NewEntry("mine")
+	entry := mockEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
 	entry.SetTestID("/mine")
 
 	assert.NotNil(t, dmap[""]["path"])
-	vd := NewDir("path", dmap[""]["path"], &entry, listcb, contentcb, "/path")
+	vd := newDir("path", dmap[""]["path"], &entry, "/path")
 	attr := plugin.Attributes(vd)
 	assert.Equal(t, 0755|os.ModeDir, attr.Mode())
 
 	assert.NotNil(t, dmap[""]["path1"])
-	vd = NewDir("path", dmap[""]["path1"], &entry, listcb, contentcb, "/path1")
+	vd = newDir("path", dmap[""]["path1"], &entry, "/path1")
 	entries, err := vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
@@ -41,7 +48,7 @@ func TestVolumeDir(t *testing.T) {
 	}
 
 	assert.NotNil(t, dmap[""]["path2"])
-	vd = NewDir("path", dmap[""]["path2"], &entry, listcb, contentcb, "/path2")
+	vd = newDir("path", dmap[""]["path2"], &entry, "/path2")
 	entries, err = vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
