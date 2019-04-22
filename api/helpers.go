@@ -62,30 +62,59 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 	return curEntry, nil
 }
 
+// Common helper to get path query param from request and validate it.
 func getPathFromRequest(r *http.Request) (string, *errorResponse) {
 	paths := r.URL.Query()["path"]
 	if len(paths) != 1 {
 		return "", invalidPathsResponse(paths)
 	}
-	return paths[0], nil
-}
-
-func getEntryFromRequest(ctx context.Context, r *http.Request) (plugin.Entry, string, *errorResponse) {
-	path, errResp := getPathFromRequest(r)
-	if errResp != nil {
-		return nil, "", errResp
-	}
+	path := paths[0]
 
 	if path == "" {
 		panic("path should never be empty")
 	}
 	if !filepath.IsAbs(path) {
-		return nil, "", relativePathResponse(path)
+		return "", relativePathResponse(path)
 	}
 
+	return path, nil
+}
+
+// Common subset used by getEntryFromRequest and getWashPathFromRequest.
+// getEntryFromRequest needs both the path and the wash path.
+func toWashPath(ctx context.Context, path string) (string, *errorResponse) {
 	mountpoint := ctx.Value(mountpointKey).(string)
 	trimmedPath := strings.TrimPrefix(path, mountpoint)
 	if trimmedPath == path {
+		return path, nonWashPathResponse(path)
+	}
+
+	return trimmedPath, nil
+}
+
+// Simpler function to transform the path when an actual entry isn't needed.
+func getWashPathFromRequest(r *http.Request) (string, *errorResponse) {
+	path, err := getPathFromRequest(r)
+	if err != nil {
+		return "", err
+	}
+
+	return toWashPath(r.Context(), path)
+}
+
+func getEntryFromRequest(r *http.Request) (plugin.Entry, string, *errorResponse) {
+	path, errResp := getPathFromRequest(r)
+	if errResp != nil {
+		return nil, "", errResp
+	}
+
+	ctx := r.Context()
+	trimmedPath, errResp := toWashPath(ctx, path)
+	if errResp != nil {
+		if errResp.body.Kind != apitypes.NonWashPath {
+			panic("Unexpected error from getWashPathFromFullPath")
+		}
+
 		// Local file/directory, so convert it to a Wash entry
 		//
 		// TODO: The code here means that the Wash server cannot be

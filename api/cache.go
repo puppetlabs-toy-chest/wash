@@ -24,7 +24,7 @@ import (
 //       200:
 //       500: errorResp
 var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	path, errResp := getPathFromRequest(r)
+	path, errResp := getWashPathFromRequest(r)
 	if errResp != nil {
 		return errResp
 	}

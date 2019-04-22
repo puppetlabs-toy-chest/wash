@@ -7,18 +7,18 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// ContentCB accepts a path and returns the content associated with that path.
-type ContentCB = func(context.Context, string) (plugin.SizedReader, error)
+// contentCB accepts a path and returns the content associated with that path.
+type contentCB = func(context.Context, string) (plugin.SizedReader, error)
 
 // File represents a file in a volume that has content we can access.
 type File struct {
 	plugin.EntryBase
-	contentcb ContentCB
+	contentcb contentCB
 	path      string
 }
 
-// NewFile creates a VolumeFile.
-func NewFile(name string, attr plugin.EntryAttributes, cb ContentCB, path string) *File {
+// newFile creates a VolumeFile.
+func newFile(name string, attr plugin.EntryAttributes, cb contentCB, path string) *File {
 	vf := &File{
 		EntryBase: plugin.NewEntry(name),
 		contentcb: cb,

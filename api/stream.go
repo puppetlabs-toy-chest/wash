@@ -29,7 +29,7 @@ import (
 //       500: errorResp
 var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, path, errResp := getEntryFromRequest(ctx, r)
+	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
 	}

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/activity"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 
 	log "github.com/sirupsen/logrus"
@@ -88,7 +88,7 @@ func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int
 //       500: errorResp
 var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, path, errResp := getEntryFromRequest(ctx, r)
+	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
 	}

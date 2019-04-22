@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/activity"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -35,7 +35,7 @@ type entryList struct {
 //       500: errorResp
 var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
-	entry, path, errResp := getEntryFromRequest(ctx, r)
+	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
 	}

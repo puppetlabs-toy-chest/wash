@@ -35,7 +35,6 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		EntryBase: plugin.NewEntry(v.Name),
 		client:    c,
 	}
-	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
 
 	attr := plugin.EntryAttributes{}
 	attr.
@@ -57,6 +56,32 @@ func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
+	return vol.List(ctx, v, "")
+}
+
+// Create a container that mounts a volume to a default mountpoint and runs a command.
+func (v *volume) createContainer(ctx context.Context, cmd []string) (string, error) {
+	// Use tty to avoid messing with the extra log formatting.
+	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
+	mounts := []mount.Mount{{
+		Type:     mount.TypeVolume,
+		Source:   v.Name(),
+		Target:   mountpoint,
+		ReadOnly: true,
+	}}
+	hostcfg := docontainer.HostConfig{Mounts: mounts}
+	netcfg := network.NetworkingConfig{}
+	created, err := v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
+	if err != nil {
+		return "", err
+	}
+	for _, warn := range created.Warnings {
+		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
+	}
+	return created.ID, nil
+}
+
+func (v *volume) VolumeList(ctx context.Context) (vol.DirMap, error) {
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
 	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint))
 	if err != nil {
@@ -105,84 +130,46 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, errors.New(string(bytes))
 	}
 
-	dirs, err := vol.StatParseAll(output, mountpoint)
+	return vol.StatParseAll(output, mountpoint)
+}
+
+func (v *volume) VolumeRead(ctx context.Context, path string) (plugin.SizedReader, error) {
+	// Create a container that mounts a volume and waits. Use it to download a file.
+	cid, err := v.createContainer(ctx, []string{"sleep", "60"})
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
+	}()
 
-	root := dirs[""]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			entries = append(entries, vol.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
-		} else {
-			entries = append(entries, vol.NewFile(name, attr, v.getContentCB(), "/"+name))
-		}
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return nil, err
 	}
-	return entries, nil
-}
+	defer func() {
+		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
+	}()
 
-// Create a container that mounts a volume to a default mountpoint and runs a command.
-func (v *volume) createContainer(ctx context.Context, cmd []string) (string, error) {
-	// Use tty to avoid messing with the extra log formatting.
-	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
-	mounts := []mount.Mount{{
-		Type:     mount.TypeVolume,
-		Source:   v.Name(),
-		Target:   mountpoint,
-		ReadOnly: true,
-	}}
-	hostcfg := docontainer.HostConfig{Mounts: mounts}
-	netcfg := network.NetworkingConfig{}
-	created, err := v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
+	// Download file, then kill container.
+	rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	for _, warn := range created.Warnings {
-		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
+	defer func() {
+		activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
+	}()
+
+	tarReader := tar.NewReader(rdr)
+	// Only expect one file.
+	if _, err := tarReader.Next(); err != nil {
+		return nil, err
 	}
-	return created.ID, nil
-}
-
-func (v *volume) getContentCB() vol.ContentCB {
-	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
-		// Create a container that mounts a volume and waits. Use it to download a file.
-		cid, err := v.createContainer(ctx, []string{"sleep", "60"})
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-			activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
-		}()
-
-		activity.Record(ctx, "Starting container %v", cid)
-		if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-			return nil, err
-		}
-		defer func() {
-			err := v.client.ContainerKill(ctx, cid, "SIGKILL")
-			activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
-		}()
-
-		// Download file, then kill container.
-		rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
-		}()
-
-		tarReader := tar.NewReader(rdr)
-		// Only expect one file.
-		if _, err := tarReader.Next(); err != nil {
-			return nil, err
-		}
-		bits, err := ioutil.ReadAll(tarReader)
-		if err != nil {
-			return nil, err
-		}
-		return bytes.NewReader(bits), nil
+	bits, err := ioutil.ReadAll(tarReader)
+	if err != nil {
+		return nil, err
 	}
+	return bytes.NewReader(bits), nil
 }

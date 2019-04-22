@@ -36,4 +36,5 @@ const (
 	RelativePath       = "puppetlabs.wash/relative-path"
 	InvalidPaths       = "puppetlabs.wash/invalid-paths"
 	OutOfBounds        = "puppetlabs.wash/out-of-bounds"
+	NonWashPath        = "puppetlabs.wash/non-wash-path"
 )

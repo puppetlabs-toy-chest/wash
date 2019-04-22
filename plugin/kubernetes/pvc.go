@@ -33,7 +33,6 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		pvci:      pi,
 		podi:      pd,
 	}
-	vol.SetTTLOf(plugin.ListOp, 60*time.Second)
 
 	attr := plugin.EntryAttributes{}
 	attr.
@@ -56,54 +55,7 @@ func (v *pvc) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
-	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := v.createPod(volume.StatCmd(mountpoint))
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
-	}()
-
-	activity.Record(ctx, "Waiting for pod %v to start", pid)
-	// Start watching for new events related to the pod we created.
-	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
-		return nil, err
-	}
-
-	activity.Record(ctx, "Gathering log for %v", pid)
-	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-	if lerr != nil {
-		return nil, lerr
-	}
-	defer func() {
-		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
-	}()
-
-	if err == errPodTerminated {
-		bytes, err := ioutil.ReadAll(output)
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New(string(bytes))
-	}
-
-	dirs, err := volume.StatParseAll(output, mountpoint)
-	if err != nil {
-		return nil, err
-	}
-	activity.Record(ctx, "Files found in persistent volume claim %v: %+v", v.Name(), dirs)
-
-	root := dirs[""]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			entries = append(entries, volume.NewDir(name, attr, v.getContentCB(), "/"+name, dirs))
-		} else {
-			entries = append(entries, volume.NewFile(name, attr, v.getContentCB(), "/"+name))
-		}
-	}
-	return entries, nil
+	return volume.List(ctx, v, "")
 }
 
 // Create a container that mounts a pvc to a default mountpoint and runs a command.
@@ -182,43 +134,77 @@ func (v *pvc) waitForPod(ctx context.Context, pid string) error {
 	}
 }
 
-func (v *pvc) getContentCB() volume.ContentCB {
-	return func(ctx context.Context, path string) (plugin.SizedReader, error) {
-		// Create a container that mounts a pvc and waits. Use it to download a file.
-		pid, err := v.createPod([]string{"cat", mountpoint + path})
-		activity.Record(ctx, "Reading from: %v", mountpoint+path)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
-		}()
-
-		activity.Record(ctx, "Waiting for pod %v", pid)
-		// Start watching for new events related to the pod we created.
-		if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
-			return nil, err
-		}
-		podErr := err
-
-		activity.Record(ctx, "Gathering log for %v", pid)
-		output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
-		}()
-
-		bits, err := ioutil.ReadAll(output)
-		if err != nil {
-			return nil, err
-		}
-		activity.Record(ctx, "Read: %v", bits)
-
-		if podErr == errPodTerminated {
-			return nil, errors.New(string(bits))
-		}
-		return bytes.NewReader(bits), nil
+func (v *pvc) VolumeList(ctx context.Context) (volume.DirMap, error) {
+	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
+	pid, err := v.createPod(volume.StatCmd(mountpoint))
+	if err != nil {
+		return nil, err
 	}
+	defer func() {
+		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+	}()
+
+	activity.Record(ctx, "Waiting for pod %v to start", pid)
+	// Start watching for new events related to the pod we created.
+	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
+		return nil, err
+	}
+
+	activity.Record(ctx, "Gathering log for %v", pid)
+	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if lerr != nil {
+		return nil, lerr
+	}
+	defer func() {
+		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+	}()
+
+	if err == errPodTerminated {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(string(bytes))
+	}
+
+	return volume.StatParseAll(output, mountpoint)
+}
+
+func (v *pvc) VolumeRead(ctx context.Context, path string) (plugin.SizedReader, error) {
+	// Create a container that mounts a pvc and waits. Use it to download a file.
+	pid, err := v.createPod([]string{"cat", mountpoint + path})
+	activity.Record(ctx, "Reading from: %v", mountpoint+path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+	}()
+
+	activity.Record(ctx, "Waiting for pod %v", pid)
+	// Start watching for new events related to the pod we created.
+	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
+		return nil, err
+	}
+	podErr := err
+
+	activity.Record(ctx, "Gathering log for %v", pid)
+	output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+	}()
+
+	bits, err := ioutil.ReadAll(output)
+	if err != nil {
+		return nil, err
+	}
+	activity.Record(ctx, "Read: %v", bits)
+
+	if podErr == errPodTerminated {
+		return nil, errors.New(string(bits))
+	}
+	return bytes.NewReader(bits), nil
 }
