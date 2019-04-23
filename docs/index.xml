@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>wash landing page on home</title>
+    <link>https://puppetlabs.github.io/wash/</link>
+    <description>Recent content in wash landing page on home</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>© 2019 — the wash maintainers</copyright>
+    <lastBuildDate>Fri, 19 Apr 2019 22:59:26 -0600</lastBuildDate>
+    
+	<atom:link href="https://puppetlabs.github.io/wash/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+  </channel>
+</rss>

@@ -76,7 +76,7 @@ We've implemented a number of handy `wash` subcommands:
 * `wash history` - lists all activity through `wash`; `wash history <id>` can be used to view logs for a specific activity
 * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
 
-Core plugins (see the _Roadmap_ below for more details)
+Core plugins (currently; see the [Roadmap](https://github.com/puppetlabs/wash#roadmap) for future plans):
 
 * `docker` - presents a filesystem hierarchy of containers and volumes
   - found from the local socket or via `DOCKER` environment variables
