@@ -1,0 +1,23 @@
+{{ block "footer" . }}
+<div class="footer">
+    {{/* Display links if available */}}
+    {{ if .Site.Menus.footer }}
+    <div class="footer-links">
+        {{- range .Site.Menus.footer -}}
+        {{ if eq (hasPrefix .URL "mailto:") true }}
+        <a href="{{ .URL }}">{{- .Name -}}</a>
+        {{ else }}
+        <a href="{{ .URL | relLangURL }}">{{- .Name -}}</a>
+        {{- end -}}
+        {{ end }}
+    </div>
+    {{ end }}
+
+    {{/* Display copyright if available */}}
+    {{ if .Site.Copyright }}
+    <div class="copyright">
+        {{- .Site.Copyright -}}
+    </div>
+    {{ end }}
+</div>
+{{ end }}

@@ -1,0 +1,66 @@
+baseurl = "https://example.com/"
+title = "simple demo"
+languageCode = "en-us"
+
+# Theme to use
+theme = "simple-hugo-theme"
+
+# Pagination
+paginate = 3
+paginatePath = "page"
+
+# Google analytics
+# googleAnalytics = ""
+
+# Copyright
+copyright = "© 2019 — Some Author — All rights reserved."
+
+# Highlighting
+pygmentsCodefences = true
+pygmentsCodeFencesGuessSyntax = true
+pygmentsoptions = "linenos=table"
+pygmentsStyle = "vs"
+
+# Taxonomies
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+
+# Menu
+[menu]
+  # Header
+  [[menu.main]]
+    url = "/posts/"
+    name = "blog"
+    weight = 1
+  [[menu.main]]
+    url = "/about/"
+    name = "about"
+    weight = 2
+  [[menu.main]]
+    url = "/contact/"
+    name = "contact"
+    weight = 3
+
+  # Footer
+  [[menu.footer]]
+    url = "https://github.com/Xzya"
+    name = "GitHub"
+    weight = 1
+  [[menu.footer]]
+    url = "/posts/index.xml"
+    name = "RSS"
+    weight = 2
+  [[menu.footer]]
+    url = "mailto:foo@bar.com"
+    name = "Contact"
+    weight = 3
+
+
+# Links format
+[permalinks]
+  posts = "/posts/:year/:month/:title/"
+
+[params]
+  # Date format (default: Jan 2, 2006)
+  # datefmt  = "Jan 2, 2006"

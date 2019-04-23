@@ -1,0 +1,23 @@
+{{ define "main" }}
+
+{{/* Display _index.md if available */}}
+{{ if .Content }}
+{{ partial "single" . }}
+{{ end }}
+
+{{/* List all pages */}}
+<ul>
+    {{ range .Paginator.Pages }}
+    <li>
+        <a href="{{ .RelPermalink }}">
+            {{- .Title | markdownify }}
+        </a>
+        {{ partial "post_meta.html" . }}
+    </li>
+    {{ end }}
+</ul>
+
+{{/* Display paginator */}}
+{{ template "_internal/pagination.html" . }}
+
+{{ end }}

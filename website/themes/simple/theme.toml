@@ -1,0 +1,12 @@
+name = "Simple Hugo Theme"
+license = "MIT"
+licenselink = "https://github.com/Xzya/simple-hugo-theme/blob/master/LICENSE.md"
+description = "A very simple and lightweight Hugo Theme inspired by the geniuses behind [bettermotherfuckingwebsite.com](http://bettermotherfuckingwebsite.com/)."
+homepage = "https://github.com/Xzya/simple-hugo-theme"
+tags = ["blog", "minimal", "clean", "light"]
+features = ["small page size", "fast", "tags", "google analytics", "pagination"]
+min_version = "0.41"
+
+[author]
+  name = "Mihail Cristian Dumitru"
+  homepage = "https://github.com/Xzya"

@@ -1,0 +1,56 @@
+publishDir = "../docs"
+baseurl = "https://puppetlabs.github.io/wash"
+title = "home"
+languageCode = "en-us"
+
+# Theme to use
+theme = "simple"
+
+# Pagination
+paginate = 100
+paginatePath = "page"
+
+# Google analytics
+# googleAnalytics = ""
+
+# Copyright
+copyright = "© 2019 — the wash maintainers"
+
+# Highlighting
+pygmentsCodefences = true
+pygmentsCodeFencesGuessSyntax = true
+pygmentsoptions = "linenos=table"
+pygmentsStyle = "vs"
+
+# Taxonomies
+[taxonomies]
+  tag = "tags"
+  category = "categories"
+
+# Menu
+[menu]
+  # Header
+  [[menu.main]]
+    url = "#"
+    name = "news"
+    weight = 1
+  [[menu.main]]
+    url = "https://github.com/puppetlabs/wash"
+    name = "github"
+    weight = 2
+  [[menu.main]]
+    url = "https://github.com/puppetlabs/wash/releases"
+    name = "download"
+    weight = 3
+  [[menu.main]]
+    url = "#"
+    name = "slack"
+    weight = 4
+
+# Links format
+[permalinks]
+  posts = "/posts/:year/:month/:title/"
+
+[params]
+  # Date format (default: Jan 2, 2006)
+  # datefmt  = "Jan 2, 2006"

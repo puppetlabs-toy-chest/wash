@@ -1,0 +1,9 @@
+<header>
+    <h1>
+        {{- .Title | markdownify -}}
+    </h1>
+    {{ partial "post_meta.html" . }}
+</header>
+<article>
+    {{ .Content }}
+</article>
