@@ -1,0 +1,24 @@
+{{ $dateFormat := default "Jan 2, 2006" (index .Site.Params "datefmt") }}
+
+<div class="post-meta">
+    {{/* Display the date if set */}}
+    {{- if not .Date.IsZero -}}
+    Date &#x5b;
+    <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format $dateFormat }}</time>
+    &#x5d;
+    {{- end -}}
+
+    {{/* Display taxonomies */}}
+    {{- range $taxo, $taxonomy := .Site.Taxonomies }}
+    {{- $elems := $.Param $taxo }}
+    {{- if $elems }}
+    {{ $taxo | humanize }} &#x5b;
+    {{- range $name := $elems }}
+    {{- with $.Site.GetPage (lower (printf "/%s/%s" $taxo (urlize $name))) }}
+    <a href="{{ .Permalink }}">{{ $name }}</a>
+    {{- end }}
+    {{- end }}
+    &#x5d;
+    {{- end }}
+    {{- end }}
+</div>

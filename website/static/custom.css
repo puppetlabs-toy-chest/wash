@@ -1,0 +1,80 @@
+body {
+    font-family: 'Merriweather';
+    font-size: 1.0rem;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+code {
+    background-color: #e0f2f1;
+    font-size: 1.0rem;
+    font-family: 'IBM Plex Mono';
+    font-weight: 500;
+}
+
+a {
+    color: #0076BA;
+}
+
+a:visited {
+    color: #531B93;
+    color: #0076BA;
+}
+
+div.header {
+    margin: 0;
+    margin-bottom: 30px;
+    padding: 7px;
+    border-top: 9px solid #9b9;
+}
+
+div.header h1 {
+    margin: 0;
+    padding: 0;
+    font-family: 'Comfortaa';
+    border: 0;
+}
+
+div.header-menu a {
+    margin-left: 3px;
+}
+
+div.header a {
+    color: #004D7F;
+}
+
+div.header a:visited {
+    color: #004D7F;
+}
+
+.logobig {
+    text-align: center;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
+    font-size: 100px;
+    font-family: 'Monoton';
+    color: #0076BA;
+}
+
+.logosmall {
+    text-align: center;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
+    margin-top: -5px;
+    margin-bottom: 1.5em;
+    font-size: 35px;
+    font-family: 'Comfortaa';
+    font-weight: normal;
+    color: #9b9;
+}
+
+div.footer {
+    margin: 0;
+    margin-top: 10px;
+    padding: 10px;
+    border: 0;
+    border-top: 9px solid #9b9;
+    font-family: 'Comfortaa';
+}
