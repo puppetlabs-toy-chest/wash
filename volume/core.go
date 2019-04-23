@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"sort"
 	"strconv"
@@ -100,6 +101,29 @@ func StatParse(line string) (plugin.EntryAttributes, string, error) {
 // A DirMap is a map of directory names to a map of their children and the children's attributes.
 type DirMap = map[string]map[string]plugin.EntryAttributes
 
+func makedirs(attrs *map[string]map[string]plugin.EntryAttributes, newpath string) map[string]plugin.EntryAttributes {
+	// If it exists, return the children map. Base case would be newpath == "", which we create at
+	// the start of StatParseAll.
+	if newchildren, ok := (*attrs)[newpath]; ok {
+		return newchildren
+	}
+
+	// Create the attributes map for the new path.
+	newchildren := make(map[string]plugin.EntryAttributes)
+	(*attrs)[newpath] = newchildren
+
+	// Check if we need to create the parent, and get its attributes map.
+	parent, file := path.Split(newpath)
+	parent = strings.TrimSuffix(parent, "/")
+	parentchildren := makedirs(attrs, parent)
+
+	// Add attributes for the new path to the parent's attributes map. Then return the new map.
+	attr := plugin.EntryAttributes{}
+	attr.SetMode(os.ModeDir | 0550)
+	parentchildren[file] = attr
+	return newchildren
+}
+
 // StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
 // file paths, and maps each directory to a map of files in that directory and their attr
 // (attributes).
@@ -125,7 +149,8 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 			// Add each entry to its parent's listing.
 			parent, file := path.Split(relative)
 			parent = strings.TrimSuffix(parent, "/")
-			attrs[parent][file] = attr
+			parentchildren := makedirs(&attrs, parent)
+			parentchildren[file] = attr
 		}
 	}
 	if err := scanner.Err(); err != nil {

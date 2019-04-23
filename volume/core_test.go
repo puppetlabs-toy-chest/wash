@@ -115,3 +115,51 @@ func TestStatParseAll(t *testing.T) {
 		SetSize(96)
 	assert.Equal(t, expectedAttr, dmap["/path"]["has"])
 }
+
+func TestStatParseAllRoot(t *testing.T) {
+	dmap, err := StatParseAll(strings.NewReader(fixture), "")
+	assert.Nil(t, err)
+	assert.NotNil(t, dmap)
+	assert.Equal(t, 9, len(dmap))
+	for _, dir := range []string{"", "mnt", "mnt/path", "mnt/path/has", "mnt/path/has/got", "mnt/path/has/got/some", "mnt/path1", "mnt/path2", "mnt/path2/dir"} {
+		assert.NotNil(t, dmap[dir])
+	}
+	for _, file := range []string{"mnt/path/has/got/some/legs", "mnt/path1/a file"} {
+		assert.Nil(t, dmap[file])
+	}
+
+	for _, node := range []string{"mnt/path", "mnt/path1", "mnt/path2"} {
+		assert.NotNil(t, dmap[""][node])
+	}
+
+	expectedAttr := plugin.EntryAttributes{}
+	expectedAttr.
+		SetAtime(time.Unix(1550611453, 0)).
+		SetMtime(time.Unix(1550611453, 0)).
+		SetCtime(time.Unix(1550611453, 0)).
+		SetMode(0644).
+		SetSize(0)
+	assert.Equal(t, expectedAttr, dmap["mnt/path1"]["a file"])
+
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.
+		SetAtime(time.Unix(1550611510, 0)).
+		SetMtime(time.Unix(1550611441, 0)).
+		SetCtime(time.Unix(1550611441, 0)).
+		SetMode(0755 | os.ModeDir).
+		SetSize(64)
+	assert.Equal(t, expectedAttr, dmap["mnt/path2"]["dir"])
+
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.
+		SetAtime(time.Unix(1550611510, 0)).
+		SetMtime(time.Unix(1550611448, 0)).
+		SetCtime(time.Unix(1550611448, 0)).
+		SetMode(0755 | os.ModeDir).
+		SetSize(96)
+	assert.Equal(t, expectedAttr, dmap["mnt/path"]["has"])
+
+	expectedAttr = plugin.EntryAttributes{}
+	expectedAttr.SetMode(0550 | os.ModeDir)
+	assert.Equal(t, expectedAttr, dmap[""]["mnt"])
+}

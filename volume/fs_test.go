@@ -54,13 +54,30 @@ func createExec() *mockExecutor {
 	return exec
 }
 
+func (suite *fsTestSuite) dig(grp plugin.Group, names ...string) plugin.Entry {
+	entry := plugin.Entry(grp)
+	for _, name := range names {
+		entries, err := entry.(plugin.Group).List(context.Background())
+		suite.NoError(err)
+		for _, match := range entries {
+			if plugin.Name(match) == name {
+				entry = match
+				break
+			}
+		}
+	}
+	suite.Equal(names[len(names)-1], plugin.Name(entry))
+	return entry
+}
+
 func (suite *fsTestSuite) TestFSList() {
 	exec := createExec()
 	fs := NewFS("fs", exec)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	entries, err := fs.List(context.Background())
+	entry := suite.dig(fs, "var", "log").(plugin.Group)
+	entries, err := entry.List(context.Background())
 	suite.NoError(err)
 	suite.Equal(3, len(entries))
 
@@ -93,13 +110,12 @@ func (suite *fsTestSuite) TestFSRead() {
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	entries, err := fs.List(context.Background())
-	entries1, err := entries[1].(plugin.Group).List(context.Background())
-	suite.Equal("a file", plugin.Name(entries1[0]))
+	entry := suite.dig(fs, "var", "log", "path1", "a file")
+	suite.Equal("a file", plugin.Name(entry))
 
 	execResult := createResult("hello")
 	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{}).Return(execResult, nil)
-	rdr, err := entries1[0].(plugin.Readable).Open(context.Background())
+	rdr, err := entry.(plugin.Readable).Open(context.Background())
 	suite.NoError(err)
 	suite.Equal(int64(5), rdr.Size())
 }

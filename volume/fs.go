@@ -54,11 +54,9 @@ func consumeExec(ctx context.Context, result plugin.ExecResult) (*bytes.Buffer, 
 	return &buf, nil
 }
 
-const basepath = "/var/log"
-
 // VolumeList satisfies the Interface required by List to enumerate files.
 func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
-	cmdline := StatCmd(basepath)
+	cmdline := StatCmd("/var/log")
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 	result, err := d.executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{})
 	if err != nil {
@@ -71,13 +69,13 @@ func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
 		return nil, err
 	}
 	activity.Record(ctx, "VolumeList complete")
-	return StatParseAll(buf, basepath)
+	return StatParseAll(buf, "")
 }
 
 // VolumeOpen satisfies the Interface required by List to read file contents.
 func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
 	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
-	result, err := d.executor.Exec(ctx, "cat", []string{basepath + path}, plugin.ExecOptions{})
+	result, err := d.executor.Exec(ctx, "cat", []string{path}, plugin.ExecOptions{})
 	if err != nil {
 		activity.Record(ctx, "Exec error in VolumeOpen: %v", err)
 		return nil, err
