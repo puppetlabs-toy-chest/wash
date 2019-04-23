@@ -4,28 +4,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
 type SizePrimaryTestSuite struct {
 	suite.Suite
-}
-
-func (suite *SizePrimaryTestSuite) TestBytesOf() {
-	// Use array of bytes instead of a string to make it easier
-	// to add other, longer units in the future
-	testCases := []byte{
-		'c',
-		'k',
-		'M',
-		'G',
-		'T',
-		'P',
-	}
-	for _, input := range testCases {
-		suite.Equal(bytesMap[input], bytesOf(input))
-	}
 }
 
 func (suite *SizePrimaryTestSuite) TestSizePrimaryInsufficientArgsError() {
@@ -53,22 +38,19 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 		input string
 		// trueSize/falseSize represent entry sizes that satisfy/unsatisfy
 		// the predicate, respectively.
-		trueSize  uint64
-		falseSize uint64
+		trueSize  int64
+		falseSize int64
 	}
 	testCases := []testCase{
 		// We set trueSize to 1.5 blocks in order to test rounding
-		testCase{"2", uint64(1.5 * 512), 512},
+		testCase{"2", int64(1.5 * 512), 512},
 		// +2 means p will return true if size > 2 blocks
 		testCase{"+2", 3 * 512, 1 * 512},
 		// -2 means p will return true if size < 2 blocks
 		testCase{"-2", 1 * 512, 2 * 512},
-		testCase{"1k", 1 * bytesOf('k'), 1 * bytesOf('c')},
-		testCase{"+1k", 2 * bytesOf('k'), 1 * bytesOf('k')},
-		testCase{"-1k", 1 * bytesOf('c'), 1 * bytesOf('k')},
-		// This case tests the multiplication by n, where here
-		// n = 2
-		testCase{"2k", 2 * bytesOf('k'), 1 * bytesOf('k')},
+		testCase{"1k", 1 * numeric.BytesOf('k'), 1 * numeric.BytesOf('c')},
+		testCase{"+1k", 2 * numeric.BytesOf('k'), 1 * numeric.BytesOf('k')},
+		testCase{"-1k", 1 * numeric.BytesOf('c'), 1 * numeric.BytesOf('k')},
 	}
 	for _, testCase := range testCases {
 		inputStr := func() string {
@@ -81,10 +63,10 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 			// Ensure p(e) is always false for an entry that doesn't have a size attribute
 			suite.False(p(e), inputStr())
 
-			e.Attributes.SetSize(testCase.trueSize)
+			e.Attributes.SetSize(uint64(testCase.trueSize))
 			suite.True(p(e), inputStr())
 
-			e.Attributes.SetSize(testCase.falseSize)
+			e.Attributes.SetSize(uint64(testCase.falseSize))
 			suite.False(p(e), inputStr())
 		}
 	}

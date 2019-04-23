@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/api/client"
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
-	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
@@ -15,7 +15,7 @@ import (
 
 // Main is `wash find`'s main function.
 func Main(cmd *cobra.Command, args []string) int {
-	primary.FindStartTime = time.Now()
+	params.StartTime = time.Now()
 
 	result, err := parser.Parse(args)
 	if err != nil {
