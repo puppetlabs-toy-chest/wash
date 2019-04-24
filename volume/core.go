@@ -32,6 +32,7 @@ type Interface interface {
 	VolumeList(context.Context) (DirMap, error)
 	// Accepts a path and returns the content associated with that path.
 	VolumeOpen(context.Context, string) (plugin.SizedReader, error)
+	// TODO: add VolumeStream
 }
 
 // StatCmd returns the command required to stat all the files in a directory.
@@ -134,7 +135,8 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 }
 
 // List constructs an array of entries for the given path from a DirMap.
-// The root path is an empty string.
+// The root path is an empty string. Requests are cached against the supplied Interface
+// using the VolumeListCB op.
 func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, error) {
 	result, err := plugin.CachedOp(ctx, "VolumeListCB", impl, 30*time.Second, func() (interface{}, error) {
 		return impl.VolumeList(ctx)

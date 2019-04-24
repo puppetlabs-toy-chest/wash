@@ -31,9 +31,14 @@ import (
 	"time"
 )
 
-// Entry is a basic named resource type. It is a sealed
-// interface, meaning you must use plugin.NewEntry when
+// Entry is the interface for things that are representable by Wash's filesystem. This includes
+// plugin roots; resources like containers and volumes; placeholders (e.g. the containers directory
+// in the Docker plugin); read-only files like the metadata.json files for containers and EC2
+// instances; and more. It is a sealed interface, meaning you must use plugin.NewEntry when
 // creating your plugin objects.
+//
+// Metadata returns a complete description of the entry. See the EntryBase documentation for more
+// details on when to override it.
 type Entry interface {
 	Metadata(ctx context.Context) (EntryMetadata, error)
 	name() string
@@ -64,6 +69,7 @@ type ExecOptions struct {
 }
 
 // ExecOutputChunk is a struct containing a chunk of the Exec'ed cmd's output.
+// For StreamID, 0 = stdout and 1 = stderr.
 type ExecOutputChunk struct {
 	StreamID  int8
 	Timestamp time.Time
@@ -72,7 +78,7 @@ type ExecOutputChunk struct {
 }
 
 // ExecResult is a struct that contains the result of invoking Execable#exec.
-// Any of these fields can be nil.
+// Any of these fields can be nil. The OutputCh will be closed when execution completes.
 type ExecResult struct {
 	OutputCh   <-chan ExecOutputChunk
 	ExitCodeCB func() (int, error)
