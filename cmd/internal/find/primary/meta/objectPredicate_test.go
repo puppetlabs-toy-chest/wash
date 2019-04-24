@@ -32,8 +32,11 @@ func (suite *ObjectPredicateTestSuite) TestErrors() {
 		nPETC("", "expected a key sequence", true),
 		nPETC("foo", "key sequences must begin with a '.'", true),
 		nPETC(".", "expected a key sequence after '.'", false),
+		nPETC(".[", "expected a key sequence after '.'", false),
 		nPETC(".key", "expected a predicate after key", false),
 		nPETC(".key +{", "expected.*closing.*}", false),
+		nPETC(".key]", `expected an opening '\['`, false),
+		nPETC(".key[", `expected a closing '\]'`, false),
 	)
 }
 

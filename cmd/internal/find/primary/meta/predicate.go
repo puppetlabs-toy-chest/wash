@@ -20,6 +20,8 @@ func parsePredicate(tokens []string) (predicate, []string, error) {
 	case '.':
 		return parseObjectPredicate(tokens)
 	case '[':
+		fallthrough
+	case ']':
 		return parseArrayPredicate(tokens)
 	default:
 		return parsePrimitivePredicate(tokens)
