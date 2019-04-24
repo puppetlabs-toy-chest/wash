@@ -2,6 +2,7 @@ package volume
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/puppetlabs/wash/datastore"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// Represents the output of StatCmd(/var/log)
 const varLogFixture = `
 96 1550611510 1550611448 1550611448 41ed /var/log/path
 96 1550611510 1550611448 1550611448 41ed /var/log/path/has
@@ -54,11 +56,14 @@ func createExec() *mockExecutor {
 	return exec
 }
 
-func (suite *fsTestSuite) dig(grp plugin.Group, names ...string) plugin.Entry {
+func (suite *fsTestSuite) find(grp plugin.Group, path string) plugin.Entry {
+	names := strings.Split(path, "/")
 	entry := plugin.Entry(grp)
 	for _, name := range names {
 		entries, err := entry.(plugin.Group).List(context.Background())
-		suite.NoError(err)
+		if !suite.NoError(err) {
+			suite.FailNow("Listing entries failed")
+		}
 		for _, match := range entries {
 			if plugin.Name(match) == name {
 				entry = match
@@ -76,9 +81,11 @@ func (suite *fsTestSuite) TestFSList() {
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	entry := suite.dig(fs, "var", "log").(plugin.Group)
+	entry := suite.find(fs, "var/log").(plugin.Group)
 	entries, err := entry.List(context.Background())
-	suite.NoError(err)
+	if !suite.NoError(err) {
+		suite.FailNow("Listing entries failed")
+	}
 	suite.Equal(3, len(entries))
 
 	suite.Equal("path", plugin.Name(entries[0]))
@@ -86,22 +93,26 @@ func (suite *fsTestSuite) TestFSList() {
 	suite.Equal("path2", plugin.Name(entries[2]))
 	for _, entry := range entries {
 		_, ok := entry.(plugin.Group)
-		suite.True(ok)
+		if !suite.True(ok) {
+			suite.FailNow("Entry was not a Group")
+		}
 	}
 
 	entries1, err := entries[1].(plugin.Group).List(context.Background())
-	suite.NoError(err)
-	suite.Equal(1, len(entries1))
-	suite.Equal("a file", plugin.Name(entries1[0]))
-	_, ok := entries1[0].(plugin.Readable)
-	suite.True(ok)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries1))
+		suite.Equal("a file", plugin.Name(entries1[0]))
+		_, ok := entries1[0].(plugin.Readable)
+		suite.True(ok)
+	}
 
 	entries2, err := entries[2].(plugin.Group).List(context.Background())
-	suite.NoError(err)
-	suite.Equal(1, len(entries2))
-	suite.Equal("dir", plugin.Name(entries2[0]))
-	_, ok = entries2[0].(plugin.Group)
-	suite.True(ok)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries2))
+		suite.Equal("dir", plugin.Name(entries2[0]))
+		_, ok := entries2[0].(plugin.Group)
+		suite.True(ok)
+	}
 }
 
 func (suite *fsTestSuite) TestFSRead() {
@@ -110,7 +121,7 @@ func (suite *fsTestSuite) TestFSRead() {
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	entry := suite.dig(fs, "var", "log", "path1", "a file")
+	entry := suite.find(fs, "var/log/path1/a file")
 	suite.Equal("a file", plugin.Name(entry))
 
 	execResult := createResult("hello")
@@ -118,9 +129,14 @@ func (suite *fsTestSuite) TestFSRead() {
 	rdr, err := entry.(plugin.Readable).Open(context.Background())
 	suite.NoError(err)
 	suite.Equal(int64(5), rdr.Size())
+	buf := make([]byte, 5)
+	n, err := rdr.ReadAt(buf, 0)
+	suite.NoError(err)
+	suite.Equal(5, n)
+	suite.Equal("hello", string(buf))
 }
 
-func TestCache(t *testing.T) {
+func TestFS(t *testing.T) {
 	suite.Run(t, new(fsTestSuite))
 }
 
