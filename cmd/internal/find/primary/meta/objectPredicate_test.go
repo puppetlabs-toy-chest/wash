@@ -13,11 +13,18 @@ type ObjectPredicateTestSuite struct {
 func (suite *ObjectPredicateTestSuite) TestKeyRegex() {
 	suite.Regexp(keyRegex, "k")
 	suite.Regexp(keyRegex, "key")
+	suite.Regexp(keyRegex, "key1.key2")
+	suite.Regexp(keyRegex, "key1[]")
+	suite.Regexp(keyRegex, "key1]")
+	suite.Regexp(keyRegex, "key1[")
 
 	suite.NotRegexp(keyRegex, "")
 	suite.NotRegexp(keyRegex, ".")
 	suite.NotRegexp(keyRegex, "[")
 	suite.NotRegexp(keyRegex, "]")
+	suite.NotRegexp(keyRegex, ".key")
+	suite.NotRegexp(keyRegex, "[key")
+	suite.NotRegexp(keyRegex, "]key")
 }
 
 func (suite *ObjectPredicateTestSuite) TestErrors() {

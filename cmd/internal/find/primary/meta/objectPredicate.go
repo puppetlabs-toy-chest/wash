@@ -14,7 +14,7 @@ import (
 // nested keys like ".key1.key2", ".key1[].key2", etc.
 // key sequences aren't specified in the grammar because
 // they make it harder to formalize the semantics.
-var keyRegex = regexp.MustCompile(`([^\.\[\]]+)`)
+var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
 
 // ObjectPredicate => EmptyPredicate | ‘.’ Key Predicate
 // Key             => keyRegex
