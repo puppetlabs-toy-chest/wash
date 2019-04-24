@@ -9,7 +9,7 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
-// sizePrimary => -size (+|-)?(\d+ | util.SizeRegex)
+// sizePrimary => -size (+|-)?(\d+ | numeric.SizeRegex)
 //
 // Example inputs:
 //   -size 2   (true if the entry's size in 512-byte blocks, rounded up, is 2)

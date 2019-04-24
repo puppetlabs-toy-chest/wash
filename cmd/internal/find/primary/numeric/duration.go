@@ -29,7 +29,7 @@ func DurationOf(unit byte) int64 {
 	if d, ok := durationsMap[unit]; ok {
 		return int64(d)
 	}
-	panic(fmt.Sprintf("util.DurationOf received an unexpected unit %v", unit))
+	panic(fmt.Sprintf("numeric.DurationOf received an unexpected unit %v", unit))
 }
 
 var durationChunkRegex = regexp.MustCompile(`\d+[smhdw]`)

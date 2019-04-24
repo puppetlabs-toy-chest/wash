@@ -27,7 +27,7 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 	}
 }
 
-// timeAttrPrimary => -<name> (+|-)?(\d+ | (util.DurationRegex)+)
+// timeAttrPrimary => -<name> (+|-)?(\d+ | (numeric.DurationRegex)+)
 //
 // Example inputs:
 //   -mtime 1      (true if the difference between the entry's mtime and startTime is exactly 1 24-hour period)

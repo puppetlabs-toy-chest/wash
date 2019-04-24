@@ -30,7 +30,7 @@ func BytesOf(unit byte) int64 {
 	if b, ok := bytesMap[unit]; ok {
 		return b
 	}
-	panic(fmt.Sprintf("util.BytesOf received an unexpected unit %v", unit))
+	panic(fmt.Sprintf("numeric.BytesOf received an unexpected unit %v", unit))
 }
 
 // SizeRegex describes a valid size value. See BytesOf for more details on
