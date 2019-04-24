@@ -30,11 +30,17 @@ func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
 	return List(ctx, d, "")
 }
 
-func consumeExec(ctx context.Context, result plugin.ExecResult) (*bytes.Buffer, error) {
+func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
+	result, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{})
+	if err != nil {
+		return nil, err
+	}
+
 	var buf bytes.Buffer
+	var errs []error
 	for chunk := range result.OutputCh {
 		if chunk.Err != nil {
-			activity.Record(ctx, "Error on exec: %v", chunk.Err)
+			errs = append(errs, chunk.Err)
 		} else if chunk.StreamID == 0 {
 			activity.Record(ctx, "Stdout: %v", chunk.Data)
 			fmt.Fprint(&buf, chunk.Data)
@@ -43,12 +49,14 @@ func consumeExec(ctx context.Context, result plugin.ExecResult) (*bytes.Buffer, 
 		}
 	}
 
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("exec errored: %v", errs)
+	}
+
 	exitcode, err := result.ExitCodeCB()
 	if err != nil {
-		activity.Record(ctx, "Error exiting exec: %v", err)
 		return nil, err
 	} else if exitcode != 0 {
-		activity.Record(ctx, "Exited non-zero")
 		return nil, fmt.Errorf("exec exited non-zero")
 	}
 	return &buf, nil
@@ -58,14 +66,9 @@ func consumeExec(ctx context.Context, result plugin.ExecResult) (*bytes.Buffer, 
 func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
 	cmdline := StatCmd("/var/log")
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
-	result, err := d.executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{})
+	buf, err := exec(ctx, d.executor, cmdline)
 	if err != nil {
-		activity.Record(ctx, "Exec error in VolumeList: %v", err)
-		return nil, err
-	}
-
-	buf, err := consumeExec(ctx, result)
-	if err != nil {
+		activity.Record(ctx, "Exec error running %v in VolumeList: %v", cmdline, err)
 		return nil, err
 	}
 	activity.Record(ctx, "VolumeList complete")
@@ -75,14 +78,9 @@ func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
 // VolumeOpen satisfies the Interface required by List to read file contents.
 func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
 	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
-	result, err := d.executor.Exec(ctx, "cat", []string{path}, plugin.ExecOptions{})
+	buf, err := exec(ctx, d.executor, []string{"cat", path})
 	if err != nil {
-		activity.Record(ctx, "Exec error in VolumeOpen: %v", err)
-		return nil, err
-	}
-
-	buf, err := consumeExec(ctx, result)
-	if err != nil {
+		activity.Record(ctx, "Exec error running 'cat %v' in VolumeOpen: %v", path, err)
 		return nil, err
 	}
 	return bytes.NewReader(buf.Bytes()), nil
