@@ -77,6 +77,9 @@ type ExecOutputChunk struct {
 	Err       error
 }
 
+// StreamTypes provides the name of the corresponding StreamID.
+var StreamTypes = []string{"Stdout", "Stderr"}
+
 // ExecResult is a struct that contains the result of invoking Execable#exec.
 // Any of these fields can be nil. The OutputCh will be closed when execution completes.
 type ExecResult struct {

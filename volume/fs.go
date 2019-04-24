@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -84,4 +85,43 @@ func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, e
 		return nil, err
 	}
 	return bytes.NewReader(buf.Bytes()), nil
+}
+
+// VolumeStream satisfies the Interface required by List to stream file contents.
+func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
+	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
+	result, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, plugin.ExecOptions{})
+	if err != nil {
+		activity.Record(ctx, "Exec error in VolumeRead: %v", err)
+		return nil, err
+	}
+
+	r, w := io.Pipe()
+	go func() {
+		// Exec uses context; if it's canceled, the OutputCh will close. Close the writer.
+		var errs []error
+		for chunk := range result.OutputCh {
+			if chunk.Err != nil {
+				activity.Record(ctx, "Error on exec: %v", chunk.Err)
+				errs = append(errs, chunk.Err)
+				continue
+			}
+
+			activity.Record(ctx, "%v: %v", plugin.StreamTypes[chunk.StreamID], chunk.Data)
+			if len(errs) == 0 {
+				if _, err := w.Write([]byte(chunk.Data)); err != nil {
+					activity.Record(ctx, "Error copying exec result: %v", err)
+					errs = append(errs, err)
+				}
+			}
+		}
+
+		if len(errs) > 0 {
+			err = w.CloseWithError(fmt.Errorf("Multiple errors from exec output: %v", errs))
+		} else {
+			err = w.Close()
+		}
+		activity.Record(ctx, "Closing write pipe: %v", err)
+	}()
+	return r, nil
 }

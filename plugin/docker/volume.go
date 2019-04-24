@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"io/ioutil"
 	"time"
 
@@ -172,4 +173,58 @@ func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReade
 		return nil, err
 	}
 	return bytes.NewReader(bits), nil
+}
+
+func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
+	// Create a container that mounts a volume and tails a file. Run it and capture the output.
+	cid, err := v.createContainer(ctx, []string{"tail", "-f", mountpoint + path})
+	if err != nil {
+		return nil, err
+	}
+
+	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
+	delete := func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted container %v: %v", cid, err)
+	}
+
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		delete()
+		return nil, err
+	}
+
+	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
+	killAndDelete := func() {
+		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
+		delete()
+	}
+
+	activity.Record(ctx, "Waiting for container %v", cid)
+	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+	var statusCode int64
+	select {
+	case err := <-errC:
+		killAndDelete()
+		return nil, err
+	case result := <-waitC:
+		statusCode = result.StatusCode
+		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+	}
+
+	opts := types.ContainerLogsOptions{ShowStdout: true}
+	if statusCode != 0 {
+		opts.ShowStderr = true
+	}
+
+	activity.Record(ctx, "Gathering log for %v", cid)
+	output, err := v.client.ContainerLogs(ctx, cid, opts)
+	if err != nil {
+		killAndDelete()
+		return nil, err
+	}
+
+	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
+	return plugin.CleanupReader{ReadCloser: output, Cleanup: killAndDelete}, nil
 }

@@ -2,6 +2,7 @@ package volume
 
 import (
 	"context"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -11,16 +12,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockEntry struct {
+type mockDirEntry struct {
 	plugin.EntryBase
 	dmap DirMap
 }
 
-func (m *mockEntry) VolumeList(context.Context) (DirMap, error) {
+func (m *mockDirEntry) VolumeList(context.Context) (DirMap, error) {
 	return m.dmap, nil
 }
 
-func (m *mockEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
+func (m *mockDirEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
+	return nil, nil
+}
+
+func (m *mockDirEntry) VolumeStream(context.Context, string) (io.ReadCloser, error) {
 	return nil, nil
 }
 
@@ -29,7 +34,7 @@ func TestVolumeDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())
-	entry := mockEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
+	entry := mockDirEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
 	entry.SetTestID("/mine")
 
 	assert.NotNil(t, dmap[""]["path"])

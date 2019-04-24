@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"time"
 
@@ -171,7 +172,7 @@ func (v *pvc) VolumeList(ctx context.Context) (volume.DirMap, error) {
 }
 
 func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
-	// Create a container that mounts a pvc and waits. Use it to download a file.
+	// Create a container that mounts a pvc and output the file.
 	pid, err := v.createPod([]string{"cat", mountpoint + path})
 	activity.Record(ctx, "Reading from: %v", mountpoint+path)
 	if err != nil {
@@ -207,4 +208,48 @@ func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, 
 		return nil, errors.New(string(bits))
 	}
 	return bytes.NewReader(bits), nil
+}
+
+func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
+	// Create a container that mounts a pvc and tail the file.
+	pid, err := v.createPod([]string{"tail", "-f", mountpoint + path})
+	activity.Record(ctx, "Streaming from: %v", mountpoint+path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
+	delete := func() {
+		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+	}
+
+	activity.Record(ctx, "Waiting for pod %v", pid)
+	// Start watching for new events related to the pod we created.
+	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
+		delete()
+		return nil, err
+	}
+	podErr := err
+
+	activity.Record(ctx, "Gathering log for %v", pid)
+	output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if err != nil {
+		delete()
+		return nil, err
+	}
+
+	if podErr == errPodTerminated {
+		bits, err := ioutil.ReadAll(output)
+		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+		delete()
+		if err != nil {
+			return nil, err
+		}
+		activity.Record(ctx, "Read: %v", bits)
+
+		return nil, errors.New(string(bits))
+	}
+
+	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
+	return plugin.CleanupReader{ReadCloser: output, Cleanup: delete}, nil
 }

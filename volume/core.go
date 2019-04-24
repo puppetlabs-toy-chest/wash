@@ -8,6 +8,7 @@ package volume
 
 import (
 	"context"
+	"io"
 	"sort"
 	"time"
 
@@ -25,7 +26,8 @@ type Interface interface {
 	VolumeList(context.Context) (DirMap, error)
 	// Accepts a path and returns the content associated with that path.
 	VolumeOpen(context.Context, string) (plugin.SizedReader, error)
-	// TODO: add VolumeStream
+	// Accepts a path and streams updates to the content associated with that path.
+	VolumeStream(context.Context, string) (io.ReadCloser, error)
 }
 
 // A Dir is a map of files in a directory to their attributes.
@@ -51,7 +53,7 @@ func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, err
 		if attr.Mode().IsDir() {
 			entries = append(entries, newDir(name, attr, impl, path+"/"+name))
 		} else {
-			entries = append(entries, newFile(name, attr, impl.VolumeOpen, path+"/"+name))
+			entries = append(entries, newFile(name, attr, impl, path+"/"+name))
 		}
 	}
 	// Sort entries so they have a deterministic order.
