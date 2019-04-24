@@ -250,6 +250,9 @@ Project maintainers are not actively working on all of these things, but any of 
 | **_IoT (e.g. Nest, Hue, Rachio)_** | ○ | ○ | ○ | ○ | ○ |
 | **`wash` itself (expose internals)** | ○ | ○ | ○ | ○ | ○ |
 
+✓ = Implemented
+○ = Possible, but not yet implemented
+
 ## Contributing
 
 We'd love to get contributions from you! For a quick guide, take a look at our guide to [contributing](./CONTRIBUTING.md).
