@@ -43,6 +43,7 @@ func (suite *PrimitivePredicateTestSuite) TestValidInput() {
 		nPTC("-false", "", false),
 		nPTC("200", "", float64(200)),
 		nPTC("+1h", "", addTST(-2*numeric.DurationOf('h'))),
+		nPTC("+{1h}", "", addTST(2*numeric.DurationOf('h'))),
 		nPTC("foo", "", "foo"),
 		nPTC("+foo", "", "+foo"),
 	)

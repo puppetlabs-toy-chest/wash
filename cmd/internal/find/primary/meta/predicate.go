@@ -13,17 +13,15 @@ Predicate => ObjectPredicate |
              PrimitivePredicate
 */
 func parsePredicate(tokens []string) (predicate, []string, error) {
-	p, tokens, err := try(
-		tokens,
-		parseObjectPredicate,
-		parseArrayPredicate,
-		parsePrimitivePredicate,
-	)
-	if err != nil {
-		if errz.IsMatchError(err) {
-			return nil, nil, errz.NewMatchError("expected either a primitive, object, or array predicate")
-		}
-		return nil, nil, err
+	if len(tokens) == 0 {
+		return nil, nil, errz.NewMatchError("expected either a primitive, object, or array predicate")
 	}
-	return p, tokens, err
+	switch token := tokens[0]; token[0] {
+	case '.':
+		return parseObjectPredicate(tokens)
+	case '[':
+		return parseArrayPredicate(tokens)
+	default:
+		return parsePrimitivePredicate(tokens)
+	}
 }

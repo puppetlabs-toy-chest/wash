@@ -14,7 +14,7 @@ import (
 
 type ParserTestSuite struct {
 	suite.Suite
-	parser predicateParser
+	parser func(tokens []string) (predicate, []string, error)
 }
 
 type parserTestCase struct {

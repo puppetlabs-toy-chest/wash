@@ -30,21 +30,42 @@ func parsePrimitivePredicate(tokens []string) (predicate, []string, error) {
 		// BooleanPredicate
 		return falseP, tokens[1:], nil
 	}
-	p, tokens, err := try(
-		tokens,
-		parseNumericPredicate,
-		parseTimePredicate,
-		// We place parseStringPredicate last because it's meant to be a fallback
-		// in case the previous parsers return match errors.
-		parseStringPredicate,
-	)
-	if err != nil {
-		if errz.IsMatchError(err) {
-			return nil, nil, errz.NewMatchError("expected a primitive predicate")
-		}
+	// We have either a NumericPredicate, a TimePredicate, or a StringPredicate.
+
+	// Use tks to avoid overwriting tokens
+	p, tks, err := parseNumericPredicate(tokens)
+	if err == nil {
+		return p, tks, nil
+	}
+	// parseNumericPredicate returned an error. Store the error, then
+	// try parseTimePredicate. If parseTimePredicate returns a syntax
+	// error, return it. Otherwise, check if numericPErr was a syntax
+	// error. If so, return it. We need this complicated logic to handle
+	// parsing "negative" time predicates like +{2h}, because parseNumericPredicate
+	// will return syntax errors for those values even though they're valid
+	// primitive predicates.
+	numericPErr := err
+	p, tks, err = parseTimePredicate(tokens)
+	if err == nil {
+		return p, tks, nil
+	}
+	if !errz.IsMatchError(err) {
 		return nil, nil, err
 	}
-	return p, tokens, nil
+	if !errz.IsMatchError(numericPErr) {
+		// numericPErr was a syntax error, so return it.
+		return nil, nil, numericPErr
+	}
+
+	// Fallback to parseStringPredicate
+	p, tks, err = parseStringPredicate(tokens)
+	if err == nil {
+		return p, tks, nil
+	}
+	if errz.IsMatchError(err) {
+		err = errz.NewMatchError("expected a primitive predicate")
+	}
+	return nil, nil, err
 }
 
 func nullP(v interface{}) bool {
