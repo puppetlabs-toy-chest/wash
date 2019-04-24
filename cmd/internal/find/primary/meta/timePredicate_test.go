@@ -29,7 +29,7 @@ func (suite *TimePredicateTestSuite) TestErrors() {
 	)
 }
 
-func (suite *TimePredicateTestSuite) TestValidInput() {
+func (suite *TimePredicateTestSuite) TestValidInputTrueValues() {
 	// Test the happy cases first
 	suite.runTestCases(
 		nPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h'))),
@@ -39,12 +39,28 @@ func (suite *TimePredicateTestSuite) TestValidInput() {
 		// Test a stringified time to ensure that munge.ToTime's called
 		nPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String()),
 	)
+}
 
-	// Now test that the predicate returns false for a non-time
-	// value
-	p, _, err := parseTimePredicate(toTks("+2h"))
-	if suite.NoError(err) {
-		suite.False(p("not_a_time"))
+func (suite *TimePredicateTestSuite) TestValidInputFalseValues() {
+	// TODO: May be worth adding support for false values to the
+	// parserTestCase class if testing lots of them becomes common
+	// enough.
+	type negativeTestCase struct {
+		input string
+		falseV interface{}
+	}
+	cases := []negativeTestCase{
+		negativeTestCase{"+2h", "not_a_valid_time_value"},
+		negativeTestCase{"+2h", addTST(-1*numeric.DurationOf('h'))},
+		negativeTestCase{"-2h", addTST(-3*numeric.DurationOf('h'))},
+		negativeTestCase{"+{2h}", addTST(1*numeric.DurationOf('h'))},
+		negativeTestCase{"-{2h}", addTST(3*numeric.DurationOf('h'))},
+	}
+	for _, c := range cases {
+		p, _, err := parseTimePredicate(toTks(c.input))
+		if suite.NoError(err, "Input: %v", c.input) {
+			suite.False(p(c.falseV), "Input: %v", c.input)
+		}
 	}
 }
 
