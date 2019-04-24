@@ -3,34 +3,13 @@ package primary
 import (
 	"fmt"
 	"math"
-	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
-
-// FindStartTime represents `wash find`'s start time. This is set by
-// `wash find`'s main function.
-var FindStartTime time.Time
-
-var durationsMap = map[byte]time.Duration{
-	's': time.Second,
-	'm': time.Minute,
-	'h': time.Hour,
-	'd': 24 * time.Hour,
-	'w': 7 * 24 * time.Hour,
-}
-
-// Use durationOf instead of a hash so that we generate a more readable
-// panic message
-func durationOf(unit byte) time.Duration {
-	if d, ok := durationsMap[unit]; ok {
-		return d
-	}
-	panic(fmt.Sprintf("cmdfind.durationOf received an unexpected unit %v", unit))
-}
 
 // We use getTimeAttrValue to retrieve the time attribute's value for performance
 // reasons. Using e.Attributes.ToMap()[name] would be slower because it would
@@ -48,47 +27,7 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 	}
 }
 
-var timeAttrValueRegex = regexp.MustCompile(`^(\+|-)?((\d+)|(\d+[smhdw])+)$`)
-
-// Describes values like 1h30m, 3w2d, etc.
-var timeAttrUnitValueRegex = regexp.MustCompile(`\d+[smhdw]`)
-
-// parseDuration is a helper for newTimeAttrPrimary that parses the
-// duration from v. It returns the parsed duration, and a boolean
-// indicating whether the difference between the entry's time attribute
-// and start time needs to be rounded to the next 24-hour period (which
-// is only true if v is an integer).
-func parseDuration(v string) (time.Duration, bool) {
-	var roundDiff bool
-	var duration time.Duration
-	if n, err := strconv.ParseInt(v, 10, 32); err == nil {
-		// v (n) is an integer
-		duration = time.Duration(n) * durationOf('d')
-		roundDiff = true
-	} else {
-		// v consists of individual time units. Add them up to get the overall
-		// duration. Note that repeated units will be stacked, meaning something
-		// like "1h1h1h1h" will result in a duration of 4 hours. This behavior matches
-		// BSD's find command's behavior.
-		for _, chunk := range timeAttrUnitValueRegex.FindAllString(v, -1) {
-			endIx := len(chunk) - 1
-			unit := chunk[endIx]
-			n, err := strconv.ParseInt(chunk[0:endIx], 10, 32)
-			if err != nil {
-				// We should never hit this code-path because timeAttrUnitValueRegex
-				// already verified that chunk[0:endIx] is an integer.
-				msg := fmt.Sprintf("errored parsing duration %v, which is an expected integer: %v", chunk[0:endIx], err)
-				panic(msg)
-			}
-			duration += time.Duration(n) * durationOf(unit)
-		}
-	}
-	return duration, roundDiff
-}
-
-// timeAttrPrimary => -<name> (+|-)?((\d+)|(\d+[smhdw])
-//
-// where s => seconds, m => minutes, h => hours, d => days, w => weeks
+// timeAttrPrimary => -<name> (+|-)?(\d+ | (numeric.DurationRegex)+)
 //
 // Example inputs:
 //   -mtime 1      (true if the difference between the entry's mtime and startTime is exactly 1 24-hour period)
@@ -101,46 +40,33 @@ func parseDuration(v string) (time.Duration, bool) {
 func newTimeAttrPrimary(name string) *grammar.Atom {
 	tk := "-" + name
 	return grammar.NewAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
-		if FindStartTime == (time.Time{}) {
-			panic("Attempting to parse a time primary without setting primary.StartTime")
+		if params.StartTime.IsZero() {
+			panic("Attempting to parse a time primary without setting params.StartTime")
 		}
-
 		tokens = tokens[1:]
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("%v: requires additional arguments", tk)
 		}
-		v := tokens[0]
-		if !timeAttrValueRegex.MatchString(v) {
-			return nil, nil, fmt.Errorf("%v: %v: illegal time value", tk, v)
+		numericP, parserID, err := numeric.ParsePredicate(
+			tokens[0],
+			numeric.ParsePositiveInt,
+			numeric.ParseDuration,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("-%v: %v: illegal time value", name, tokens[0])
 		}
 
-		cmp := v[0]
-		if cmp == '+' || cmp == '-' {
-			v = v[1:]
-		} else {
-			cmp = '='
-		}
-
-		duration, roundDiff := parseDuration(v)
 		p := func(e types.Entry) bool {
 			t, ok := getTimeAttrValue(name, e)
 			if !ok {
 				return false
 			}
-			diff := FindStartTime.Sub(t)
-			if roundDiff {
-				// Round-up diff to the next 24-hour period
-				roundedDays := time.Duration(math.Ceil(float64(diff) / float64(durationOf('d'))))
-				diff = roundedDays * durationOf('d')
+			diff := int64(params.StartTime.Sub(t))
+			if parserID == 0 {
+				// n was an integer, so round-up diff to the next 24-hour period
+				diff = int64(math.Ceil(float64(diff) / float64(numeric.DurationOf('d'))))
 			}
-			switch cmp {
-			case '+':
-				return diff > duration
-			case '-':
-				return diff < duration
-			default:
-				return diff == duration
-			}
+			return numericP(diff)
 		}
 		return p, tokens[1:], nil
 	})

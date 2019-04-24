@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -14,26 +16,11 @@ type TimeAttrPrimaryTestSuite struct {
 }
 
 func (suite *TimeAttrPrimaryTestSuite) SetupTest() {
-	FindStartTime = time.Now()
+	params.StartTime = time.Now()
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
-	FindStartTime = time.Time{}
-}
-
-func (suite *TimeAttrPrimaryTestSuite) TestDurationOf() {
-	// Use array of bytes instead of a string to make it easier
-	// to add other, longer units in the future
-	testCases := []byte{
-		's',
-		'm',
-		'h',
-		'd',
-		'w',
-	}
-	for _, input := range testCases {
-		suite.Equal(durationsMap[input], durationOf(input))
-	}
+	params.StartTime = time.Time{}
 }
 
 func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
@@ -70,25 +57,6 @@ func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 	}
 }
 
-func (suite *TimeAttrPrimaryTestSuite) TestParseDuration() {
-	type testCase struct {
-		input             string
-		expectedDuration  time.Duration
-		expectedRoundDiff bool
-	}
-	testCases := []testCase{
-		testCase{"1", 1 * durationOf('d'), true},
-		testCase{"2", 2 * durationOf('d'), true},
-		testCase{"1w1d1h1m1s", 1*durationOf('w') + 1*durationOf('d') + 1*durationOf('h') + 1*durationOf('m') + 1*durationOf('s'), false},
-		testCase{"2w2d2h2m2s", 2*durationOf('w') + 2*durationOf('d') + 2*durationOf('h') + 2*durationOf('m') + 2*durationOf('s'), false},
-	}
-	for _, testCase := range testCases {
-		actualDuration, actualRoundDiff := parseDuration(testCase.input)
-		suite.Equal(testCase.expectedDuration, actualDuration)
-		suite.Equal(testCase.expectedRoundDiff, actualRoundDiff)
-	}
-}
-
 // These tests use the ctimePrimary as the representative test case
 
 func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryInsufficientArgsError() {
@@ -119,22 +87,20 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 		input string
 		// trueCtime/falseCtime represent ctime durations that, when subtracted
 		// from startTime, satisfy/unsatisfy the predicate, respectively.
-		trueCtime  time.Duration
-		falseCtime time.Duration
+		trueCtime  int64
+		falseCtime int64
 	}
 	testCases := []testCase{
 		// We set trueCtime to 1.5 days in order to test roundDiff
-		testCase{"2", 1*durationOf('d') + 12*time.Hour, 1 * durationOf('d')},
+		testCase{"2", 1*numeric.DurationOf('d') + 12*numeric.DurationOf('h'), 1 * numeric.DurationOf('d')},
 		// +1 means p will return true if diff > 1 day
-		testCase{"+1", 2 * durationOf('d'), 0 * durationOf('d')},
+		testCase{"+1", 2 * numeric.DurationOf('d'), 0 * numeric.DurationOf('d')},
 		// -2 means p will return true if diff < 2 days
-		testCase{"-2", 1 * durationOf('d'), 3 * durationOf('d')},
-		// Units like "1h30m" aren't really useful unless they're used with the
-		// +/- modifiers, but we'd still like to test an exact comparison since it
-		// is technically supported.
-		testCase{"1h", 1 * durationOf('h'), 1 * durationOf('m')},
-		testCase{"+1h", 2 * durationOf('h'), 1 * durationOf('m')},
-		testCase{"-1h", 1 * durationOf('m'), 1 * durationOf('h')},
+		testCase{"-2", 1 * numeric.DurationOf('d'), 3 * numeric.DurationOf('d')},
+		// time.Time has nanosecond precision so units like "1h30m" aren't really
+		// useful unless they're used with the +/- modifiers.
+		testCase{"+1h", 2 * numeric.DurationOf('h'), 1 * numeric.DurationOf('m')},
+		testCase{"-1h", 1 * numeric.DurationOf('m'), 1 * numeric.DurationOf('h')},
 	}
 	for _, testCase := range testCases {
 		inputStr := func() string {
@@ -147,10 +113,10 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 			// Ensure p(e) is always false for an entry that doesn't have a ctime attribute
 			suite.False(p(e), inputStr())
 
-			e.Attributes.SetCtime(FindStartTime.Add(-testCase.trueCtime))
+			e.Attributes.SetCtime(params.StartTime.Add(time.Duration(-testCase.trueCtime)))
 			suite.True(p(e), inputStr())
 
-			e.Attributes.SetCtime(FindStartTime.Add(-testCase.falseCtime))
+			e.Attributes.SetCtime(params.StartTime.Add(time.Duration(-testCase.falseCtime)))
 			suite.False(p(e), inputStr())
 		}
 	}
