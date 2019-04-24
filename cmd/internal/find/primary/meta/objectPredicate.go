@@ -37,10 +37,14 @@ func parseObjectPredicate(tokens []string) (predicate, []string, error) {
 	}
 	key := tk[loc[0]:loc[1]]
 	if len(tk) == loc[1] {
-		// tk is not a key sequence, so we can shift tokens
+		// tk is a single key, so it is of the form "key". Since keyRegex matched "key",
+		// we can shift tokens.
 		tokens = tokens[1:]
 	} else {
-		// tk is a key sequence, so shift it to the regex's postmatch
+		// tk is a key sequence, so it is of the form "key1.key2" (or "key1[]"). keyRegex
+		// matched the "key1" part, while the ".key2"/"[]" parts correspond to object/array
+		// predicates. We can let parsePredicate figure this info out for us by setting
+		// tokens[0] to the regex's postmatch prior to passing tokens into parsePredicate.
 		tokens[0] = tk[loc[1]:]
 	}
 	p, tokens, err := parsePredicate(tokens)
