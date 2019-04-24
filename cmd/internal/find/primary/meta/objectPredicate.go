@@ -11,7 +11,7 @@ import (
 // A key consists of one or more characters that aren't
 // ".", "[", or "]". The reason we have this limitation
 // is so we can support key sequences, which includes
-// nested keys like ".key1.key2", ".key1[].key2", etc.
+// nested keys like ".key1.key2", ".key1[?].key2", etc.
 // key sequences aren't specified in the grammar because
 // they make it harder to formalize the semantics.
 var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
@@ -41,8 +41,8 @@ func parseObjectPredicate(tokens []string) (predicate, []string, error) {
 		// we can shift tokens.
 		tokens = tokens[1:]
 	} else {
-		// tk is a key sequence, so it is of the form "key1.key2" (or "key1[]"). keyRegex
-		// matched the "key1" part, while the ".key2"/"[]" parts correspond to object/array
+		// tk is a key sequence, so it is of the form "key1.key2" (or "key1[?]"). keyRegex
+		// matched the "key1" part, while the ".key2"/"[?]" parts correspond to object/array
 		// predicates. We can let parsePredicate figure this info out for us by setting
 		// tokens[0] to the regex's postmatch prior to passing tokens into parsePredicate.
 		tokens[0] = tk[loc[1]:]

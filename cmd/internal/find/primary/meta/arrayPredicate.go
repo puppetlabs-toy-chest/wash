@@ -32,9 +32,9 @@ func parseArrayPredicate(tokens []string) (predicate, []string, error) {
 		tokens = tokens[1:]
 	} else {
 		// token may be part of a key sequence (e.g. something like
-		// [].key2 or [][])
+		// [?].key2 or [?][?])
 		if token[0] != '.' && token[0] != '[' {
-			// Returning this error avoids weird cases like "[]-true", which would
+			// Returning this error avoids weird cases like "[?]-true", which would
 			// otherwise be parsed as an array predicate on a Boolean predicate. For
 			// that case, the token being compared here would be "-true".
 			return nil, nil, fmt.Errorf("expected a '.' or '[' after ']' but got %v instead", token)
