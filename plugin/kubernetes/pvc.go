@@ -170,7 +170,7 @@ func (v *pvc) VolumeList(ctx context.Context) (volume.DirMap, error) {
 	return volume.StatParseAll(output, mountpoint)
 }
 
-func (v *pvc) VolumeRead(ctx context.Context, path string) (plugin.SizedReader, error) {
+func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
 	// Create a container that mounts a pvc and waits. Use it to download a file.
 	pid, err := v.createPod([]string{"cat", mountpoint + path})
 	activity.Record(ctx, "Reading from: %v", mountpoint+path)

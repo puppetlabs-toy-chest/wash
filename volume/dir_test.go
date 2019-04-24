@@ -20,7 +20,7 @@ func (m *mockEntry) VolumeList(context.Context) (DirMap, error) {
 	return m.dmap, nil
 }
 
-func (m *mockEntry) VolumeRead(context.Context, string) (plugin.SizedReader, error) {
+func (m *mockEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
 	return nil, nil
 }
 

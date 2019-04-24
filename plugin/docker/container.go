@@ -10,6 +10,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	vol "github.com/puppetlabs/wash/volume"
 )
 
 type container struct {
@@ -51,7 +52,8 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	clfAttr.SetSize(uint64(content.Size()))
 	clf.SetAttributes(clfAttr)
 
-	return []plugin.Entry{cm, clf}, nil
+	// Include a view of the remote filesystem using volume.FS
+	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil
 }
 
 func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {

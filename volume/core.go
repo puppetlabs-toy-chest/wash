@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -21,13 +22,16 @@ import (
 )
 
 // Interface presents methods to access the volume.
+//
+// Method names for this interface are chosen to make it simple to distinguish them from
+// methods implemented to satisfy plugin interfaces.
 type Interface interface {
 	plugin.Entry
 
 	// Returns a map of volume nodes to their stats, such as that returned by StatParseAll.
 	VolumeList(context.Context) (DirMap, error)
 	// Accepts a path and returns the content associated with that path.
-	VolumeRead(context.Context, string) (plugin.SizedReader, error)
+	VolumeOpen(context.Context, string) (plugin.SizedReader, error)
 }
 
 // StatCmd returns the command required to stat all the files in a directory.
@@ -145,8 +149,10 @@ func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, err
 		if attr.Mode().IsDir() {
 			entries = append(entries, newDir(name, attr, impl, path+"/"+name))
 		} else {
-			entries = append(entries, newFile(name, attr, impl.VolumeRead, path+"/"+name))
+			entries = append(entries, newFile(name, attr, impl.VolumeOpen, path+"/"+name))
 		}
 	}
+	// Sort entries so they have a deterministic order.
+	sort.Slice(entries, func(i, j int) bool { return plugin.Name(entries[i]) < plugin.Name(entries[j]) })
 	return entries, nil
 }
