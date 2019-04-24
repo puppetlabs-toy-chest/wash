@@ -43,7 +43,7 @@ func TestVolumeDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "a file", plugin.Name(entries[0]))
-	if entry, ok := entries[0].(*File); assert.Equal(t, true, ok) {
+	if entry, ok := entries[0].(*file); assert.Equal(t, true, ok) {
 		assert.Equal(t, "/path1/a file", entry.path)
 	}
 
@@ -53,7 +53,7 @@ func TestVolumeDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "dir", plugin.Name(entries[0]))
-	if entry, ok := entries[0].(*Dir); assert.Equal(t, true, ok) {
+	if entry, ok := entries[0].(*dir); assert.Equal(t, true, ok) {
 		assert.Equal(t, "/path2/dir", entry.path)
 	}
 
