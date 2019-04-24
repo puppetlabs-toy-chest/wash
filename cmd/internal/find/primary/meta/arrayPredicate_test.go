@@ -27,14 +27,16 @@ func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
 		nPETC("f", `expected an opening '\['`, true),
 		nPETC("[", `expected a closing '\]'`, false),
 		nPETC("[a", `expected a closing '\]'`, false),
+		nPETC("[]", `expected a '\*', '\?', or an array index inside '\[\]'`, false),
 		nPETC("[*a]", `expected a closing '\]' after '\*'`, false),
+		nPETC("[?a]", `expected a closing '\]' after '\?'`, false),
 		nPETC("[a]", `expected an array index inside '\[\]'`, false),
 		nPETC("[-15]", `expected an array index inside '\[\]'`, false),
-		nPETC("[]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false),
-		nPETC("[]", `expected a predicate after \[\]`, false),
+		nPETC("[?]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false),
+		nPETC("[?]", `expected a predicate after \[\?\]`, false),
 		nPETC("[*]", `expected a predicate after \[\*\]`, false),
 		nPETC("[15]", `expected a predicate after \[15\]`, false),
-		nPETC("[] +{", "expected.*closing.*}", false),
+		nPETC("[?] +{", "expected.*closing.*}", false),
 	)
 }
 
@@ -45,12 +47,12 @@ func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 		// Test -empty
 		nPTC("-empty", "", []interface{}{}),
 		// Test each of the possible arrayPs
-		nPTC("[] -true -size", "-size", toA(false, true)),
+		nPTC("[?] -true -size", "-size", toA(false, true)),
 		nPTC("[*] -true -size", "-size", toA(true, true)),
 		nPTC("[0] -true -size", "-size", toA(true)),
 		// Test key sequences
-		nPTC("[][] -true -size", "-size", toA(toA(true))),
-		nPTC("[].key -true -size", "-size", toA(mp)),
+		nPTC("[?][?] -true -size", "-size", toA(toA(true))),
+		nPTC("[?].key -true -size", "-size", toA(mp)),
 	)
 }
 
@@ -58,7 +60,7 @@ func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
 	// These test only the valid inputs. The error cases are tested in
 	// TestParseArrayPredicateErrors.
 
-	ptype, token, err := parseArrayPredicateType("[]")
+	ptype, token, err := parseArrayPredicateType("[?]")
 	if suite.NoError(err) {
 		suite.Equal(byte('s'), ptype.t)
 		suite.Equal("", token)

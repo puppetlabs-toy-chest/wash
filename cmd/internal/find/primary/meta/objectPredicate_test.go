@@ -51,7 +51,7 @@ func (suite *ObjectPredicateTestSuite) TestValidInput() {
 		// Test an object key sequence
 		nPTC(".key1.key2 -true -size", "-size", mp2),
 		// Test an array key sequence
-		nPTC(".key[] -true -size", "-size", mp3),
+		nPTC(".key[?] -true -size", "-size", mp3),
 	)
 }
 

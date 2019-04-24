@@ -20,7 +20,7 @@ Predicate          => ObjectPredicate     |
                       PrimitivePredicate
 
 ArrayPredicate     => EmptyPredicate      |
-                      ‘[' ‘]’ Predicate   |
+                      ‘[' ? ‘]’ Predicate |
                       ‘[' * ‘]’ Predicate |
                       ‘[' N ‘]’ Predicate |
 

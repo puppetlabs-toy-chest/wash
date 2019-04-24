@@ -9,7 +9,7 @@ import (
 )
 
 // ArrayPredicate => EmptyPredicate      |
-//                   ‘[' ‘]’ Predicate   |
+//                   ‘[' ? ‘]’ Predicate |
 //                   ‘[' * ‘]’ Predicate |
 //                   ‘[' N ‘]’ Predicate |
 func parseArrayPredicate(tokens []string) (predicate, []string, error) {
@@ -75,14 +75,20 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 		return ptype, "", fmt.Errorf("expected a closing ']'")
 	}
 	if endIx == 0 {
-		// s => some
-		ptype.t = 's'
-	} else if token[0] == '*' {
+		return ptype, "", fmt.Errorf("expected a '*', '?', or an array index inside '[]'")
+	}
+	if token[0] == '*' || token[0] == '?' {
 		if endIx > 1 {
-			return ptype, "", fmt.Errorf("expected a closing ']' after '*'")
+			// Handles input like [*123] or [?123]
+			return ptype, "", fmt.Errorf("expected a closing ']' after '%v'", string(token[0]))
 		}
-		// a => any
-		ptype.t = 'a'
+		if token[0] == '*' {
+			// a => any
+			ptype.t = 'a'
+		} else {
+			// s => some
+			ptype.t = 's'
+		}
 	} else {
 		n, err := strconv.ParseUint(token[0:endIx], 10, 32)
 		if err != nil {

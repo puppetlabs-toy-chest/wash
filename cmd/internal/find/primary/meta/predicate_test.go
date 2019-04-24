@@ -38,7 +38,7 @@ func (suite *PredicateTestSuite) TestValidInput() {
 		// ObjectPredicate
 		nPTC(".key -true", "", mp),
 		// ArrayPredicate
-		nPTC("[] -true", "", toA(true)),
+		nPTC("[?] -true", "", toA(true)),
 		// PrimitivePredicate
 		nPTC("-true", "", true),
 	)
