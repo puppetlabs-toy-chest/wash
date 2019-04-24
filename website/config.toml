@@ -43,7 +43,7 @@ pygmentsStyle = "vs"
     name = "download"
     weight = 3
   [[menu.main]]
-    url = "#"
+    url = "https://puppetcommunity.slack.com/app_redirect?channel=wash"
     name = "slack"
     weight = 4
 
