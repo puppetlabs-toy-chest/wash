@@ -6,7 +6,7 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
 )
 
-// StringPredicate => [^-]+
+// StringPredicate => [^-].*
 func parseStringPredicate(tokens []string) (predicate, []string, error) {
 	if len(tokens) == 0 || len(tokens[0]) == 0 {
 		return nil, nil, errz.NewMatchError("expected a nonempty string")

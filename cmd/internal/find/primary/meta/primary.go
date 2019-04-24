@@ -41,7 +41,7 @@ Number             => N | '{' N '}' | numeric.SizeRegex
 TimePredicate      => (+|-)? Duration
 Duration           => numeric.DurationRegex | '{' numeric.DurationRegex '}'
 
-StringPredicate    => [^-]+
+StringPredicate    => [^-].*
 
 N                  => \d+ (i.e. some number > 0)
 */
