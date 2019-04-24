@@ -95,7 +95,7 @@ func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
 	return &s3ObjectReader{o: o}, nil
 }
 
-func (o *s3Object) Stream(context.Context) (io.Reader, error) {
+func (o *s3Object) Stream(context.Context) (io.ReadCloser, error) {
 	return o.fetchContent(0)
 }
 

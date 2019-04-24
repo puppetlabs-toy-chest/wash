@@ -179,7 +179,7 @@ func (s *stdoutStreamer) Close() error {
 }
 
 // Stream streams the entry's content
-func (e *externalPluginEntry) Stream(ctx context.Context) (io.Reader, error) {
+func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
 	cmd, stdoutR, stderrR, err := CreateCommand(
 		e.script.Path(),
 		"stream",

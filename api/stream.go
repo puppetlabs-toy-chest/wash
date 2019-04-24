@@ -57,13 +57,12 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	wf := &streamableResponseWriter{f}
 	f.Flush()
 
-	if closer, ok := rdr.(io.Closer); ok {
-		// If a ReadCloser, ensure it's closed when the context is cancelled.
-		go func() {
-			<-r.Context().Done()
-			activity.Record(ctx, "API: Stream %v closed by completed context: %v", path, closer.Close())
-		}()
-	}
+	// Ensure it's closed when the context is cancelled.
+	go func() {
+		<-r.Context().Done()
+		activity.Record(ctx, "API: Stream %v closed by completed context: %v", path, rdr.Close())
+	}()
+
 	if _, err := io.Copy(wf, rdr); err != nil {
 		// Common for copy to error when the caller closes the connection.
 		log.Debugf("Errored streaming response for entry %v: %v", path, err)

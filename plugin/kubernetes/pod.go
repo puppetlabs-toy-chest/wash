@@ -113,7 +113,7 @@ func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 	return bytes.NewReader(pdInfo.logContent), nil
 }
 
-func (p *pod) Stream(ctx context.Context) (io.Reader, error) {
+func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
 	var tailLines int64 = 10
 	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{Follow: true, TailLines: &tailLines})
 	return req.Stream()

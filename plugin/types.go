@@ -93,7 +93,7 @@ type Execable interface {
 // Streamable is an entry that returns a stream of updates.
 type Streamable interface {
 	Entry
-	Stream(context.Context) (io.Reader, error)
+	Stream(context.Context) (io.ReadCloser, error)
 }
 
 // SizedReader returns a ReaderAt that can report its Size.
