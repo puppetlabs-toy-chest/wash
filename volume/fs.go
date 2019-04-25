@@ -90,7 +90,7 @@ func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, e
 // VolumeStream satisfies the Interface required by List to stream file contents.
 func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
-	result, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, plugin.ExecOptions{})
+	result, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, plugin.ExecOptions{Tty: true})
 	if err != nil {
 		activity.Record(ctx, "Exec error in VolumeRead: %v", err)
 		return nil, err
