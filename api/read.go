@@ -32,8 +32,8 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	if !plugin.ReadAction.IsSupportedOn(entry) {
-		return unsupportedActionResponse(path, plugin.ReadAction)
+	if !plugin.ReadAction().IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ReadAction())
 	}
 
 	activity.Record(ctx, "API: Read %v", path)
@@ -41,7 +41,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 
 	if err != nil {
 		activity.Record(ctx, "API: Read %v errored: %v", path, err)
-		return erroredActionResponse(path, plugin.ReadAction, err.Error())
+		return erroredActionResponse(path, plugin.ReadAction(), err.Error())
 	}
 	activity.Record(ctx, "API: Reading %v", path)
 
@@ -53,7 +53,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 	if err != nil {
 		activity.Record(ctx, "API: Reading %v errored: %v", path, err)
-		return erroredActionResponse(path, plugin.ReadAction, err.Error())
+		return erroredActionResponse(path, plugin.ReadAction(), err.Error())
 	}
 
 	activity.Record(ctx, "API: Reading %v complete", path)

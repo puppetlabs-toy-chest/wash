@@ -93,17 +93,17 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	if !plugin.ExecAction.IsSupportedOn(entry) {
-		return unsupportedActionResponse(path, plugin.ExecAction)
+	if !plugin.ExecAction().IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ExecAction())
 	}
 
 	if r.Body == nil {
-		return badActionRequestResponse(path, plugin.ExecAction, "Please send a JSON request body")
+		return badActionRequestResponse(path, plugin.ExecAction(), "Please send a JSON request body")
 	}
 
 	var body apitypes.ExecBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return badActionRequestResponse(path, plugin.ExecAction, err.Error())
+		return badActionRequestResponse(path, plugin.ExecAction(), err.Error())
 	}
 
 	fw, ok := w.(flushableWriter)
@@ -119,7 +119,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
 		activity.Record(ctx, "API: Exec %v errored: %v", path, err)
-		return erroredActionResponse(path, plugin.ExecAction, err.Error())
+		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)

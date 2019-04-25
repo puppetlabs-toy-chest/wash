@@ -34,8 +34,8 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return errResp
 	}
 
-	if !plugin.StreamAction.IsSupportedOn(entry) {
-		return unsupportedActionResponse(path, plugin.StreamAction)
+	if !plugin.StreamAction().IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.StreamAction())
 	}
 
 	f, ok := w.(flushableWriter)
@@ -48,7 +48,7 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 
 	if err != nil {
 		activity.Record(ctx, "API: Stream %v errored: %v", path, err)
-		return erroredActionResponse(path, plugin.StreamAction, err.Error())
+		return erroredActionResponse(path, plugin.StreamAction(), err.Error())
 	}
 	activity.Record(ctx, "API: Streaming %v", path)
 

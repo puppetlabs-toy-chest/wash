@@ -26,7 +26,7 @@ func newDir(p plugin.Group, e plugin.Group) *dir {
 
 func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
-	if plugin.ListAction.IsSupportedOn(d.entry) {
+	if plugin.ListAction().IsSupportedOn(d.entry) {
 		return plugin.CachedList(ctx, d.entry.(plugin.Group))
 	}
 
@@ -52,7 +52,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 
 	log.Infof("FUSE: Find[d,jid=%v] %v/%v", activity.GetJournal(ctx), d, cname)
-	if plugin.ListAction.IsSupportedOn(entry) {
+	if plugin.ListAction().IsSupportedOn(entry) {
 		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
 		activity.Record(ctx, "FUSE: Found directory %v", childdir)
 		return childdir, nil
@@ -79,7 +79,7 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	for cname, entry := range entries {
 		var de fuse.Dirent
 		de.Name = cname
-		if plugin.ListAction.IsSupportedOn(entry) {
+		if plugin.ListAction().IsSupportedOn(entry) {
 			de.Type = fuse.DT_Dir
 		}
 		res = append(res, de)

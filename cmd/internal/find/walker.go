@@ -37,7 +37,7 @@ func (w *walker) walk(e types.Entry, depth uint) {
 		w.visit(e, depth)
 	}
 	childDepth := depth + 1
-	if childDepth <= w.opts.Maxdepth && e.Supports(plugin.ListAction) {
+	if childDepth <= w.opts.Maxdepth && e.Supports(plugin.ListAction()) {
 		children, err := list(w.conn, e)
 		if err != nil {
 			cmdutil.ErrPrintf("could not get children of %v: %v\n", e.NormalizedPath, err)

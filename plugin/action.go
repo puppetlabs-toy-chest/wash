@@ -6,11 +6,15 @@ type Action struct {
 	Protocol string `json:"protocol"`
 }
 
+var actions = make(map[string]Action)
+
 func newAction(name string, protocol string) Action {
-	return Action{
+	a := Action{
 		Name:     name,
 		Protocol: protocol,
 	}
+	actions[a.Name] = a
+	return a
 }
 
 // IsSupportedOn returns true if the action's supported
@@ -25,17 +29,41 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 	return false
 }
 
+var listAction = newAction("list", "Group")
 // ListAction represents the list action
-var ListAction = newAction("list", "Group")
+func ListAction() Action {
+	return listAction
+}
 
+var readAction = newAction("read", "Readable")
 // ReadAction represents the read action
-var ReadAction = newAction("read", "Readable")
+func ReadAction() Action {
+	return readAction
+}
 
+var streamAction = newAction("stream", "Streamable")
 // StreamAction represents the stream action
-var StreamAction = newAction("stream", "Streamable")
+func StreamAction() Action {
+	return streamAction
+}
 
+var execAction = newAction("exec", "Execable")
 // ExecAction represents the exec action
-var ExecAction = newAction("exec", "Execable")
+func ExecAction() Action {
+	return execAction
+}
+
+// Actions returns all of the available Wash actions as a map
+// of <action_name> => <action_object>.
+func Actions() map[string]Action {
+	// We create a clone of the actions map so that callers won't
+	// be able to modify it.
+	mp := make(map[string]Action)
+	for k, v := range actions {
+		mp[k] = v 
+	}
+	return mp
+}
 
 // SupportedActionsOf returns all of the given
 // entry's supported actions.
@@ -52,16 +80,16 @@ func SupportedActionsOf(entry Entry) []string {
 		// of the code did do that. The reason we removed it was b/c type assertion's
 		// a lot faster, and the resulting code isn't that bad, if a little verbose.
 		if _, ok := entry.(Group); ok {
-			actions = append(actions, ListAction.Name)
+			actions = append(actions, ListAction().Name)
 		}
 		if _, ok := entry.(Readable); ok {
-			actions = append(actions, ReadAction.Name)
+			actions = append(actions, ReadAction().Name)
 		}
 		if _, ok := entry.(Streamable); ok {
-			actions = append(actions, StreamAction.Name)
+			actions = append(actions, StreamAction().Name)
 		}
 		if _, ok := entry.(Execable); ok {
-			actions = append(actions, ExecAction.Name)
+			actions = append(actions, ExecAction().Name)
 		}
 
 		return actions
