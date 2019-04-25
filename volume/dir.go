@@ -7,16 +7,16 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// Dir represents a directory in a volume. It populates a subtree with listcb as needed.
-type Dir struct {
+// dir represents a directory in a volume. It populates a subtree with listcb as needed.
+type dir struct {
 	plugin.EntryBase
 	impl Interface
 	path string
 }
 
-// newDir creates a Dir populated from dirs.
-func newDir(name string, attr plugin.EntryAttributes, impl Interface, path string) *Dir {
-	vd := &Dir{
+// newDir creates a dir populated from dirs.
+func newDir(name string, attr plugin.EntryAttributes, impl Interface, path string) *dir {
+	vd := &dir{
 		EntryBase: plugin.NewEntry(name),
 		impl:      impl,
 		path:      path,
@@ -30,6 +30,6 @@ func newDir(name string, attr plugin.EntryAttributes, impl Interface, path strin
 }
 
 // List lists the children of the directory.
-func (v *Dir) List(ctx context.Context) ([]plugin.Entry, error) {
+func (v *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	return List(ctx, v.impl, v.path)
 }

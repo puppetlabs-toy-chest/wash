@@ -133,7 +133,7 @@ func (v *volume) VolumeList(ctx context.Context) (vol.DirMap, error) {
 	return vol.StatParseAll(output, mountpoint)
 }
 
-func (v *volume) VolumeRead(ctx context.Context, path string) (plugin.SizedReader, error) {
+func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
 	// Create a container that mounts a volume and waits. Use it to download a file.
 	cid, err := v.createContainer(ctx, []string{"sleep", "60"})
 	if err != nil {

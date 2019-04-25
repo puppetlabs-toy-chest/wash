@@ -17,6 +17,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/volume"
 )
 
 // ec2Instance represents an EC2 instance
@@ -184,6 +185,9 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 		}
 		entries = append(entries, latestConsoleOutput)
 	}
+
+	// Include a view of the remote filesystem using volume.FS
+	entries = append(entries, volume.NewFS("fs", inst))
 
 	return entries, nil
 }
