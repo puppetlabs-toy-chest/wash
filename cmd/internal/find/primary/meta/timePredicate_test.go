@@ -55,6 +55,10 @@ func (suite *TimePredicateTestSuite) TestValidInputFalseValues() {
 		negativeTestCase{"-2h", addTST(-3*numeric.DurationOf('h'))},
 		negativeTestCase{"+{2h}", addTST(1*numeric.DurationOf('h'))},
 		negativeTestCase{"-{2h}", addTST(3*numeric.DurationOf('h'))},
+		// Test time mis-matches. First case is a future/past mismatch,
+		// while the second case is a past/future mismatch.
+		negativeTestCase{"-{2h}", addTST(-5*numeric.DurationOf('h'))},
+		negativeTestCase{"-2h", addTST(5*numeric.DurationOf('h'))},
 	}
 	for _, c := range cases {
 		p, _, err := parseTimePredicate(toTks(c.input))

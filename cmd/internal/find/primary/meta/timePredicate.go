@@ -22,7 +22,7 @@ func parseTimePredicate(tokens []string) (predicate, []string, error) {
 	numericP, parserID, err := numeric.ParsePredicate(
 		token,
 		numeric.ParseDuration,
-		numeric.Bracket(numeric.Negate(numeric.ParseDuration)),
+		numeric.Bracket(numeric.ParseDuration),
 	)
 	if err != nil {
 		if errz.IsMatchError(err) {
@@ -32,27 +32,34 @@ func parseTimePredicate(tokens []string) (predicate, []string, error) {
 		// err is a parse error, so return it.
 		return nil, nil, err
 	}
+	subFromStartTime := true
 	if parserID == 1 {
 		// User passed-in something like +{1h}. This means they want to
 		// base the predicate off of 'timeV - StartTime' instead of
-		// 'StartTime - timeV'. For our example of +{1h}, we want numericP
-		// to return true if 'timeV - StartTime' > 1h. Unfortunately, there
-		// isn't a clean way to mathematically enforce this without complicating
-		// the parsing logic. However, we can get a pretty good approximation
-		// by inverting numericP. For the +{1h} example, inverting numericP means
-		// that numericP returns true if 'StartTime - timeV' <= -1h which reduces
-		// to returning true if 'timeV - StartTime' >= 1h. This is not quite correct
-		// because numericP will return true if timeV == startTime, but given that
-		// Go's time.Time objects have nanosecond precision, this is a very rare
-		// (if not impossible) edge case so negating numericP should be good enough.
-		numericP = numeric.Not(numericP)
+		// 'StartTime - timeV'.
+		subFromStartTime = false
 	}
 	p := func(v interface{}) bool {
 		timeV, err := munge.ToTime(v)
 		if err != nil {
 			return false
 		}
-		diff := int64(params.StartTime.Sub(timeV))
+		var diff int64
+		if subFromStartTime {
+			diff = int64(params.StartTime.Sub(timeV))
+		} else {
+			diff = int64(timeV.Sub(params.StartTime))
+		}
+		if diff < 0 {
+			// Time predicates query either the past or the future, but not both.
+			// For example, +1h means "more than one hour ago", which queries the
+			// past. diff < 0 there means timeV is from the future, so the query
+			// doesn't make sense. Similarly, +{1h} means "more than one hour from now",
+			// which queries the future. diff < 0 there means timeV is from the past,
+			// so the query doesn't make sense. Thus, diff < 0 is a time-mismatch.
+			// Time-mismatches always return false.
+			return false
+		}
 		return numericP(diff)
 	}
 	return p, tokens[1:], nil
