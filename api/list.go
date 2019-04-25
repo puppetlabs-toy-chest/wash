@@ -40,8 +40,8 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	if !plugin.ListAction.IsSupportedOn(entry) {
-		return unsupportedActionResponse(path, plugin.ListAction)
+	if !plugin.ListAction().IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ListAction())
 	}
 
 	activity.Record(ctx, "API: List %v", path)
@@ -54,7 +54,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 			return duplicateCNameResponse(cnameErr)
 		}
 
-		return erroredActionResponse(path, plugin.ListAction, err.Error())
+		return erroredActionResponse(path, plugin.ListAction(), err.Error())
 	}
 
 	result := make([]apitypes.Entry, 0, len(entries))

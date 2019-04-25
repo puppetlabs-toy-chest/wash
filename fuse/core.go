@@ -84,7 +84,7 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 
 	if attr.HasMode() {
 		a.Mode = attr.Mode()
-	} else if plugin.ListAction.IsSupportedOn(f.entry) {
+	} else if plugin.ListAction().IsSupportedOn(f.entry) {
 		a.Mode = os.ModeDir | 0550
 	} else {
 		a.Mode = 0440

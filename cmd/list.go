@@ -57,7 +57,7 @@ func formatListEntries(ls []apitypes.Entry) string {
 			name = "."
 		}
 
-		if entry.Supports(plugin.ListAction) {
+		if entry.Supports(plugin.ListAction()) {
 			name += "/"
 		}
 
@@ -80,7 +80,7 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	entries := []apitypes.Entry{e}
-	if e.Supports(plugin.ListAction) {
+	if e.Supports(plugin.ListAction()) {
 		children, err := conn.List(path)
 		if err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
