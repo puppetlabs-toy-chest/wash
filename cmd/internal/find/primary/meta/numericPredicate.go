@@ -17,7 +17,7 @@ func parseNumericPredicate(tokens []string) (predicate, []string, error) {
 	numericP, _, err := numeric.ParsePredicate(
 		token,
 		numeric.ParsePositiveInt,
-		numeric.Negate(numeric.ParsePositiveInt),
+		numeric.Bracket(numeric.Negate(numeric.ParsePositiveInt)),
 		numeric.ParseSize,
 	)
 	if err != nil {

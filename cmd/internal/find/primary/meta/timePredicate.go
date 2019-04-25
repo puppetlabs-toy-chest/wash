@@ -22,7 +22,7 @@ func parseTimePredicate(tokens []string) (predicate, []string, error) {
 	numericP, parserID, err := numeric.ParsePredicate(
 		token,
 		numeric.ParseDuration,
-		numeric.Negate(numeric.ParseDuration),
+		numeric.Bracket(numeric.Negate(numeric.ParseDuration)),
 	)
 	if err != nil {
 		if errz.IsMatchError(err) {
