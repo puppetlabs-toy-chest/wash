@@ -31,10 +31,7 @@ func Bracket(p Parser) Parser {
 		}
 		str = str[1:]
 		endIx := len(str) - 1
-		if endIx < 0 {
-			return 0, fmt.Errorf("expected a closing '}'")
-		}
-		if str[endIx] != '}' {
+		if endIx < 0 || str[endIx] != '}' {
 			return 0, fmt.Errorf("expected a closing '}'")
 		}
 		str = str[0:endIx]
