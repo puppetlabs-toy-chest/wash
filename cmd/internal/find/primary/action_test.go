@@ -17,29 +17,8 @@ func (suite *ActionPrimaryTestSuite) TestActionPrimaryInsufficientArgsError() {
 	suite.Equal("-action: requires additional arguments", err.Error())
 }
 
-func (suite *ActionPrimaryTestSuite) TestActionPrimarySyntaxErrors() {
-	_, _, err := actionPrimary.Parse([]string{"-action", ","})
-	suite.Regexp("expected an action before ','", err)
-
-	_, _, err = actionPrimary.Parse([]string{"-action", ",list"})
-	suite.Regexp("expected an action before ','", err)
-
-	_, _, err = actionPrimary.Parse([]string{"-action", ",,list"})
-	suite.Regexp("expected an action before ','", err)
-
-	_, _, err = actionPrimary.Parse([]string{"-action", "list,"})
-	suite.Regexp("expected an action after ','", err)
-
-	_, _, err = actionPrimary.Parse([]string{"-action", "list,,"})
-	suite.Regexp("expected an action after ','", err)
-}
-
 func (suite *ActionPrimaryTestSuite) TestActionPrimaryInvalidActionError() {
 	_, _, err := actionPrimary.Parse([]string{"-action", "foo"})
-	suite.Regexp("foo is an invalid action. Valid actions are.*list", err)
-	
-	// Test a comma-separated list
-	_, _, err = actionPrimary.Parse([]string{"-action", "list,exec,foo,read"})
 	suite.Regexp("foo is an invalid action. Valid actions are.*list", err)
 }
 
@@ -53,11 +32,8 @@ func (suite *ActionPrimaryTestSuite) TestActionPrimaryValidInput() {
 	}
 	testCases := []testCase{
 		testCase{"list", []string{"list"}, []string{"exec"}},
-		// Test comma-separated list
-		testCase{"list,exec", []string{"exec"}, []string{"read"}},
 		// Test multiple supported actions
 		testCase{"list", []string{"read","stream","list"}, []string{"read", "stream"}},
-		testCase{"list,exec", []string{"read","stream","list"}, []string{"read", "stream"}},
 	}
 	for _, testCase := range testCases {
 		inputStr := func() string {
