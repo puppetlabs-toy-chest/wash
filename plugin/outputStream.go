@@ -6,18 +6,11 @@ import (
 	"time"
 )
 
-const (
-	// StdoutID represents Stdout
-	StdoutID = iota
-	// StderrID represents Stderr
-	StderrID
-)
-
 // OutputStream represents stdout/stderr.
 type OutputStream struct {
 	ctx        context.Context
 	sentCtxErr bool
-	id         int8
+	id         ExecPacketType
 	ch         chan ExecOutputChunk
 	closer     *multiCloser
 }
@@ -91,8 +84,8 @@ func CreateExecOutputStreams(ctx context.Context) (<-chan ExecOutputChunk, *Outp
 	outputCh := make(chan ExecOutputChunk)
 	closer := &multiCloser{ch: outputCh, countdown: 2}
 
-	stdout := &OutputStream{ctx: ctx, id: StdoutID, ch: outputCh, closer: closer}
-	stderr := &OutputStream{ctx: ctx, id: StderrID, ch: outputCh, closer: closer}
+	stdout := &OutputStream{ctx: ctx, id: Stdout, ch: outputCh, closer: closer}
+	stderr := &OutputStream{ctx: ctx, id: Stderr, ch: outputCh, closer: closer}
 
 	return outputCh, stdout, stderr
 }

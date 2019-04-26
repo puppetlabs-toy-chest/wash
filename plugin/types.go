@@ -63,15 +63,39 @@ type Root interface {
 }
 
 // ExecOptions is a struct we can add new features to that must be serializable to JSON.
-// Examples of potential features: user, privileged, tty, map of environment variables, string of stdin, timeout.
+// Examples of potential features: user, privileged, map of environment variables, timeout.
 type ExecOptions struct {
+	// Stdin can be used to pass a stream of input to write to stdin when executing the command.
 	Stdin io.Reader
+
+	// Tty instructs the executor to allocate a TTY (pseudo-terminal), which lets Wash communicate
+	// with the running process via its Stdin. The TTY is used to send a process termination signal
+	// (Ctrl+C) via Stdin when the passed-in Exec context is cancelled.
+	//
+	// NOTE TO PLUGIN AUTHORS: The Tty option is only relevant for executors that do not have an API
+	// endpoint to stop a running command (e.g. Docker, Kubernetes). If your executor does have an
+	// API endpoint to stop a running command, then ignore the Tty option. Note that the reason we
+	// make Tty an option instead of having the relevant executors always attach a TTY is because
+	// attaching a TTY can change the behavior of the command that's being executed.
+	//
+	// NOTE TO CALLERS: The Tty option is useful for executing your own stream-like commands (e.g.
+	// tail -f), because it ensures that there are no orphaned processes after the request is
+	// cancelled/finished.
+	Tty bool
 }
 
+// ExecPacketType identifies the packet type.
+type ExecPacketType = string
+
+// Enumerates packet types.
+const (
+	Stdout ExecPacketType = "stdout"
+	Stderr ExecPacketType = "stderr"
+)
+
 // ExecOutputChunk is a struct containing a chunk of the Exec'ed cmd's output.
-// For StreamID, 0 = stdout and 1 = stderr.
 type ExecOutputChunk struct {
-	StreamID  int8
+	StreamID  ExecPacketType
 	Timestamp time.Time
 	Data      string
 	Err       error
@@ -93,7 +117,7 @@ type Execable interface {
 // Streamable is an entry that returns a stream of updates.
 type Streamable interface {
 	Entry
-	Stream(context.Context) (io.Reader, error)
+	Stream(context.Context) (io.ReadCloser, error)
 }
 
 // SizedReader returns a ReaderAt that can report its Size.

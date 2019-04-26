@@ -52,7 +52,7 @@ func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, erro
 	return bytes.NewReader(buf.Bytes()), nil
 }
 
-func (clf *containerLogFile) Stream(ctx context.Context) (io.Reader, error) {
+func (clf *containerLogFile) Stream(ctx context.Context) (io.ReadCloser, error) {
 	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Follow: true, Tail: "10"}
 	rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
 	if err != nil {

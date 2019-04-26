@@ -60,8 +60,10 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	execResult := plugin.ExecResult{}
 
 	command := append([]string{cmd}, args...)
-	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true}
-	if opts.Stdin != nil {
+	activity.Record(ctx, "Exec %v on %v", command, c.Name())
+
+	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true, Tty: opts.Tty}
+	if opts.Stdin != nil || opts.Tty {
 		cfg.AttachStdin = true
 	}
 	created, err := c.client.ContainerExecCreate(ctx, c.id, cfg)
@@ -76,7 +78,20 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 
 	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	go func() {
-		defer resp.Close()
+		go func() {
+			// Close the response on context cancellation. Copying will block until there's more to read
+			// from the exec output. For an action with no more output it may never return.
+			// Asynchronously watch for context cancellation, and when it happens close the response so
+			// the parent goroutine can complete. We expect all contexts to complete eventually.
+			<-ctx.Done()
+
+			if opts.Tty {
+				// If resp.Conn is still open, Send Ctrl-C over resp.Conn before closing it.
+				_, err := resp.Conn.Write([]byte{0x03})
+				activity.Record(ctx, "Sent ETX on context termination: %v", err)
+			}
+			resp.Close()
+		}()
 
 		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
@@ -88,8 +103,13 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	if opts.Stdin != nil {
 		go func() {
 			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
-			respErr := resp.CloseWrite()
-			activity.Record(ctx, "Closed execution input stream for %v: %v, %v", c.Name(), writeErr, respErr)
+			// If using a Tty, wait until done reading in case we need to send Ctrl-C; when a Tty is
+			// allocated commands expect user input and will respond to control signals. Otherwise close
+			// input now to ensure commands that depend on EOF execute correctly.
+			if !opts.Tty {
+				respErr := resp.CloseWrite()
+				activity.Record(ctx, "Closed execution input stream for %v: %v, %v", c.Name(), writeErr, respErr)
+			}
 		}()
 	}
 

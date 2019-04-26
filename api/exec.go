@@ -29,19 +29,15 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	}
 }
 
-var outputStreamNames = [2]string{apitypes.Stdout, apitypes.Stderr}
-
 func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.ExecOutputChunk) {
 	if outputCh == nil {
 		return
 	}
 
 	for chunk := range outputCh {
-		stream := outputStreamNames[chunk.StreamID]
-
-		packet := apitypes.ExecPacket{TypeField: stream, Timestamp: chunk.Timestamp}
+		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
 		if err := chunk.Err; err != nil {
-			packet.Err = newStreamingErrorObj(stream, err.Error())
+			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
 		} else {
 			packet.Data = chunk.Data
 		}
