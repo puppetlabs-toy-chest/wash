@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	ec2Client "github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/transport"
 	"github.com/puppetlabs/wash/volume"
 )
 
@@ -182,6 +183,24 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 }
 
 func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
-	// TODO: implement
-	return plugin.ExecResult{}, fmt.Errorf("Not supported")
+	meta, err := inst.Metadata(ctx)
+	if err != nil {
+		return plugin.ExecResult{}, err
+	}
+
+	// TODO: scrape default user and authorized keys from console output. Probably only works for Amazon AMIs.
+	// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connection-prereqs.html#connection-prereqs-fingerprint
+	// for some helpful defaults we could add.
+	var hostname string
+	if name, ok := meta["PublicDnsName"]; ok {
+		hostname = name.(string)
+	} else if ipaddr, ok := meta["PublicIpAddress"]; ok {
+		hostname = ipaddr.(string)
+	} else {
+		return plugin.ExecResult{}, fmt.Errorf("No public interface found for %v", inst)
+	}
+
+	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
+	// overridden in ~/.ssh/config.
+	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, User: "ec2-user"}, append([]string{cmd}, args...), opts)
 }
