@@ -58,28 +58,13 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	ec2Instance.SetTTLOf(plugin.ListOp, 30*time.Second)
 	ec2Instance.DisableCachingFor(plugin.MetadataOp)
 
-	metaObj := newDescribeInstanceResult(inst)
-
-	attr := plugin.EntryAttributes{}
-	attr.
-		SetCtime(metaObj.ctime).
-		SetMtime(metaObj.mtime).
-		SetMeta(metaObj.toMeta())
-	ec2Instance.SetAttributes(attr)
+	ec2Instance.SetAttributes(getAttributes(inst))
 
 	return ec2Instance
 }
 
-type describeInstanceResult struct {
-	inst  *ec2Client.Instance
-	ctime time.Time
-	mtime time.Time
-}
-
-func newDescribeInstanceResult(inst *ec2Client.Instance) describeInstanceResult {
-	result := describeInstanceResult{
-		inst: inst,
-	}
+func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
+	attr := plugin.EntryAttributes{}
 
 	// AWS does not include the EC2 instance's ctime in its
 	// metadata. It also does not include the EC2 instance's
@@ -87,62 +72,30 @@ func newDescribeInstanceResult(inst *ec2Client.Instance) describeInstanceResult 
 	// reasonable values for ctime and mtime by looping over each
 	// block device's attachment time and the instance's launch time.
 	// The oldest of these times is the ctime; the newest is the mtime.
-	result.ctime = awsSDK.TimeValue(inst.LaunchTime)
-	result.mtime = result.ctime
+	ctime := awsSDK.TimeValue(inst.LaunchTime)
+	mtime := ctime
 	for _, mapping := range inst.BlockDeviceMappings {
 		attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
 
-		if attachTime.Before(result.ctime) {
-			result.ctime = attachTime
+		if attachTime.Before(ctime) {
+			ctime = attachTime
 		}
 
-		if attachTime.After(result.mtime) {
-			result.mtime = attachTime
+		if attachTime.After(mtime) {
+			mtime = attachTime
 		}
 	}
 
-	return result
-}
+	meta := plugin.ToMeta(inst)
+	meta["CreationTime"] = ctime
+	meta["LastModifiedTime"] = mtime
 
-func (d describeInstanceResult) toMeta() plugin.EntryMetadata {
-	meta := plugin.ToMeta(d.inst)
-	meta["CreationTime"] = d.ctime
-	meta["LastModifiedTime"] = d.mtime
+	attr.
+		SetCtime(ctime).
+		SetMtime(mtime).
+		SetMeta(meta)
 
-	return meta
-}
-
-func (inst *ec2Instance) cachedDescribeInstance(ctx context.Context) (describeInstanceResult, error) {
-	info, err := plugin.CachedOp(ctx, "DescribeInstance", inst, 15*time.Second, func() (interface{}, error) {
-		request := &ec2Client.DescribeInstancesInput{
-			InstanceIds: []*string{
-				awsSDK.String(inst.id),
-			},
-		}
-
-		resp, err := inst.client.DescribeInstances(request)
-		if err != nil {
-			return nil, err
-		}
-
-		inst := resp.Reservations[0].Instances[0]
-		return newDescribeInstanceResult(inst), nil
-	})
-
-	if err != nil {
-		return describeInstanceResult{}, err
-	}
-
-	return info.(describeInstanceResult), nil
-}
-
-func (inst *ec2Instance) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	result, err := inst.cachedDescribeInstance(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return result.toMeta(), nil
+	return attr
 }
 
 func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
