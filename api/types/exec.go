@@ -1,6 +1,7 @@
 package apitypes
 
 import (
+	"github.com/puppetlabs/wash/plugin"
 	"time"
 )
 
@@ -30,14 +31,11 @@ type ExecBody struct {
 	Opts ExecOptions `json:"opts"`
 }
 
-// ExecPacketType identifies the packet type.
-type ExecPacketType = string
-
-// Enumerates packet types.
+// Enumerates packet types used by the API.
 const (
-	Stdout   ExecPacketType = "stdout"
-	Stderr   ExecPacketType = "stderr"
-	Exitcode ExecPacketType = "exitcode"
+	Stdout   plugin.ExecPacketType = plugin.Stdout
+	Stderr   plugin.ExecPacketType = plugin.Stderr
+	Exitcode plugin.ExecPacketType = "exitcode"
 )
 
 // ExecPacket is a single packet of results from an exec.
@@ -46,8 +44,8 @@ const (
 //
 // swagger:response
 type ExecPacket struct {
-	TypeField ExecPacketType `json:"type"`
-	Timestamp time.Time      `json:"timestamp"`
-	Data      interface{}    `json:"data"`
-	Err       *ErrorObj      `json:"error"`
+	TypeField plugin.ExecPacketType `json:"type"`
+	Timestamp time.Time             `json:"timestamp"`
+	Data      interface{}           `json:"data"`
+	Err       *ErrorObj             `json:"error"`
 }

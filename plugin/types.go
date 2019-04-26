@@ -84,17 +84,22 @@ type ExecOptions struct {
 	Tty bool
 }
 
+// ExecPacketType identifies the packet type.
+type ExecPacketType = string
+
+// Enumerates packet types.
+const (
+	Stdout ExecPacketType = "stdout"
+	Stderr ExecPacketType = "stderr"
+)
+
 // ExecOutputChunk is a struct containing a chunk of the Exec'ed cmd's output.
-// For StreamID, 0 = stdout and 1 = stderr.
 type ExecOutputChunk struct {
-	StreamID  int8
+	StreamID  ExecPacketType
 	Timestamp time.Time
 	Data      string
 	Err       error
 }
-
-// StreamTypes provides the name of the corresponding StreamID.
-var StreamTypes = []string{"Stdout", "Stderr"}
 
 // ExecResult is a struct that contains the result of invoking Execable#exec.
 // Any of these fields can be nil. The OutputCh will be closed when execution completes.

@@ -42,7 +42,7 @@ func createResult(data string) plugin.ExecResult {
 		OutputCh:   outputch,
 		ExitCodeCB: func() (int, error) { return 0, nil },
 	}
-	outputch <- plugin.ExecOutputChunk{Data: data}
+	outputch <- plugin.ExecOutputChunk{StreamID: plugin.Stdout, Data: data}
 	close(outputch)
 	return execResult
 }

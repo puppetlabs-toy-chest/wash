@@ -42,11 +42,11 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 	for chunk := range result.OutputCh {
 		if chunk.Err != nil {
 			errs = append(errs, chunk.Err)
-		} else if chunk.StreamID == 0 {
-			activity.Record(ctx, "Stdout: %v", chunk.Data)
-			fmt.Fprint(&buf, chunk.Data)
 		} else {
-			activity.Record(ctx, "Stderr: %v", chunk.Data)
+			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
+			if chunk.StreamID == plugin.Stdout {
+				fmt.Fprint(&buf, chunk.Data)
+			}
 		}
 	}
 
@@ -107,7 +107,7 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 				continue
 			}
 
-			activity.Record(ctx, "%v: %v", plugin.StreamTypes[chunk.StreamID], chunk.Data)
+			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
 			if len(errs) == 0 {
 				if _, err := w.Write([]byte(chunk.Data)); err != nil {
 					activity.Record(ctx, "Error copying exec result: %v", err)

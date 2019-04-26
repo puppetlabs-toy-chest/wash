@@ -15,31 +15,10 @@ type OutputStreamTestSuite struct {
 }
 
 func (suite *OutputStreamTestSuite) EqualChunk(expected ExecOutputChunk, actual ExecOutputChunk) bool {
-	streamName := func(id int8) (string, error) {
-		if id == StdoutID {
-			return "stdout", nil
-		}
-
-		if id == StderrID {
-			return "stderr", nil
-		}
-
-		return "", fmt.Errorf("unknown ID: %v", id)
-	}
-
-	expectedStreamName, err := streamName(expected.StreamID)
-	if err != nil {
-		suite.Fail("could not get the stream name of the expected chunk: %v", err)
-	}
-
-	actualStreamName, err := streamName(actual.StreamID)
-	if err != nil {
-		suite.Fail("actual chunk has an invalid stream ID: %v", err)
-	}
-
+	expectedStreamName := expected.StreamID
 	eqlStreamName := suite.Equal(
 		expectedStreamName,
-		actualStreamName,
+		actual.StreamID,
 		fmt.Sprintf("The sent ExecOutputChunk should have come from the %v stream", expectedStreamName),
 	)
 
@@ -83,7 +62,7 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 	ch := make(chan ExecOutputChunk, 1)
 	defer close(ch)
 
-	stream := OutputStream{ctx: ctx, id: StdoutID, ch: ch}
+	stream := OutputStream{ctx: ctx, id: Stdout, ch: ch}
 
 	// Test a successful write
 	data := []byte("data")
@@ -94,7 +73,7 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 	select {
 	case chunk := <-stream.ch:
 		suite.EqualChunk(
-			ExecOutputChunk{StreamID: StdoutID, Data: string(data)},
+			ExecOutputChunk{StreamID: Stdout, Data: string(data)},
 			chunk,
 		)
 	default:
@@ -108,7 +87,7 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 	select {
 	case chunk := <-stream.ch:
 		suite.EqualChunk(
-			ExecOutputChunk{StreamID: StdoutID, Err: ctx.Err()},
+			ExecOutputChunk{StreamID: Stdout, Err: ctx.Err()},
 			chunk,
 		)
 		suite.Equal(stream.sentCtxErr, true, "The stream should mark that the context's error was sent")
@@ -142,7 +121,7 @@ func (suite *OutputStreamTestSuite) TestClose() {
 func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	newOutputStream := func(ctx context.Context) OutputStream {
 		ch := make(chan ExecOutputChunk, 1)
-		return OutputStream{ctx: ctx, id: StdoutID, ch: ch, closer: &multiCloser{ch: ch, countdown: 1}}
+		return OutputStream{ctx: ctx, id: Stdout, ch: ch, closer: &multiCloser{ch: ch, countdown: 1}}
 	}
 
 	// Test that if err == nil, then nothing was sent to the channel
@@ -196,15 +175,6 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 
 func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 	outputCh, stdout, stderr := CreateExecOutputStreams(context.Background())
-
-	assertStreamID := func(streamName string, expectedID int8, stream *OutputStream) {
-		if !suite.Equal(expectedID, stream.id) {
-			msg := fmt.Sprintf("expected %v stream to have stream ID %v, got %v instead", streamName, expectedID, stream.id)
-			suite.FailNow(msg)
-		}
-	}
-	assertStreamID("stdout", StdoutID, stdout)
-	assertStreamID("stderr", StderrID, stderr)
 
 	// Our simulated command alternates writing to stdout + stderr
 	expectedChunksCh := make(chan ExecOutputChunk, 1)
