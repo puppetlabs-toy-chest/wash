@@ -1,7 +1,8 @@
 package meta
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 /*
@@ -12,7 +13,7 @@ PrimitivePredicate => NullPredicate       |
                       TimePredicate       |
                       StringPredicate
 */
-func parsePrimitivePredicate(tokens []string) (predicate, []string, error) {
+func parsePrimitivePredicate(tokens []string) (predicate.Generic, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a primitive predicate")
 	}
@@ -79,7 +80,7 @@ func existsP(v interface{}) bool {
 var trueP = makeBooleanPredicate(true)
 var falseP = makeBooleanPredicate(false)
 
-func makeBooleanPredicate(expectedVal bool) predicate {
+func makeBooleanPredicate(expectedVal bool) predicate.Generic {
 	return func(v interface{}) bool {
 		bv, ok := v.(bool)
 		if !ok {

@@ -3,7 +3,7 @@ package numeric
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"github.com/stretchr/testify/suite"
 )
 

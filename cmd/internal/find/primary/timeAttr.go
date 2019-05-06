@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
@@ -37,15 +37,14 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 //
 // NOTE: For non-unit time values (e.g. 1, +1, -1), the difference is rounded to the next 24-hour period. For
 // example, a difference of 1.5 days will be rounded to 2 days.
-func newTimeAttrPrimary(name string) *grammar.Atom {
+func newTimeAttrPrimary(name string) *primary {
 	tk := "-" + name
-	return grammar.NewAtom([]string{tk}, func(tokens []string) (types.Predicate, []string, error) {
+	return Parser.newPrimary([]string{tk}, func(tokens []string) (predicate.Entry, []string, error) {
 		if params.StartTime.IsZero() {
 			panic("Attempting to parse a time primary without setting params.StartTime")
 		}
-		tokens = tokens[1:]
 		if len(tokens) == 0 {
-			return nil, nil, fmt.Errorf("%v: requires additional arguments", tk)
+			return nil, nil, fmt.Errorf("requires additional arguments")
 		}
 		numericP, parserID, err := numeric.ParsePredicate(
 			tokens[0],
@@ -53,7 +52,7 @@ func newTimeAttrPrimary(name string) *grammar.Atom {
 			numeric.ParseDuration,
 		)
 		if err != nil {
-			return nil, nil, fmt.Errorf("-%v: %v: illegal time value", name, tokens[0])
+			return nil, nil, fmt.Errorf("%v: illegal time value", tokens[0])
 		}
 
 		p := func(e types.Entry) bool {

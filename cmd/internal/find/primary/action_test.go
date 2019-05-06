@@ -13,12 +13,12 @@ type ActionPrimaryTestSuite struct {
 }
 
 func (suite *ActionPrimaryTestSuite) TestActionPrimaryInsufficientArgsError() {
-	_, _, err := actionPrimary.Parse([]string{"-action"})
+	_, _, err := actionPrimary.parse([]string{"-action"})
 	suite.Equal("-action: requires additional arguments", err.Error())
 }
 
 func (suite *ActionPrimaryTestSuite) TestActionPrimaryInvalidActionError() {
-	_, _, err := actionPrimary.Parse([]string{"-action", "foo"})
+	_, _, err := actionPrimary.parse([]string{"-action", "foo"})
 	suite.Regexp("foo is an invalid action. Valid actions are.*list", err)
 }
 
@@ -39,7 +39,7 @@ func (suite *ActionPrimaryTestSuite) TestActionPrimaryValidInput() {
 		inputStr := func() string {
 			return fmt.Sprintf("Input was '%v'", testCase.input)
 		}
-		p, tokens, err := actionPrimary.Parse([]string{"-action", testCase.input})
+		p, tokens, err := actionPrimary.parse([]string{"-action", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
 			e := types.Entry{}

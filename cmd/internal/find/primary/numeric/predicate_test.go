@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -52,13 +52,6 @@ func (suite *PredicateTestSuite) TestParsePredicateValidInput() {
 			suite.False(p(c.falseV), inputStr())
 		}
 	}
-}
-
-func (suite *PredicateTestSuite) TestNot() {
-	g := Not(func(v int64) bool {
-		return true
-	})
-	suite.False(g(2))
 }
 
 func TestPredicate(t *testing.T) {

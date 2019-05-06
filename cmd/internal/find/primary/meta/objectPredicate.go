@@ -5,7 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // A key consists of one or more characters that aren't
@@ -18,7 +19,7 @@ var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
 
 // ObjectPredicate => EmptyPredicate | ‘.’ Key Predicate
 // Key             => keyRegex
-func parseObjectPredicate(tokens []string) (predicate, []string, error) {
+func parseObjectPredicate(tokens []string) (predicate.Generic, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
@@ -57,7 +58,7 @@ func parseObjectPredicate(tokens []string) (predicate, []string, error) {
 	return objectP(key, p), tokens, nil
 }
 
-func objectP(key string, p predicate) predicate {
+func objectP(key string, p predicate.Generic) predicate.Generic {
 	return func(v interface{}) bool {
 		mp, ok := v.(map[string]interface{})
 		if !ok {

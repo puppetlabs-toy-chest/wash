@@ -4,16 +4,15 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // namePrimary => -name ShellGlob
 //nolint
-var namePrimary = grammar.NewAtom([]string{"-name"}, func(tokens []string) (types.Predicate, []string, error) {
-	tokens = tokens[1:]
+var namePrimary = Parser.newPrimary([]string{"-name"}, func(tokens []string) (predicate.Entry, []string, error) {
 	if len(tokens) == 0 {
-		return nil, nil, fmt.Errorf("-name: requires additional arguments")
+		return nil, nil, fmt.Errorf("requires additional arguments")
 	}
 
 	g, err := glob.Compile(tokens[0])

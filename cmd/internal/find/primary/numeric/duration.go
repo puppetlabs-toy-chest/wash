@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 )
 
 var durationsMap = map[byte]time.Duration{

@@ -3,11 +3,12 @@ package meta
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // StringPredicate => [^-].*
-func parseStringPredicate(tokens []string) (predicate, []string, error) {
+func parseStringPredicate(tokens []string) (predicate.Generic, []string, error) {
 	if len(tokens) == 0 || len(tokens[0]) == 0 {
 		return nil, nil, errz.NewMatchError("expected a nonempty string")
 	}

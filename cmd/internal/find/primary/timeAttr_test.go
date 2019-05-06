@@ -60,7 +60,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 // These tests use the ctimePrimary as the representative test case
 
 func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryInsufficientArgsError() {
-	_, _, err := ctimePrimary.Parse([]string{"-ctime"})
+	_, _, err := ctimePrimary.parse([]string{"-ctime"})
 	suite.Equal("-ctime: requires additional arguments", err.Error())
 }
 
@@ -76,7 +76,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryIllegalTimeValueError(
 		"+1h30min",
 	}
 	for _, v := range illegalValues {
-		_, _, err := ctimePrimary.Parse([]string{"-ctime", v})
+		_, _, err := ctimePrimary.parse([]string{"-ctime", v})
 		msg := fmt.Sprintf("-ctime: %v: illegal time value", v)
 		suite.Equal(msg, err.Error())
 	}
@@ -106,7 +106,7 @@ func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
 		inputStr := func() string {
 			return fmt.Sprintf("Input was '%v'", testCase.input)
 		}
-		p, tokens, err := ctimePrimary.Parse([]string{"-ctime", testCase.input})
+		p, tokens, err := ctimePrimary.parse([]string{"-ctime", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
 			e := types.Entry{}

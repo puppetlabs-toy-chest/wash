@@ -4,14 +4,15 @@ import (
 	"fmt"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/munge"
 )
 
 // TimePredicate => (+|-)? Duration
 // Duration      => numeric.DurationRegex | '{' numeric.DurationRegex '}'
-func parseTimePredicate(tokens []string) (predicate, []string, error) {
+func parseTimePredicate(tokens []string) (predicate.Generic, []string, error) {
 	if params.StartTime.IsZero() {
 		panic("meta.parseTimePredicate called without setting params.StartTime")
 	}

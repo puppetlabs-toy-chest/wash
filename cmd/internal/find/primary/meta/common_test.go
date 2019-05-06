@@ -5,7 +5,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -14,7 +15,7 @@ import (
 
 type ParserTestSuite struct {
 	suite.Suite
-	parser func(tokens []string) (predicate, []string, error)
+	parser predicate.GenericParser
 }
 
 type parserTestCase struct {

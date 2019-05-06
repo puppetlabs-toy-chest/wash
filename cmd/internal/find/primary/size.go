@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
@@ -18,10 +18,9 @@ import (
 //   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
 //
 //nolint
-var sizePrimary = grammar.NewAtom([]string{"-size"}, func(tokens []string) (types.Predicate, []string, error) {
-	tokens = tokens[1:]
+var sizePrimary = Parser.newPrimary([]string{"-size"}, func(tokens []string) (predicate.Entry, []string, error) {
 	if len(tokens) == 0 {
-		return nil, nil, fmt.Errorf("-size: requires additional arguments")
+		return nil, nil, fmt.Errorf("requires additional arguments")
 	}
 	numericP, parserID, err := numeric.ParsePredicate(
 		tokens[0],
@@ -29,7 +28,7 @@ var sizePrimary = grammar.NewAtom([]string{"-size"}, func(tokens []string) (type
 		numeric.ParseSize,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("-size: %v: illegal size value", tokens[0])
+		return nil, nil, fmt.Errorf("%v: illegal size value", tokens[0])
 	}
 
 	p := func(e types.Entry) bool {
