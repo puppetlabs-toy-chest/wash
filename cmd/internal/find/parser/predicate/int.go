@@ -24,6 +24,16 @@ func (p1 Int) Negate() Predicate {
 	})
 }
 
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 Int) IsSatisfiedBy(v interface{}) bool {
+	intV, ok := v.(int64)
+	if !ok {
+		return false
+	}
+	return p1(intV)
+}
+
+
 // IntParser is a type that parses Int predicates
 type IntParser func(tokens []string) (Int, []string, error)
 

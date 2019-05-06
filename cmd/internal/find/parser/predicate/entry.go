@@ -26,6 +26,15 @@ func (p1 Entry) Negate() Predicate {
 	})
 }
 
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 Entry) IsSatisfiedBy(v interface{}) bool {
+	entry, ok := v.(types.Entry)
+	if !ok {
+		return false
+	}
+	return p1(entry)
+}
+
 // EntryParser is a type that parses Entry predicates
 type EntryParser func(tokens []string) (Entry, []string, error)
 

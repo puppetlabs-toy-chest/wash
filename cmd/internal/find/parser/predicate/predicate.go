@@ -12,4 +12,5 @@ type Predicate interface {
 	And(Predicate) Predicate
 	Or(Predicate) Predicate
 	Negate() Predicate
+	IsSatisfiedBy(v interface{}) bool
 }
