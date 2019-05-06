@@ -1,7 +1,7 @@
 package errz
 
 // MatchError represents the case when the input tokens did not
-// match the given parser.
+// match a given parser.
 type MatchError struct {
 	reason string
 }
