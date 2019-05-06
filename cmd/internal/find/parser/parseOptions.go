@@ -1,7 +1,8 @@
 package parser
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/expression"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -11,14 +12,14 @@ func parseOptions(args []string) (types.Options, []string, error) {
 
 	// Find the index of the first non-option arg that FlagSet
 	// doesn't know about. This is either "--", the special flag
-	// termination symbol, or an atom/binary op, which indicates
+	// termination symbol, or a primary/operator, which indicates
 	// the beginning of a `wash find` expression. These non-option
 	// args will be handled/processed in parseExpression. Note that
 	// without this code, FlagSet would interpret "--" as the flag
 	// termination symbol, which is bad because "--" is invalid
-	// `wash find` syntax. It would also try to parse our atoms/binary
-	// ops (like -true, -false, -not, -and) as options, which is also
-	// bad.
+	// `wash find` syntax. It would also try to parse our primaries
+	// and operators (like -true, -false, -not, -and) as options, which is
+	// also bad.
 	//
 	// All other cases are properly handled by fs.Parse(). For example,
 	// if args is of the form ["-mindepth", "0", "foo", "bar", "baz"],
@@ -27,13 +28,7 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	// arguments.
 	var endIx int
 	for _, arg := range args {
-		if arg == "--" {
-			break
-		}
-		if _, ok := grammar.Atoms[arg]; ok {
-			break
-		}
-		if _, ok := grammar.BinaryOps[arg]; ok {
+		if nonOptionArg(arg) {
 			break
 		}
 		endIx++
@@ -57,4 +52,9 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	}
 
 	return o, args, nil
+}
+
+func nonOptionArg(arg string) bool {
+	parser := expression.NewParser(primary.Parser)
+	return arg == "--" || parser.IsOp(arg) || primary.Parser.IsPrimary(arg)
 }

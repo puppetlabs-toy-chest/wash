@@ -14,7 +14,7 @@ type SizePrimaryTestSuite struct {
 }
 
 func (suite *SizePrimaryTestSuite) TestSizePrimaryInsufficientArgsError() {
-	_, _, err := sizePrimary.Parse([]string{"-size"})
+	_, _, err := sizePrimary.parse([]string{"-size"})
 	suite.Equal("-size: requires additional arguments", err.Error())
 }
 
@@ -27,7 +27,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryIllegalTimeValueError() {
 		"+1kb",
 	}
 	for _, v := range illegalValues {
-		_, _, err := sizePrimary.Parse([]string{"-size", v})
+		_, _, err := sizePrimary.parse([]string{"-size", v})
 		msg := fmt.Sprintf("-size: %v: illegal size value", v)
 		suite.Equal(msg, err.Error())
 	}
@@ -56,7 +56,7 @@ func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
 		inputStr := func() string {
 			return fmt.Sprintf("Input was '%v'", testCase.input)
 		}
-		p, tokens, err := sizePrimary.Parse([]string{"-size", testCase.input})
+		p, tokens, err := sizePrimary.parse([]string{"-size", testCase.input})
 		if suite.NoError(err, inputStr()) {
 			suite.Equal([]string{}, tokens)
 			e := types.Entry{}

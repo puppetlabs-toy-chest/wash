@@ -3,7 +3,7 @@ package numeric
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 )
 
 // Bracket returns a new parser g that parses all numbers

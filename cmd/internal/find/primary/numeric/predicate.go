@@ -3,21 +3,19 @@ package numeric
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 )
-
-// Predicate is a predicate on a numeric value.
-type Predicate func(int64) bool
 
 // Parser parses numeric values.
 type Parser func(string) (int64, error)
 
-// ParsePredicate parses a Predicate from str. Str should
+// ParsePredicate parses a numeric predicate from str. Str should
 // satisfy the regex `(\+|\-)?<number>`, where <number> is s.t.
 // that parser(<number>) does not return an error for at least one
 // parser in parsers. The returned value is the parsed predicate
 // and the id of the parser that parsed <number>.
-func ParsePredicate(str string, parsers ...Parser) (Predicate, int, error) {
+func ParsePredicate(str string, parsers ...Parser) (predicate.Int, int, error) {
 	if len(str) == 0 {
 		return nil, -1, errz.NewMatchError("empty input")
 	}
@@ -62,11 +60,4 @@ func ParsePredicate(str string, parsers ...Parser) (Predicate, int, error) {
 			return v == n
 		}
 	}, parserID, nil
-}
-
-// Not returns a predicate f s.t. f(v) = !p(v)
-func Not(p Predicate) Predicate {
-	return func(v int64) bool {
-		return !p(v)
-	}
 }

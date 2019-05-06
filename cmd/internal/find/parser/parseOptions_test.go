@@ -79,6 +79,7 @@ func (suite *ParseOptionsTestSuite) TestParseOptionsNoOptions() {
 		nPOTC("--", o, "--"),
 		nPOTC("-true", o, "-true"),
 		nPOTC("-a", o, "-a"),
+		nPOTC("(", o, "("),
 		nPOTC("foo bar baz", o, "foo bar baz"),
 	)
 }

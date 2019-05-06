@@ -4,21 +4,20 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/puppetlabs/wash/cmd/internal/find/grammar"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // pathPrimary => -path ShellGlob
 //nolint
-var pathPrimary = grammar.NewAtom([]string{"-path"}, func(tokens []string) (types.Predicate, []string, error) {
-	tokens = tokens[1:]
+var pathPrimary = Parser.newPrimary([]string{"-path"}, func(tokens []string) (predicate.Entry, []string, error) {
 	if len(tokens) == 0 {
-		return nil, nil, fmt.Errorf("-path: requires additional arguments")
+		return nil, nil, fmt.Errorf("requires additional arguments")
 	}
 
 	g, err := glob.Compile(tokens[0])
 	if err != nil {
-		return nil, nil, fmt.Errorf("-path: invalid glob: %v", err)
+		return nil, nil, fmt.Errorf("invalid glob: %v", err)
 	}
 
 	return func(e types.Entry) bool {

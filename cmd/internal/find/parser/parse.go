@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // Result represents the result of parsing `wash find`'s
@@ -9,7 +10,7 @@ import (
 type Result struct {
 	Path      string
 	Options   types.Options
-	Predicate types.Predicate
+	Predicate predicate.Entry
 }
 
 /*

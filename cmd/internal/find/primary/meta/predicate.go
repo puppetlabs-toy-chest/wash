@@ -1,29 +1,26 @@
 package meta
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
-
-// predicate represents a predicate in the meta primary's grammar.
-type predicate func(v interface{}) bool
 
 /*
 Predicate => ObjectPredicate |
              ArrayPredicate  |
              PrimitivePredicate
 */
-func parsePredicate(tokens []string) (predicate, []string, error) {
-	if len(tokens) == 0 {
-		return nil, nil, errz.NewMatchError("expected either a primitive, object, or array predicate")
+func parsePredicate(tokens []string) (predicate.Generic, []string, error) {
+	cp := &predicate.CompositeParser{
+		ErrMsg: "expected either a primitive, object, or array predicate",
+		Parsers: []predicate.Parser{
+			predicate.GenericParser(parseObjectPredicate),
+			predicate.GenericParser(parseArrayPredicate),
+			predicate.GenericParser(parsePrimitivePredicate),
+		},
 	}
-	switch token := tokens[0]; token[0] {
-	case '.':
-		return parseObjectPredicate(tokens)
-	case '[':
-		fallthrough
-	case ']':
-		return parseArrayPredicate(tokens)
-	default:
-		return parsePrimitivePredicate(tokens)
+	p, tokens, err := cp.Parse(tokens)
+	if err != nil {
+		return nil, nil, err
 	}
+	return p.(predicate.Generic), tokens, err
 }

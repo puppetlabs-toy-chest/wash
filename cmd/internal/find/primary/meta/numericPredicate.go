@@ -3,13 +3,14 @@ package meta
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/primary/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 )
 
 // NumericPredicate => (+|-)? Number
 // Number           => N | '{' N '}' | numeric.SizeRegex
-func parseNumericPredicate(tokens []string) (predicate, []string, error) {
+func parseNumericPredicate(tokens []string) (predicate.Generic, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a +, -, or a digit")
 	}

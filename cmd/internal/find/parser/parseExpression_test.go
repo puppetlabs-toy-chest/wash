@@ -67,6 +67,9 @@ func (suite *ParseExpressionTestSuite) TestParseExpressionNotOpParseErrors() {
 	suite.runTestCases(
 		// Test error when "-not" is supplied without an expression
 		nPETC("-not", "-not: no following expression"),
+		// Test error when "-not" is mixed with parentheses
+		nPETC("-not )", "): no beginning '('"),
+		nPETC("( -not )", "-not: no following expression"),
 		// Test error when "-not" is supplied w/ an atom that errors
 		nPETC("-not -name", "-name: requires additional arguments"),
 		// Test error when "-not" is followed by a binary operator
@@ -156,6 +159,7 @@ func (suite *ParseExpressionTestSuite) TestParseExpressionParensEval() {
 func (suite *ParseExpressionTestSuite) TestParseExpressionComplexErrors() {
 	suite.runTestCases(
 		nPETC("( -true ) -a )", "): no beginning '('"),
+		nPETC("-true -a -foo", "-foo: unknown primary or operator"),
 	)
 }
 
