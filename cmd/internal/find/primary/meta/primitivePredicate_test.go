@@ -6,73 +6,74 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type PrimitivePredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *PrimitivePredicateTestSuite) SetupTest() {
+func (s *PrimitivePredicateTestSuite) SetupTest() {
 	params.StartTime = time.Now()
 }
 
-func (suite *PrimitivePredicateTestSuite) TeardownTest() {
+func (s *PrimitivePredicateTestSuite) TeardownTest() {
 	params.StartTime = time.Time{}
 }
 
-func (suite *PrimitivePredicateTestSuite) TestErrors() {
-	suite.runTestCases(
+func (s *PrimitivePredicateTestSuite) TestErrors() {
+	s.RunTestCases(
 		// These cases ensure that parsePrimitivePredicate
 		// returns a MatchError if it cannot parse a primitive
 		// predicate
-		nPETC("", "expected a primitive predicate", true),
+		s.NPETC("", "expected a primitive predicate", true),
 		// These cases ensure that parsePrimitivePredicate
 		// returns any parse errors found while parsing the
 		// primitive predicates
-		nPETC("--15", "positive.*number", false),
-		nPETC("+{", ".*closing.*}", false),
+		s.NPETC("--15", "positive.*number", false),
+		s.NPETC("+{", ".*closing.*}", false),
 	)
 }
 
-func (suite *PrimitivePredicateTestSuite) TestValidInput() {
-	suite.runTestCases(
-		nPTC("-null", "", nil),
-		nPTC("-exists", "", "not nil"),
-		nPTC("-true", "", true),
-		nPTC("-false", "", false),
-		nPTC("200", "", float64(200)),
-		nPTC("+1h", "", addTST(-2*numeric.DurationOf('h'))),
-		nPTC("+{1h}", "", addTST(2*numeric.DurationOf('h'))),
-		nPTC("foo", "", "foo"),
-		nPTC("+foo", "", "+foo"),
+func (s *PrimitivePredicateTestSuite) TestValidInput() {
+	s.RunTestCases(
+		s.NPTC("-null", "", nil),
+		s.NPTC("-exists", "", "not nil"),
+		s.NPTC("-true", "", true),
+		s.NPTC("-false", "", false),
+		s.NPTC("200", "", float64(200)),
+		s.NPTC("+1h", "", addTST(-2*numeric.DurationOf('h'))),
+		s.NPTC("+{1h}", "", addTST(2*numeric.DurationOf('h'))),
+		s.NPTC("foo", "", "foo"),
+		s.NPTC("+foo", "", "+foo"),
 	)
 }
 
-func (suite *PrimitivePredicateTestSuite) TestNullP() {
-	suite.True(nullP(nil))
-	suite.False(nullP("not nil"))
+func (s *PrimitivePredicateTestSuite) TestNullP() {
+	s.True(nullP(nil))
+	s.False(nullP("not nil"))
 }
 
-func (suite *PrimitivePredicateTestSuite) TestExistsP() {
-	suite.True(existsP("not nil"))
-	suite.False(existsP(nil))
+func (s *PrimitivePredicateTestSuite) TestExistsP() {
+	s.True(existsP("not nil"))
+	s.False(existsP(nil))
 }
 
-func (suite *PrimitivePredicateTestSuite) TestTrueP() {
-	suite.False(trueP("foo"))
-	suite.False(trueP(false))
-	suite.True(trueP(true))
+func (s *PrimitivePredicateTestSuite) TestTrueP() {
+	s.False(trueP("foo"))
+	s.False(trueP(false))
+	s.True(trueP(true))
 }
 
-func (suite *PrimitivePredicateTestSuite) TestFalseP() {
-	suite.False(falseP("foo"))
-	suite.False(falseP(true))
-	suite.True(falseP(false))
+func (s *PrimitivePredicateTestSuite) TestFalseP() {
+	s.False(falseP("foo"))
+	s.False(falseP(true))
+	s.True(falseP(false))
 }
 
 func TestPrimitivePredicate(t *testing.T) {
 	s := new(PrimitivePredicateTestSuite)
-	s.parser = parsePrimitivePredicate
+	s.Parser = predicate.GenericParser(parsePrimitivePredicate)
 	suite.Run(t, s)
 }

@@ -5,47 +5,48 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type PredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *PredicateTestSuite) SetupTest() {
+func (s *PredicateTestSuite) SetupTest() {
 	params.StartTime = time.Now()
 }
 
-func (suite *PredicateTestSuite) TeardownTest() {
+func (s *PredicateTestSuite) TeardownTest() {
 	params.StartTime = time.Time{}
 }
 
-func (suite *PredicateTestSuite) TestErrors() {
-	suite.runTestCases(
-		nPETC("", "expected either a primitive, object, or array predicate", true),
+func (s *PredicateTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", "expected either a primitive, object, or array predicate", true),
 		// These cases ensure that parsePredicate returns any syntax errors found
 		// while parsing the predicate
-		nPETC(".", "expected a key sequence after '.'", false),
-		nPETC("[", `expected a closing '\]'`, false),
-		nPETC("--15", "positive", false),
+		s.NPETC(".", "expected a key sequence after '.'", false),
+		s.NPETC("[", `expected a closing '\]'`, false),
+		s.NPETC("--15", "positive", false),
 	)
 }
 
-func (suite *PredicateTestSuite) TestValidInput() {
+func (s *PredicateTestSuite) TestValidInput() {
 	mp := make(map[string]interface{})
 	mp["key"] = true
-	suite.runTestCases(
+	s.RunTestCases(
 		// ObjectPredicate
-		nPTC(".key -true", "", mp),
+		s.NPTC(".key -true", "", mp),
 		// ArrayPredicate
-		nPTC("[?] -true", "", toA(true)),
+		s.NPTC("[?] -true", "", toA(true)),
 		// PrimitivePredicate
-		nPTC("-true", "", true),
+		s.NPTC("-true", "", true),
 	)
 }
 
 func TestPredicate(t *testing.T) {
 	s := new(PredicateTestSuite)
-	s.parser = parsePredicate
+	s.Parser = predicate.GenericParser(parsePredicate)
 	suite.Run(t, s)
 }

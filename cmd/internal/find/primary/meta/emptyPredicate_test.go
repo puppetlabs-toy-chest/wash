@@ -4,45 +4,46 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 type EmptyPredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *EmptyPredicateTestSuite) TestErrors() {
-	suite.runTestCases(
-		nPETC("", "expected '-empty'", true),
-		nPETC("foo", "expected '-empty'", true),
+func (s *EmptyPredicateTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", "expected '-empty'", true),
+		s.NPETC("foo", "expected '-empty'", true),
 	)
 }
 
-func (suite *EmptyPredicateTestSuite) TestValidInput() {
-	suite.runTestCases(
-		nPTC("-empty", "", []interface{}{}),
+func (s *EmptyPredicateTestSuite) TestValidInput() {
+	s.RunTestCases(
+		s.NPTC("-empty", "", []interface{}{}),
 	)
 }
 
-func (suite *EmptyPredicateTestSuite) TestEmptyPInvalidType() {
-	suite.False(emptyP("foo"))
+func (s *EmptyPredicateTestSuite) TestEmptyPInvalidType() {
+	s.False(emptyP("foo"))
 }
 
-func (suite *EmptyPredicateTestSuite) TestEmptyPObject() {
+func (s *EmptyPredicateTestSuite) TestEmptyPObject() {
 	mp := make(map[string]interface{})
-	suite.True(emptyP(mp))
+	s.True(emptyP(mp))
 	mp["foo"] = 1
-	suite.False(emptyP(mp))
+	s.False(emptyP(mp))
 }
 
-func (suite *EmptyPredicateTestSuite) TestEmptyPArray() {
+func (s *EmptyPredicateTestSuite) TestEmptyPArray() {
 	a := []interface{}{}
-	suite.True(emptyP(a))
+	s.True(emptyP(a))
 	a = append(a, 1)
-	suite.False(emptyP(a))
+	s.False(emptyP(a))
 }
 
 func TestEmptyPredicate(t *testing.T) {
 	s := new(EmptyPredicateTestSuite)
-	s.parser = parseEmptyPredicate
+	s.Parser = predicate.GenericParser(parseEmptyPredicate)
 	suite.Run(t, s)
 }

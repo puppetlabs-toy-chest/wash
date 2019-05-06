@@ -4,39 +4,40 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/suite"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 type StringPredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *StringPredicateTestSuite) TestErrors() {
-	suite.runTestCases(
-		nPETC("", "expected a nonempty string", true),
-		nPETC("-a", "-a begins with a '-'", true),
+func (s *StringPredicateTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", "expected a nonempty string", true),
+		s.NPETC("-a", "-a begins with a '-'", true),
 	)
 
 	_, _, err := parseStringPredicate([]string{""})
-	suite.Regexp("expected a nonempty string", err)
+	s.Regexp("expected a nonempty string", err)
 }
 
-func (suite *StringPredicateTestSuite) TestValidInput() {
+func (s *StringPredicateTestSuite) TestValidInput() {
 	// Test the happy cases first
-	suite.runTestCases(
-		nPTC("foo -size", "-size", "foo"),
+	s.RunTestCases(
+		s.NPTC("foo -size", "-size", "foo"),
 	)
 
 	// Now test that the predicate returns false for a non-string
 	// value or if value != s
-	p, _, err := parseStringPredicate(toTks("foo"))
-	if suite.NoError(err) {
-		suite.False(p(200))
-		suite.False(p("bar"))
+	p, _, err := parseStringPredicate(s.ToTks("foo"))
+	if s.NoError(err) {
+		s.False(p(200))
+		s.False(p("bar"))
 	}
 }
 
 func TestStringPredicate(t *testing.T) {
 	s := new(StringPredicateTestSuite)
-	s.parser = parseStringPredicate
+	s.Parser = predicate.GenericParser(parseStringPredicate)
 	suite.Run(t, s)
 }

@@ -6,66 +6,54 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type TimePredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *TimePredicateTestSuite) SetupTest() {
+func (s *TimePredicateTestSuite) SetupTest() {
 	params.StartTime = time.Now()
 }
 
-func (suite *TimePredicateTestSuite) TeardownTest() {
+func (s *TimePredicateTestSuite) TeardownTest() {
 	params.StartTime = time.Time{}
 }
 
-func (suite *TimePredicateTestSuite) TestErrors() {
-	suite.runTestCases(
-		nPETC("", `expected a \+, -, or a digit`, true),
-		nPETC("200", "expected a duration", true),
-		nPETC("+{", ".*closing.*}", false),
+func (s *TimePredicateTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", `expected a \+, -, or a digit`, true),
+		s.NPETC("200", "expected a duration", true),
+		s.NPETC("+{", ".*closing.*}", false),
 	)
 }
 
-func (suite *TimePredicateTestSuite) TestValidInputTrueValues() {
+func (s *TimePredicateTestSuite) TestValidInputTrueValues() {
 	// Test the happy cases first
-	suite.runTestCases(
-		nPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h'))),
-		nPTC("-2h -size", "-size", addTST(-1*numeric.DurationOf('h'))),
-		nPTC("+{2h} -size", "-size", addTST(3*numeric.DurationOf('h'))),
-		nPTC("-{2h} -size", "-size", addTST(1*numeric.DurationOf('h'))),
+	s.RunTestCases(
+		s.NPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h'))),
+		s.NPTC("-2h -size", "-size", addTST(-1*numeric.DurationOf('h'))),
+		s.NPTC("+{2h} -size", "-size", addTST(3*numeric.DurationOf('h'))),
+		s.NPTC("-{2h} -size", "-size", addTST(1*numeric.DurationOf('h'))),
 		// Test a stringified time to ensure that munge.ToTime's called
-		nPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String()),
+		s.NPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String()),
 	)
 }
 
-func (suite *TimePredicateTestSuite) TestValidInputFalseValues() {
-	// TODO: May be worth adding support for false values to the
-	// parserTestCase class if testing lots of them becomes common
-	// enough.
-	type negativeTestCase struct {
-		input string
-		falseV interface{}
-	}
-	cases := []negativeTestCase{
-		negativeTestCase{"+2h", "not_a_valid_time_value"},
-		negativeTestCase{"+2h", addTST(-1*numeric.DurationOf('h'))},
-		negativeTestCase{"-2h", addTST(-3*numeric.DurationOf('h'))},
-		negativeTestCase{"+{2h}", addTST(1*numeric.DurationOf('h'))},
-		negativeTestCase{"-{2h}", addTST(3*numeric.DurationOf('h'))},
+func (s *TimePredicateTestSuite) TestValidInputFalseValues() {
+	s.RunTestCases(
+		s.NPNTC("+2h", "", "not_a_valid_time_value"),
+		s.NPNTC("+2h", "", addTST(-1*numeric.DurationOf('h'))),
+		s.NPNTC("-2h", "", addTST(-3*numeric.DurationOf('h'))),
+		s.NPNTC("+{2h}", "", addTST(1*numeric.DurationOf('h'))),
+		s.NPNTC("-{2h}", "", addTST(3*numeric.DurationOf('h'))),
 		// Test time mis-matches. First case is a future/past mismatch,
 		// while the second case is a past/future mismatch.
-		negativeTestCase{"-{2h}", addTST(-5*numeric.DurationOf('h'))},
-		negativeTestCase{"-2h", addTST(5*numeric.DurationOf('h'))},
-	}
-	for _, c := range cases {
-		p, _, err := parseTimePredicate(toTks(c.input))
-		if suite.NoError(err, "Input: %v", c.input) {
-			suite.False(p(c.falseV), "Input: %v", c.input)
-		}
-	}
+		s.NPNTC("-{2h}", "", addTST(-5*numeric.DurationOf('h'))),
+		s.NPNTC("-2h", "", addTST(5*numeric.DurationOf('h'))),
+	)
 }
 
 // addTST => addToStartTime. Saves some typing. Note that v
@@ -76,6 +64,6 @@ func addTST(v int64) time.Time {
 
 func TestTimePredicate(t *testing.T) {
 	s := new(TimePredicateTestSuite)
-	s.parser = parseTimePredicate
+	s.Parser = predicate.GenericParser(parseTimePredicate)
 	suite.Run(t, s)
 }
