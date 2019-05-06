@@ -5,126 +5,127 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type ArrayPredicateTestSuite struct {
-	ParserTestSuite
+	predicate.ParserTestSuite
 }
 
-func (suite *ArrayPredicateTestSuite) SetupTest() {
+func (s *ArrayPredicateTestSuite) SetupTest() {
 	params.StartTime = time.Now()
 }
 
-func (suite *ArrayPredicateTestSuite) TeardownTest() {
+func (s *ArrayPredicateTestSuite) TeardownTest() {
 	params.StartTime = time.Time{}
 }
 
-func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
-	suite.runTestCases(
-		nPETC("", `expected an opening '\['`, true),
-		nPETC("]", `expected an opening '\['`, false),
-		nPETC("f", `expected an opening '\['`, true),
-		nPETC("[", `expected a closing '\]'`, false),
-		nPETC("[a", `expected a closing '\]'`, false),
-		nPETC("[]", `expected a '\*', '\?', or an array index inside '\[\]'`, false),
-		nPETC("[*a]", `expected a closing '\]' after '\*'`, false),
-		nPETC("[?a]", `expected a closing '\]' after '\?'`, false),
-		nPETC("[a]", `expected an array index inside '\[\]'`, false),
-		nPETC("[-15]", `expected an array index inside '\[\]'`, false),
-		nPETC("[?]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false),
-		nPETC("[?]", `expected a predicate after \[\?\]`, false),
-		nPETC("[*]", `expected a predicate after \[\*\]`, false),
-		nPETC("[15]", `expected a predicate after \[15\]`, false),
-		nPETC("[?] +{", "expected.*closing.*}", false),
+func (s *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
+	s.RunTestCases(
+		s.NPETC("", `expected an opening '\['`, true),
+		s.NPETC("]", `expected an opening '\['`, false),
+		s.NPETC("f", `expected an opening '\['`, true),
+		s.NPETC("[", `expected a closing '\]'`, false),
+		s.NPETC("[a", `expected a closing '\]'`, false),
+		s.NPETC("[]", `expected a '\*', '\?', or an array index inside '\[\]'`, false),
+		s.NPETC("[*a]", `expected a closing '\]' after '\*'`, false),
+		s.NPETC("[?a]", `expected a closing '\]' after '\?'`, false),
+		s.NPETC("[a]", `expected an array index inside '\[\]'`, false),
+		s.NPETC("[-15]", `expected an array index inside '\[\]'`, false),
+		s.NPETC("[?]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false),
+		s.NPETC("[?]", `expected a predicate after \[\?\]`, false),
+		s.NPETC("[*]", `expected a predicate after \[\*\]`, false),
+		s.NPETC("[15]", `expected a predicate after \[15\]`, false),
+		s.NPETC("[?] +{", "expected.*closing.*}", false),
 	)
 }
 
-func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
+func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 	mp := make(map[string]interface{})
 	mp["key"] = true
-	suite.runTestCases(
+	s.RunTestCases(
 		// Test -empty
-		nPTC("-empty", "", []interface{}{}),
+		s.NPTC("-empty", "", []interface{}{}),
 		// Test each of the possible arrayPs
-		nPTC("[?] -true -size", "-size", toA(false, true)),
-		nPTC("[*] -true -size", "-size", toA(true, true)),
-		nPTC("[0] -true -size", "-size", toA(true)),
+		s.NPTC("[?] -true -size", "-size", toA(false, true)),
+		s.NPTC("[*] -true -size", "-size", toA(true, true)),
+		s.NPTC("[0] -true -size", "-size", toA(true)),
 		// Test key sequences
-		nPTC("[?][?] -true -size", "-size", toA(toA(true))),
-		nPTC("[?].key -true -size", "-size", toA(mp)),
+		s.NPTC("[?][?] -true -size", "-size", toA(toA(true))),
+		s.NPTC("[?].key -true -size", "-size", toA(mp)),
 	)
 }
 
-func (suite *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
+func (s *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
 	// These test only the valid inputs. The error cases are tested in
 	// TestParseArrayPredicateErrors.
 
 	ptype, token, err := parseArrayPredicateType("[?]")
-	if suite.NoError(err) {
-		suite.Equal(byte('s'), ptype.t)
-		suite.Equal("", token)
+	if s.NoError(err) {
+		s.Equal(byte('s'), ptype.t)
+		s.Equal("", token)
 	}
 
 	ptype, token, err = parseArrayPredicateType("[*]")
-	if suite.NoError(err) {
-		suite.Equal(byte('a'), ptype.t)
-		suite.Equal("", token)
+	if s.NoError(err) {
+		s.Equal(byte('a'), ptype.t)
+		s.Equal("", token)
 	}
 
 	ptype, token, err = parseArrayPredicateType("[15]")
-	if suite.NoError(err) {
-		suite.Equal(byte('n'), ptype.t)
-		suite.Equal(uint(15), ptype.n)
-		suite.Equal("", token)
+	if s.NoError(err) {
+		s.Equal(byte('n'), ptype.t)
+		s.Equal(uint(15), ptype.n)
+		s.Equal("", token)
 	}
 }
 
-func (suite *ArrayPredicateTestSuite) TestArrayPSome() {
+func (s *ArrayPredicateTestSuite) TestArrayPSome() {
 	p := arrayP(arrayPredicateType{t: 's'}, trueP)
 
 	// Returns false for a non-array value
-	suite.False(p("foo"))
+	s.False(p("foo"))
 
 	// Returns false if no elements satisfy p
-	suite.False(p(toA(false)))
+	s.False(p(toA(false)))
 
 	// Returns true if some element satifies p
-	suite.True(p(toA(true)))
-	suite.True(p(toA("foo", true)))
+	s.True(p(toA(true)))
+	s.True(p(toA("foo", true)))
 }
 
-func (suite *ArrayPredicateTestSuite) TestArrayPAll() {
+func (s *ArrayPredicateTestSuite) TestArrayPAll() {
 	p := arrayP(arrayPredicateType{t: 'a'}, trueP)
 
 	// Returns false for a non-array value
-	suite.False(p("foo"))
+	s.False(p("foo"))
 
 	// Returns false if no elements satisfy p
-	suite.False(p(toA(false)))
+	s.False(p(toA(false)))
 
 	// Returns false if only some of the elements satisfy p
-	suite.False(p(toA(false, true)))
+	s.False(p(toA(false, true)))
 
 	// Returns true if all the elements satisfy P
-	suite.True(p(toA(true)))
-	suite.True(p(toA(true, true)))
+	s.True(p(toA(true)))
+	s.True(p(toA(true, true)))
 }
 
-func (suite *ArrayPredicateTestSuite) TestArrayPNth() {
+func (s *ArrayPredicateTestSuite) TestArrayPNth() {
 	p := arrayP(arrayPredicateType{t: 'n', n: 1}, trueP)
 
 	// Returns false for a non-array value
-	suite.False(p("foo"))
+	s.False(p("foo"))
 
 	// Returns false if n >= len(vs)
-	suite.False(p(toA(true)))
+	s.False(p(toA(true)))
 
 	// Returns false if vs[n] does not satisfy p
-	suite.False(p(toA(true, false)))
+	s.False(p(toA(true, false)))
 
 	// Returns true if vs[n] satisfies p
-	suite.True(p(toA(true, true)))
+	s.True(p(toA(true, true)))
 }
 
 func toA(vs ...interface{}) []interface{} {
@@ -133,6 +134,6 @@ func toA(vs ...interface{}) []interface{} {
 
 func TestArrayPredicate(t *testing.T) {
 	s := new(ArrayPredicateTestSuite)
-	s.parser = parseArrayPredicate
+	s.Parser = predicate.GenericParser(parseArrayPredicate)
 	suite.Run(t, s)
 }

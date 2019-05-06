@@ -1,10 +1,10 @@
 package parser
 
 import (
-	"fmt"
-	"strings"
+	"regexp"
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -14,165 +14,139 @@ import (
 // the parseExpression function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced.
 type ParseExpressionTestSuite struct {
-	suite.Suite
+	predicate.ParserTestSuite
 }
 
-type parseExpressionTestCase struct {
-	input    string
-	expected bool
-	err      string
+func (s *ParseExpressionTestSuite) NPETC(input string, errMsg string) predicate.ParserTestCase {
+	return s.ParserTestSuite.NPETC(input, regexp.QuoteMeta(errMsg), false)
 }
 
-// nPETC => newParseExpressionTestCase. This helper saves some typing
-func nPETC(input string, v interface{}) parseExpressionTestCase {
-	ptc := parseExpressionTestCase{input: input}
-	if bv, ok := v.(bool); ok {
-		ptc.expected = bv
-	} else {
-		ptc.err = v.(string)
+func (s *ParseExpressionTestSuite) NPTC(input string, expected bool) predicate.ParserTestCase {
+	if expected {
+		return s.ParserTestSuite.NPTC(input, "", types.Entry{})
 	}
-	return ptc
+	return s.ParserTestSuite.NPNTC(input, "", types.Entry{})
 }
 
-func (suite *ParseExpressionTestSuite) runTestCases(testCases ...parseExpressionTestCase) {
-	var input string
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("Panicked on input '%v'\n", input)
-			panic(r)
-		}
-	}()
-	for _, c := range testCases {
-		tks := []string{}
-		input = c.input
-		if input != "" {
-			tks = strings.Split(input, " ")
-		}
-		p, err := parseExpression(tks)
-		if c.err != "" {
-			suite.Equal(c.err, err.Error(), "Input was '%v'", input)
-		} else {
-			if suite.NoError(err) {
-				suite.Equal(c.expected, p(types.Entry{}), "Input was '%v'", input)
-			}
-		}
-	}
+func (s *ParseExpressionTestSuite) TestParseExpressionEmptyTokens() {
+	s.RunTestCases(s.NPTC("", true))
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionEmptyTokens() {
-	suite.runTestCases(nPETC("", true))
-}
-
-func (suite *ParseExpressionTestSuite) TestParseExpressionNotOpParseErrors() {
-	suite.runTestCases(
+func (s *ParseExpressionTestSuite) TestParseExpressionNotOpParseErrors() {
+	s.RunTestCases(
 		// Test error when "-not" is supplied without an expression
-		nPETC("-not", "-not: no following expression"),
+		s.NPETC("-not", "-not: no following expression"),
 		// Test error when "-not" is mixed with parentheses
-		nPETC("-not )", "): no beginning '('"),
-		nPETC("( -not )", "-not: no following expression"),
+		s.NPETC("-not )", "): no beginning '('"),
+		s.NPETC("( -not )", "-not: no following expression"),
 		// Test error when "-not" is supplied w/ an atom that errors
-		nPETC("-not -name", "-name: requires additional arguments"),
+		s.NPETC("-not -name", "-name: requires additional arguments"),
 		// Test error when "-not" is followed by a binary operator
-		nPETC("-not -a", "-not: no following expression"),
+		s.NPETC("-not -a", "-not: no following expression"),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionNotOpEval() {
-	suite.runTestCases(
-		nPETC("-not -true", false),
-		nPETC("-not -not -true", true),
-		nPETC("-not -not -not -true", false),
+func (s *ParseExpressionTestSuite) TestParseExpressionNotOpEval() {
+	s.RunTestCases(
+		s.NPTC("-not -true", false),
+		s.NPTC("-not -not -true", true),
+		s.NPTC("-not -not -not -true", false),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionBinOpParseErrors() {
-	suite.runTestCases(
+func (s *ParseExpressionTestSuite) TestParseExpressionBinOpParseErrors() {
+	s.RunTestCases(
 		// Tests for -and
-		nPETC("-a", "-a: no expression before -a"),
-		nPETC("-true -a", "-a: no expression after -a"),
-		nPETC("-true -a -a", "-a: no expression after -a"),
+		s.NPETC("-a", "-a: no expression before -a"),
+		s.NPETC("-true -a", "-a: no expression after -a"),
+		s.NPETC("-true -a -a", "-a: no expression after -a"),
 		// Tests for -or
-		nPETC("-o", "-o: no expression before -o"),
-		nPETC("-true -o", "-o: no expression after -o"),
-		nPETC("-true -o -o", "-o: no expression after -o"),
+		s.NPETC("-o", "-o: no expression before -o"),
+		s.NPETC("-true -o", "-o: no expression after -o"),
+		s.NPETC("-true -o -o", "-o: no expression after -o"),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionAndOpEval() {
-	suite.runTestCases(
-		nPETC("-true -a -false", false),
-		nPETC("-true -false", false),
-		nPETC("-true -true", true),
+func (s *ParseExpressionTestSuite) TestParseExpressionAndOpEval() {
+	s.RunTestCases(
+		s.NPTC("-true -a -false", false),
+		s.NPTC("-true -false", false),
+		s.NPTC("-true -true", true),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionOrOpEval() {
-	suite.runTestCases(
-		nPETC("-true -o -false", true),
-		nPETC("-false -o -true", true),
+func (s *ParseExpressionTestSuite) TestParseExpressionOrOpEval() {
+	s.RunTestCases(
+		s.NPTC("-true -o -false", true),
+		s.NPTC("-false -o -true", true),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionBinOpPrecedence() {
-	suite.runTestCases(
+func (s *ParseExpressionTestSuite) TestParseExpressionBinOpPrecedence() {
+	s.RunTestCases(
 		// Should be parsed as (-true -o (-true -a -false)), which evaluates to true.
 		// Without precedence, this would be parsed as ((-true -o -true) -a false) which
 		// evaluates to false.
-		nPETC("-true -o -true -a -false", true),
+		s.NPTC("-true -o -true -a -false", true),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionUnknownPrimaryOrOperatorError() {
-	suite.runTestCases(nPETC("-foo", "-foo: unknown primary or operator"))
+func (s *ParseExpressionTestSuite) TestParseExpressionUnknownPrimaryOrOperatorError() {
+	s.RunTestCases(s.NPETC("-foo", "-foo: unknown primary or operator"))
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionParensErrors() {
-	suite.runTestCases(
+func (s *ParseExpressionTestSuite) TestParseExpressionParensErrors() {
+	s.RunTestCases(
 		// Test the simple error cases
-		nPETC(")", "): no beginning '('"),
-		nPETC("(", "(: missing closing ')'"),
-		nPETC("( )", "(): empty inner expression"),
+		s.NPETC(")", "): no beginning '('"),
+		s.NPETC("(", "(: missing closing ')'"),
+		s.NPETC("( )", "(): empty inner expression"),
 		// Test some more complicated error cases
-		nPETC("( -true ) )", "): no beginning '('"),
-		nPETC("( -true ) ( ) -true", "(): empty inner expression"),
-		nPETC("( -true ( -false )", "(: missing closing ')'"),
-		nPETC("( ( ( -true ) ) ) )", "): no beginning '('"),
-		nPETC("( -a )", "-a: no expression before -a"),
-		nPETC("( ( ( -true ) -a", "(: missing closing ')'"),
-		nPETC("( ( ( -true ) -a ) )", "-a: no expression after -a"),
+		s.NPETC("( -true ) )", "): no beginning '('"),
+		s.NPETC("( -true ) ( ) -true", "(): empty inner expression"),
+		s.NPETC("( -true ( -false )", "(: missing closing ')'"),
+		s.NPETC("( ( ( -true ) ) ) )", "): no beginning '('"),
+		s.NPETC("( -a )", "-a: no expression before -a"),
+		s.NPETC("( ( ( -true ) -a", "(: missing closing ')'"),
+		s.NPETC("( ( ( -true ) -a ) )", "-a: no expression after -a"),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionParensEval() {
-	suite.runTestCases(
+func (s *ParseExpressionTestSuite) TestParseExpressionParensEval() {
+	s.RunTestCases(
 		// Note that w/o the parentheses, this would be parsed as "(-true -o (-true -a -false))"
 		// which would evaluate to true.
-		nPETC("( -true -o -true ) -a -false", false),
-		nPETC("-not ( -true -o -false )", false),
-		nPETC("( -true ) -a ( -false )", false),
-		nPETC("( -true ( -false ) -o ( ( -false -true ) ) )", false),
-		nPETC("( ( ( -true ) ) )", true),
-		nPETC("( ( -true ) -a -false )", false),
+		s.NPTC("( -true -o -true ) -a -false", false),
+		s.NPTC("-not ( -true -o -false )", false),
+		s.NPTC("( -true ) -a ( -false )", false),
+		s.NPTC("( -true ( -false ) -o ( ( -false -true ) ) )", false),
+		s.NPTC("( ( ( -true ) ) )", true),
+		s.NPTC("( ( -true ) -a -false )", false),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionComplexErrors() {
-	suite.runTestCases(
-		nPETC("( -true ) -a )", "): no beginning '('"),
-		nPETC("-true -a -foo", "-foo: unknown primary or operator"),
+func (s *ParseExpressionTestSuite) TestParseExpressionComplexErrors() {
+	s.RunTestCases(
+		s.NPETC("( -true ) -a )", "): no beginning '('"),
+		s.NPETC("-true -a -foo", "-foo: unknown primary or operator"),
 	)
 }
 
-func (suite *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
-	suite.runTestCases(
-		nPETC("( -true -o -true ) -false", false),
+func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
+	s.RunTestCases(
+		s.NPTC("( -true -o -true ) -false", false),
 		// Should be parsed as (-true -a -false) -o -true which evaluates to true.
-		nPETC("-true -false -o -true", true),
-		nPETC("-false -o -true -false", false),
-		nPETC("( -true -true ) -o -false", true),
+		s.NPTC("-true -false -o -true", true),
+		s.NPTC("-false -o -true -false", false),
+		s.NPTC("( -true -true ) -o -false", true),
 	)
 }
 
 func TestParseExpression(t *testing.T) {
-	suite.Run(t, new(ParseExpressionTestSuite))
+	s := new(ParseExpressionTestSuite)
+	s.Parser = predicate.EntryParser(func(tokens []string) (predicate.Entry, []string, error) {
+		p, err := parseExpression(tokens)
+		return p, []string{}, err
+	})
+	suite.Run(t, s)
 }

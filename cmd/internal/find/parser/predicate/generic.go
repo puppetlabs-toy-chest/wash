@@ -24,6 +24,11 @@ func (p1 Generic) Negate() Predicate {
 	})
 }
 
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 Generic) IsSatisfiedBy(v interface{}) bool {
+	return p1(v)
+}
+
 // GenericParser is a type that parses Generic predicates
 type GenericParser func(tokens []string) (Generic, []string, error)
 
