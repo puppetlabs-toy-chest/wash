@@ -102,6 +102,14 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 		return nil, err
 	}
 
+	// Setup context cancellation handling
+	if result.CancelFunc != nil {
+		go func() {
+			<-ctx.Done()
+			result.CancelFunc()
+		}()
+	}
+
 	r, w := io.Pipe()
 	go func() {
 		// Exec uses context; if it's canceled, the OutputCh will close. Close the writer.

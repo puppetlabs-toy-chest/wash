@@ -146,33 +146,29 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 
 	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	exitcode := 0
-	go func() {
-		stdin := opts.Stdin
-		if opts.Tty {
-			// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
-			// when a Tty is allocated commands expect user input and will respond to control signals.
-			// Otherwise close input now to ensure commands that depend on EOF execute correctly.
-			r, w := io.Pipe()
-			if stdin != nil {
-				stdin = io.MultiReader(stdin, r)
-			} else {
-				stdin = r
-			}
 
-			go func() {
-				// Close the response on context cancellation. Copying will block until there's more to
-				// read from the exec output. For an action with no more output it may never return.
-				// Asynchronously watch for context cancellation, and when it happens close the response
-				// so the parent goroutine can complete. We expect all contexts to complete eventually.
-				<-ctx.Done()
-
-				// Append Ctrl-C to input to signal end of execution.
-				_, err := w.Write([]byte{0x03})
-				activity.Record(ctx, "Sent ETX on context termination: %v", err)
-				w.Close()
-			}()
+	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
+	// when a Tty is allocated commands expect user input and will respond to control signals.
+	stdin := opts.Stdin
+	if opts.Tty {
+		r, w := io.Pipe()
+		if stdin != nil {
+			stdin = io.MultiReader(stdin, r)
+		} else {
+			stdin = r
 		}
 
+		execResult.CancelFunc = func() {
+			// Close the response on context cancellation. Copying will block until there's more to
+			// read from the exec output. For an action with no more output it may never return.
+			// Append Ctrl-C to input to signal end of execution.
+			_, err := w.Write([]byte{0x03})
+			activity.Record(ctx, "Sent ETX on context termination: %v", err)
+			w.Close()
+		}
+	}
+
+	go func() {
 		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: stdin, Tty: opts.Tty}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)

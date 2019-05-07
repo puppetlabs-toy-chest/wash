@@ -166,29 +166,23 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 	// exitcode callback won't be called until stdout/stderr are closed, but they're not closed by
 	// session.Start.
 	var exitErr error
-
 	go func() {
+		exitErr = session.Wait()
+		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
+		stdout.Close()
+		stderr.Close()
+	}()
+
+	result.OutputCh = outputch
+	result.CancelFunc = func() {
 		// Close the session on context cancellation. Copying will block until there's more to read
 		// from the exec output. For an action with no more output it may never return.
-		// Asynchronously watch for context cancellation, and when it happens close the session so
-		// the parent goroutine can complete. We expect all contexts to complete eventually.
-		<-ctx.Done()
-
 		// If a TTY is setup and the session is still open, send Ctrl-C over before closing it.
 		if opts.Tty {
 			activity.Record(ctx, "Sent SIGINT on context termination: %v", session.Signal(ssh.SIGINT))
 		}
 		activity.Record(ctx, "Closing session on context termination for %v: %v", id.Host, session.Close())
-	}()
-
-	go func() {
-		exitErr = session.Wait()
-		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
-		stdout.CloseWithError(exitErr)
-		stderr.CloseWithError(exitErr)
-	}()
-
-	result.OutputCh = outputch
+	}
 	result.ExitCodeCB = func() (int, error) {
 		if exitErr == nil {
 			return 0, nil
