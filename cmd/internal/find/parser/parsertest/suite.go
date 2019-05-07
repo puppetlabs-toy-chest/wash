@@ -1,21 +1,23 @@
-package predicate
+package parsertest
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
-	"github.com/stretchr/testify/suite"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
+	"github.com/stretchr/testify/suite"
 )
 
-// ParserTestSuite represents a type that tests predicate parsers
-type ParserTestSuite struct {
+// Suite represents a type that tests predicate parsers
+type Suite struct {
 	suite.Suite
-	Parser Parser
+	Parser predicate.Parser
 }
 
-// ParserTestCase represents a parser test case
-type ParserTestCase struct {
+// Case represents a parser test case
+type Case struct {
 	Input           string
 	RemInput        string
 	SatisfyingValue interface{}
@@ -23,27 +25,27 @@ type ParserTestCase struct {
 	IsMatchError    bool
 }
 
-// NPTC => NewParserTestCase. Saves some typing
-func (suite *ParserTestSuite) NPTC(input string, remInput string, trueValue interface{}) ParserTestCase {
-	return ParserTestCase{
-		Input: input,
-		RemInput: remInput,
+// NPTC => NewCase. Saves some typing
+func (suite *Suite) NPTC(input string, remInput string, trueValue interface{}) Case {
+	return Case{
+		Input:           input,
+		RemInput:        remInput,
 		SatisfyingValue: trueValue,
 	}
 }
 
 // NPNTC => NewParserNegativeTestCase. Saves some typing
-func (suite *ParserTestSuite) NPNTC(input string, remInput string, falseValue interface{}) ParserTestCase {
-	return ParserTestCase{
-		Input: input,
-		RemInput: remInput,
+func (suite *Suite) NPNTC(input string, remInput string, falseValue interface{}) Case {
+	return Case{
+		Input:           input,
+		RemInput:        remInput,
 		SatisfyingValue: falseV{falseValue},
 	}
 }
 
 // NPETC => NewParserErrorTestCase
-func (suite *ParserTestSuite) NPETC(input string, errRegex string, isMatchError bool) ParserTestCase {
-	return ParserTestCase{
+func (suite *Suite) NPETC(input string, errRegex string, isMatchError bool) Case {
+	return Case{
 		Input:        input,
 		ErrRegex:     regexp.MustCompile(errRegex),
 		IsMatchError: isMatchError,
@@ -51,7 +53,7 @@ func (suite *ParserTestSuite) NPETC(input string, errRegex string, isMatchError 
 }
 
 // RunTestCases runs the given test cases.
-func (suite *ParserTestSuite) RunTestCases(cases ...ParserTestCase) {
+func (suite *Suite) RunTestCases(cases ...Case) {
 	var input string
 	defer func() {
 		if r := recover(); r != nil {
@@ -84,7 +86,7 @@ func (suite *ParserTestSuite) RunTestCases(cases ...ParserTestCase) {
 }
 
 // ToTks => ToTokens. Saves some typing
-func (suite *ParserTestSuite) ToTks(s string) []string {
+func (suite *Suite) ToTks(s string) []string {
 	var tokens = []string{}
 	if s != "" {
 		tokens = strings.Split(s, " ")
@@ -97,4 +99,3 @@ func (suite *ParserTestSuite) ToTks(s string) []string {
 type falseV struct {
 	v interface{}
 }
-

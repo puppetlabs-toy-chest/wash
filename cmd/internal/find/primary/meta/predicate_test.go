@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type PredicateTestSuite struct {
-	predicate.ParserTestSuite
+	parsertest.Suite
 }
 
 func (s *PredicateTestSuite) SetupTest() {
