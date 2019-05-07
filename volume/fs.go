@@ -31,6 +31,8 @@ func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
 	return List(ctx, d, "")
 }
 
+var errNonZero = fmt.Errorf("Exec exited non-zero")
+
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
 	result, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{})
 	if err != nil {
@@ -58,7 +60,8 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 	if err != nil {
 		return nil, err
 	} else if exitcode != 0 {
-		return nil, fmt.Errorf("exec exited non-zero")
+		// Can happen due to permission denied. Leave handling up to the caller.
+		return &buf, errNonZero
 	}
 	return &buf, nil
 }
@@ -68,7 +71,10 @@ func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
 	cmdline := StatCmd("/var/log")
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 	buf, err := exec(ctx, d.executor, cmdline)
-	if err != nil {
+	if err == errNonZero {
+		// May not have access to some files, but list the rest.
+		activity.Record(ctx, "%v running %v, attempting to parse output", err, cmdline)
+	} else if err != nil {
 		activity.Record(ctx, "Exec error running %v in VolumeList: %v", cmdline, err)
 		return nil, err
 	}
