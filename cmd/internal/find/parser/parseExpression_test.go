@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
@@ -14,18 +15,18 @@ import (
 // the parseExpression function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced.
 type ParseExpressionTestSuite struct {
-	predicate.ParserTestSuite
+	parsertest.Suite
 }
 
-func (s *ParseExpressionTestSuite) NPETC(input string, errMsg string) predicate.ParserTestCase {
-	return s.ParserTestSuite.NPETC(input, regexp.QuoteMeta(errMsg), false)
+func (s *ParseExpressionTestSuite) NPETC(input string, errMsg string) parsertest.Case {
+	return s.Suite.NPETC(input, regexp.QuoteMeta(errMsg), false)
 }
 
-func (s *ParseExpressionTestSuite) NPTC(input string, expected bool) predicate.ParserTestCase {
+func (s *ParseExpressionTestSuite) NPTC(input string, expected bool) parsertest.Case {
 	if expected {
-		return s.ParserTestSuite.NPTC(input, "", types.Entry{})
+		return s.Suite.NPTC(input, "", types.Entry{})
 	}
-	return s.ParserTestSuite.NPNTC(input, "", types.Entry{})
+	return s.Suite.NPNTC(input, "", types.Entry{})
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionEmptyTokens() {

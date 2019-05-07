@@ -3,12 +3,13 @@ package meta
 import (
 	"testing"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
+	"github.com/stretchr/testify/suite"
 )
 
 type StringPredicateTestSuite struct {
-	predicate.ParserTestSuite
+	parsertest.Suite
 }
 
 func (s *StringPredicateTestSuite) TestErrors() {
