@@ -6,14 +6,13 @@ import (
 	"strings"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // ArrayPredicate => EmptyPredicate      |
 //                   ‘[' ? ‘]’ Predicate |
 //                   ‘[' * ‘]’ Predicate |
 //                   ‘[' N ‘]’ Predicate |
-func parseArrayPredicate(tokens []string) (predicate.Generic, []string, error) {
+func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
@@ -102,7 +101,7 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 	return ptype, token[endIx+1:], nil
 }
 
-func arrayP(ptype arrayPredicateType, p predicate.Generic) predicate.Generic {
+func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
 	switch ptype.t {
 	case 's':
 		return toArrayP(func(vs []interface{}) bool {
@@ -141,7 +140,7 @@ func arrayP(ptype arrayPredicateType, p predicate.Generic) predicate.Generic {
 
 // toArrayP is a helper for arrayP that's meant to reduce
 // the boilerplate type validation.
-func toArrayP(p func([]interface{}) bool) predicate.Generic {
+func toArrayP(p func([]interface{}) bool) Predicate {
 	return func(v interface{}) bool {
 		arrayV, ok := v.([]interface{})
 		if !ok {

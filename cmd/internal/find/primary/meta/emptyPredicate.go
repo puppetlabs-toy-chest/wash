@@ -2,11 +2,10 @@ package meta
 
 import (
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // emptyPredicate => -empty
-func parseEmptyPredicate(tokens []string) (predicate.Generic, []string, error) {
+func parseEmptyPredicate(tokens []string) (Predicate, []string, error) {
 	if len(tokens) == 0 || tokens[0] != "-empty" {
 		return nil, nil, errz.NewMatchError("expected '-empty'")
 	}

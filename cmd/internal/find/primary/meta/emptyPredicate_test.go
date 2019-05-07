@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,6 +44,6 @@ func (s *EmptyPredicateTestSuite) TestEmptyPArray() {
 
 func TestEmptyPredicate(t *testing.T) {
 	s := new(EmptyPredicateTestSuite)
-	s.Parser = predicate.GenericParser(parseEmptyPredicate)
+	s.Parser = predicateParser(parseEmptyPredicate)
 	suite.Run(t, s)
 }

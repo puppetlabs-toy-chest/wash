@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -103,6 +102,6 @@ func (s *ObjectPredicateTestSuite) TestFindMatchingKey() {
 
 func TestObjectPredicate(t *testing.T) {
 	s := new(ObjectPredicateTestSuite)
-	s.Parser = predicate.GenericParser(parseObjectPredicate)
+	s.Parser = predicateParser(parseObjectPredicate)
 	suite.Run(t, s)
 }
