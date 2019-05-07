@@ -76,23 +76,23 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return execResult, err
 	}
 
+	go func() {
+		// Close the response on context cancellation. Copying will block until there's more to read
+		// from the exec output. For an action with no more output it may never return.
+		// Asynchronously watch for context cancellation, and when it happens close the response so
+		// the parent goroutine can complete. We expect all contexts to complete eventually.
+		<-ctx.Done()
+
+		if opts.Tty {
+			// If resp.Conn is still open, send Ctrl-C over resp.Conn before closing it.
+			_, err := resp.Conn.Write([]byte{0x03})
+			activity.Record(ctx, "Sent ETX on context termination: %v", err)
+		}
+		resp.Close()
+	}()
+
 	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	go func() {
-		go func() {
-			// Close the response on context cancellation. Copying will block until there's more to read
-			// from the exec output. For an action with no more output it may never return.
-			// Asynchronously watch for context cancellation, and when it happens close the response so
-			// the parent goroutine can complete. We expect all contexts to complete eventually.
-			<-ctx.Done()
-
-			if opts.Tty {
-				// If resp.Conn is still open, Send Ctrl-C over resp.Conn before closing it.
-				_, err := resp.Conn.Write([]byte{0x03})
-				activity.Record(ctx, "Sent ETX on context termination: %v", err)
-			}
-			resp.Close()
-		}()
-
 		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
 		stdout.CloseWithError(err)
