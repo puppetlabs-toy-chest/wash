@@ -3,40 +3,52 @@ package primary
 import "github.com/puppetlabs/wash/cmd/internal/find/primary/meta"
 
 /*
-metaPrimary        => (-meta|-m) ObjectPredicate
-ObjectPredicate    => EmptyPredicate | ‘.’ Key Predicate
-EmptyPredicate     => -empty
-Key                => [ ^.[ ] ]+ (i.e. one or more cs that aren't ".", "[", or "]")
+metaPrimary         => (-meta|-m) Expression
 
-Predicate          => ObjectPredicate     |
-                      ArrayPredicate      |
-                      PrimitivePredicate
+Expression          => EmptyPredicate | KeySequence PredicateExpression
+EmptyPredicate      => -empty
 
-ArrayPredicate     => EmptyPredicate      |
-                      ‘[' ? ‘]’ Predicate |
-                      ‘[' * ‘]’ Predicate |
-                      ‘[' N ‘]’ Predicate |
+KeySequence         => '.' Key Tail
+Key                 => [ ^.[ ] ]+ (i.e. one or more cs that aren't ".", "[", or "]")
+Tail                => '.' Key Tail   |
+                       ‘[' ? ‘]’ Tail |
+                       '[' * ']' Tail |
+                       '[' N ']' Tail |
+                       ""
 
-PrimitivePredicate => NullPredicate       |
-                      ExistsPredicate     |
-                      BooleanPredicate    |
-                      NumericPredicate    |
-                      TimePredicate       |
-                      StringPredicate
+PredicateExpression => (See the comments of expression.Parser#Parse)
 
-NullPredicate      => -null
-ExistsPredicate    => -exists
-BooleanPredicate   => -true | -false
+Predicate           => ObjectPredicate     |
+                       ArrayPredicate      |
+                       PrimitivePredicate
 
-NumericPredicate   => (+|-)? Number
-Number             => N | '{' N '}' | numeric.SizeRegex
+ObjectPredicate     => EmptyPredicate | ‘.’ Key Predicate
 
-TimePredicate      => (+|-)? Duration
-Duration           => numeric.DurationRegex | '{' numeric.DurationRegex '}'
+ArrayPredicate      => EmptyPredicate      |
+                       ‘[' ? ‘]’ Predicate |
+                       ‘[' * ‘]’ Predicate |
+                       ‘[' N ‘]’ Predicate |
 
-StringPredicate    => [^-].*
+PrimitivePredicate  => NullPredicate       |
+                       ExistsPredicate     |
+                       BooleanPredicate    |
+                       NumericPredicate    |
+                       TimePredicate       |
+                       StringPredicate
 
-N                  => \d+ (i.e. some number > 0)
+NullPredicate       => -null
+ExistsPredicate     => -exists
+BooleanPredicate    => -true | -false
+
+NumericPredicate    => (+|-)? Number
+Number              => N | '{' N '}' | numeric.SizeRegex
+
+TimePredicate       => (+|-)? Duration
+Duration            => numeric.DurationRegex | '{' numeric.DurationRegex '}'
+
+StringPredicate     => [^-].*
+
+N                   => \d+ (i.e. some number > 0)
 */
 //nolint
 var metaPrimary = Parser.newPrimary([]string{"-meta", "-m"}, meta.Parse)

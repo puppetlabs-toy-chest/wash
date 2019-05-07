@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -25,25 +26,41 @@ func (s *EmptyPredicateTestSuite) TestValidInput() {
 }
 
 func (s *EmptyPredicateTestSuite) TestEmptyPInvalidType() {
-	s.False(emptyP("foo"))
+	p := emptyP(false)
+	s.False(p.IsSatisfiedBy("foo"))
+	s.False(p.Negate().IsSatisfiedBy("foo"))
 }
 
 func (s *EmptyPredicateTestSuite) TestEmptyPObject() {
 	mp := make(map[string]interface{})
-	s.True(emptyP(mp))
+	p := emptyP(false)
+	
+	// Test empty map
+	s.True(p.IsSatisfiedBy(mp))
+	s.False(p.Negate().IsSatisfiedBy(mp))
+
+	// Test nonempty map
 	mp["foo"] = 1
-	s.False(emptyP(mp))
+	s.False(p.IsSatisfiedBy(mp))
+	s.True(p.Negate().IsSatisfiedBy(mp))
 }
 
 func (s *EmptyPredicateTestSuite) TestEmptyPArray() {
 	a := []interface{}{}
-	s.True(emptyP(a))
+	p := emptyP(false)
+
+	// Test empty array
+	s.True(p.IsSatisfiedBy(a))
+	s.False(p.Negate().IsSatisfiedBy(a))
+
+	// Test nonempty array
 	a = append(a, 1)
-	s.False(emptyP(a))
+	s.False(p.IsSatisfiedBy(a))
+	s.True(p.Negate().IsSatisfiedBy(a))
 }
 
 func TestEmptyPredicate(t *testing.T) {
 	s := new(EmptyPredicateTestSuite)
-	s.Parser = predicateParser(parseEmptyPredicate)
+	s.Parser = predicate.ToParser(parseEmptyPredicate)
 	suite.Run(t, s)
 }

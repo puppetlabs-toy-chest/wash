@@ -2,6 +2,7 @@ package meta
 
 import (
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 /*
@@ -12,17 +13,17 @@ PrimitivePredicate => NullPredicate       |
                       TimePredicate       |
                       StringPredicate
 */
-func parsePrimitivePredicate(tokens []string) (Predicate, []string, error) {
+func parsePrimitivePredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a primitive predicate")
 	}
 	switch token := tokens[0]; token {
 	case "-null":
 		// NullPredicate
-		return nullP, tokens[1:], nil
+		return genericPredicate(nullP), tokens[1:], nil
 	case "-exists":
 		// ExistsPredicate
-		return existsP, tokens[1:], nil
+		return genericPredicate(existsP), tokens[1:], nil
 	case "-true":
 		// BooleanPredicate
 		return trueP, tokens[1:], nil
@@ -76,15 +77,27 @@ func existsP(v interface{}) bool {
 	return v != nil
 }
 
-var trueP = makeBooleanPredicate(true)
-var falseP = makeBooleanPredicate(false)
+var trueP = booleanP(true)
+var falseP = booleanP(false)
 
-func makeBooleanPredicate(expectedVal bool) Predicate {
-	return func(v interface{}) bool {
-		bv, ok := v.(bool)
-		if !ok {
-			return false
-		}
-		return bv == expectedVal
+func booleanP(value bool) predicate.Predicate {
+	return &booleanPredicate{
+		genericPredicate: func(v interface{}) bool {
+			bv, ok := v.(bool)
+			if !ok {
+				return false
+			}
+			return bv == value
+		},
+		value: value,
 	}
+}
+
+type booleanPredicate struct {
+	genericPredicate
+	value bool
+}
+
+func (bp *booleanPredicate) Negate() predicate.Predicate {
+	return booleanP(!bp.value)
 }

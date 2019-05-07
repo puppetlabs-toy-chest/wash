@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -56,6 +57,34 @@ func (s *TimePredicateTestSuite) TestValidInputFalseValues() {
 	)
 }
 
+func (s *TimePredicateTestSuite) TestTimeP_Negation_NotATime() {
+	d := 5 * numeric.DurationOf('h')
+	tp := timeP(true, func(n int64) bool {
+		return n > d 
+	})
+	s.False(tp.Negate().IsSatisfiedBy("not_a_valid_time_value"))
+}
+
+func (s *TimePredicateTestSuite) TestTimeP_Negation_TimeMismatch() {
+	d := 5 * numeric.DurationOf('h')
+	// This is a query to the past
+	tp := timeP(true, func(n int64) bool {
+		return n > d 
+	})
+	/// Negating tp still preserves time mismatches. 
+	s.False(tp.Negate().IsSatisfiedBy(addTST(d+1)))
+	s.False(tp.Negate().IsSatisfiedBy(addTST(d-1)))
+}
+
+func (s *TimePredicateTestSuite) TestTimeP_Negation() {
+	d := 5 * numeric.DurationOf('h')
+	tp := timeP(true, func(n int64) bool {
+		return n > d 
+	})
+	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d+1))))
+	s.True(tp.Negate().IsSatisfiedBy(addTST(-(d-1))))
+}
+
 // addTST => addToStartTime. Saves some typing. Note that v
 // is an int64 duration.
 func addTST(v int64) time.Time {
@@ -64,6 +93,6 @@ func addTST(v int64) time.Time {
 
 func TestTimePredicate(t *testing.T) {
 	s := new(TimePredicateTestSuite)
-	s.Parser = predicateParser(parseTimePredicate)
+	s.Parser = predicate.ToParser(parseTimePredicate)
 	suite.Run(t, s)
 }

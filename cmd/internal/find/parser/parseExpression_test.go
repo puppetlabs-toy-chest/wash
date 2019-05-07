@@ -129,6 +129,9 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexErrors() {
 	s.RunTestCases(
 		s.NPETC("( -true ) -a )", "): no beginning '('"),
 		s.NPETC("-true -a -foo", "-foo: unknown primary or operator"),
+		// Make sure meta primary expressions are parsed independently of
+		// the top-level `wash find` expression
+		s.NPETC("-m .key (", "-m: (: missing closing ')'"),
 	)
 }
 

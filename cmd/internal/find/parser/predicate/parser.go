@@ -10,7 +10,7 @@ type Parser interface {
 // CompositeParser represents a parser composed of multiple predicate
 // parsers.
 type CompositeParser struct {
-	ErrMsg string
+	MatchErrMsg string
 	Parsers []Parser
 }
 
@@ -24,7 +24,7 @@ func (cp CompositeParser) Parse(tokens []string) (Predicate, []string, error) {
 // ParseAndReturnParserID attempts to parse a predicate from the given tokens. It loops
 // through each of cp's parsers, returning the result of the first parser that matches
 // the input, and the matching parser's ID. If no parser matches the input, then Parse
-// returns a MatchError containing cp.ErrMsg
+// returns a MatchError containing cp.MatchErrMsg
 func (cp CompositeParser) ParseAndReturnParserID(tokens []string) (Predicate, []string, int, error) {
 	for i, parser := range cp.Parsers {
 		p, tokens, err := parser.Parse(tokens)
@@ -38,7 +38,7 @@ func (cp CompositeParser) ParseAndReturnParserID(tokens []string) (Predicate, []
 		}
 	}
 	// None of the parsers matched the input, so return a MatchError
-	return nil, nil, -1, errz.NewMatchError(cp.ErrMsg)		
+	return nil, nil, -1, errz.NewMatchError(cp.MatchErrMsg)		
 }
 
 // ToParser converts the given parse function to a predicate.Parser object

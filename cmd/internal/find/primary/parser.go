@@ -11,7 +11,7 @@ import (
 // Parser parses `wash find` primaries.
 var Parser = &parser{
 	CompositeParser: &predicate.CompositeParser{
-		ErrMsg: "unknown primary",
+		MatchErrMsg: "unknown primary",
 	},
 	primaries: make(map[string]*primary),
 }

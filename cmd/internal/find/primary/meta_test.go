@@ -1,43 +1,103 @@
 package primary
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"testing"
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/stretchr/testify/suite"
 )
 
 type MetaPrimaryTestSuite struct {
-	suite.Suite
+	parsertest.Suite
+	e types.Entry
 }
 
-func (suite *MetaPrimaryTestSuite) SetupTest() {
+func (s *MetaPrimaryTestSuite) SetupTest() {
 	params.StartTime = time.Now()
 }
 
-func (suite *MetaPrimaryTestSuite) TeardownTest() {
+func (s *MetaPrimaryTestSuite) TeardownTest() {
 	params.StartTime = time.Time{}
 }
 
-func (suite *MetaPrimaryTestSuite) TestMetaPrimaryErrors() {
-	_, _, err := metaPrimary.parse([]string{"-m", "-true"})
-	suite.Regexp("-m: key sequences must begin with a '.'", err)
-
-	_, _, err = metaPrimary.parse([]string{"-m", "."})
-	suite.Regexp("-m: expected a key sequence after '.'", err)
+func (s *MetaPrimaryTestSuite) TestMetaPrimaryErrors() {
+	s.RunTestCases(
+		s.NPETC("-m", "expected a key sequence", false),
+		s.NPETC("-m foo", "key sequences must begin with a '.'", false),
+		s.NPETC("-m .", "expected a key sequence after '.'", false),
+		s.NPETC("-m .[", "expected a key sequence after '.'", false),
+		s.NPETC("-m .key", "expected a predicate expression", false),
+		s.NPETC("-m .key +{", "expected.*closing.*}", false),
+		s.NPETC("-m .key]", `expected an opening '\['`, false),
+		s.NPETC("-m .key[", `expected a closing '\]'`, false),
+	)
 }
 
-func (suite *MetaPrimaryTestSuite) TestMetaPrimaryValidInput() {
-	p, tokens, err := metaPrimary.parse([]string{"-m", "-empty", "-size"})
-	if suite.NoError(err) {
-		suite.Equal([]string{"-size"}, tokens)
-		e := types.Entry{}
-		suite.True(p(e))
-	}
+func (s *MetaPrimaryTestSuite) TestMetaPrimaryValidInputTruePredicates() {
+	s.RunTestCases(
+		s.NPTC("-m .architecture x86_64 -primary", "-primary", s.e),
+		s.NPTC("-m .blockDeviceMappings[?] .deviceName /dev/sda1 -primary", "-primary", s.e),
+		s.NPTC("-m .cpuOptions.coreCount 4 -primary", "-primary", s.e),
+		s.NPTC("-m .tags[?] .key termination_date -a .value +1h -primary", "-primary", s.e),
+		s.NPTC("-m .tags[?] .key foo -o .key department -primary", "-primary", s.e),
+		s.NPTC("-m .elasticGpuAssociations -null -primary", "-primary", s.e),
+		s.NPTC("-m .networkInterfaces[?] .association.ipOwnerID amazon -a .privateIpAddresses[?] .association.ipOwnerID amazon -primary", "-primary", s.e),
+	)
+}
+
+func (s *MetaPrimaryTestSuite) TestMetaPrimaryValidInputFalsePredicates() {
+	s.RunTestCases(
+		// Should fail b/c arch key does not exist
+		s.NPNTC("-m .arch x86_64 -primary", "-primary", s.e),
+		// Should fail b/c architecture is a string, not a number
+		s.NPNTC("-m .architecture +10 -primary", "-primary", s.e),
+		// Should fail b/c the termination_date tag's value is in the past while
+		// +{1h} queries the future. 
+		s.NPNTC("-m .tags[?] .key termination_date -a .value +{1h} -primary", "-primary", s.e),
+		// Should fail b/c the tags array has elements whose ".key" value is _not_ termination_date.
+		// Informally, this means that this EC2 instance has more than one tag.
+		s.NPNTC("-m .tags[*] .key termination_date -primary", "-primary", s.e),
+		// Should fail b/c architecture cannot be both a number and a string
+		s.NPNTC("-m .architecture +10 -a x86_64 -primary", "-primary", s.e),
+	)
+}
+
+func (s *MetaPrimaryTestSuite) TestMetaPrimaryValidInputNegation() {
+	s.RunTestCases(
+		s.NPNTC("-m .architecture ! x86_64 -primary", "-primary", s.e),
+		s.NPNTC("-m .blockDeviceMappings[?] ! .deviceName /dev/sda1 -primary", "-primary", s.e),
+		s.NPNTC("-m .cpuOptions.coreCount ! 4 -primary", "-primary", s.e),
+		// De'Morgan's Law: !(p1(a) && p2(a)) == ! p1(a) || ! p2(a). Since there's more than one
+		// tag (e.g. "department"), the negation of this predicate will evaluate to true.
+		s.NPTC("-m .tags[?] ! ( .key termination_date -a .value +1h ) -primary", "-primary", s.e),
+		// De'Morgan's Law: !(p1(a) || p2(a)) == !p1(a) && !p2(a). Substituting, this translates to
+		// "at least one tag that does _not_ have the "key" key set to 'foo' AND 'department'". Since
+		// we have a tag with "key" set to "termination_date", and since "termination_date" is not "foo"
+		// and "department", this predicate evaluates to true.
+		s.NPTC("-m .tags[?] ! ( .key foo -o .key department ) -primary", "-primary", s.e),
+		s.NPNTC("-m .elasticGpuAssociations ! -null -primary", "-primary", s.e),
+		// There's only one network interface, so the negation here evaluates to false.
+		s.NPNTC("-m .networkInterfaces[?] ! ( .association.ipOwnerID amazon -a .privateIpAddresses[?] .association.ipOwnerID amazon ) -primary", "-primary", s.e),
+	)
 }
 
 func TestMetaPrimary(t *testing.T) {
-	suite.Run(t, new(MetaPrimaryTestSuite))
+	s := new(MetaPrimaryTestSuite)
+	rawMeta, err := ioutil.ReadFile("testdata/metadata.json")
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Failed to read testdata/metadata.json"))
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(rawMeta, &m); err != nil {
+		t.Fatal(fmt.Sprintf("Failed to unmarshal testdata/metadata.json: %v", err))
+	}
+	s.e.Attributes.SetMeta(m)
+	s.Parser = metaPrimary
+	suite.Run(t, s)
 }

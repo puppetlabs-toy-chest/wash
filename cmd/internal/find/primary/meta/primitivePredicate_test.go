@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -61,19 +62,29 @@ func (s *PrimitivePredicateTestSuite) TestExistsP() {
 }
 
 func (s *PrimitivePredicateTestSuite) TestTrueP() {
-	s.False(trueP("foo"))
-	s.False(trueP(false))
-	s.True(trueP(true))
+	s.False(trueP.IsSatisfiedBy("foo"))
+	s.False(trueP.Negate().IsSatisfiedBy("foo"))
+
+	s.False(trueP.IsSatisfiedBy(false))
+	s.True(trueP.Negate().IsSatisfiedBy(false))
+
+	s.True(trueP.IsSatisfiedBy(true))
+	s.False(trueP.Negate().IsSatisfiedBy(true))
 }
 
 func (s *PrimitivePredicateTestSuite) TestFalseP() {
-	s.False(falseP("foo"))
-	s.False(falseP(true))
-	s.True(falseP(false))
+	s.False(falseP.IsSatisfiedBy("foo"))
+	s.False(falseP.Negate().IsSatisfiedBy("foo"))
+
+	s.False(falseP.IsSatisfiedBy(true))
+	s.True(falseP.Negate().IsSatisfiedBy(true))
+
+	s.True(falseP.IsSatisfiedBy(false))
+	s.False(falseP.Negate().IsSatisfiedBy(false))
 }
 
 func TestPrimitivePredicate(t *testing.T) {
 	s := new(PrimitivePredicateTestSuite)
-	s.Parser = predicateParser(parsePrimitivePredicate)
+	s.Parser = predicate.ToParser(parsePrimitivePredicate)
 	suite.Run(t, s)
 }

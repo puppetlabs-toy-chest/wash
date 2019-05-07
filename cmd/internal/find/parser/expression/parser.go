@@ -64,7 +64,7 @@ func NewParser(predicateParser predicate.Parser) *Parser {
 		}
 	}
 	p.atom = &predicate.CompositeParser{
-		ErrMsg: "expected an atom",
+		MatchErrMsg: "expected an atom",
 		Parsers: []predicate.Parser{
 			notOpParser(p),
 			parensOpParser(p),

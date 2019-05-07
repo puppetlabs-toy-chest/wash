@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -28,7 +29,7 @@ func (s *ObjectPredicateTestSuite) TestKeyRegex() {
 	s.NotRegexp(keyRegex, "]key")
 }
 
-func (s *ObjectPredicateTestSuite) TestErrors() {
+func (s *ObjectPredicateTestSuite) TestParseObjectPredicateErrors() {
 	s.RunTestCases(
 		s.NPETC("", "expected a key sequence", true),
 		s.NPETC("foo", "key sequences must begin with a '.'", true),
@@ -41,7 +42,7 @@ func (s *ObjectPredicateTestSuite) TestErrors() {
 	)
 }
 
-func (s *ObjectPredicateTestSuite) TestValidInput() {
+func (s *ObjectPredicateTestSuite) TestParseObjectPredicateValidInput() {
 	// Make the satisfying maps
 	mp1 := make(map[string]interface{})
 	mp1["key"] = true
@@ -67,12 +68,16 @@ func (s *ObjectPredicateTestSuite) TestValidInput() {
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_NotAnObject() {
-	s.False(objectP("foo", trueP)("not an object"))
+	objP := objectP("foo", trueP)
+	s.False(objP.IsSatisfiedBy("not an object"))
+	s.False(objP.Negate().IsSatisfiedBy("not an object"))
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_NonexistantKey() {
 	mp := make(map[string]interface{})
-	s.False(objectP("foo", trueP)(mp))
+	objP := objectP("foo", trueP)
+	s.False(objP.IsSatisfiedBy(mp))
+	s.False(objP.Negate().IsSatisfiedBy(mp))
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_ExistantKey() {
@@ -80,14 +85,20 @@ func (s *ObjectPredicateTestSuite) TestObjectP_ExistantKey() {
 	mp["foo"] = "baz"
 
 	var calledP bool
-	p := func(v interface{}) bool {
+	p := genericPredicate(func(v interface{}) bool {
 		calledP = true
 		s.Equal("baz", v, "objectP did not pass-in mp[key] into p")
 		return true
-	}
+	})
+	objP := objectP("foo", p)
 
-	s.True(objectP("foo", p)(mp), "objectP did not return p(mp[key])")
+	s.True(objP.IsSatisfiedBy(mp), "objectP did not return p(mp[key])")
 	s.True(calledP, "objectP did not invoke p")
+	
+	// Now test negation
+	calledP = false
+	s.False(objP.Negate().IsSatisfiedBy(mp), "objectP.Negate() did not return !p(mp[key])")
+	s.True(calledP, "objectP.Negate() did not invoke p")
 }
 
 func (s *ObjectPredicateTestSuite) TestFindMatchingKey() {
@@ -102,6 +113,6 @@ func (s *ObjectPredicateTestSuite) TestFindMatchingKey() {
 
 func TestObjectPredicate(t *testing.T) {
 	s := new(ObjectPredicateTestSuite)
-	s.Parser = predicateParser(parseObjectPredicate)
+	s.Parser = predicate.ToParser(parseObjectPredicate)
 	suite.Run(t, s)
 }

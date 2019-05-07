@@ -4,10 +4,41 @@ import (
 	"fmt"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // Predicate represents a Numeric predicate
 type Predicate func(int64) bool
+
+// And returns p1 && p2
+func (p1 Predicate) And(p2 predicate.Predicate) predicate.Predicate {
+	return Predicate(func(n int64) bool {
+		return p1(n) && (p2.(Predicate))(n)
+	})
+}
+
+// Or returns p1 || p2
+func (p1 Predicate) Or(p2 predicate.Predicate) predicate.Predicate {
+	return Predicate(func(n int64) bool {
+		return p1(n) || (p2.(Predicate))(n)
+	})
+}
+
+// Negate returns Not(p1)
+func (p1 Predicate) Negate() predicate.Predicate {
+	return Predicate(func(n int64) bool {
+		return !p1(n)
+	})
+}
+
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 Predicate) IsSatisfiedBy(v interface{}) bool {
+	n, ok := v.(int64)
+	if !ok {
+		return false
+	}
+	return p1(n)
+}
 
 // Parser parses numeric values.
 type Parser func(string) (int64, error)
@@ -25,6 +56,7 @@ func ParsePredicate(str string, parsers ...Parser) (Predicate, int, error) {
 		panic("numeric.ParsePredicate called without any parsers")
 	}
 
+	// TODO: Introduce "+="/"-=" to represent ">="/"<="?
 	cmp := str[0]
 	if cmp == '+' || cmp == '-' {
 		str = str[1:]

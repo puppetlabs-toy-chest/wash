@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,6 +30,16 @@ func (s *PredicateTestSuite) TestErrors() {
 		s.NPETC(".", "expected a key sequence after '.'", false),
 		s.NPETC("[", `expected a closing '\]'`, false),
 		s.NPETC("--15", "positive", false),
+		// These cases ensure that parsePredicate does not parse any expression operators.
+		// Otherwise, parsePredicateExpression may not work correctly.
+		s.NPETC("-a", ".*primitive.*", true),
+		s.NPETC("-and", ".*primitive.*", true),
+		s.NPETC("-o", ".*primitive.*", true),
+		s.NPETC("-or", ".*primitive.*", true),
+		s.NPETC("!", ".*primitive.*", true),
+		s.NPETC("-not", ".*primitive.*", true),
+		s.NPETC("(", ".*primitive.*", true),
+		s.NPETC(")", ".*primitive.*", true),
 	)
 }
 
@@ -47,6 +58,6 @@ func (s *PredicateTestSuite) TestValidInput() {
 
 func TestPredicate(t *testing.T) {
 	s := new(PredicateTestSuite)
-	s.Parser = predicateParser(parsePredicate)
+	s.Parser = predicate.ToParser(parsePredicate)
 	suite.Run(t, s)
 }
