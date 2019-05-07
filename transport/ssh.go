@@ -99,7 +99,7 @@ type Identity struct {
 
 // ExecSSH executes against a target via SSH. It will look up port, user, and other configuration
 // by exact hostname match from default SSH config files. Identity can be used to override the
-// default user.
+// default user. If opts.Elevate is true, will attempt to `sudo` as root.
 //
 // Lots of SSH configuration is currently omitted, such as global known hosts files, finding known
 // hosts from the config, identity file from config... pretty much everything but port and user
@@ -156,6 +156,10 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 
 	outputch, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
 	session.Stdin, session.Stdout, session.Stderr = opts.Stdin, stdout, stderr
+
+	if opts.Elevate {
+		cmd = append([]string{"sudo"}, cmd...)
+	}
 
 	cmdStr := shellquote.Join(cmd...)
 	if err := session.Start(cmdStr); err != nil {

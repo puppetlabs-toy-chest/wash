@@ -82,6 +82,9 @@ type ExecOptions struct {
 	// tail -f), because it ensures that there are no orphaned processes after the request is
 	// cancelled/finished.
 	Tty bool
+
+	// Elevate execution to run as a privileged user if not already running as a privileged user.
+	Elevate bool
 }
 
 // ExecPacketType identifies the packet type.
