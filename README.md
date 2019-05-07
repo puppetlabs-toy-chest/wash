@@ -61,6 +61,11 @@ We've implemented some neat features inside of `wash` to support the above goals
         - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
         - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). Note that currently `region` will also need to be specified with the profile.
         - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
+        - SSH is used to connect to EC2 instances. It relies on an `ssh-agent` for credentials, your SSH config to override the default user (`ec2-user`) and port (`22`), and `~/.ssh/known_hosts`. If you don't want to add the target to your `known_hosts` file, you can disable strict host key checking in your SSH config with
+          ```
+          Host *.compute.amazonaws.com
+            StrictHostKeyChecking no
+          ```
 
 * [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
     * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!

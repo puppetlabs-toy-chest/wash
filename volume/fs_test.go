@@ -52,7 +52,7 @@ func createExec() *mockExecutor {
 	// Used when recording activity.
 	exec.SetTestID("/instance")
 	cmd := StatCmd("/var/log")
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{}).Return(createResult(varLogFixture), nil)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(createResult(varLogFixture), nil)
 	return exec
 }
 
@@ -125,7 +125,7 @@ func (suite *fsTestSuite) TestFSRead() {
 	suite.Equal("a file", plugin.Name(entry))
 
 	execResult := createResult("hello")
-	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{}).Return(execResult, nil)
+	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
 	rdr, err := entry.(plugin.Readable).Open(context.Background())
 	suite.NoError(err)
 	suite.Equal(int64(5), rdr.Size())

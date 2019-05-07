@@ -82,6 +82,9 @@ type ExecOptions struct {
 	// tail -f), because it ensures that there are no orphaned processes after the request is
 	// cancelled/finished.
 	Tty bool
+
+	// Elevate execution to run as a privileged user if not already running as a privileged user.
+	Elevate bool
 }
 
 // ExecPacketType identifies the packet type.
@@ -102,10 +105,18 @@ type ExecOutputChunk struct {
 }
 
 // ExecResult is a struct that contains the result of invoking Execable#exec.
-// Any of these fields can be nil. The OutputCh will be closed when execution completes.
+// Any of these fields can be nil.
+//
+// OutputCh: contains timestamped chunks of the running command's stdout/stderr. This should be set
+//           to the channel that's returned by plugin.CreateExecOutputStreams(). OutputCh must be
+//           closed to signal that execution is complete.
+// ExitCodeCB: is called after execution completes to determine final status of execution.
+// CancelFunc: cancels a running command. It should noop for a finished command. CancelFunc is
+//             called when the execution context completes to perform necessary termination.
 type ExecResult struct {
 	OutputCh   <-chan ExecOutputChunk
 	ExitCodeCB func() (int, error)
+	CancelFunc func()
 }
 
 // Execable is an entry that can have a command run on it.
