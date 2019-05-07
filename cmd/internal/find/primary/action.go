@@ -5,13 +5,12 @@ import (
 	"strings"
 
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // actionPrimary => <action>
 //nolint
-var actionPrimary = Parser.newPrimary([]string{"-action"}, func(tokens []string) (predicate.Entry, []string, error) {
+var actionPrimary = Parser.newPrimary([]string{"-action"}, func(tokens []string) (types.EntryPredicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("requires additional arguments")
 	}

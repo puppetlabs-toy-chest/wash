@@ -3,7 +3,6 @@ package parser
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/expression"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
@@ -13,7 +12,7 @@ import (
 See the comments of expression.Parser#Parse for the grammar. Substitute
 Predicate with Primary.
 */
-func parseExpression(tokens []string) (predicate.Entry, error) {
+func parseExpression(tokens []string) (types.EntryPredicate, error) {
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
@@ -35,5 +34,5 @@ func parseExpression(tokens []string) (predicate.Entry, error) {
 		msg := fmt.Sprintf("parser.parseExpression(): returned a non-empty set of tokens: %v", tks)
 		panic(msg)
 	}
-	return p.(predicate.Entry), nil
+	return p.(types.EntryPredicate), nil
 }

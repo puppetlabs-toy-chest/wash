@@ -5,7 +5,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
@@ -39,7 +38,7 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 // example, a difference of 1.5 days will be rounded to 2 days.
 func newTimeAttrPrimary(name string) *primary {
 	tk := "-" + name
-	return Parser.newPrimary([]string{tk}, func(tokens []string) (predicate.Entry, []string, error) {
+	return Parser.newPrimary([]string{tk}, func(tokens []string) (types.EntryPredicate, []string, error) {
 		if params.StartTime.IsZero() {
 			panic("Attempting to parse a time primary without setting params.StartTime")
 		}

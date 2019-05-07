@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -145,7 +144,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
-	s.Parser = predicate.EntryParser(func(tokens []string) (predicate.Entry, []string, error) {
+	s.Parser = types.EntryPredicateParser(func(tokens []string) (types.EntryPredicate, []string, error) {
 		p, err := parseExpression(tokens)
 		return p, []string{}, err
 	})
