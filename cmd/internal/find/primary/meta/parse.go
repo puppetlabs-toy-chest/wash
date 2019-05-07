@@ -3,11 +3,10 @@ package meta
 
 import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // Parse is the meta primary's parse function.
-func Parse(tokens []string) (predicate.Entry, []string, error) {
+func Parse(tokens []string) (types.EntryPredicate, []string, error) {
 	p, tokens, err := parseObjectPredicate(tokens)
 	if err != nil {
 		return nil, nil, err

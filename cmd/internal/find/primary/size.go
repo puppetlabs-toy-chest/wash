@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
@@ -18,7 +17,7 @@ import (
 //   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
 //
 //nolint
-var sizePrimary = Parser.newPrimary([]string{"-size"}, func(tokens []string) (predicate.Entry, []string, error) {
+var sizePrimary = Parser.newPrimary([]string{"-size"}, func(tokens []string) (types.EntryPredicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("requires additional arguments")
 	}

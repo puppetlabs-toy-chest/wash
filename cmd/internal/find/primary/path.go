@@ -4,13 +4,12 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
 // pathPrimary => -path ShellGlob
 //nolint
-var pathPrimary = Parser.newPrimary([]string{"-path"}, func(tokens []string) (predicate.Entry, []string, error) {
+var pathPrimary = Parser.newPrimary([]string{"-path"}, func(tokens []string) (types.EntryPredicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, fmt.Errorf("requires additional arguments")
 	}

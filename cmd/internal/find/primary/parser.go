@@ -2,6 +2,7 @@ package primary
 
 import (
 	"fmt"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"strings"
@@ -27,7 +28,7 @@ func (parser *parser) IsPrimary(token string) bool {
 	return ok
 }
 
-func (parser *parser) newPrimary(tokens []string, parse func(tokens []string) (predicate.Entry, []string, error)) *primary {
+func (parser *parser) newPrimary(tokens []string, parse func(tokens []string) (types.EntryPredicate, []string, error)) *primary {
 	p := &primary{
 		tokens: tokens,
 		parseFunc: parse,
@@ -45,10 +46,10 @@ func (parser *parser) newPrimary(tokens []string, parse func(tokens []string) (p
 type primary struct {
 	tokens []string
 	tokensMap map[string]struct{}
-	parseFunc predicate.EntryParser
+	parseFunc types.EntryPredicateParser
 }
 
-func (primary *primary) parse(tokens []string) (predicate.Entry, []string, error) {
+func (primary *primary) parse(tokens []string) (types.EntryPredicate, []string, error) {
 	tokensErrMsg := fmt.Sprintf("expected one of: %v", strings.Join(primary.tokens, ","))
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError(tokensErrMsg)

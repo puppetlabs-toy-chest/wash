@@ -6,7 +6,6 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -135,6 +134,6 @@ func toA(vs ...interface{}) []interface{} {
 
 func TestArrayPredicate(t *testing.T) {
 	s := new(ArrayPredicateTestSuite)
-	s.Parser = predicate.GenericParser(parseArrayPredicate)
+	s.Parser = predicateParser(parseArrayPredicate)
 	suite.Run(t, s)
 }

@@ -6,13 +6,12 @@ import (
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
 )
 
 type walker struct {
-	p    predicate.Entry
+	p    types.EntryPredicate
 	opts types.Options
 	conn client.Client
 }

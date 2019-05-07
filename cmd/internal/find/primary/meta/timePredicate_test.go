@@ -6,7 +6,6 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -65,6 +64,6 @@ func addTST(v int64) time.Time {
 
 func TestTimePredicate(t *testing.T) {
 	s := new(TimePredicateTestSuite)
-	s.Parser = predicate.GenericParser(parseTimePredicate)
+	s.Parser = predicateParser(parseTimePredicate)
 	suite.Run(t, s)
 }
