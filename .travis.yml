@@ -18,7 +18,7 @@ jobs:
     script: golangci-lint run -v
   - stage: deploy
     name: Deploy to GitHub Releases
-    if: branch = master AND type = push
+    if: tag IS present
     env: LINKFLAGS="-w -s -X github.com/puppetlabs/wash/cmd.version=${TRAVIS_TAG}" CGO_ENABLED=0
     script:
     - GOOS=darwin GOARCH=amd64 go build -ldflags="$LINKFLAGS"
