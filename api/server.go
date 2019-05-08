@@ -68,7 +68,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //
 //   3. An error object
 func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (chan<- context.Context, <-chan struct{}, error) {
-	log.Infof("API: started")
+	log.Infof("API: Listening at %s", socketPath)
 
 	if _, err := os.Stat(socketPath); err == nil {
 		// Socket already exists, so nuke it and recreate it
@@ -134,7 +134,6 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 
 	stopCh := make(chan context.Context)
 	go func() {
-		defer close(stopCh)
 		ctx := <-stopCh
 
 		log.Infof("API: Shutting down the server")

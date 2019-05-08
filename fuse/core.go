@@ -153,7 +153,7 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 //   2. A read-only channel that signals whether the server was shutdown
 //
 //   3. An error object
-func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-chan struct{}, error) {
+func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- context.Context, <-chan struct{}, error) {
 	fuse.Debug = func(msg interface{}) {
 		log.Tracef("FUSE: %v", msg)
 	}
@@ -196,11 +196,9 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 	}()
 
 	// Clean-up
-	stopCh := make(chan bool)
+	stopCh := make(chan context.Context)
 	go func() {
-		defer close(stopCh)
 		<-stopCh
-
 		log.Infof("FUSE: Shutting down the server")
 
 		log.Infof("FUSE: Unmounting %v", mountpoint)
