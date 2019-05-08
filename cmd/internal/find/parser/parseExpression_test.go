@@ -69,16 +69,23 @@ func (s *ParseExpressionTestSuite) TestParseExpressionBinOpParseErrors() {
 
 func (s *ParseExpressionTestSuite) TestParseExpressionAndOpEval() {
 	s.RunTestCases(
+		s.NPTC("-false -a -false", false),
+		s.NPTC("-false -false", false),
+		s.NPTC("-false -a -true", false),
+		s.NPTC("-false -true", false),
 		s.NPTC("-true -a -false", false),
 		s.NPTC("-true -false", false),
+		s.NPTC("-true -a -true", true),
 		s.NPTC("-true -true", true),
 	)
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionOrOpEval() {
 	s.RunTestCases(
-		s.NPTC("-true -o -false", true),
+		s.NPTC("-false -o -false", false),
 		s.NPTC("-false -o -true", true),
+		s.NPTC("-true -o -false", true),
+		s.NPTC("-true -o -true", true),
 	)
 }
 

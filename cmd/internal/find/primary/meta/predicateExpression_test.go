@@ -120,16 +120,23 @@ func (s *PredicateExpressionTestSuite) TestBinOpParseErrors() {
 
 func (s *PredicateExpressionTestSuite) TestAndOpEval() {
 	s.RunTestCases(
+		s.NPOETC("-false -a -false -primary", "-primary", false),
+		s.NPOETC("-false -false -primary", "-primary", false),
+		s.NPOETC("-false -a -true -primary", "-primary", false),
+		s.NPOETC("-false -true -primary", "-primary", false),
 		s.NPOETC("-true -a -false -primary", "-primary", false),
 		s.NPOETC("-true -false -primary", "-primary", false),
+		s.NPOETC("-true -a -true -primary", "-primary", true),
 		s.NPOETC("-true -true -primary", "-primary", true),
 	)
 }
 
 func (s *PredicateExpressionTestSuite) TestOrOpEval() {
 	s.RunTestCases(
-		s.NPOETC("-true -o -false -primary", "-primary", true),
-		s.NPOETC("-false -o -true -primary", "-primary", true),
+		s.NPTC("-false -o -false -primary", "-primary", false),
+		s.NPTC("-false -o -true -primary", "-primary", true),
+		s.NPTC("-true -o -false -primary", "-primary", true),
+		s.NPTC("-true -o -true -primary", "-primary", true),
 	)
 }
 
