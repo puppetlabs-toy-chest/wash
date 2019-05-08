@@ -3,8 +3,10 @@ package parser
 import (
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -15,6 +17,14 @@ import (
 // the operators, and whether operator precedence is enforced.
 type ParseExpressionTestSuite struct {
 	parsertest.Suite
+}
+
+func (s *ParseExpressionTestSuite) SetupTest() {
+	params.StartTime = time.Now()
+}
+
+func (s *ParseExpressionTestSuite) TeardownTest() {
+	params.StartTime = time.Time{}
 }
 
 func (s *ParseExpressionTestSuite) NPETC(input string, errMsg string) parsertest.Case {
@@ -143,12 +153,22 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexErrors() {
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
+	// Set-up the entry for the meta primary integration test
+	m := make(map[string]interface{})
+	m["key"] = "foo"
+	entry := types.Entry{}
+	entry.Attributes.SetMeta(m)
+
 	s.RunTestCases(
 		s.NPTC("( -true -o -true ) -false", false),
 		// Should be parsed as (-true -a -false) -o -true which evaluates to true.
 		s.NPTC("-true -false -o -true", true),
 		s.NPTC("-false -o -true -false", false),
 		s.NPTC("( -true -true ) -o -false", true),
+		// Test meta primary integration. Use s.Suite.NPTC/s.Suite.NPNTC because
+		// we're providing our own entry
+		s.Suite.NPTC("-m .key foo -o -m .key bar", "", entry),
+		s.Suite.NPNTC("-m .key foo -a -m .key bar", "", entry),
 	)
 }
 

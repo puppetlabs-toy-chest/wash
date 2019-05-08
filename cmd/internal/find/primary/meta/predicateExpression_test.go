@@ -182,7 +182,6 @@ func (s *PredicateExpressionTestSuite) TestParensEval() {
 func (s *PredicateExpressionTestSuite) TestComplexErrors() {
 	s.RunTestCases(
 		s.NPETC("( -true ) -a )", "): no beginning '('"),
-		s.NPETC("-true -a -foo", "unknown predicate -foo"),
 		s.NPETC(".key -a -foo", "expected a predicate after key"),
 	)
 }

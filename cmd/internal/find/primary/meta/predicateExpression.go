@@ -21,7 +21,7 @@ func parsePredicateExpression(tokens []string) (predicate.Predicate, []string, e
 			return nil, nil, err
 		}
 		if p == nil {
-			// possible via something like "-size + 1" or "-true -a -size + 1"
+			// possible via something like "-size + 1"
 			return nil, nil, fmt.Errorf("unknown predicate %v", tkErr.Token)
 		}
 	}
