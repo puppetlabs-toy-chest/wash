@@ -5,13 +5,14 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/munge"
 )
 
 // TimePredicate => (+|-)? Duration
 // Duration      => numeric.DurationRegex | '{' numeric.DurationRegex '}'
-func parseTimePredicate(tokens []string) (Predicate, []string, error) {
+func parseTimePredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if params.StartTime.IsZero() {
 		panic("meta.parseTimePredicate called without setting params.StartTime")
 	}
@@ -19,7 +20,7 @@ func parseTimePredicate(tokens []string) (Predicate, []string, error) {
 		return nil, nil, errz.NewMatchError("expected a +, -, or a digit")
 	}
 	token := tokens[0]
-	numericP, parserID, err := numeric.ParsePredicate(
+	p, parserID, err := numeric.ParsePredicate(
 		token,
 		numeric.ParseDuration,
 		numeric.Bracket(numeric.ParseDuration),
@@ -39,28 +40,45 @@ func parseTimePredicate(tokens []string) (Predicate, []string, error) {
 		// 'StartTime - timeV'.
 		subFromStartTime = false
 	}
-	p := func(v interface{}) bool {
-		timeV, err := munge.ToTime(v)
-		if err != nil {
-			return false
-		}
-		var diff int64
-		if subFromStartTime {
-			diff = int64(params.StartTime.Sub(timeV))
-		} else {
-			diff = int64(timeV.Sub(params.StartTime))
-		}
-		if diff < 0 {
-			// Time predicates query either the past or the future, but not both.
-			// For example, +1h means "more than one hour ago", which queries the
-			// past. diff < 0 there means timeV is from the future, so the query
-			// doesn't make sense. Similarly, +{1h} means "more than one hour from now",
-			// which queries the future. diff < 0 there means timeV is from the past,
-			// so the query doesn't make sense. Thus, diff < 0 is a time-mismatch.
-			// Time-mismatches always return false.
-			return false
-		}
-		return numericP(diff)
+	return timeP(subFromStartTime, p), tokens[1:], nil
+}
+
+func timeP(subFromStartTime bool, p numeric.Predicate) predicate.Predicate {
+	return &timePredicate{
+		genericPredicate: func(v interface{}) bool {
+			timeV, err := munge.ToTime(v)
+			if err != nil {
+				return false
+			}
+			var diff int64
+			if subFromStartTime {
+				diff = int64(params.StartTime.Sub(timeV))
+			} else {
+				diff = int64(timeV.Sub(params.StartTime))
+			}
+			if diff < 0 {
+				// Time predicates query either the past or the future, but not both.
+				// For example, +1h means "more than one hour ago", which queries the
+				// past. diff < 0 there means timeV is from the future, so the query
+				// doesn't make sense. Similarly, +{1h} means "more than one hour from now",
+				// which queries the future. diff < 0 there means timeV is from the past,
+				// so the query doesn't make sense. Thus, diff < 0 is a time-mismatch.
+				// Time-mismatches always return false.
+				return false
+			}
+			return p(diff)
+		},
+		subFromStartTime: subFromStartTime,
+		p: p,
 	}
-	return p, tokens[1:], nil
+}
+
+type timePredicate struct {
+	genericPredicate
+	subFromStartTime bool
+	p numeric.Predicate
+}
+
+func (tp *timePredicate) Negate() predicate.Predicate {
+	return timeP(tp.subFromStartTime, tp.p.Negate().(numeric.Predicate))
 }

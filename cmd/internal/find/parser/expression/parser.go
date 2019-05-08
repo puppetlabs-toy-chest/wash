@@ -64,7 +64,7 @@ func NewParser(predicateParser predicate.Parser) *Parser {
 		}
 	}
 	p.atom = &predicate.CompositeParser{
-		ErrMsg: "expected an atom",
+		MatchErrMsg: "expected an atom",
 		Parsers: []predicate.Parser{
 			notOpParser(p),
 			parensOpParser(p),
@@ -183,15 +183,22 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	}
 	if _, ok := parser.stack.Peek().(*BinaryOp); ok {
 		// This codepath is possible via something like "p1 -and" or "p1 -and <unknown_token>"
-		if err != nil {
-			// We have "p1 -and <unknown_token>"
-			return nil, nil, err
+		if err == nil {
+			// We have "p1 -and"
+			return nil, nil, fmt.Errorf(
+				"%v: no expression after %v",
+				parser.stack.mostRecentOpToken,
+				parser.stack.mostRecentOpToken,
+			)
 		}
-		return nil, nil, fmt.Errorf(
-			"%v: no expression after %v",
-			parser.stack.mostRecentOpToken,
-			parser.stack.mostRecentOpToken,
-		)
+		// We have "p1 -and <unknown_token>". Pop the binary op off the stack and include
+		// it as part of the remaining tokens. This is useful in case our expression is inside
+		// another expression, where the top-level expression handles combining our parsed
+		// predicate p with whatever's parsed by the "<unknown_token>" bit. For example, it
+		// ensures that the top-level `wash find` parser correctly parses something like
+		// "-m .key foo -o -m .key bar" as "Meta(.key, foo) -o Meta(.key, bar)".
+		parser.stack.Pop()
+		tokens = append([]string{parser.stack.mostRecentOpToken}, tokens...)
 	}
 	// Call s.evaluate() to handle cases like "p1 -and p2"
 	parser.stack.evaluate()

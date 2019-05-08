@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -84,48 +85,69 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
 func (s *ArrayPredicateTestSuite) TestArrayPSome() {
 	p := arrayP(arrayPredicateType{t: 's'}, trueP)
 
-	// Returns false for a non-array value
-	s.False(p("foo"))
+	// Returns false for a non-array value. Not(p) should also
+	// return false.
+	s.False(p.IsSatisfiedBy("foo"))
+	s.False(p.Negate().IsSatisfiedBy("foo"))
 
-	// Returns false if no elements satisfy p
-	s.False(p(toA(false)))
+	// Returns false if no elements satisfy p. Not(p) should return
+	// true here.
+	s.False(p.IsSatisfiedBy(toA(false, false)))
+	s.True(p.Negate().IsSatisfiedBy(toA(false, false)))
 
-	// Returns true if some element satifies p
-	s.True(p(toA(true)))
-	s.True(p(toA("foo", true)))
+	// Returns true if some element satifies . Not(p) should return
+	// false here.
+	s.True(p.IsSatisfiedBy(toA(true, false)))
+	s.False(p.Negate().IsSatisfiedBy(toA(true, false)))
 }
 
 func (s *ArrayPredicateTestSuite) TestArrayPAll() {
 	p := arrayP(arrayPredicateType{t: 'a'}, trueP)
 
-	// Returns false for a non-array value
-	s.False(p("foo"))
+	// Returns false for a non-array value. Not(p) should also
+	// return false.
+	s.False(p.IsSatisfiedBy("foo"))
+	s.False(p.Negate().IsSatisfiedBy("foo"))
 
-	// Returns false if no elements satisfy p
-	s.False(p(toA(false)))
+	// Returns false if no elements satisfy p. Not(p) should return
+	// true here.
+	s.False(p.IsSatisfiedBy(toA(false)))
+	s.True(p.Negate().IsSatisfiedBy(toA(false)))
 
-	// Returns false if only some of the elements satisfy p
-	s.False(p(toA(false, true)))
+	// Returns false if only some of the elements satisfy p. Not(p) should
+	// return true here
+	s.False(p.IsSatisfiedBy(toA(false, true)))
+	s.True(p.Negate().IsSatisfiedBy(toA(false, true)))
 
-	// Returns true if all the elements satisfy P
-	s.True(p(toA(true)))
-	s.True(p(toA(true, true)))
+	// Returns true if all the elements satisfy P. Not(p) should return
+	// false here.
+	s.True(p.IsSatisfiedBy(toA(true)))
+	s.False(p.Negate().IsSatisfiedBy(toA(true)))
+	s.True(p.IsSatisfiedBy(toA(true, true)))
+	s.False(p.Negate().IsSatisfiedBy(toA(true, true)))
 }
 
 func (s *ArrayPredicateTestSuite) TestArrayPNth() {
 	p := arrayP(arrayPredicateType{t: 'n', n: 1}, trueP)
 
-	// Returns false for a non-array value
-	s.False(p("foo"))
+	// Returns false for a non-array value. Not(p) should also
+	// return false.
+	s.False(p.IsSatisfiedBy("foo"))
+	s.False(p.Negate().IsSatisfiedBy("foo"))
 
-	// Returns false if n >= len(vs)
-	s.False(p(toA(true)))
+	// Returns false if n >= len(vs). Not(p) should also return
+	// false.
+	s.False(p.IsSatisfiedBy(toA(true)))
+	s.False(p.Negate().IsSatisfiedBy(toA(true)))
 
-	// Returns false if vs[n] does not satisfy p
-	s.False(p(toA(true, false)))
+	// Returns false if vs[n] does not satisfy p. Not(p) should return
+	// true here.
+	s.False(p.IsSatisfiedBy(toA(true, false)))
+	s.True(p.Negate().IsSatisfiedBy(toA(true, false)))
 
-	// Returns true if vs[n] satisfies p
-	s.True(p(toA(true, true)))
+	// Returns true if vs[n] satisfies p. Not(p) should return false.
+	s.True(p.IsSatisfiedBy(toA(true, true)))
+	s.False(p.Negate().IsSatisfiedBy(toA(true, true)))
 }
 
 func toA(vs ...interface{}) []interface{} {
@@ -134,6 +156,6 @@ func toA(vs ...interface{}) []interface{} {
 
 func TestArrayPredicate(t *testing.T) {
 	s := new(ArrayPredicateTestSuite)
-	s.Parser = predicateParser(parseArrayPredicate)
+	s.Parser = predicate.ToParser(parseArrayPredicate)
 	suite.Run(t, s)
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,7 +22,6 @@ func (s *NumericPredicateTestSuite) TestErrors() {
 }
 
 func (s *NumericPredicateTestSuite) TestValidInput() {
-	// Test the happy cases first
 	s.RunTestCases(
 		// Test a plain numeric value
 		s.NPTC("200 -size", "-size", float64(200)),
@@ -36,17 +36,31 @@ func (s *NumericPredicateTestSuite) TestValidInput() {
 		s.NPTC("+2G -size", "-size", float64(3*numeric.BytesOf('G'))),
 		s.NPTC("-2G -size", "-size", float64(1*numeric.BytesOf('G'))),
 	)
+}
 
-	// Now test that the predicate returns false for a non-numeric
-	// value (i.e. a non float64 value)
-	p, _, err := parseNumericPredicate(s.ToTks("200"))
-	if s.NoError(err) {
-		s.False(p("200"))
-	}
+func (s *NumericPredicateTestSuite) TestNumericP_NotANumber() {
+	np := numericP(func(n int64) bool {
+		return n > 5
+	})
+	s.False(np.IsSatisfiedBy("6"))
+	s.False(np.Negate().IsSatisfiedBy("3"))
+}
+
+func (s *NumericPredicateTestSuite) TestNumericP() {
+	np := numericP(func(n int64) bool {
+		return n > 5
+	})
+
+	s.True(np.IsSatisfiedBy(float64(6)))
+	s.False(np.IsSatisfiedBy(float64(3)))
+
+	// Test negation
+	s.False(np.Negate().IsSatisfiedBy(float64(6)))
+	s.True(np.Negate().IsSatisfiedBy(float64(3)))
 }
 
 func TestNumericPredicate(t *testing.T) {
 	s := new(NumericPredicateTestSuite)
-	s.Parser = predicateParser(parseNumericPredicate)
+	s.Parser = predicate.ToParser(parseNumericPredicate)
 	suite.Run(t, s)
 }

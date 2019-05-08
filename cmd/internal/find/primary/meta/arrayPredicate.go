@@ -6,17 +6,28 @@ import (
 	"strings"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 // ArrayPredicate => EmptyPredicate      |
 //                   ‘[' ? ‘]’ Predicate |
 //                   ‘[' * ‘]’ Predicate |
 //                   ‘[' N ‘]’ Predicate |
-func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
+func parseArrayPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match
+	parsePredicate := predicate.ToParser(parsePredicate)
+	return parseArrayP(
+		tokens,
+		parsePredicate,
+		parsePredicate,
+	)
+}
+
+// This helper's used by parseArrayPredicate and parseArrayExpression
+func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected an opening '['")
 	}
@@ -28,8 +39,11 @@ func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	var p predicate.Predicate
 	if len(token) == 0 {
 		tokens = tokens[1:]
+		p, tokens, err = baseCaseParser.Parse(tokens)
 	} else {
 		// token may be part of a key sequence (e.g. something like
 		// [?].key2 or [?][?])
@@ -40,8 +54,9 @@ func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
 			return nil, nil, fmt.Errorf("expected a '.' or '[' after ']' but got %v instead", token)
 		}
 		tokens[0] = token
+		p, tokens, err = keySequenceParser.Parse(tokens)
 	}
-	p, tokens, err := parsePredicate(tokens)
+
 	if err != nil {
 		if errz.IsMatchError(err) {
 			parsedToken := rawToken[0 : len(rawToken)-len(token)]
@@ -101,12 +116,16 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 	return ptype, token[endIx+1:], nil
 }
 
-func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
+func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate {
+	arryP := &arrayPredicate{
+		ptype: ptype,
+		p: p,
+	}
 	switch ptype.t {
 	case 's':
-		return toArrayP(func(vs []interface{}) bool {
+		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
 			for _, v := range vs {
-				if p(v) {
+				if p.IsSatisfiedBy(v) {
 					return true
 				}
 			}
@@ -115,9 +134,9 @@ func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
 			return false
 		})
 	case 'a':
-		return toArrayP(func(vs []interface{}) bool {
+		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
 			for _, v := range vs {
-				if !p(v) {
+				if !p.IsSatisfiedBy(v) {
 					return false
 				}
 			}
@@ -126,26 +145,54 @@ func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
 		})
 	case 'n':
 		n := ptype.n
-		return toArrayP(func(vs []interface{}) bool {
+		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
 			if n >= uint(len(vs)) {
 				return false
 			}
-			return p(vs[n])
+			return p.IsSatisfiedBy(vs[n])
 		})
 	default:
 		msg := fmt.Sprintf("meta.arrayP called with an unkown ptype %v", ptype.t)
 		panic(msg)
 	}
+	return arryP
 }
 
 // toArrayP is a helper for arrayP that's meant to reduce
 // the boilerplate type validation.
-func toArrayP(p func([]interface{}) bool) Predicate {
-	return func(v interface{}) bool {
+func toArrayP(p func([]interface{}) bool) genericPredicate {
+	return genericPredicate(func(v interface{}) bool {
 		arrayV, ok := v.([]interface{})
 		if !ok {
 			return false
 		}
 		return p(arrayV)
+	})
+}
+
+type arrayPredicate struct {
+	genericPredicate
+	ptype arrayPredicateType
+	p predicate.Predicate
+}
+
+func (arryP *arrayPredicate) Negate() predicate.Predicate {
+	switch t := arryP.ptype.t; t {
+	case 's':
+		// Not("Some element satisfies p") => "All elements satisfy Not(p)"
+		ptype := arrayPredicateType{}
+		ptype.t = 'a'
+		return arrayP(ptype, arryP.p.Negate())
+	case 'a':
+		// Not("All elements satisfy p") => "Some element satisfies Not(p)"
+		ptype := arrayPredicateType{}
+		ptype.t = 's'
+		return arrayP(ptype, arryP.p.Negate())
+	case 'n':
+		// Not("Nth element satisfies p") => "Nth element satisfies Not(p)"
+		return arrayP(arryP.ptype, arryP.p.Negate())
+	default:
+		msg := fmt.Sprintf("meta.arrayPredicate contains an unknown ptype %v", t)
+		panic(msg)
 	}
 }

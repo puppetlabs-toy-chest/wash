@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 )
 
 // NumericPredicate => (+|-)? Number
 // Number           => N | '{' N '}' | numeric.SizeRegex
-func parseNumericPredicate(tokens []string) (Predicate, []string, error) {
+func parseNumericPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a +, -, or a digit")
 	}
 	token := tokens[0]
-	numericP, _, err := numeric.ParsePredicate(
+	p, _, err := numeric.ParsePredicate(
 		token,
 		numeric.ParsePositiveInt,
 		numeric.Bracket(numeric.Negate(numeric.ParsePositiveInt)),
@@ -28,12 +29,27 @@ func parseNumericPredicate(tokens []string) (Predicate, []string, error) {
 		// err is a parse error, so return it.
 		return nil, nil, err
 	}
-	p := func(v interface{}) bool {
-		floatV, ok := v.(float64)
-		if !ok {
-			return false
-		}
-		return numericP(int64(floatV))
+	return numericP(p), tokens[1:], nil
+}
+
+func numericP(p numeric.Predicate) predicate.Predicate {
+	return &numericPredicate{
+		genericPredicate: func(v interface{}) bool {
+			floatV, ok := v.(float64)
+			if !ok {
+				return false
+			}
+			return p(int64(floatV))
+		},
+		p: p,
 	}
-	return p, tokens[1:], nil
+}
+
+type numericPredicate struct {
+	genericPredicate
+	p numeric.Predicate
+}
+
+func (np *numericPredicate) Negate() predicate.Predicate {
+	return numericP(np.p.Negate().(numeric.Predicate))
 }
