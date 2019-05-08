@@ -6,7 +6,6 @@ import (
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
 // swagger:route GET /fs/read read readContent
@@ -48,7 +47,6 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	w.WriteHeader(http.StatusOK)
 	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 	if n != content.Size() {
-		log.Warnf("Read incomplete %v/%v", n, content.Size())
 		activity.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
 	}
 	if err != nil {

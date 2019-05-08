@@ -43,7 +43,7 @@ type octetResponse struct {
 type handler func(http.ResponseWriter, *http.Request) *errorResponse
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Infof("API: %v %v", r.Method, r.URL)
+	activity.Record(r.Context(), "API: %v %v", r.Method, r.URL)
 
 	if err := handle(w, r); err != nil {
 		w.WriteHeader(err.statusCode)

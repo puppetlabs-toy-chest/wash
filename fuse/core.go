@@ -29,7 +29,6 @@ func newRoot(registry *plugin.Registry) Root {
 
 // Root presents the root of the filesystem.
 func (r *Root) Root() (fs.Node, error) {
-	log.Infof("Entering root of filesystem")
 	return newDir(nil, r.registry), nil
 }
 
@@ -127,14 +126,12 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 		if err != nil {
 			err := fmt.Errorf("could not refresh the attributes: %v", err)
 			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetJournal(ctx), err)
 			return err
 		}
 		updatedEntry, ok := entries[plugin.CName(f.entry)]
 		if !ok {
 			err := fmt.Errorf("entry does not exist anymore")
 			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			log.Warnf("FUSE: Error[Attr,%v,jid=%v]: %v", f, activity.GetJournal(ctx), err)
 			return err
 		}
 		attr = plugin.Attributes(updatedEntry)
@@ -146,7 +143,6 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 
 	f.applyAttr(a, &attr)
 	activity.Record(ctx, "FUSE: Attr finished %v", f)
-	log.Infof("FUSE: Attr[%v,jid=%v] %v %v", f.ftype, activity.GetJournal(ctx), f, a)
 	return nil
 }
 
@@ -178,8 +174,6 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- bool, <-ch
 				log.Infof("FUSE: Error closing the connection: %v", err)
 			}
 		}()
-
-		log.Infof("FUSE: Serving filesystem")
 
 		serverConfig := &fs.Config{
 			WithContext: func(ctx context.Context, req fuse.Request) context.Context {

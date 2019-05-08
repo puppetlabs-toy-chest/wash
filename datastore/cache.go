@@ -120,7 +120,7 @@ func (cache *MemCache) Delete(matcher *regexp.Regexp) []string {
 	deleted := make([]string, 0, len(items))
 	for k := range items {
 		if matcher.MatchString(k) {
-			log.Infof("Deleting cache entry %v", k)
+			log.Debugf("Deleting cache entry %v", k)
 			cache.instance.Delete(k)
 			deleted = append(deleted, k)
 		} else {

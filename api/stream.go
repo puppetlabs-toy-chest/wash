@@ -7,8 +7,6 @@ import (
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // swagger:route GET /fs/stream stream streamUpdates
@@ -65,7 +63,6 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 
 	if _, err := io.Copy(wf, rdr); err != nil {
 		// Common for copy to error when the caller closes the connection.
-		log.Debugf("Errored streaming response for entry %v: %v", path, err)
 		activity.Record(ctx, "API: Streaming %v errored: %v", path, err)
 	}
 
