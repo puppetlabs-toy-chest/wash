@@ -7,7 +7,7 @@ draft= false
 
 `wash` helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love.
 
-_TBD: Screencast_
+<script id="asciicast-245046" src="https://asciinema.org/a/245046.js" async></script>
 
 `wash` aims to:
 
