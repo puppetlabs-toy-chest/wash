@@ -45,6 +45,18 @@ func parensOpParser(parser *Parser) predicate.Parser {
 			parser.stack = stack
 			parser.numOpenParens--
 		}()
-		return parser.Parse(tokens)
+		p, tokens, err := parser.Parse(tokens)
+		if err != nil && err != ErrEmptyExpression {
+			return p, tokens, err
+		}
+		// err == nil || err == ErrEmptyExpression
+		if len(tokens) == 0 || tokens[0] != ")" {
+			return nil, nil, fmt.Errorf("(: missing closing ')'")
+		}
+		if err == ErrEmptyExpression {
+			return nil, nil, fmt.Errorf("(): empty inner expression")
+		}
+		tokens = tokens[1:]
+		return p, tokens, err
 	})
 }

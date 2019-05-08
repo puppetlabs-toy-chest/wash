@@ -13,3 +13,6 @@ type UnknownTokenError struct {
 func (e UnknownTokenError) Error() string {
 	return fmt.Sprintf("unknown token %v", e.Token)
 }
+
+// ErrEmptyExpression represents an empty expression error
+var ErrEmptyExpression = fmt.Errorf("empty expression")

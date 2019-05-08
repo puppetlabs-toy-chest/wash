@@ -124,7 +124,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionParensErrors() {
 		s.NPETC("( -true ( -false )", "(: missing closing ')'"),
 		s.NPETC("( ( ( -true ) ) ) )", "): no beginning '('"),
 		s.NPETC("( -a )", "-a: no expression before -a"),
-		s.NPETC("( ( ( -true ) -a", "(: missing closing ')'"),
+		s.NPETC("( ( ( -true ) -a", "-a: no expression after -a"),
 		s.NPETC("( ( ( -true ) -a ) )", "-a: no expression after -a"),
 	)
 }

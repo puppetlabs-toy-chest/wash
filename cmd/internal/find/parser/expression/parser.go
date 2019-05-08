@@ -92,6 +92,8 @@ UnknownTokenError containing the offending token.
 Case 2's useful if we're parsing an expression inside an expression. It lets the caller
 decide if they've finished parsing the inner expression. We will take advantage of Case 2
 when parsing `meta` primary expressions.
+
+If tokens is empty, then Parse will return an ErrEmptyExpression error.
 */
 func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	parser.stack = newEvalStack()
@@ -109,9 +111,6 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		// Reset err in each iteration to maintain the post-loop invariant
 		err = nil
 		if len(tokens) == 0 {
-			if parser.numOpenParens > 0 {
-				return nil, nil, fmt.Errorf("(: missing closing ')'")
-			}
 			break
 		}
 		token := tokens[0]
@@ -119,10 +118,8 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 			if parser.numOpenParens <= 0 {
 				return nil, nil, fmt.Errorf("): no beginning '('")
 			}
-			// We're reached the end of a parenthesized expression, so shift tokens
-			// and break out of the loop
-			tokens = tokens[1:]
-			break
+			// We've finished parsing a parenthesized expression
+			break	
 		}
 		// Try parsing an atom first.
 		p, tks, err = parser.atom.Parse(tokens)
@@ -170,13 +167,7 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		// We didn't parse anything. Either we have an empty expression, or
 		// err is an UnknownTokenError
 		if err == nil {
-			// We have an empty expression
-			if parser.numOpenParens > 0 {
-				err = fmt.Errorf("(): empty inner expression")
-			} else {
-				err = fmt.Errorf("empty expression")
-			}
-			return nil, nil, err
+			err = ErrEmptyExpression
 		}
 		// err is an UnknownTokenError
 		return nil, tokens, err
