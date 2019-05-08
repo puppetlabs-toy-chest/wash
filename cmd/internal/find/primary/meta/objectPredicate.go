@@ -24,10 +24,11 @@ func parseObjectPredicate(tokens []string) (predicate.Predicate, []string, error
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match, so try '.' Key Predicate
+	parsePredicate := predicate.ToParser(parsePredicate)
 	return parseObjectP(
 		tokens,
-		predicate.ToParser(parsePredicate),
-		predicate.ToParser(parsePredicate),
+		parsePredicate,
+		parsePredicate,
 	)
 }
 
