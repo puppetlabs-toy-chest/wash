@@ -16,6 +16,29 @@ a {
     color: #0076BA;
 }
 
+ul {
+    list-style-type: disc;
+}
+
+h2 {
+    padding-top: 1em;
+}
+
+h2:nth-of-type(1) {
+    padding-top: 0;
+}
+
+#horizontalmenu {
+    text-align: center;
+}
+
+#horizontalmenu a {
+    margin: 0 10px;
+    font-family: 'Comfortaa';
+    font-variant: small-caps;
+    color: #004D7F;
+}
+
 a:visited {
     color: #531B93;
     color: #0076BA;
@@ -32,6 +55,7 @@ div.header h1 {
     margin: 0;
     padding: 0;
     font-family: 'Comfortaa';
+    font-variant: small-caps;
     border: 0;
 }
 
