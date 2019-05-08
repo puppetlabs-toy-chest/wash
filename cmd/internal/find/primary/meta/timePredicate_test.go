@@ -67,13 +67,22 @@ func (s *TimePredicateTestSuite) TestTimeP_Negation_NotATime() {
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation_TimeMismatch() {
 	d := 5 * numeric.DurationOf('h')
-	// This is a query to the past
+	// These tests check that negating a timePredicate will still return
+	// false for time mismatches.
+
+	// Test past queries
 	tp := timeP(true, func(n int64) bool {
-		return n > d 
+		return n > d
 	})
-	/// Negating tp still preserves time mismatches. 
 	s.False(tp.Negate().IsSatisfiedBy(addTST(d+1)))
 	s.False(tp.Negate().IsSatisfiedBy(addTST(d-1)))
+
+	// Test future queries
+	tp = timeP(false, func(n int64) bool {
+		return n > d 
+	})
+	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d+1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d-1))))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation() {

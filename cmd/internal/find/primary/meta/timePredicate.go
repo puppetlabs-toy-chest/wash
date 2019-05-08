@@ -68,7 +68,7 @@ func timeP(subFromStartTime bool, p numeric.Predicate) predicate.Predicate {
 			}
 			return p(diff)
 		},
-		subFromStartTime: true,
+		subFromStartTime: subFromStartTime,
 		p: p,
 	}
 }
