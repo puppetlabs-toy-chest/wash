@@ -2,76 +2,53 @@ package primary
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
 type SizePrimaryTestSuite struct {
-	suite.Suite
+	primaryTestSuite
 }
 
-func (suite *SizePrimaryTestSuite) TestSizePrimaryInsufficientArgsError() {
-	_, _, err := sizePrimary.parse([]string{"-size"})
-	suite.Equal("-size: requires additional arguments", err.Error())
+func (s *SizePrimaryTestSuite) TestErrors() {
+	// NIVTC => NewIllegalValueTestCase
+	NIVTC := func(v string) parsertest.Case {
+		return s.NPETC(v, fmt.Sprintf("%v: illegal size value", regexp.QuoteMeta(v)))
+	}
+	s.RunTestCases(
+		s.NPETC("", "requires additional arguments"),
+		NIVTC("foo"),
+		NIVTC("+"),
+		NIVTC("+++++1"),
+		NIVTC("+1kb"),
+		NIVTC("+1kb"),
+	)
 }
 
-func (suite *SizePrimaryTestSuite) TestSizePrimaryIllegalTimeValueError() {
-	illegalValues := []string{
-		"foo",
-		"+",
-		"+++++1",
-		"1kb",
-		"+1kb",
-	}
-	for _, v := range illegalValues {
-		_, _, err := sizePrimary.parse([]string{"-size", v})
-		msg := fmt.Sprintf("-size: %v: illegal size value", v)
-		suite.Equal(msg, err.Error())
-	}
-}
-
-func (suite *SizePrimaryTestSuite) TestSizePrimaryValidInput() {
-	type testCase struct {
-		input string
-		// trueSize/falseSize represent entry sizes that satisfy/unsatisfy
-		// the predicate, respectively.
-		trueSize  int64
-		falseSize int64
-	}
-	testCases := []testCase{
-		// We set trueSize to 1.5 blocks in order to test rounding
-		testCase{"2", int64(1.5 * 512), 512},
-		// +2 means p will return true if size > 2 blocks
-		testCase{"+2", 3 * 512, 1 * 512},
-		// -2 means p will return true if size < 2 blocks
-		testCase{"-2", 1 * 512, 2 * 512},
-		testCase{"1k", 1 * numeric.BytesOf('k'), 1 * numeric.BytesOf('c')},
-		testCase{"+1k", 2 * numeric.BytesOf('k'), 1 * numeric.BytesOf('k')},
-		testCase{"-1k", 1 * numeric.BytesOf('c'), 1 * numeric.BytesOf('k')},
-	}
-	for _, testCase := range testCases {
-		inputStr := func() string {
-			return fmt.Sprintf("Input was '%v'", testCase.input)
-		}
-		p, tokens, err := sizePrimary.parse([]string{"-size", testCase.input})
-		if suite.NoError(err, inputStr()) {
-			suite.Equal([]string{}, tokens)
-			e := types.Entry{}
-			// Ensure p(e) is always false for an entry that doesn't have a size attribute
-			suite.False(p(e), inputStr())
-
-			e.Attributes.SetSize(uint64(testCase.trueSize))
-			suite.True(p(e), inputStr())
-
-			e.Attributes.SetSize(uint64(testCase.falseSize))
-			suite.False(p(e), inputStr())
-		}
-	}
+func (s *SizePrimaryTestSuite) TestValidInput() {
+	// We set the size to 1.5 blocks in order to test rounding
+	s.RTC("2", "", int64(1.5 * 512), int64(512))
+	// +2 means p will return true if size > 2 blocks
+	s.RTC("+2", "", int64(3 * 512), int64(1 * 512))
+	// -2 means p will return true if size < 2 blocks
+	s.RTC("-2", "", int64(1 * 512), int64(2 * 512))
+	s.RTC("1k", "", 1 * numeric.BytesOf('k'), 1 * numeric.BytesOf('c'))
+	s.RTC("+1k", "", 2 * numeric.BytesOf('k'), 1 * numeric.BytesOf('k'))
+	s.RTC("-1k", "", 1 * numeric.BytesOf('c'), 1 * numeric.BytesOf('k'))
 }
 
 func TestSizePrimary(t *testing.T) {
-	suite.Run(t, new(SizePrimaryTestSuite))
+	s := new(SizePrimaryTestSuite)
+	s.Parser = sizePrimary
+	s.ConstructEntry = func(v interface{}) types.Entry {
+		e := types.Entry{}
+		e.Attributes.SetSize(uint64(v.(int64)))
+		return e
+	}
+	suite.Run(t, s)
 }

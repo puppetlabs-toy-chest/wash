@@ -53,4 +53,7 @@ StringPredicate     => [^-].*
 N                   => \d+ (i.e. some number > 0)
 */
 //nolint
-var metaPrimary = Parser.newPrimary([]string{"-meta", "-m"}, meta.Parse)
+var metaPrimary = Parser.add(&primary{
+    tokens: []string{"-meta", "-m"},
+    parseFunc: meta.Parse,
+})
