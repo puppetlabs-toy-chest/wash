@@ -3,9 +3,7 @@ package meta
 import (
 	"regexp"
 	"testing"
-	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/stretchr/testify/suite"
 )
@@ -42,14 +40,6 @@ func (s *PredicateExpressionTestSuite) NPOETC(input string, remInput string, exp
 		return s.NPTC(input, remInput, true)
 	}
 	return s.NPNTC(input, remInput, true)
-}
-
-func (s *PredicateExpressionTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *PredicateExpressionTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *PredicateExpressionTestSuite) TestEmptyExpression() {

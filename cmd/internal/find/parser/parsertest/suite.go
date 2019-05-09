@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
@@ -93,6 +95,17 @@ func (suite *Suite) ToTks(s string) []string {
 	}
 	return tokens
 }
+
+// SetupTest sets the StartTime
+func (suite *Suite) SetupTest() {
+	params.StartTime = time.Now()
+}
+
+// TeardownTest resets the StartTime
+func (suite *Suite) TeardownTest() {
+	params.StartTime = time.Time{}
+}
+
 
 // falseV's a wrapper type that's used to distingush between "positive" and "negative"
 // satisfying values. We need it b/c "nil" could be a satisfying value.

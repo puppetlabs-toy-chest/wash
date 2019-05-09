@@ -2,9 +2,7 @@ package meta
 
 import (
 	"testing"
-	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
@@ -12,14 +10,6 @@ import (
 
 type ObjectPredicateTestSuite struct {
 	parsertest.Suite
-}
-
-func (s *ObjectPredicateTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *ObjectPredicateTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *ObjectPredicateTestSuite) TestKeyRegex() {

@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/stretchr/testify/suite"
 )
@@ -16,14 +14,6 @@ import (
 type MetaPrimaryTestSuite struct {
 	parsertest.Suite
 	e types.Entry
-}
-
-func (s *MetaPrimaryTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *MetaPrimaryTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *MetaPrimaryTestSuite) TestMetaPrimaryErrors() {
