@@ -39,6 +39,12 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
 		s.NPETC("[*]", `expected a predicate after \[\*\]`, false),
 		s.NPETC("[15]", `expected a predicate after \[15\]`, false),
 		s.NPETC("[?] +{", "expected.*closing.*}", false),
+		// Test predicate expression errors
+		s.NPETC("[?] )", `\): no beginning '\('`, false),
+		s.NPETC("[?] (", `\(: missing closing '\)'`, false),
+		s.NPETC("[?] ( -true", `\(: missing closing '\)'`, false),
+		s.NPETC("[?] ( )", `\(\): empty inner expression`, false),
+		s.NPETC("[?] ( -true -false -foo", "unknown predicate -foo", false),
 	)
 }
 
@@ -55,6 +61,12 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 		// Test key sequences
 		s.NPTC("[?][?] -true -size", "-size", toA(toA(true))),
 		s.NPTC("[?].key -true -size", "-size", toA(mp)),
+		// Now test predicate expressions. The predicate expression parser's
+		// already well tested, so these are just some sanity checks.
+		s.NPNTC("[0] ( -true -a -false ) -size", "-size", toA(true)),
+		s.NPTC("[0] ( -true -o -false ) -size", "-size", toA(true)),
+		s.NPTC("[0] ( ! -false ) -size", "-size", toA(true)),
+		s.NPTC("[0] ( ! ( -true -a -false ) ) -size", "-size", toA(true)),
 	)
 }
 

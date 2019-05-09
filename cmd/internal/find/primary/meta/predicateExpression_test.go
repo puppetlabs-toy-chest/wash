@@ -7,7 +7,6 @@ import (
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -15,6 +14,9 @@ import (
 // will not be tested here. Instead, the tests here serve as "integration tests" for
 // the parsePredicateExpression function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced. 
+//
+// Note that inner expressions are tested in ObjectPredicate/ArrayPredicate since that
+// is where they are used. They're also tested in the meta primary tests.
 
 type PredicateExpressionTestSuite struct {
 	parsertest.Suite
@@ -220,6 +222,6 @@ func (s *PredicateExpressionTestSuite) TestPredicateExpressions() {
 
 func TestPredicateExpression(t *testing.T) {
 	s := new(PredicateExpressionTestSuite)
-	s.Parser = predicate.ToParser(parsePredicateExpression)
+	s.Parser = newPredicateExpressionParser(false)
 	suite.Run(t, s)
 }

@@ -22,12 +22,14 @@ Predicate           => ObjectPredicate     |
                        ArrayPredicate      |
                        PrimitivePredicate
 
-ObjectPredicate     => EmptyPredicate | ‘.’ Key Predicate
+ObjectPredicate     => EmptyPredicate | ‘.’ Key OAPredicate
 
-ArrayPredicate      => EmptyPredicate      |
-                       ‘[' ? ‘]’ Predicate |
-                       ‘[' * ‘]’ Predicate |
-                       ‘[' N ‘]’ Predicate |
+ArrayPredicate      => EmptyPredicate        |
+                       ‘[' ? ‘]’ OAPredicate |
+                       ‘[' * ‘]’ OAPredicate |
+                       ‘[' N ‘]’ OAPredicate |
+
+OAPredicate         => Predicate | "(" PredicateExpression ")"
 
 PrimitivePredicate  => NullPredicate       |
                        ExistsPredicate     |
