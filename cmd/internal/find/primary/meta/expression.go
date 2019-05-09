@@ -65,7 +65,7 @@ func parseExpression(tokens []string) (predicate.Predicate, []string, error) {
 func parseObjectExpression(tokens []string) (predicate.Predicate, []string, error) {
 	return parseObjectP(
 		tokens,
-		predicate.ToParser(parsePredicateExpression),
+		newPredicateExpressionParser(false),
 		predicate.ToParser(parseOAExpression),
 	)
 }
@@ -100,7 +100,7 @@ func parseOAExpression(tokens []string) (predicate.Predicate, []string, error) {
 func parseArrayExpression(tokens []string) (predicate.Predicate, []string, error) {
 	return parseArrayP(
 		tokens,
-		predicate.ToParser(parsePredicateExpression),
+		newPredicateExpressionParser(false),
 		predicate.ToParser(parseOAExpression),
 	)
 }

@@ -3,10 +3,8 @@ package parser
 import (
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -17,14 +15,6 @@ import (
 // the operators, and whether operator precedence is enforced.
 type ParseExpressionTestSuite struct {
 	parsertest.Suite
-}
-
-func (s *ParseExpressionTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *ParseExpressionTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *ParseExpressionTestSuite) NPETC(input string, errMsg string) parsertest.Case {
@@ -124,7 +114,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionParensErrors() {
 		s.NPETC("( -true ( -false )", "(: missing closing ')'"),
 		s.NPETC("( ( ( -true ) ) ) )", "): no beginning '('"),
 		s.NPETC("( -a )", "-a: no expression before -a"),
-		s.NPETC("( ( ( -true ) -a", "(: missing closing ')'"),
+		s.NPETC("( ( ( -true ) -a", "-a: no expression after -a"),
 		s.NPETC("( ( ( -true ) -a ) )", "-a: no expression after -a"),
 	)
 }

@@ -15,14 +15,6 @@ type TimeAttrPrimaryTestSuite struct {
 	suite.Suite
 }
 
-func (suite *TimeAttrPrimaryTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (suite *TimeAttrPrimaryTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
-}
-
 func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 	e := types.Entry{}
 

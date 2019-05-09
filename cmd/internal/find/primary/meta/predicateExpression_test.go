@@ -3,11 +3,8 @@ package meta
 import (
 	"regexp"
 	"testing"
-	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -15,6 +12,9 @@ import (
 // will not be tested here. Instead, the tests here serve as "integration tests" for
 // the parsePredicateExpression function. They're meant to test parser errors, each of
 // the operators, and whether operator precedence is enforced. 
+//
+// Note that inner expressions are tested in ObjectPredicate/ArrayPredicate since that
+// is where they are used. They're also tested in the meta primary tests.
 
 type PredicateExpressionTestSuite struct {
 	parsertest.Suite
@@ -40,14 +40,6 @@ func (s *PredicateExpressionTestSuite) NPOETC(input string, remInput string, exp
 		return s.NPTC(input, remInput, true)
 	}
 	return s.NPNTC(input, remInput, true)
-}
-
-func (s *PredicateExpressionTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *PredicateExpressionTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *PredicateExpressionTestSuite) TestEmptyExpression() {
@@ -161,7 +153,7 @@ func (s *PredicateExpressionTestSuite) TestParensErrors() {
 		s.NPETC("( -true ( -false )", "(: missing closing ')'"),
 		s.NPETC("( ( ( -true ) ) ) )", "): no beginning '('"),
 		s.NPETC("( -a )", "-a: no expression before -a"),
-		s.NPETC("( ( ( -true ) -a", "(: missing closing ')'"),
+		s.NPETC("( ( ( -true ) -a", "-a: no expression after -a"),
 		s.NPETC("( ( ( -true ) -a ) )", "-a: no expression after -a"),
 	)
 }
@@ -220,6 +212,6 @@ func (s *PredicateExpressionTestSuite) TestPredicateExpressions() {
 
 func TestPredicateExpression(t *testing.T) {
 	s := new(PredicateExpressionTestSuite)
-	s.Parser = predicate.ToParser(parsePredicateExpression)
+	s.Parser = newPredicateExpressionParser(false)
 	suite.Run(t, s)
 }

@@ -7,25 +7,43 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
-// PredicateExpression => (See the comments of expression.Parser#Parse)
-func parsePredicateExpression(tokens []string) (predicate.Predicate, []string, error) {
-	if len(tokens) == 0 {
-		return nil, nil, fmt.Errorf("expected a predicate expression")
+type predicateExpressionParser struct {
+	expression.Parser
+	isInnerExpression bool
+}
+
+func newPredicateExpressionParser(isInnerExpression bool) predicate.Parser {
+	p := &predicateExpressionParser{
+		Parser: expression.NewParser(predicate.ToParser(parsePredicate)),
+		isInnerExpression: isInnerExpression,
 	}
-	parser := expression.NewParser(predicate.ToParser(parsePredicate))
-	p, tks, err := parser.Parse(tokens)
+	if isInnerExpression {
+		// Inner expressions are parenthesized so that they do not conflict with
+		// the top-level predicate expression parser.
+		return expression.Parenthesize(p)
+	}
+	return p
+}
+
+func (parser *predicateExpressionParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
+	if len(tokens) == 0 {
+		return nil, nil, expression.NewEmptyExpressionError("expected a predicate expression")
+	}
+	p, tks, err := parser.Parser.Parse(tokens)
 	if err != nil {
 		tkErr, ok := err.(expression.UnknownTokenError)
 		if !ok {
-			// We have a syntax error
-			return nil, nil, err
+			// We have a syntax error or an EmptyExpressionError. The latter's possible if
+			// parser is an inner predicate expression and tokens is ")".
+			return nil, tks, err
 		}
-		if p == nil {
+		if p == nil || parser.isInnerExpression {
 			// possible via something like "-size + 1"
-			return nil, nil, fmt.Errorf("unknown predicate %v", tkErr.Token)
+			return nil, tks, fmt.Errorf("unknown predicate %v", tkErr.Token)
 		}
 	}
-	// If err != nil here, then err is an UnknownTokenError. An UnknownTokenError
-	// means we've finished parsing the `meta` primary's predicate expression.
+	// If err != nil here, then err is an UnknownTokenError and this predicate expression
+	// parser is the top level predicate expression parser. These both mean that we've
+	// finished parsing the `meta` primary's predicate expression.
 	return p, tks, nil
 }

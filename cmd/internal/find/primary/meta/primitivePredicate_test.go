@@ -2,9 +2,7 @@ package meta
 
 import (
 	"testing"
-	"time"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
@@ -13,14 +11,6 @@ import (
 
 type PrimitivePredicateTestSuite struct {
 	parsertest.Suite
-}
-
-func (s *PrimitivePredicateTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *PrimitivePredicateTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
 }
 
 func (s *PrimitivePredicateTestSuite) TestErrors() {

@@ -18,11 +18,11 @@ func parseArrayPredicate(tokens []string) (predicate.Predicate, []string, error)
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match
-	parsePredicate := predicate.ToParser(parsePredicate)
+	parseOAPredicate := predicate.ToParser(parseOAPredicate)
 	return parseArrayP(
 		tokens,
-		parsePredicate,
-		parsePredicate,
+		parseOAPredicate,
+		parseOAPredicate,
 	)
 }
 

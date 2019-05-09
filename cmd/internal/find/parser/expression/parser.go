@@ -32,15 +32,29 @@ Operator precedence is (from highest to lowest):
 The precedence of the () and -not operators is already enforced by the grammar.
 Precedence of the binary operators -and and -or is enforced by maintaining an
 evaluation stack.
+
+Note that Parser is a sealed interface. Child classes must extend the parser
+returned by NewParser when overriding the interface's methods.
 */
-type Parser struct {
+type Parser interface {
+	predicate.Parser
+	IsOp(token string) bool
+	atom() *predicate.CompositeParser
+	stack() *evalStack
+	setStack(s *evalStack)
+	insideParens() bool
+	openParens()
+	closeParens()
+}
+
+type parser struct {
 	// Storing the binary ops this way makes it easier for us to add the capability
 	// for callers to extend the parser if they'd like to support additional binary
 	// ops. We will likely need this capability in the future if/when we add the ","
 	// operator to `wash find`.
 	binaryOps map[string]*BinaryOp
-	atom *predicate.CompositeParser
-	stack *evalStack
+	Atom *predicate.CompositeParser
+	Stack *evalStack
 	numOpenParens int
 	opTokens map[string]struct{}
 }
@@ -48,8 +62,8 @@ type Parser struct {
 // NewParser returns a new predicate expression parser. The passed-in
 // predicateParser must be able to parse the "Predicate" nonterminal
 // in the expression grammar.
-func NewParser(predicateParser predicate.Parser) *Parser {
-	p := &Parser{}
+func NewParser(predicateParser predicate.Parser) Parser {
+	p := &parser{}
 	p.binaryOps = make(map[string]*BinaryOp)
 	p.opTokens = map[string]struct{}{
 		"!": struct{}{},
@@ -63,20 +77,44 @@ func NewParser(predicateParser predicate.Parser) *Parser {
 			p.opTokens[token] = struct{}{}
 		}
 	}
-	p.atom = &predicate.CompositeParser{
+	p.Atom = &predicate.CompositeParser{
 		MatchErrMsg: "expected an atom",
 		Parsers: []predicate.Parser{
 			notOpParser(p),
-			parensOpParser(p),
+			Parenthesize(p),
 			predicateParser,
 		},
 	}
 	return p
 }
 
+func (parser *parser) atom() *predicate.CompositeParser {
+	return parser.Atom
+}
+
+func (parser *parser) stack() *evalStack {
+	return parser.Stack
+}
+
+func (parser *parser) setStack(stack *evalStack) {
+	parser.Stack = stack
+}
+
+func (parser *parser) insideParens() bool {
+	return parser.numOpenParens > 0
+}
+
+func (parser *parser) openParens() {
+	parser.numOpenParens++
+}
+
+func (parser *parser) closeParens() {
+	parser.numOpenParens--
+}
+
 // IsOp returns true if the given token represents the parentheses operator,
 // the not operator, or a binary operator.
-func (parser *Parser) IsOp(token string) bool {
+func (parser *parser) IsOp(token string) bool {
 	_, ok := parser.opTokens[token]
 	return ok
 }
@@ -92,9 +130,11 @@ UnknownTokenError containing the offending token.
 Case 2's useful if we're parsing an expression inside an expression. It lets the caller
 decide if they've finished parsing the inner expression. We will take advantage of Case 2
 when parsing `meta` primary expressions.
+
+If tokens is empty, then Parse will return an ErrEmptyExpression error.
 */
-func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
-	parser.stack = newEvalStack()
+func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
+	parser.setStack(newEvalStack())
 
 	// Declare these as variables so that we can cleanly update
 	// err for each iteration without having to worry about the
@@ -109,26 +149,21 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		// Reset err in each iteration to maintain the post-loop invariant
 		err = nil
 		if len(tokens) == 0 {
-			if parser.numOpenParens > 0 {
-				return nil, nil, fmt.Errorf("(: missing closing ')'")
-			}
 			break
 		}
 		token := tokens[0]
 		if token == ")" {
-			if parser.numOpenParens <= 0 {
+			if !parser.insideParens() {
 				return nil, nil, fmt.Errorf("): no beginning '('")
 			}
-			// We're reached the end of a parenthesized expression, so shift tokens
-			// and break out of the loop
-			tokens = tokens[1:]
-			break
+			// We've finished parsing a parenthesized expression
+			break	
 		}
 		// Try parsing an atom first.
-		p, tks, err = parser.atom.Parse(tokens)
+		p, tks, err = parser.Atom.Parse(tokens)
 		if err == nil {
 			// Successfully parsed an atom, so push the parsed predicate onto the stack.
-			parser.stack.pushPredicate(p)
+			parser.stack().pushPredicate(p)
 			tokens = tks
 			continue
 		}
@@ -146,49 +181,43 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		}
 		// Parsed a binaryOp, so shift tokens and push the op on the evaluation stack.
 		tokens = tokens[1:]
-		if parser.stack.mostRecentOp == nil {
-			if _, ok := parser.stack.Peek().(predicate.Predicate); !ok {
+		if parser.stack().mostRecentOp == nil {
+			if _, ok := parser.stack().Peek().(predicate.Predicate); !ok {
 				return nil, nil, fmt.Errorf("%v: no expression before %v", token, token)
 			}
-			parser.stack.pushBinaryOp(token, b)
+			parser.stack().pushBinaryOp(token, b)
 			continue
 		}
-		if _, ok := parser.stack.Peek().(*BinaryOp); ok {
+		if _, ok := parser.stack().Peek().(*BinaryOp); ok {
 			// mostRecentOp's on the stack, and the parser's asking us to
 			// push b. This means that mostRecentOp did not have an expression
 			// after it, so report the syntax error.
 			return nil, nil, fmt.Errorf(
 				"%v: no expression after %v",
-				parser.stack.mostRecentOpToken,
-				parser.stack.mostRecentOpToken,
+				parser.stack().mostRecentOpToken,
+				parser.stack().mostRecentOpToken,
 			)
 		}
-		parser.stack.pushBinaryOp(token, b)
+		parser.stack().pushBinaryOp(token, b)
 	}
 	// Parsing's finished.
-	if parser.stack.Len() <= 0 {
+	if parser.stack().Len() <= 0 {
 		// We didn't parse anything. Either we have an empty expression, or
 		// err is an UnknownTokenError
 		if err == nil {
-			// We have an empty expression
-			if parser.numOpenParens > 0 {
-				err = fmt.Errorf("(): empty inner expression")
-			} else {
-				err = fmt.Errorf("empty expression")
-			}
-			return nil, nil, err
+			err = NewEmptyExpressionError("empty expression")
 		}
 		// err is an UnknownTokenError
 		return nil, tokens, err
 	}
-	if _, ok := parser.stack.Peek().(*BinaryOp); ok {
+	if _, ok := parser.stack().Peek().(*BinaryOp); ok {
 		// This codepath is possible via something like "p1 -and" or "p1 -and <unknown_token>"
 		if err == nil {
 			// We have "p1 -and"
 			return nil, nil, fmt.Errorf(
 				"%v: no expression after %v",
-				parser.stack.mostRecentOpToken,
-				parser.stack.mostRecentOpToken,
+				parser.stack().mostRecentOpToken,
+				parser.stack().mostRecentOpToken,
 			)
 		}
 		// We have "p1 -and <unknown_token>". Pop the binary op off the stack and include
@@ -197,12 +226,12 @@ func (parser *Parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		// predicate p with whatever's parsed by the "<unknown_token>" bit. For example, it
 		// ensures that the top-level `wash find` parser correctly parses something like
 		// "-m .key foo -o -m .key bar" as "Meta(.key, foo) -o Meta(.key, bar)".
-		parser.stack.Pop()
-		tokens = append([]string{parser.stack.mostRecentOpToken}, tokens...)
+		parser.stack().Pop()
+		tokens = append([]string{parser.stack().mostRecentOpToken}, tokens...)
 	}
 	// Call s.evaluate() to handle cases like "p1 -and p2"
-	parser.stack.evaluate()
-	return parser.stack.Pop().(predicate.Predicate), tokens, err
+	parser.stack().evaluate()
+	return parser.stack().Pop().(predicate.Predicate), tokens, err
 }
 
 type evalStack struct {

@@ -15,14 +15,6 @@ type TimePredicateTestSuite struct {
 	parsertest.Suite
 }
 
-func (s *TimePredicateTestSuite) SetupTest() {
-	params.StartTime = time.Now()
-}
-
-func (s *TimePredicateTestSuite) TeardownTest() {
-	params.StartTime = time.Time{}
-}
-
 func (s *TimePredicateTestSuite) TestErrors() {
 	s.RunTestCases(
 		s.NPETC("", `expected a \+, -, or a digit`, true),
