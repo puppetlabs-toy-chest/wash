@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>wash landing page | home</title>
+    <title>wash: the wide-area shell | home</title>
 
     <style>body{margin:40px auto;max-width:650px;line-height:1.6;font-size:18px;color:#444;padding:0 10px}h1,h2,h3{line-height:1.2}div.header h1{padding-top:0;padding-bottom:8px;margin-bottom:24px;font-size:18px;font-weight:400;border-bottom:1px solid}.header-menu{float:right}ul.pagination{list-style-type:none;text-align:center;padding:0}ul.pagination>li{padding:0 8px;display:inline-block}div.footer{border-top:1px solid;text-align:center}img{max-width:100%;max-height:100%;display:block;margin-left:auto;margin-right:auto}</style>
     <link href="https://puppetlabs.github.io/wash/index.xml" rel="alternate" type="application/rss+xml" title="home" />
@@ -37,7 +37,17 @@
 
 <p><code>wash</code> helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love.</p>
 
+<div id="horizontalmenu">
+    • <a href="#introduction">introduction</a>
+    • <a href="#current-features">features</a>
+    • <a href="#getting-started">installation</a>
+    • <a href="#contributing">contributing</a>
+    •
+</div>
+
 <script id="asciicast-245046" src="https://asciinema.org/a/245046.js" async></script>
+
+<h2 id="introduction">Introduction</h2>
 
 <p><code>wash</code> aims to:</p>
 
@@ -47,7 +57,12 @@
 <li>render into text that which can be rendered into text (cuz text is a universal interface!) for easy viewing, editing, and UNIXy slicing-and-dicing</li>
 <li>build equivalents of basic, UNIX tools to support the above goals (but reuse existing ones if they work!)</li>
 <li>let you easily extend the system in whatever language you want</li>
+<li>be extremely simple to get up-and-running; if it takes you more than a few minutes, let us know!</li>
 </ul>
+
+<p>Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it&rsquo;s containers, VMs, network devices, IoT stuff, or anything in between&hellip;they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that&rsquo;s no fun at all!</p>
+
+<p><a href="https://en.wikipedia.org/wiki/Unix_philosophy#Origin">UNIX&rsquo;s philosophy</a> and abstractions have worked for decades. They&rsquo;re pretty good, and more importantly, they&rsquo;re <em>familiar</em> to millions of people. <code>wash</code> intends to apply those same philosophies and abstractions to modern, distributed infrastructure.</p>
 
 <h2 id="getting-started">Getting started</h2>
 
@@ -69,23 +84,17 @@
 </ul></li>
 </ol>
 
-<p>That should do it! Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore <code>wash-root-dir</code>. You can then start experimenting with <code>wash</code> subcommands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more <code>wash</code>-optimized way.</p>
+<p>At this point, if you haven&rsquo;t already, you should fire up some resources that <code>wash</code> can actually introspect. Otherwise, as Han Solo would say, &ldquo;this is going to be a real short trip&rdquo;. So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc.</p>
 
-<p>For more of a guided tour, check out our <a href="https://github.com/puppetlabs/wash#wash-by-example"><code>docker compose</code> example</a>.</p>
+<p>For more of a guided tour that includes spinning up some resources <code>wash</code> can talk to, check out our <a href="https://github.com/puppetlabs/wash#wash-by-example"><code>docker compose</code> example</a>.</p>
+
+<p>Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore <code>wash-root-dir</code>. You can then start experimenting with <code>wash</code> subcommands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more <code>wash</code>-optimized way.</p>
 
 <p>When you&rsquo;re done, make sure there are no processes still using <code>wash-root-dir</code>, and you can just <code>Ctrl-C</code> the server.</p>
 
-<h2 id="motivation">Motivation</h2>
+<h2 id="current-features">Current features</h2>
 
-<p>Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it&rsquo;s containers, VMs, network devices, IoT stuff, or anything in between&hellip;they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that&rsquo;s no fun at all!</p>
-
-<p><a href="https://en.wikipedia.org/wiki/Unix_philosophy#Origin">UNIX&rsquo;s philosophy</a> and abstractions have worked for decades. They&rsquo;re pretty good, and more importantly, they&rsquo;re <em>familiar</em> to millions of people. <code>wash</code> intends to apply those same philosophies and abstractions to modern, distributed infrastructure.</p>
-
-<h2 id="features">Features</h2>
-
-<p><code>wash</code> can already do quite a bit (listed below), and we&rsquo;ve got <a href="https://github.com/puppetlabs/wash#roadmap">even more planned</a>!</p>
-
-<p>The <code>wash</code> daemon:</p>
+<p><code>wash</code> does a lot already, with <a href="https://github.com/puppetlabs/wash#roadmap">more to come</a>:</p>
 
 <ul>
 <li>presents a FUSE filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways</li>
@@ -94,7 +103,54 @@
 <li>caches information, for better performance</li>
 </ul>
 
-<p><code>wash</code> supports the following primitives for resources it knows about:</p>
+<p>We&rsquo;ve implemented a number of handy <code>wash</code> subcommands:</p>
+
+<ul>
+<li><code>wash ls</code> - a version of <code>ls</code> that uses our API to enhance directory listings with <code>wash</code>-specific info
+
+<ul>
+<li><em>e.g. show you what primitives are supported for each resource</em></li>
+</ul></li>
+<li><code>wash meta</code> - emits a resource&rsquo;s metadata to standard out</li>
+<li><code>wash exec</code> - uses the <code>exec</code> primitive to let you invoke commands against resources</li>
+<li><code>wash find</code> - find resources using powerful selection predicates (WIP)</li>
+<li><code>wash tail -f</code> - follow updates to resources that support the <code>stream</code> primitive as well as normal files</li>
+<li><code>wash ps</code> - lists running processes on indicated compute instances that support the <code>exec</code> primitive</li>
+<li><code>wash history</code> - lists all activity through <code>wash</code>; <code>wash history &lt;id&gt;</code> can be used to view logs for a specific activity</li>
+<li><code>wash clear</code> - clears cached data for a subhierarchy rooted at the supplied path so <code>wash</code> will re-request it</li>
+</ul>
+
+<p>Core plugins (and we&rsquo;re <a href="https://github.com/puppetlabs/wash#roadmap">adding more all the time</a>):</p>
+
+<ul>
+<li><code>docker</code>
+
+<ul>
+<li>containers and volumes</li>
+<li>found from the local socket or via <code>DOCKER</code> environment variables</li>
+<li>supports streaming, and remote command execution</li>
+</ul></li>
+<li><code>kubernetes</code>
+
+<ul>
+<li>pods, containers, and persistent volume claims</li>
+<li>uses contexts from <code>~/.kube/config</code></li>
+<li>supports streaming, and remote command execution</li>
+<li>supports listing of volume contents</li>
+</ul></li>
+<li><code>aws</code>
+
+<ul>
+<li>EC2 and S3</li>
+<li>uses <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK</li>
+<li>IAM roles are supported when configured as described <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html">here</a>. Note that currently <code>region</code> will also need to be specified with the profile.</li>
+<li>if using MFA, <code>wash</code> will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under <code>wash/aws-credentials</code> in your <a href="#user-cache-directory">user cache directory</a> so they can be re-used across server restarts. <code>wash</code> may have to re-prompt for a new MFA token in response to navigating the <code>wash</code> environment to authorize a new session.</li>
+<li>supports streaming, and remote command execution via <code>ssh</code> or AWS-SSM</li>
+<li>supports full metadata for S3 content</li>
+</ul></li>
+</ul>
+
+<p><code>wash</code> supports the following primitives for resources it knows about, where appropriate:</p>
 
 <ul>
 <li><code>list</code> - lets you ask any resource what&rsquo;s contained inside of it, and what primitives it supports.
@@ -117,48 +173,10 @@
 <ul>
 <li><em>e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc.</em></li>
 </ul></li>
+<li>these are all available programmatically via the API, or on the CLI via <code>wash</code> subcommands</li>
 </ul>
 
-<p>We&rsquo;ve implemented a number of handy <code>wash</code> subcommands:</p>
-
-<ul>
-<li><code>wash ls</code> - a version of <code>ls</code> that uses our API to enhance directory listings with <code>wash</code>-specific info
-
-<ul>
-<li><em>e.g. show you what primitives are supported for each resource</em></li>
-</ul></li>
-<li><code>wash meta</code> - emits a resource&rsquo;s metadata to standard out</li>
-<li><code>wash exec</code> - uses the <code>exec</code> primitive to let you invoke commands against resources</li>
-<li><code>wash find</code> - find resources using powerful selection predicates (WIP)</li>
-<li><code>wash tail -f</code> - follow updates to resources that support the <code>stream</code> primitive as well as normal files</li>
-<li><code>wash ps</code> - lists running processes on indicated compute instances that support the <code>exec</code> primitive</li>
-<li><code>wash history</code> - lists all activity through <code>wash</code>; <code>wash history &lt;id&gt;</code> can be used to view logs for a specific activity</li>
-<li><code>wash clear</code> - clears cached data for a subhierarchy rooted at the supplied path so <code>wash</code> will re-request it</li>
-</ul>
-
-<p>Core plugins (currently; see the <a href="https://github.com/puppetlabs/wash#roadmap">Roadmap</a> for future plans):</p>
-
-<ul>
-<li><code>docker</code> - presents a filesystem hierarchy of containers and volumes
-
-<ul>
-<li>found from the local socket or via <code>DOCKER</code> environment variables</li>
-</ul></li>
-<li><code>kubernetes</code> - presents a filesystem hierarchy of pods, containers, and persistent volume claims
-
-<ul>
-<li>uses contexts from <code>~/.kube/config</code></li>
-</ul></li>
-<li><code>aws</code> - presents a filesystem hierarchy for EC2 and S3
-
-<ul>
-<li>uses <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK</li>
-<li>IAM roles are supported when configured as described <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html">here</a>. Note that currently <code>region</code> will also need to be specified with the profile.</li>
-<li>if using MFA, <code>wash</code> will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under <code>wash/aws-credentials</code> in your <a href="#user-cache-directory">user cache directory</a> so they can be re-used across server restarts. <code>wash</code> may have to re-prompt for a new MFA token in response to navigating the <code>wash</code> environment to authorize a new session.</li>
-</ul></li>
-</ul>
-
-<p><a href="https://github.com/puppetlabs/wash/tree/master/docs/external_plugins">External plugins</a></p>
+<p><a href="https://github.com/puppetlabs/wash/tree/master/docs/external_plugins">External plugins</a>:</p>
 
 <ul>
 <li><code>wash</code> allows for easy creation of out-of-process plugins using any language you want, from <code>bash</code> to <code>go</code> or anything in-between!</li>
@@ -167,6 +185,28 @@
 </ul>
 
 <p>For more information about future direction, see our <a href="https://github.com/puppetlabs/wash#roadmap">Roadmap</a>!</p>
+
+<h2 id="contributing">Contributing</h2>
+
+<p>There are tons of ways to get involved with <code>wash</code>, whether or not you&rsquo;re a programmer!</p>
+
+<ul>
+<li><p>Come and hang out with us on <a href="https://puppetcommunity.slack.com/app_redirect?channel=wash">Slack</a>! Feel free to ask questions, answer questions from other folks, or just lurk. Come and talk to us about things about modern infra you find <a href="https://landscape.cncf.io/">complex or infuriating</a>, or what your <a href="https://www.youtube.com/watch?v=u1Ds9CeG-VY">favorite hacking movie scenes</a> are, or the <a href="https://fonts.google.com/specimen/Inconsolata">best monospaced font</a>.</p></li>
+
+<li><p>Have something cool that you&rsquo;d like connect up to <code>wash</code>? We&rsquo;d love to hear your ideas, and help you figure out how to do it! We don&rsquo;t care if you want <code>wash</code> to talk to a network device, a smart lightbulb, your bluetooth-enabled espresso scale, or just more types of resources from cloud providers.</p></li>
+
+<li><p>Are you an artist? Design some <code>wash</code>-related artwork or a logo, and we&rsquo;ll see about putting it into the rotation for the site!</p></li>
+
+<li><p>Are you an old skool command-line gearhead with, like, <em>opinions</em> about how things should work on a command line? We&rsquo;d love your help figuring out how the shell experience for <code>wash</code> should work. How can our unixy <code>wash</code> subcommands behave better? Are there new subcommands we should build? What colors and formatting should we use for <code>wash ls</code>? If we implemented <code>wash fortune</code>, what quotes should be in there?!</p></li>
+
+<li><p>Did you script something cool that usees <code>wash</code> under the hood? Please let us know, and how we can help!</p></li>
+
+<li><p>Can you sling HTML, or Markdown? This site is built using Hugo, and the source is in our <a href="https://github.com/puppetlabs/wash/website">github repo</a>. We&rsquo;d love help documenting stuff!</p></li>
+
+<li><p>Did you give a talk or presentation on <code>wash</code>? Give us the link, so we can help promote it!</p></li>
+</ul>
+
+<p>Come check us out on <a href="https://github.com/puppetlabs/wash">github</a>, and in particular check out the <a href="https://github.com/puppetlabs/wash/blob/master/CONTRIBUTING.md">contribution guidelines</a> and the <a href="https://github.com/puppetlabs/wash/blob/master/CODE_OF_CONDUCT.md">code of conduct</a>.</p>
 
 </article>
 
