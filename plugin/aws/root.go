@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,24 +22,12 @@ type Root struct {
 	plugin.EntryBase
 }
 
-func homeDir() (string, error) {
-	curUser, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	if curUser.HomeDir == "" {
-		return "", fmt.Errorf("the current user %v does not have a home directory", curUser.Name)
-	}
-	return curUser.HomeDir, nil
-}
-
 func awsCredentialsFile() (string, error) {
 	if filename := os.Getenv("AWS_SHARED_CREDENTIALS_FILE"); len(filename) != 0 {
 		return filename, nil
 	}
 
-	homedir, err := homeDir()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("could not determine the location of the AWS credentials file: %v", err)
 	}
@@ -53,7 +40,7 @@ func awsConfigFile() (string, error) {
 		return filename, nil
 	}
 
-	homedir, err := homeDir()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("could not determine the location of the AWS config file: %v", err)
 	}
