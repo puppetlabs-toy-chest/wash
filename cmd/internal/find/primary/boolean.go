@@ -8,10 +8,13 @@ import (
 
 //nolint
 func newBooleanPrimary(val bool) *primary {
-	return Parser.newPrimary([]string{fmt.Sprintf("-%v", val)}, func(tokens []string) (types.EntryPredicate, []string, error) {
-		return func(e types.Entry) bool {
-			return val
-		}, tokens, nil
+	return Parser.add(&primary{
+		tokens: []string{fmt.Sprintf("-%v", val)},
+		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
+			return func(e types.Entry) bool {
+				return val
+			}, tokens, nil
+		},
 	})
 }
 

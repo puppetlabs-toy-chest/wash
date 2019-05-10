@@ -38,35 +38,38 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 // example, a difference of 1.5 days will be rounded to 2 days.
 func newTimeAttrPrimary(name string) *primary {
 	tk := "-" + name
-	return Parser.newPrimary([]string{tk}, func(tokens []string) (types.EntryPredicate, []string, error) {
-		if params.StartTime.IsZero() {
-			panic("Attempting to parse a time primary without setting params.StartTime")
-		}
-		if len(tokens) == 0 {
-			return nil, nil, fmt.Errorf("requires additional arguments")
-		}
-		numericP, parserID, err := numeric.ParsePredicate(
-			tokens[0],
-			numeric.ParsePositiveInt,
-			numeric.ParseDuration,
-		)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%v: illegal time value", tokens[0])
-		}
+	return Parser.add(&primary{
+		tokens: []string{tk},
+		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
+			if params.StartTime.IsZero() {
+				panic("Attempting to parse a time primary without setting params.StartTime")
+			}
+			if len(tokens) == 0 {
+				return nil, nil, fmt.Errorf("requires additional arguments")
+			}
+			numericP, parserID, err := numeric.ParsePredicate(
+				tokens[0],
+				numeric.ParsePositiveInt,
+				numeric.ParseDuration,
+			)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%v: illegal time value", tokens[0])
+			}
 
-		p := func(e types.Entry) bool {
-			t, ok := getTimeAttrValue(name, e)
-			if !ok {
-				return false
+			p := func(e types.Entry) bool {
+				t, ok := getTimeAttrValue(name, e)
+				if !ok {
+					return false
+				}
+				diff := int64(params.StartTime.Sub(t))
+				if parserID == 0 {
+					// n was an integer, so round-up diff to the next 24-hour period
+					diff = int64(math.Ceil(float64(diff) / float64(numeric.DurationOf('d'))))
+				}
+				return numericP(diff)
 			}
-			diff := int64(params.StartTime.Sub(t))
-			if parserID == 0 {
-				// n was an integer, so round-up diff to the next 24-hour period
-				diff = int64(math.Ceil(float64(diff) / float64(numeric.DurationOf('d'))))
-			}
-			return numericP(diff)
-		}
-		return p, tokens[1:], nil
+			return p, tokens[1:], nil
+		},
 	})
 }
 

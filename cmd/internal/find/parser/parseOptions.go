@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"flag"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/expression"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
@@ -39,6 +40,12 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	if err != nil {
 		return o, nil, err
 	}
+	fs.Visit(func(f *flag.Flag) {
+		o.MarkAsSet(f.Name)
+		if f.Name == types.MaxdepthFlag && o.Maxdepth < 0 {
+			o.Maxdepth = types.DefaultMaxdepth
+		}
+	})
 
 	// Calculate the remaining args
 	if endIx == len(args) {

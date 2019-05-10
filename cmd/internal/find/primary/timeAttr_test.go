@@ -2,118 +2,96 @@ package primary
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
 type TimeAttrPrimaryTestSuite struct {
-	suite.Suite
+	primaryTestSuite
 }
 
-func (suite *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
+func (s *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 	e := types.Entry{}
 
 	// Test ctime
 	_, ok := getTimeAttrValue("ctime", e)
-	suite.False(ok)
+	s.False(ok)
 	expected := time.Now()
 	e.Attributes.SetCtime(expected)
 	actual, ok := getTimeAttrValue("ctime", e)
-	if suite.True(ok) {
-		suite.Equal(expected, actual)
+	if s.True(ok) {
+		s.Equal(expected, actual)
 	}
 
 	// Test mtime
 	_, ok = getTimeAttrValue("mtime", e)
-	suite.False(ok)
+	s.False(ok)
 	expected = time.Now()
 	e.Attributes.SetMtime(expected)
 	actual, ok = getTimeAttrValue("mtime", e)
-	if suite.True(ok) {
-		suite.Equal(expected, actual)
+	if s.True(ok) {
+		s.Equal(expected, actual)
 	}
 
 	// Test atime
 	_, ok = getTimeAttrValue("atime", e)
-	suite.False(ok)
+	s.False(ok)
 	expected = time.Now()
 	e.Attributes.SetAtime(expected)
 	actual, ok = getTimeAttrValue("atime", e)
-	if suite.True(ok) {
-		suite.Equal(expected, actual)
+	if s.True(ok) {
+		s.Equal(expected, actual)
 	}
 }
 
 // These tests use the ctimePrimary as the representative test case
 
-func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryInsufficientArgsError() {
-	_, _, err := ctimePrimary.parse([]string{"-ctime"})
-	suite.Equal("-ctime: requires additional arguments", err.Error())
+func (s *TimeAttrPrimaryTestSuite) TestErrors() {
+	// NIVTC => NewIllegalValueTestCase
+	NIVTC := func(v string) parsertest.Case {
+		return s.NPETC(v, fmt.Sprintf("%v: illegal time value", regexp.QuoteMeta(v)))
+	}
+	s.RunTestCases(
+		s.NPETC("", "requires additional arguments"),
+		NIVTC("foo"),
+		NIVTC("+"),
+		NIVTC("+++++1"),
+		NIVTC("1hr"),
+		NIVTC("+1hr"),
+		NIVTC("++++++1hr"),
+		NIVTC("1h30min"),
+		NIVTC("+1h30min"),
+	)
 }
 
-func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryIllegalTimeValueError() {
-	illegalValues := []string{
-		"foo",
-		"+",
-		"+++++1",
-		"1hr",
-		"+1hr",
-		"++++++1hr",
-		"1h30min",
-		"+1h30min",
-	}
-	for _, v := range illegalValues {
-		_, _, err := ctimePrimary.parse([]string{"-ctime", v})
-		msg := fmt.Sprintf("-ctime: %v: illegal time value", v)
-		suite.Equal(msg, err.Error())
-	}
-}
-
-func (suite *TimeAttrPrimaryTestSuite) TestTimeAttrPrimaryValidInput() {
-	type testCase struct {
-		input string
-		// trueCtime/falseCtime represent ctime durations that, when subtracted
-		// from startTime, satisfy/unsatisfy the predicate, respectively.
-		trueCtime  int64
-		falseCtime int64
-	}
-	testCases := []testCase{
-		// We set trueCtime to 1.5 days in order to test roundDiff
-		testCase{"2", 1*numeric.DurationOf('d') + 12*numeric.DurationOf('h'), 1 * numeric.DurationOf('d')},
-		// +1 means p will return true if diff > 1 day
-		testCase{"+1", 2 * numeric.DurationOf('d'), 0 * numeric.DurationOf('d')},
-		// -2 means p will return true if diff < 2 days
-		testCase{"-2", 1 * numeric.DurationOf('d'), 3 * numeric.DurationOf('d')},
-		// time.Time has nanosecond precision so units like "1h30m" aren't really
-		// useful unless they're used with the +/- modifiers.
-		testCase{"+1h", 2 * numeric.DurationOf('h'), 1 * numeric.DurationOf('m')},
-		testCase{"-1h", 1 * numeric.DurationOf('m'), 1 * numeric.DurationOf('h')},
-	}
-	for _, testCase := range testCases {
-		inputStr := func() string {
-			return fmt.Sprintf("Input was '%v'", testCase.input)
-		}
-		p, tokens, err := ctimePrimary.parse([]string{"-ctime", testCase.input})
-		if suite.NoError(err, inputStr()) {
-			suite.Equal([]string{}, tokens)
-			e := types.Entry{}
-			// Ensure p(e) is always false for an entry that doesn't have a ctime attribute
-			suite.False(p(e), inputStr())
-
-			e.Attributes.SetCtime(params.StartTime.Add(time.Duration(-testCase.trueCtime)))
-			suite.True(p(e), inputStr())
-
-			e.Attributes.SetCtime(params.StartTime.Add(time.Duration(-testCase.falseCtime)))
-			suite.False(p(e), inputStr())
-		}
-	}
+func (s *TimeAttrPrimaryTestSuite) TestValidInput() {
+	// We set trueCtime to 1.5 days in order to test roundDiff
+	s.RTC("2", "", 1*numeric.DurationOf('d') + 12*numeric.DurationOf('h'), 1 * numeric.DurationOf('d'))
+	// +1 means p will return true if diff > 1 day
+	s.RTC("+1", "", 2 * numeric.DurationOf('d'), 0 * numeric.DurationOf('d'))
+	// -2 means p will return true if diff < 2 days
+	s.RTC("-2", "", 1 * numeric.DurationOf('d'), 3 * numeric.DurationOf('d'))
+	// time.Time has nanosecond precision so units like "1h30m" aren't really
+	// useful unless they're used with the +/- modifiers.
+	s.RTC("+1h", "", 2 * numeric.DurationOf('h'), 1 * numeric.DurationOf('m'))
+	s.RTC("-1h", "", 1 * numeric.DurationOf('m'), 1 * numeric.DurationOf('h'))
 }
 
 func TestTimeAttrPrimary(t *testing.T) {
-	suite.Run(t, new(TimeAttrPrimaryTestSuite))
+	s := new(TimeAttrPrimaryTestSuite)
+	s.Parser = ctimePrimary
+	s.ConstructEntry = func(v interface{}) types.Entry {
+		e := types.Entry{}
+		d := time.Duration(v.(int64))
+		e.Attributes.SetCtime(params.StartTime.Add(-d))
+		return e
+	}
+	suite.Run(t, s)
 }

@@ -8,30 +8,27 @@ import (
 )
 
 type NamePrimaryTestSuite struct {
-	suite.Suite
+	primaryTestSuite
 }
 
-func (suite *NamePrimaryTestSuite) TestNamePrimaryErrors() {
-	_, _, err := namePrimary.parse([]string{"-name"})
-	suite.Regexp("-name: requires additional arguments", err)
-
-	_, _, err = namePrimary.parse([]string{"-name", "[a"})
-	suite.Regexp("-name: invalid glob: unexpected end of input", err)
+func (s *NamePrimaryTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", "requires additional arguments"),
+		s.NPETC("[a", "invalid glob: unexpected end of input"),
+	)
 }
 
-func (suite *NamePrimaryTestSuite) TestNamePrimaryValidInput() {
-	e1 := types.Entry{}
-	e1.CName = "a"
-	e2 := types.Entry{}
-	e2.CName = "b"
-	p, tokens, err := namePrimary.parse([]string{"-name", "a"})
-	if suite.NoError(err) {
-		suite.Equal([]string{}, tokens)
-		suite.Equal(true, p(e1))
-		suite.Equal(false, p(e2))
-	}
+func (s *NamePrimaryTestSuite) TestValidInput() {
+	s.RTC("a", "", "a", "b")
 }
 
 func TestNamePrimary(t *testing.T) {
-	suite.Run(t, new(NamePrimaryTestSuite))
+	s := new(NamePrimaryTestSuite)
+	s.Parser = namePrimary
+	s.ConstructEntry = func(v interface{}) types.Entry {
+		e := types.Entry{}
+		e.CName = v.(string)
+		return e
+	}
+	suite.Run(t, s)
 }

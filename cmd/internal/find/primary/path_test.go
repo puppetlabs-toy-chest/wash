@@ -8,30 +8,27 @@ import (
 )
 
 type PathPrimaryTestSuite struct {
-	suite.Suite
+	primaryTestSuite
 }
 
-func (suite *PathPrimaryTestSuite) TestPathPrimaryErrors() {
-	_, _, err := pathPrimary.parse([]string{"-path"})
-	suite.Regexp("-path: requires additional arguments", err)
-
-	_, _, err = pathPrimary.parse([]string{"-path", "[a"})
-	suite.Regexp("-path: invalid glob: unexpected end of input", err)
+func (s *PathPrimaryTestSuite) TestErrors() {
+	s.RunTestCases(
+		s.NPETC("", "requires additional arguments"),
+		s.NPETC("[a", "invalid glob: unexpected end of input"),
+	)
 }
 
-func (suite *PathPrimaryTestSuite) TestPathPrimaryValidInput() {
-	e1 := types.Entry{}
-	e1.NormalizedPath = "a"
-	e2 := types.Entry{}
-	e2.NormalizedPath = "b"
-	p, tokens, err := pathPrimary.parse([]string{"-path", "a"})
-	if suite.NoError(err) {
-		suite.Equal([]string{}, tokens)
-		suite.Equal(true, p(e1))
-		suite.Equal(false, p(e2))
-	}
+func (s *PathPrimaryTestSuite) TestValidInput() {
+	s.RTC("a", "", "a", "b")
 }
 
 func TestPathPrimary(t *testing.T) {
-	suite.Run(t, new(PathPrimaryTestSuite))
+	s := new(PathPrimaryTestSuite)
+	s.Parser = pathPrimary
+	s.ConstructEntry = func(v interface{}) types.Entry {
+		e := types.Entry{}
+		e.NormalizedPath = v.(string)
+		return e
+	}
+	suite.Run(t, s)
 }

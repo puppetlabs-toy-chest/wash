@@ -91,12 +91,21 @@ func (suite *ParseOptionsTestSuite) TestParseOptionInvalidOption() {
 func (suite *ParseOptionsTestSuite) TestParseOptionsValidOptions() {
 	o := types.NewOptions()
 	o.Mindepth = 5
+	o.MarkAsSet(types.MindepthFlag)
 	suite.runTestCases(
 		nPOTC("-mindepth 5", o, ""),
 		nPOTC("-mindepth 5 --", o, "--"),
 		nPOTC("-mindepth 5 -true", o, "-true"),
 		nPOTC("-mindepth 5 -a", o, "-a"),
 		nPOTC("-mindepth 5 foo bar baz", o, "foo bar baz"),
+	)
+}
+
+func (suite *ParseOptionsTestSuite) TestParseOptionsNegativeMaxdepth() {
+	o := types.NewOptions()
+	o.MarkAsSet(types.MaxdepthFlag)
+	suite.runTestCases(
+		nPOTC("-maxdepth -1", o, ""),
 	)
 }
 
