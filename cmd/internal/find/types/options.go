@@ -23,14 +23,14 @@ func NewOptions() Options {
 	}
 }
 
-// DepthFlag is the name of the depth option's flag
-var DepthFlag = "depth"
-
-// MindepthFlag is the name of the mindepth option's flag
-var MindepthFlag = "mindepth"
-
-// MaxdepthFlag is the name of the maxdepth option's flag
-var MaxdepthFlag = "maxdepth"
+const (
+	// DepthFlag is the name of the depth option's flag
+	DepthFlag = "depth"
+	// MindepthFlag is the name of the mindepth option's flag
+	MindepthFlag = "mindepth"
+	// MaxdepthFlag is the name of the maxdepth option's flag
+	MaxdepthFlag = "maxdepth"
+)
 
 // IsSet returns true if the flag was set, false otherwise.
 func (opts *Options) IsSet(flag string) bool {
