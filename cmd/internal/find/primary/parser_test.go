@@ -37,7 +37,7 @@ func (s *ParserTestSuite) TestCallsOptionSetter() {
 	}()
 	_, _, err := Parser.Parse([]string{"-meta", ".key", "-true"})
 	if s.NoError(err) {
-		s.Equal(uint(1), opts.Maxdepth)
+		s.Equal(int(1), opts.Maxdepth)
 	}
 }
 

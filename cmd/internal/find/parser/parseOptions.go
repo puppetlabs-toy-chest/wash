@@ -42,6 +42,9 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	}
 	fs.Visit(func(f *flag.Flag) {
 		o.MarkAsSet(f.Name)
+		if f.Name == types.MaxdepthFlag && o.Maxdepth < 0 {
+			o.Maxdepth = types.DefaultMaxdepth
+		}
 	})
 
 	// Calculate the remaining args

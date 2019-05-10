@@ -1,6 +1,9 @@
 package primary
 
 import (
+    "fmt"
+    "os"
+
     "github.com/puppetlabs/wash/cmd/internal/find/types"
     "github.com/puppetlabs/wash/cmd/internal/find/primary/meta"
 )
@@ -71,9 +74,10 @@ var metaPrimary = Parser.add(&primary{
             // because those entries don't have tags and, even if they did, they'd likely be under a
             // different key (e.g. like "Labels" for Docker containers). Thus to avoid the unnecessary
             // recursion, we default maxdepth to 1 if the flag was not set by the user. Note that users
-            // who want to recurse down into subdirectories can just specify the maxdepth option, which
+            // who want to recurse down into subdirectories can just set maxdepth to -1. The recursion
             // is useful when running `wash find` inside a directory whose entries and subdirectory entries
             // all have the same `meta` schema (e.g. like in an S3 bucket).
+            fmt.Fprintln(os.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
             opts.Maxdepth = 1
         }
     },

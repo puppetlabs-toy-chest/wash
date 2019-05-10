@@ -42,7 +42,7 @@ func (suite *ParseTestSuite) TestPrimariesCanSetOptions() {
 	r, err := Parse([]string{"-meta", ".key", "-true"})
 	if suite.NoError(err) {
 		expectedOpts := types.NewOptions()
-		expectedOpts.Maxdepth = uint(1)
+		expectedOpts.Maxdepth = int(1)
 		suite.Equal(expectedOpts, r.Options)
 	}
 
@@ -50,7 +50,7 @@ func (suite *ParseTestSuite) TestPrimariesCanSetOptions() {
 	r, err = Parse([]string{"-maxdepth", "10", "-meta", ".key", "-true"})
 	if suite.NoError(err) {
 		expectedOpts := types.NewOptions()
-		expectedOpts.Maxdepth = uint(10)
+		expectedOpts.Maxdepth = int(10)
 		expectedOpts.MarkAsSet(types.MaxdepthFlag)
 		suite.Equal(expectedOpts, r.Options)
 	}

@@ -101,6 +101,14 @@ func (suite *ParseOptionsTestSuite) TestParseOptionsValidOptions() {
 	)
 }
 
+func (suite *ParseOptionsTestSuite) TestParseOptionsNegativeMaxdepth() {
+	o := types.NewOptions()
+	o.MarkAsSet(types.MaxdepthFlag)
+	suite.runTestCases(
+		nPOTC("-maxdepth -1", o, ""),
+	)
+}
+
 func TestParseOptions(t *testing.T) {
 	suite.Run(t, new(ParseOptionsTestSuite))
 }
