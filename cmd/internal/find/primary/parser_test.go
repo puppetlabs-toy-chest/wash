@@ -29,6 +29,18 @@ func (s *ParserTestSuite) TestValidInput() {
 	)
 }
 
+func (s *ParserTestSuite) TestCallsOptionSetter() {
+	opts := types.NewOptions()
+	Parser.Options = &opts
+	defer func() {
+		Parser.Options = nil
+	}()
+	_, _, err := Parser.Parse([]string{"-meta", ".key", "-true"})
+	if s.NoError(err) {
+		s.Equal(uint(1), opts.Maxdepth)
+	}
+}
+
 func TestPrimaryParser(t *testing.T) {
 	// Use the -name primary as a representative case
 	s := new(ParserTestSuite)

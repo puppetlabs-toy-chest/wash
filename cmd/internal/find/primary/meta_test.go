@@ -88,6 +88,22 @@ func (s *MetaPrimaryTestSuite) TestMetaPrimaryValidInputNegation() {
 	)
 }
 
+func (s *MetaPrimaryTestSuite) TestOptionsSetter() {
+	opts := types.NewOptions()
+
+	// Test that if maxdepth is not set, then the options setter
+	// sets it to 1.
+	metaPrimary.optionsSetter(&opts)
+	s.Equal(uint(1), opts.Maxdepth)
+
+	// Test that if maxdepth is set, then the options setter
+	// leaves it alone.
+	opts.Maxdepth = 10
+	opts.MarkAsSet(types.MaxdepthFlag)
+	metaPrimary.optionsSetter(&opts)
+	s.Equal(uint(10), opts.Maxdepth)
+}
+
 func TestMetaPrimary(t *testing.T) {
 	s := new(MetaPrimaryTestSuite)
 	rawMeta, err := ioutil.ReadFile("testdata/metadata.json")

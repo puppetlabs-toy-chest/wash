@@ -91,6 +91,7 @@ func (suite *ParseOptionsTestSuite) TestParseOptionInvalidOption() {
 func (suite *ParseOptionsTestSuite) TestParseOptionsValidOptions() {
 	o := types.NewOptions()
 	o.Mindepth = 5
+	o.MarkAsSet(types.MindepthFlag)
 	suite.runTestCases(
 		nPOTC("-mindepth 5", o, ""),
 		nPOTC("-mindepth 5 --", o, "--"),

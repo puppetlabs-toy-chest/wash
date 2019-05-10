@@ -13,6 +13,8 @@ var Parser = &parser{
 }
 
 type parser struct {
+	// Options represent the passed-in `wash find` options
+	Options *types.Options
 	primaries map[string]*primary
 }
 
@@ -32,6 +34,9 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	if !ok {
 		msg := fmt.Sprintf("%v: unknown primary", token)
 		return nil, nil, errz.NewMatchError(msg)
+	}
+	if primary.optionsSetter != nil && parser.Options != nil {
+		primary.optionsSetter(parser.Options)
 	}
 	tokens = tokens[1:]
 	p, tokens, err := primary.Parse(tokens)
@@ -54,6 +59,7 @@ func (parser *parser) add(p *primary) *primary {
 type primary struct {
 	tokens []string
 	tokensMap map[string]struct{}
+	optionsSetter func(*types.Options)
 	parseFunc types.EntryPredicateParser
 }
 
