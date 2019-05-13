@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	log "github.com/sirupsen/logrus"
 )
 
 // swagger:route GET /history history retrieveHistory
@@ -41,7 +40,7 @@ var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *error
 	}
 	jsonEncoder := json.NewEncoder(w)
 	if err := jsonEncoder.Encode(&commands); err != nil {
-		log.Warnf("Unable to encode history: %v", err)
+		activity.Record(r.Context(), "Unable to encode history: %v", err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", history, err))
 	}
 	return nil
@@ -84,7 +83,7 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 	}
 	defer func() {
 		if err := rdr.Close(); err != nil {
-			log.Infof("Failed to close journal %v: %v", journal, err)
+			activity.Record(r.Context(), "Failed to close journal %v: %v", journal, err)
 		}
 	}()
 

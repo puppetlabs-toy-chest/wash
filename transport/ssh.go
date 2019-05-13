@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"time"
 
@@ -30,18 +29,6 @@ func closeConnection(id string, obj interface{}) {
 	}
 }
 
-func homeDir() (string, error) {
-	curUser, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	if curUser.HomeDir == "" {
-		return "", fmt.Errorf("the current user %v does not have a home directory", curUser.Name)
-	}
-	return curUser.HomeDir, nil
-}
-
 func newAgent() (ssh.AuthMethod, error) {
 	sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 
@@ -52,7 +39,7 @@ func newAgent() (ssh.AuthMethod, error) {
 }
 
 func getHostKeyCallback() (ssh.HostKeyCallback, error) {
-	homedir, err := homeDir()
+	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}

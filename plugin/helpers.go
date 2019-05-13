@@ -5,7 +5,6 @@ import (
 	"io"
 	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -137,11 +136,5 @@ func ExitCodeFromErr(err error) (int, error) {
 		return 0, err
 	}
 
-	// For some reason, exitErr.ExitCode() results in a "no field or method"
-	// compiler error on some machines. Other variants like
-	// exitErr.ProcessState.ExitCode() also don't work. Thus, we use the method
-	// described in https://stackoverflow.com/questions/10385551/get-exit-code-go
-	// to get the exit code.
-	ws := exitErr.Sys().(syscall.WaitStatus)
-	return ws.ExitStatus(), nil
+	return exitErr.ExitCode(), nil
 }

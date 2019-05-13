@@ -7,7 +7,6 @@ import (
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
-	log "github.com/sirupsen/logrus"
 )
 
 // ==== FUSE Directory Interface ====
@@ -39,7 +38,6 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		log.Warnf("FUSE: Error[Find,%v,%v,jid=%v]: %v", d, req.Name, activity.GetJournal(ctx), err)
 		activity.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
@@ -51,7 +49,6 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 		return nil, fuse.ENOENT
 	}
 
-	log.Infof("FUSE: Find[d,jid=%v] %v/%v", activity.GetJournal(ctx), d, cname)
 	if plugin.ListAction().IsSupportedOn(entry) {
 		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
 		activity.Record(ctx, "FUSE: Found directory %v", childdir)
@@ -68,12 +65,9 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		log.Warnf("FUSE: Error[List,%v,jid=%v]: %v", d, activity.GetJournal(ctx), err)
 		activity.Record(ctx, "FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
-
-	log.Infof("FUSE: List[jid=%v] %v in %v", activity.GetJournal(ctx), len(entries), d)
 
 	res := make([]fuse.Dirent, 0, len(entries))
 	for cname, entry := range entries {

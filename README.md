@@ -84,7 +84,7 @@ Clone repo and within it run `go install`.
 
 Ensure `$GOPATH/bin` is part of `$PATH`.
 
-> Requires golang 1.11+.
+> Requires golang 1.12+.
 
 ### Additional macOS Setup
 

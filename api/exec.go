@@ -11,8 +11,6 @@ import (
 	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // Send serializes an ExecPacket via the provided json encoder.
@@ -24,7 +22,7 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 		// will error w/ a broken pipe.
 	default:
 		if err := w.Encode(p); err != nil {
-			log.Warnf("Error encoding the packet from %v: %v", p.TypeField, err)
+			activity.Record(ctx, "Error encoding the packet from %v: %v", p.TypeField, err)
 		}
 	}
 }
