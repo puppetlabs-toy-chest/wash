@@ -63,7 +63,7 @@ func formatListEntries(ls []apitypes.Entry) string {
 
 		table[i] = []string{name, mtimeStr, verbs}
 	}
-	return cmdutil.FormatTable(headers(), table)
+	return cmdutil.NewTableWithHeaders(headers(), table).Format()
 }
 
 func listMain(cmd *cobra.Command, args []string) exitCode {
