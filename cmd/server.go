@@ -25,6 +25,12 @@ func serverCommand() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 	}
 
+	serverCmd.Flags().String("loglevel", "info", "Set the logging level")
+	errz.Fatal(viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel")))
+
+	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
+	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
+
 	serverCmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
 	errz.Fatal(viper.BindPFlag("external-plugins", serverCmd.Flags().Lookup("external-plugins")))
 
