@@ -88,16 +88,30 @@ var metaPrimary = Parser.add(&Primary{
 })
 
 const metaDetailedDescription = `
+The meta primary constructs a predicate on the entry's meta attribute.
+It is a specialized filter, so you should only use it if you need to
+filter your entries on a property that isn't captured by the common Wash
+attributes. For example, the meta primary can be used to filter EC2
+instances on a specific tag. It can be used to filter Docker containers
+with a specified label. In general, the meta primary can be used to filter
+on any property that's specified in the entry's meta attribute. See the
+EXAMPLES section for some interesting real-world examples.
+
+NOTE: Because it is a specialized filter, the meta primary defaults
+maxdepth to 1 if the -maxdepth flag is not provided. This is to avoid
+unnecessary recursion (and API requests), since only entries in the same
+hierarchy are likely to have the same "meta" schema. For example, it
+wouldn't make sense for 'wash find' to recurse into an EC2 instance's
+console output when it is filtering on an EC2 instance's tags.
+
+You can set maxdepth to -1 if you'd like find to always recurse.
+
+USAGE:
 (-m|-meta) (-empty | KeySequence PredicateExpression)
 
 If -empty is specified, then returns true if the entry's meta attribute
 is empty. Otherwise, returns true if the meta value specified by the key
 sequence satisfies the given predicate expression.
-
-NOTE: If the -maxdepth flag was not provided, then the meta primary
-defaults the maxdepth to 1. This is to avoid unnecessary recursion (and
-API requests) since the meta primary is a specialized filter. You can set
-maxdepth to -1 if you'd like find to always recurse.
 
 KEY SEQUENCES:
 A key sequence consists of a key token followed by zero or more "chunks".
