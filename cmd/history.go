@@ -11,13 +11,19 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func historyCommand() *cobra.Command {
 	historyCmd := &cobra.Command{
-		Use:   "history [<id>]",
+		Use:   "history [-f] [<id>]",
 		Short: "Prints the wash command history, or journal of a particular item",
 		Args:  cobra.MaximumNArgs(1),
+	}
+
+	historyCmd.Flags().BoolP("follow", "f", false, "Follow new updates")
+	if err := viper.BindPFlag("follow", historyCmd.Flags().Lookup("follow")); err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
 	}
 
 	historyCmd.RunE = toRunE(historyMain)
@@ -25,7 +31,7 @@ func historyCommand() *cobra.Command {
 	return historyCmd
 }
 
-func printJournalEntry(index string) error {
+func printJournalEntry(index string, follow bool) error {
 	idx, err := strconv.Atoi(index)
 	if err != nil {
 		return err
@@ -33,7 +39,7 @@ func printJournalEntry(index string) error {
 
 	conn := client.ForUNIXSocket(config.Socket)
 	// Translate from 1-indexing for history entries
-	rdr, err := conn.ActivityJournal(idx - 1)
+	rdr, err := conn.ActivityJournal(idx-1, follow)
 	if err != nil {
 		return err
 	}
@@ -45,9 +51,9 @@ func printJournalEntry(index string) error {
 	return err
 }
 
-func printHistory() error {
+func printHistory(follow bool) error {
 	conn := client.ForUNIXSocket(config.Socket)
-	history, err := conn.History()
+	history, err := conn.History(follow)
 	if err != nil {
 		return err
 	}
@@ -55,18 +61,22 @@ func printHistory() error {
 	// Use 1-indexing for history entries
 	indexColumnLength := len(strconv.Itoa(len(history)))
 	formatStr := "%" + strconv.Itoa(indexColumnLength) + "d  %s  %s\n"
-	for i, item := range history {
+	i := 0
+	for item := range history {
 		fmt.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
+		i++
 	}
 	return nil
 }
 
 func historyMain(cmd *cobra.Command, args []string) exitCode {
+	follow := viper.GetBool("follow")
+
 	var err error
 	if len(args) > 0 {
-		err = printJournalEntry(args[0])
+		err = printJournalEntry(args[0], follow)
 	} else {
-		err = printHistory()
+		err = printHistory(follow)
 	}
 
 	if err != nil {

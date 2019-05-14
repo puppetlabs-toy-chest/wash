@@ -40,4 +40,5 @@ const (
 	InvalidPaths       = "puppetlabs.wash/invalid-paths"
 	OutOfBounds        = "puppetlabs.wash/out-of-bounds"
 	NonWashPath        = "puppetlabs.wash/non-wash-path"
+	InvalidBool        = "puppetlabs.wash/invalid-bool"
 )

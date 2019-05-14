@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	apifs "github.com/puppetlabs/wash/api/fs"
@@ -158,4 +160,25 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, *errorResponse)
 
 	entry, err := findEntry(ctx, root, segments)
 	return entry, path, err
+}
+
+func getScalarParam(u *url.URL, key string) string {
+	vals := u.Query()[key]
+	if len(vals) > 0 {
+		// Take last value
+		return vals[len(vals)-1]
+	}
+	return ""
+}
+
+func getBoolParam(u *url.URL, key string) (bool, *errorResponse) {
+	val := getScalarParam(u, key)
+	if val != "" {
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return false, invalidBoolParam(key, val)
+		}
+		return b, nil
+	}
+	return false, nil
 }

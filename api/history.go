@@ -1,16 +1,27 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
+
+// swagger:parameters retrieveHistory getJournal
+//nolint:deadcode,unused
+type historyParams struct {
+	// stream updates when true
+	//
+	// in: query
+	Follow bool
+}
 
 // swagger:route GET /history history retrieveHistory
 //
@@ -29,16 +40,59 @@ import (
 //       404: errorResp
 //       500: errorResp
 var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	history := activity.History()
-
-	commands := make([]apitypes.Activity, len(history))
-	for i, item := range history {
-		commands[i].Description = item.Description
-		commands[i].Start = item.Start()
+	follow, err := getBoolParam(r.URL, "follow")
+	if err != nil {
+		return err
 	}
-	jsonEncoder := json.NewEncoder(w)
-	if err := jsonEncoder.Encode(&commands); err != nil {
-		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", history, err))
+
+	var enc *json.Encoder
+	if follow {
+		// Ensure every write is a flush.
+		f, ok := w.(flushableWriter)
+		if !ok {
+			return unknownErrorResponse(fmt.Errorf("Cannot stream history, response handler does not support flushing"))
+		}
+		enc = json.NewEncoder(&streamableResponseWriter{f})
+	} else {
+		enc = json.NewEncoder(w)
+	}
+
+	history := activity.History()
+	if err := writeHistory(r.Context(), enc, history); err != nil {
+		return err
+	}
+
+	if follow {
+		last := len(history)
+		for {
+			// Continue sending updates
+			select {
+			case <-r.Context().Done():
+				return nil
+			case <-time.After(1 * time.Second):
+				// Retry
+			}
+
+			history = activity.History()
+			if len(history) > last {
+				if err := writeHistory(r.Context(), enc, history[last:]); err != nil {
+					return err
+				}
+				last = len(history)
+			}
+		}
+	}
+	return nil
+}
+
+func writeHistory(ctx context.Context, enc *json.Encoder, history []activity.Journal) *errorResponse {
+	var act apitypes.Activity
+	for _, item := range history {
+		act.Description = item.Description
+		act.Start = item.Start()
+		if err := enc.Encode(&act); err != nil {
+			return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", history, err))
+		}
 	}
 	return nil
 }
@@ -73,19 +127,58 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 		return outOfBoundsRequest(len(history), err.Error())
 	}
 
-	journal := history[idx]
-	rdr, err := journal.Open()
-	if err != nil {
-		return journalUnavailableResponse(journal.String(), err.Error())
+	follow, errResp := getBoolParam(r.URL, "follow")
+	if errResp != nil {
+		return errResp
 	}
-	defer func() {
-		if err := rdr.Close(); err != nil {
-			activity.Record(r.Context(), "Failed to close journal %v: %v", journal, err)
-		}
-	}()
 
-	if _, err := io.Copy(w, rdr); err != nil {
-		return unknownErrorResponse(fmt.Errorf("Could not read journal %v: %v", journal, err))
+	journal := history[idx]
+
+	if follow {
+		// Ensure every write is a flush.
+		f, ok := w.(flushableWriter)
+		if !ok {
+			return unknownErrorResponse(fmt.Errorf("Cannot stream history, response handler does not support flushing"))
+		}
+
+		rdr, err := journal.Tail()
+		if err != nil {
+			return journalUnavailableResponse(journal.String(), err.Error())
+		}
+
+		// Ensure the reader is closed when context stops.
+		go func() {
+			<-r.Context().Done()
+			rdr.Cleanup()
+			activity.Record(r.Context(), "API: Journal %v closed by completed context: %v", journal, rdr.Stop())
+		}()
+
+		// Do an initial flush to send the header.
+		w.WriteHeader(http.StatusOK)
+		f.Flush()
+
+		for line := range rdr.Lines {
+			if line.Err != nil {
+				return unknownErrorResponse(line.Err)
+			}
+			if _, err := fmt.Fprintln(f, line.Text); err != nil {
+				return unknownErrorResponse(err)
+			}
+			f.Flush()
+		}
+	} else {
+		rdr, err := journal.Open()
+		if err != nil {
+			return journalUnavailableResponse(journal.String(), err.Error())
+		}
+
+		defer func() {
+			activity.Record(r.Context(), "API: Journal %v closed by completed context: %v", journal, rdr.Close())
+		}()
+
+		if _, err := io.Copy(w, rdr); err != nil {
+			return unknownErrorResponse(fmt.Errorf("Could not read journal %v: %v", journal, err))
+		}
 	}
 	return nil
 }

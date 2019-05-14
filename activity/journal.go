@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hpcloud/tail"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -97,6 +98,18 @@ func (j Journal) Record(msg string, a ...interface{}) {
 // Open returns a reader to read the journal.
 func (j Journal) Open() (io.ReadCloser, error) {
 	return os.Open(j.filepath())
+}
+
+var endOfFileLocation = tail.SeekInfo{Offset: -5, Whence: 2}
+
+// Tail streams updates to the journal.
+func (j Journal) Tail() (*tail.Tail, error) {
+	return tail.TailFile(j.filepath(), tail.Config{
+		Follow:    true,
+		MustExist: true,
+		Location:  &endOfFileLocation,
+		Logger:    tail.DiscardingLogger,
+	})
 }
 
 func (j Journal) filepath() string {
