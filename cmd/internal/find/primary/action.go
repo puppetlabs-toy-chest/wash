@@ -10,8 +10,10 @@ import (
 
 // actionPrimary => <action>
 //nolint
-var actionPrimary = Parser.add(&primary{
-	tokens: []string{"-action"},
+var actionPrimary = Parser.add(&Primary{
+	Description: "Returns true if the entry supports action",
+	name: "action",
+	args: "action",
 	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")

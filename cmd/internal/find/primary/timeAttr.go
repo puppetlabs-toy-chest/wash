@@ -3,6 +3,7 @@ package primary
 import (
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
@@ -27,19 +28,12 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 }
 
 // timeAttrPrimary => -<name> (+|-)?(\d+ | (numeric.DurationRegex)+)
-//
-// Example inputs:
-//   -mtime 1      (true if the difference between the entry's mtime and startTime is exactly 1 24-hour period)
-//   -mtime +1     (true if the difference between the entry's mtime and startTime is greater than 1 24-hour period)
-//   -mtime -1     (true if the difference between the entry's mtime and startTime is less than 1 24-hour period)
-//   -mtime +1h30m (true if the difference between the entry's mtime and startTime is greater than 1 hour and 30 minutes)
-//
-// NOTE: For non-unit time values (e.g. 1, +1, -1), the difference is rounded to the next 24-hour period. For
-// example, a difference of 1.5 days will be rounded to 2 days.
-func newTimeAttrPrimary(name string) *primary {
-	tk := "-" + name
-	return Parser.add(&primary{
-		tokens: []string{tk},
+func newTimeAttrPrimary(name string) *Primary {
+	return Parser.add(&Primary{
+		Description: fmt.Sprintf("Returns true if the entry's %v attribute satisfies timeP", name),
+		DetailedDescription: timeAttrDetailedDescription(name),
+		name: name,
+		args: "timeP",
 		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 			if params.StartTime.IsZero() {
 				panic("Attempting to parse a time primary without setting params.StartTime")
@@ -71,6 +65,46 @@ func newTimeAttrPrimary(name string) *primary {
 			return p, tokens[1:], nil
 		},
 	})
+}
+
+func timeAttrDetailedDescription(name string) string {
+	// Note that some of the spacing is purposefully mis-aligned
+	// because {name} is replaced with the name parameter, which
+	// is not the same # of characters as the string literal
+	// '{name}'
+	descr := `
+-{name} [+|-]n[smhdw]
+
+Returns true if the entry's {name} attribute is exactly n days,
+rounded up to the nearest day. If n is suffixed with a unit, then
+the {name} is compared as-is to n scaled as:
+
+s        second
+m        minute (60 seconds)
+h        hour   (60 minutes)
+d        day    (24 hours)
+w        week   (7 days)
+
+If n is prefixed with a +/-, then the comparison returns true if the
+{name} is greater-than/less-than n.
+
+Examples:
+  -{name} 1        Returns true if the entry's {name} is exactly 1
+                  day, rounded up to the nearest day
+
+  -{name} +1       Returns true if the entry's {name} is more than 1
+                  day ago, rounded up to the nearest day
+
+  -{name} -1       Returns true if the entry's {name} is less than 1
+                  day ago, rounded up to the nearest day
+
+  -{name} +1h      Returns true if the entry's {name} is more than one
+                  hour ago
+
+NOTE: All comparisons are made with respect to the find command's
+start time.
+`
+	return strings.NewReplacer("{name}", name).Replace(descr)
 }
 
 //nolint

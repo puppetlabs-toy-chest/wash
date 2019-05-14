@@ -2,26 +2,57 @@ package primary
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 )
 
+// Get retrieves the specified primary
+func Get(name string) *Primary {
+	return Parser.primaryMap[tokenize(name)]
+}
+
+// Table returns a table containing all of `wash find`'s available primaries
+func Table() *cmdutil.Table {
+	rows := make([][]string, len(Parser.primaries))
+	for i, p := range Parser.primaries {
+		rows[i] = make([]string, 2)
+		padding := 6
+		if p.shortName != "" {
+			padding = 2
+		}
+		rows[i][0] = strings.Repeat(" ", padding) + p.Usage()
+		rows[i][1] = p.Description
+	}
+	// Now include the "Primaries:" header row
+	rows = append(
+		[][]string{
+			[]string{"Primaries:", ""},
+		},
+		rows...,
+	)
+	return cmdutil.NewTable(rows...)
+}
+
 // Parser parses `wash find` primaries.
 var Parser = &parser{
-	primaries: make(map[string]*primary),
+	primaryMap: make(map[string]*Primary),
 }
 
 type parser struct {
 	// Options represent the passed-in `wash find` options
 	Options *types.Options
-	primaries map[string]*primary
+	primaryMap map[string]*Primary
+	primaries []*Primary
 }
 
 // IsPrimary returns true if the token is a `wash find`
 // primary
 func (parser *parser) IsPrimary(token string) bool {
-	_, ok := parser.primaries[token]
+	_, ok := parser.primaryMap[token]
 	return ok
 }
 
@@ -30,7 +61,7 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		return nil, nil, errz.NewMatchError("expected a primary")
 	}
 	token := tokens[0]
-	primary, ok := parser.primaries[token]
+	primary, ok := parser.primaryMap[token]
 	if !ok {
 		msg := fmt.Sprintf("%v: unknown primary", token)
 		return nil, nil, errz.NewMatchError(msg)
@@ -46,24 +77,50 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	return p, tokens, nil
 }
 
-func (parser *parser) add(p *primary) *primary {
-	p.tokensMap = make(map[string]struct{})
-	for _, token := range p.tokens {
-		p.tokensMap[token] = struct{}{}
-		parser.primaries[token] = p
+func (parser *parser) add(p *Primary) *Primary {
+	p.tokens = make(map[string]struct{})
+	parser.primaries = append(parser.primaries, p)
+	for _, name := range []string{p.name, p.shortName} {
+		if name != "" {
+			token := tokenize(name)
+			p.tokens[token] = struct{}{}
+			parser.primaryMap[token] = p
+		}
 	}
 	return p
 }
 
-// primary represents a `wash find` primary.
-type primary struct {
-	tokens []string
-	tokensMap map[string]struct{}
+// Primary represents a `wash find` primary.
+type Primary struct {
+	Description string
+	DetailedDescription string
+	args string
+	shortName string
+	name string
+	tokens map[string]struct{}
 	optionsSetter func(*types.Options)
 	parseFunc types.EntryPredicateParser
 }
 
+// Usage returns the primary's usage string.
+func (primary *Primary) Usage() string {
+	nameTk := tokenize(primary.name)
+	usage := fmt.Sprintf("%v", nameTk)
+	if primary.shortName != "" {
+		shortNameTk := tokenize(primary.shortName)
+		usage = fmt.Sprintf("%v, %v", shortNameTk, nameTk)
+	}
+	if primary.args != "" {
+		usage += " " + primary.args
+	}
+	return usage
+}
+
 // Parse parses a predicate from the given primary.
-func (primary *primary) Parse(tokens []string) (predicate.Predicate, []string, error) {
+func (primary *Primary) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	return primary.parseFunc(tokens)
+}
+
+func tokenize(primaryName string) string {
+	return "-" + primaryName
 }

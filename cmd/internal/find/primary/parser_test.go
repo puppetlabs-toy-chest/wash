@@ -11,6 +11,37 @@ type ParserTestSuite struct {
 	parsertest.Suite
 }
 
+func (s *ParserTestSuite) TestRegisteredPrimaries() {
+	expectedList := []*Primary{
+		actionPrimary,
+		truePrimary,
+		falsePrimary,
+		metaPrimary,
+		namePrimary,
+		pathPrimary,
+		sizePrimary,
+		ctimePrimary,
+		mtimePrimary,
+		atimePrimary,
+	}
+	expectedMp := map[string]*Primary{
+		"-action": actionPrimary,
+		"-true": truePrimary,
+		"-false": falsePrimary,
+		"-meta": metaPrimary,
+		"-m": metaPrimary,
+		"-name": namePrimary,
+		"-path": pathPrimary,
+		"-size": sizePrimary,
+		"-ctime": ctimePrimary,
+		"-mtime": mtimePrimary,
+		"-atime": atimePrimary,
+	}
+
+	s.ElementsMatch(expectedList, Parser.primaries)
+	s.Equal(expectedMp, Parser.primaryMap)
+}
+
 func (s *ParserTestSuite) TestErrors() {
 	s.RunTestCases(
 		s.NPETC("", "expected a primary", true),

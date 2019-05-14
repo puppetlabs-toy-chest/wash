@@ -9,8 +9,10 @@ import (
 
 // pathPrimary => -path ShellGlob
 //nolint
-var pathPrimary = Parser.add(&primary{
-	tokens: []string{"-path"},
+var pathPrimary = Parser.add(&Primary{
+	Description: "Returns true if the entry's normalized path matches glob",
+	name: "path",
+	args: "glob",
 	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
