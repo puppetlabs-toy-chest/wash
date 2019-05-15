@@ -40,7 +40,6 @@ var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *error
 	}
 	jsonEncoder := json.NewEncoder(w)
 	if err := jsonEncoder.Encode(&commands); err != nil {
-		activity.Record(r.Context(), "Unable to encode history: %v", err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", history, err))
 	}
 	return nil

@@ -35,11 +35,9 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ReadAction())
 	}
 
-	activity.Record(ctx, "API: Read %v", path)
 	content, err := plugin.CachedOpen(ctx, entry.(plugin.Readable))
 
 	if err != nil {
-		activity.Record(ctx, "API: Read %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction(), err.Error())
 	}
 	activity.Record(ctx, "API: Reading %v", path)
@@ -50,10 +48,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		activity.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())
 	}
 	if err != nil {
-		activity.Record(ctx, "API: Reading %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ReadAction(), err.Error())
 	}
-
-	activity.Record(ctx, "API: Reading %v complete", path)
 	return nil
 }

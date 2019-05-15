@@ -46,6 +46,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	activity.Record(r.Context(), "API: %v %v", r.Method, r.URL)
 
 	if err := handle(w, r); err != nil {
+		activity.Record(r.Context(), "API: %v %v: %v", r.Method, r.URL, err)
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
@@ -57,6 +58,8 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if _, err := fmt.Fprintln(w, err.Error()); err != nil {
 			log.Warnf("API: Failed writing error response: %v", err)
 		}
+	} else {
+		activity.Record(r.Context(), "API: %v %v complete", r.Method, r.URL)
 	}
 }
 
