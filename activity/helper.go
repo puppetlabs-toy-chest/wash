@@ -17,10 +17,15 @@ var pidJournalCache = datastore.NewMemCache()
 func JournalForPID(pid int) Journal {
 	pidStr := strconv.Itoa(pid)
 	result, err := pidJournalCache.GetOrUpdate("", pidStr, expires, true, func() (interface{}, error) {
-		proc, err := process.NewProcess(int32(pid))
 		out := NewJournal(pidStr, "")
+		// In a container, os.Getpid may return 0. We won't be able to find a process, so just return the base string.
+		if pid == 0 {
+			return out, nil
+		}
+
+		proc, err := process.NewProcess(int32(pid))
 		if err != nil {
-			return out, err
+			return nil, err
 		}
 
 		if name, err := proc.Name(); err == nil && name != "" {

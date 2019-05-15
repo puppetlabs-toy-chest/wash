@@ -1,6 +1,6 @@
-# Run with: docker run --device /dev/fuse --cap-add SYS_ADMIN -v /var/run/docker.sock:/var/run/docker.sock
-# Then enter: docker exec -it <name> sh
-
+# Run with: docker run --device /dev/fuse --cap-add SYS_ADMIN -v /var/run/docker.sock:/var/run/docker.sock -v /proc:/proc -it <name>
+# Warning: these docker options give the container complete access to the host system. This
+# container is designed for convenience, not security.
 FROM golang:alpine AS build_base
 
 RUN apk update && apk add --no-cache git
@@ -17,8 +17,5 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflag
 FROM alpine AS wash
 RUN apk update && apk add --no-cache fuse ca-certificates
 COPY --from=builder /workdir/wash /bin/wash
-WORKDIR /mnt
 
-# Eventually move to entrypoint with #!/bin/sh\nwash server /mnt 2>/var/log/wash.log &\nsh
-# Challenging now because /mnt is a different inode after wash finishes initializing.
-ENTRYPOINT ["wash", "server", "/mnt"]
+ENTRYPOINT ["wash"]

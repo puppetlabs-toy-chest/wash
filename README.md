@@ -96,18 +96,19 @@ Add your mount directory to Spotlight's list of excluded directories to avoid he
 
 ## Usage
 
-Mount `wash`'s filesystem and API server with
+Start the `wash` daemon and shell with
 ```
-wash server mnt
+wash
 ```
-In another shell, navigate to `mnt` to view available resources.
+
+The `wash` shell provides wrappers for executing most subcommands. You can usually find the native POSIX variants in `/usr/bin` or `/bin`.
 
 See available subcommands - such as `ls` and `exec` - with
 ```
 wash help
 ```
 
-When done, `cd` out of `mnt`, then run `umount mnt` or `Ctrl-C` the server process.
+When done, `exit` to exit the shell and shutdown the daemon.
 
 ### Wash by Example
 
@@ -122,8 +123,9 @@ This starts a small [Flask](http://flask.pocoo.org) webapp that keeps a count of
 
 Navigate the filesystem to view running containers
 ```
-$ cd mnt/docker/containers
-$ wash ls
+$ wash
+wash$ cd docker/containers
+wash$ wash ls
 NAME                                                                CREATED               ACTIONS
 ./                                                                  <unknown>             list
 45a0265546d63a8f1b0d17033748db1468dc49dfd09cdaf2db62c45a60e82aaf/   20 Mar 19 17:02 PDT   exec, list, metadata
@@ -137,7 +139,7 @@ log             <unknown>             read, stream
 
 Those containers are displayed as a directory, and provide access to their logs and metadata as files. Recent output from both can be accessed with common tools.
 ```
-$ tail */log
+wash$ tail */log
 ==> 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6/log <==
  * Serving Flask app "app" (lazy loading)
  * Environment: production
@@ -155,7 +157,7 @@ $ tail */log
 
 The list earlier also noted that the container "directories" support the *metadata* action. We can get structured metadata in ether YAML or JSON with `wash meta`
 ```
-$ wash meta 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6 -o yaml
+wash$ meta 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6 -o yaml
 AppArmorProfile: ""
 Args:
 - app.py
@@ -169,7 +171,7 @@ $ wash exec 45a0265546d63a8f1b0d17033748db1468dc49dfd09cdaf2db62c45a60e82aaf who
 root
 ```
 
-Try exploring `mnt/docker/volumes` to interact with the volume created for Redis.
+Try exploring `docker/volumes` to interact with the volume created for Redis.
 
 ### Record of Activity
 
