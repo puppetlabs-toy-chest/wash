@@ -6,10 +6,10 @@ import (
 
 // This file contains the implementation of the ExecCommand type
 
-// NewExecCommand creates a new ExecCommand object that runs for
-// the duration of the specified context.
-//
-// TODO: Clarify the comments here a bit.
+// NewExecCommand creates a new ExecCommand object that's tied to
+// the passed-in execution context. You should call this function
+// once you've verified that your plugin API has successfully
+// started executing the command.
 func NewExecCommand(ctx context.Context) *ExecCommand {
 	cmd := &ExecCommand{}
 	cmd.ctx = ctx
@@ -21,9 +21,9 @@ func NewExecCommand(ctx context.Context) *ExecCommand {
 	return cmd
 }
 
-// SetStopFunc sets the function that stops the running command. stopFunc is called
-// when the execution context completes to perform necessary termination. Hence,
-// it should noop for a finished command.
+// SetStopFunc sets the function that stops the running command. stopFunc
+// is called when the execution context completes to perform necessary
+// termination. Hence, it should noop for a finished command.
 func (cmd *ExecCommand) SetStopFunc(stopFunc func()) {
 	if stopFunc != nil {
 		go func() {
@@ -33,12 +33,14 @@ func (cmd *ExecCommand) SetStopFunc(stopFunc func()) {
 	}
 }
 
-// Stdout returns the command's stdout stream
+// Stdout returns the command's stdout stream. Attach this to your
+// plugin API's stdout stream.
 func (cmd *ExecCommand) Stdout() *OutputStream {
 	return cmd.stdout
 }
 
-// Stderr returns the command's stderr stream
+// Stderr returns the command's stderr stream. Attach this to your
+// plugin API's stderr stream.
 func (cmd *ExecCommand) Stderr() *OutputStream {
 	return cmd.stderr
 }

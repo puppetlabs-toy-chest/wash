@@ -105,6 +105,7 @@ type ExecOutputChunk struct {
 }
 
 // ExecCommand represents a running command that was invoked by Execable#exec.
+// You should use plugin.NewExecCommand to create these objects.
 type ExecCommand struct {
 	ctx        context.Context
 	exitCodeCB func() (int, error)
