@@ -27,40 +27,6 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	}
 }
 
-func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.ExecOutputChunk) {
-	if outputCh == nil {
-		return
-	}
-
-	for chunk := range outputCh {
-		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
-		if err := chunk.Err; err != nil {
-			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
-		} else {
-			packet.Data = chunk.Data
-		}
-
-		sendPacket(ctx, w, &packet)
-	}
-}
-
-func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int, error)) {
-	if exitCodeCB == nil {
-		return
-	}
-
-	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
-
-	exitCode, err := exitCodeCB()
-	if err != nil {
-		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
-	} else {
-		packet.Data = exitCode
-	}
-
-	sendPacket(ctx, w, &packet)
-}
-
 // swagger:route POST /fs/exec exec executeCommand
 //
 // Execute a command on a remote system
@@ -110,24 +76,36 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
-	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
+	cmd, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
-	}
-
-	// Setup context cancellation handling
-	if result.CancelFunc != nil {
-		go func() {
-			<-ctx.Done()
-			result.CancelFunc()
-		}()
 	}
 
 	w.WriteHeader(http.StatusOK)
 	fw.Flush()
 
+	// Stream the command's output
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
-	streamOutput(ctx, enc, result.OutputCh)
-	streamExitCode(ctx, enc, result.ExitCodeCB)
+	for chunk := range cmd.OutputCh() {
+		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
+		if err := chunk.Err; err != nil {
+			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
+		} else {
+			packet.Data = chunk.Data
+		}
+
+		sendPacket(ctx, enc, &packet)
+	}
+
+	// Now stream its exit code
+	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
+	exitCode, err := cmd.ExitCode()
+	if err != nil {
+		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
+	} else {
+		packet.Data = exitCode
+	}
+	sendPacket(ctx, enc, &packet)
+
 	return nil
 }

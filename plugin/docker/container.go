@@ -56,9 +56,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil
 }
 
-func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
-	execResult := plugin.ExecResult{}
-
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	command := append([]string{cmd}, args...)
 	activity.Record(ctx, "Exec %v on %v", command, c.Name())
 
@@ -68,29 +66,18 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 	created, err := c.client.ContainerExecCreate(ctx, c.id, cfg)
 	if err != nil {
-		return execResult, err
+		return nil, err
 	}
 
 	resp, err := c.client.ContainerExecAttach(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
-		return execResult, err
+		return nil, err
 	}
 
-	// Asynchronously copy container exec output to an exec output channel.
-	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
-	go func() {
-		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
-		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
-		stdout.CloseWithError(err)
-		stderr.CloseWithError(err)
-		resp.Close()
-	}()
-
 	// If stdin is supplied, asynchronously copy it to container exec input.
-	var writeErr error
 	if opts.Stdin != nil {
 		go func() {
-			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
+			_, writeErr := io.Copy(resp.Conn, opts.Stdin)
 			// If using a Tty, wait until done reading in case we need to send Ctrl-C; when a Tty is
 			// allocated commands expect user input and will respond to control signals. Otherwise close
 			// input now to ensure commands that depend on EOF execute correctly.
@@ -101,8 +88,8 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}()
 	}
 
-	execResult.OutputCh = outputCh
-	execResult.CancelFunc = func() {
+	execCmd := plugin.NewExecCommand(ctx)
+	execCmd.SetStopFunc(func() {
 		// Close the response on cancellation. Copying will block until there's more to read from the
 		// exec output. For an action with no more output it may never return.
 		if opts.Tty {
@@ -111,24 +98,27 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 			activity.Record(ctx, "Sent ETX on context termination: %v", err)
 		}
 		resp.Close()
-	}
-	execResult.ExitCodeCB = func() (int, error) {
-		if writeErr != nil {
-			return 0, err
-		}
+	})
+	// Asynchronously copy container exec output, then fetch the exit code once
+	// the copy's finished.
+	go func() {
+		_, err := stdcopy.StdCopy(execCmd.Stdout(), execCmd.Stderr(), resp.Reader)
+		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
+		execCmd.CloseStreamsWithError(err)
+		resp.Close()
 
+		// Command's finished. Now send the exit code.
 		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
 		if err != nil {
-			return 0, err
+			execCmd.SetExitCodeErr(err)
+			return
 		}
-
 		if resp.Running {
-			return 0, fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF")
+			execCmd.SetExitCodeErr(fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF"))
+			return
 		}
-
 		activity.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
-		return resp.ExitCode, nil
-	}
-
-	return execResult, nil
+		execCmd.SetExitCode(resp.ExitCode)
+	}()
+	return execCmd, nil
 }

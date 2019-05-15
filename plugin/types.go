@@ -104,25 +104,26 @@ type ExecOutputChunk struct {
 	Err       error
 }
 
-// ExecResult is a struct that contains the result of invoking Execable#exec.
-// Any of these fields can be nil.
+// ExecCommand represents a command that was invoked by a call to Exec.
+// It is a sealed interface, meaning you must use plugin.NewExecCommand
+// to create instances of these objects.
 //
-// OutputCh: contains timestamped chunks of the running command's stdout/stderr. This should be set
-//           to the channel that's returned by plugin.CreateExecOutputStreams(). OutputCh must be
-//           closed to signal that execution is complete.
-// ExitCodeCB: is called after execution completes to determine final status of execution.
-// CancelFunc: cancels a running command. It should noop for a finished command. CancelFunc is
-//             called when the execution context completes to perform necessary termination.
-type ExecResult struct {
-	OutputCh   <-chan ExecOutputChunk
-	ExitCodeCB func() (int, error)
-	CancelFunc func()
+// OutputCh returns a channel containing timestamped chunks of the command's
+// stdout/stderr.
+//
+// ExitCode returns the command's exit code. It will block until the command's
+// exit code is set, or until the execution context is cancelled. ExitCode will
+// return an error if it fails to fetch the command's exit code.
+type ExecCommand interface {
+	OutputCh() <-chan ExecOutputChunk
+	ExitCode() (int, error)
+	sealed()
 }
 
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
-	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error)
 }
 
 // Streamable is an entry that returns a stream of updates.

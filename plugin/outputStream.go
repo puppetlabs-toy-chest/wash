@@ -13,6 +13,8 @@ type OutputStream struct {
 	id         ExecPacketType
 	ch         chan ExecOutputChunk
 	closer     *multiCloser
+	mux        sync.Mutex
+	closed     bool
 }
 
 func (s *OutputStream) sendData(timestamp time.Time, data string) {
@@ -41,13 +43,19 @@ func (s *OutputStream) Write(data []byte) (int, error) {
 	return len(data), err
 }
 
-// Close ensures the channel is closed when the last OutputStream is closed.
-func (s *OutputStream) Close() {
-	s.closer.Close()
-}
-
-// CloseWithError sends the given error before calling Close()
+// CloseWithError sends the given error before closing the OutputStream.
+// It will noop if the OutputStream's already closed.
 func (s *OutputStream) CloseWithError(err error) {
+	// The lock's necessary because this can be called by multiple threads
+	// (e.g. the goroutine in NewExecCommand + ExecCommandImpl#CloseStreamsWithError)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if s.closed {
+		return
+	}
+	defer func() {
+		s.closed = true
+	}()
 	if err != nil {
 		// Avoid re-sending ctx.Err() if it was already sent
 		// by OutputStream#Write
@@ -55,8 +63,7 @@ func (s *OutputStream) CloseWithError(err error) {
 			s.sendError(time.Now(), err)
 		}
 	}
-
-	s.Close()
+	s.closer.Close()
 }
 
 type multiCloser struct {
@@ -72,20 +79,4 @@ func (c *multiCloser) Close() {
 		close(c.ch)
 	}
 	c.mux.Unlock()
-}
-
-// CreateExecOutputStreams creates a pair of writers representing stdout
-// and stderr. They are used to transfer chunks of the Exec'ed cmd's
-// output in the order they're received by the corresponding API. The
-// writers maintain the ordering by writing to a channel.
-//
-// This method returns outputCh, stdout, and stderr, respectively.
-func CreateExecOutputStreams(ctx context.Context) (<-chan ExecOutputChunk, *OutputStream, *OutputStream) {
-	outputCh := make(chan ExecOutputChunk)
-	closer := &multiCloser{ch: outputCh, countdown: 2}
-
-	stdout := &OutputStream{ctx: ctx, id: Stdout, ch: outputCh, closer: closer}
-	stderr := &OutputStream{ctx: ctx, id: Stderr, ch: outputCh, closer: closer}
-
-	return outputCh, stdout, stderr
 }
