@@ -29,21 +29,16 @@ var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRe
 		return errResp
 	}
 
-	ctx := r.Context()
-	activity.Record(ctx, "API: Cache DELETE %v", path)
 	deleted, err := plugin.ClearCacheFor(path)
 	if err != nil {
-		activity.Record(ctx, "API: Cache DELETE flush cache errored constructing regexp from %v: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not use path %v in a regexp: %v", path, err))
 	}
+	activity.Record(r.Context(), "API: Cache DELETE %v %+v", path, deleted)
 
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(deleted); err != nil {
-		activity.Record(ctx, "API: Cache DELETE marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal deleted keys for %v: %v", path, err))
 	}
-
-	activity.Record(ctx, "API: Cache DELETE %v complete: %v", path, deleted)
 	return nil
 }

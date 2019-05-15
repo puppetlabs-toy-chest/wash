@@ -112,7 +112,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
-		activity.Record(ctx, "API: Exec %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}
 
@@ -130,7 +129,5 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
 	streamOutput(ctx, enc, result.OutputCh)
 	streamExitCode(ctx, enc, result.ExitCodeCB)
-
-	activity.Record(ctx, "API: Exec %v complete", path)
 	return nil
 }

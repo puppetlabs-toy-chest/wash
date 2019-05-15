@@ -44,12 +44,9 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ListAction())
 	}
 
-	activity.Record(ctx, "API: List %v", path)
 	group := entry.(plugin.Group)
 	entries, err := plugin.CachedList(ctx, group)
 	if err != nil {
-		activity.Record(ctx, "API: List %v errored: %v", path, err)
-
 		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 			return duplicateCNameResponse(cnameErr)
 		}
@@ -68,10 +65,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
-		activity.Record(ctx, "API: List marshalling %v errored: %v", path, err)
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
-
-	activity.Record(ctx, "API: List %v complete", path)
 	return nil
 }

@@ -41,11 +41,9 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
-	activity.Record(ctx, "API: Stream %v", path)
 	rdr, err := entry.(plugin.Streamable).Stream(ctx)
 
 	if err != nil {
-		activity.Record(ctx, "API: Stream %v errored: %v", path, err)
 		return erroredActionResponse(path, plugin.StreamAction(), err.Error())
 	}
 	activity.Record(ctx, "API: Streaming %v", path)
@@ -65,7 +63,5 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		// Common for copy to error when the caller closes the connection.
 		activity.Record(ctx, "API: Streaming %v errored: %v", path, err)
 	}
-
-	activity.Record(ctx, "API: Streaming %v complete", path)
 	return nil
 }
