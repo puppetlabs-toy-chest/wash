@@ -126,7 +126,7 @@ There are tons of ways to get involved with `wash`, whether or not you're a prog
 
 - Did you script something cool that usees `wash` under the hood? Please let us know, and how we can help!
 
-- Can you sling HTML, or Markdown? This site is built using Hugo, and the source is in our [github repo](https://github.com/puppetlabs/wash/website). We'd love help documenting stuff!
+- Can you sling HTML, or Markdown? This site is built using Hugo, and the source is in our [github repo](https://github.com/puppetlabs/wash/tree/master/website). We'd love help documenting stuff!
 
 - Did you give a talk or presentation on `wash`? Give us the link, so we can help promote it!
 
