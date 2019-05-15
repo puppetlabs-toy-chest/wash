@@ -31,21 +31,25 @@ pygmentsStyle = "vs"
 [menu]
   # Header
   [[menu.main]]
+    url = "api"
+    name = "api"
+    weight = 1
+  [[menu.main]]
     url = "#"
     name = "news"
-    weight = 1
+    weight = 4
   [[menu.main]]
     url = "https://github.com/puppetlabs/wash"
     name = "github"
-    weight = 2
+    weight = 7
   [[menu.main]]
     url = "https://github.com/puppetlabs/wash/releases"
     name = "download"
-    weight = 3
+    weight = 10
   [[menu.main]]
     url = "https://puppetcommunity.slack.com/app_redirect?channel=wash"
     name = "slack"
-    weight = 4
+    weight = 13
 
 # Links format
 [permalinks]

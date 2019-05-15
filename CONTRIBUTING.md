@@ -32,21 +32,6 @@ Versioning for the kubernetes and docker projects don't work well with Go module
 
 It should always be safe to run `go get -u=patch` to pickup patches.
 
-### Regenerate swagger docs
-
-[api docs](./docs/api.json) are generated using [go-swagger](https://github.com/go-swagger/go-swagger). Install `swagger` with
-```
-go get -u github.com/go-swagger/go-swagger/cmd/swagger
-```
-
-Then run it and [redoc-cli](https://github.com/Rebilly/ReDoc/blob/master/cli/README.md) to update the static docs page.
-```
-swagger generate spec > docs/api.json
-npx redoc-cli bundle docs/api.json -o docs/api.html --options.nativeScrollbars
-```
-
-> Note that this is somewhat painful to get right with the current state of Go modules. Please ask for help if you have trouble.
-
 ## How to create a new plugin
 
 The [plugin](./plugin) package defines a set of interfaces that a plugin can implement to enable specific behaviors.
