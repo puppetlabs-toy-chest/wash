@@ -182,10 +182,10 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 	return nil, fmt.Errorf("could not access the latest console log: %v", err)
 }
 
-func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
+func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	meta, err := inst.Metadata(ctx)
 	if err != nil {
-		return plugin.ExecResult{}, err
+		return plugin.ExecCommand{}, err
 	}
 
 	// TODO: scrape default user and authorized keys from console output. Probably only works for Amazon AMIs.
@@ -197,7 +197,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	} else if ipaddr, ok := meta["PublicIpAddress"]; ok {
 		hostname = ipaddr.(string)
 	} else {
-		return plugin.ExecResult{}, fmt.Errorf("No public interface found for %v", inst)
+		return plugin.ExecCommand{}, fmt.Errorf("No public interface found for %v", inst)
 	}
 
 	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be

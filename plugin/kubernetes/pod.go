@@ -119,7 +119,7 @@ func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return req.Stream()
 }
 
-func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	execRequest := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.Name()).
@@ -137,11 +137,11 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("stdin", "true")
 	}
 
-	execResult := plugin.ExecResult{}
+	execCommand := plugin.ExecCommand{}
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
 	if err != nil {
-		return execResult, errors.Wrap(err, "kubernetes.pod.Exec request")
+		return execCommand, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
 	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
@@ -158,7 +158,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			stdin = r
 		}
 
-		execResult.CancelFunc = func() {
+		execCommand.StopFunc = func() {
 			// Close the response on context cancellation. Copying will block until there's more to
 			// read from the exec output. For an action with no more output it may never return.
 			// Append Ctrl-C to input to signal end of execution.
@@ -181,10 +181,10 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		stderr.CloseWithError(err)
 	}()
 
-	execResult.OutputCh = outputCh
-	execResult.ExitCodeCB = func() (int, error) {
+	execCommand.OutputCh = outputCh
+	execCommand.ExitCodeCB = func() (int, error) {
 		return exitcode, nil
 	}
 
-	return execResult, nil
+	return execCommand, nil
 }

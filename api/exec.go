@@ -110,16 +110,16 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
-	result, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
+	cmd, err := entry.(plugin.Execable).Exec(ctx, body.Cmd, body.Args, opts)
 	if err != nil {
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}
 
 	// Setup context cancellation handling
-	if result.CancelFunc != nil {
+	if cmd.StopFunc != nil {
 		go func() {
 			<-ctx.Done()
-			result.CancelFunc()
+			cmd.StopFunc()
 		}()
 	}
 
@@ -127,7 +127,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	fw.Flush()
 
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
-	streamOutput(ctx, enc, result.OutputCh)
-	streamExitCode(ctx, enc, result.ExitCodeCB)
+	streamOutput(ctx, enc, cmd.OutputCh)
+	streamExitCode(ctx, enc, cmd.ExitCodeCB)
 	return nil
 }

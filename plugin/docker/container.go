@@ -56,8 +56,8 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil
 }
 
-func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
-	execResult := plugin.ExecResult{}
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+	execCommand := plugin.ExecCommand{}
 
 	command := append([]string{cmd}, args...)
 	activity.Record(ctx, "Exec %v on %v", command, c.Name())
@@ -68,12 +68,12 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 	created, err := c.client.ContainerExecCreate(ctx, c.id, cfg)
 	if err != nil {
-		return execResult, err
+		return execCommand, err
 	}
 
 	resp, err := c.client.ContainerExecAttach(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
-		return execResult, err
+		return execCommand, err
 	}
 
 	// Asynchronously copy container exec output to an exec output channel.
@@ -101,8 +101,8 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}()
 	}
 
-	execResult.OutputCh = outputCh
-	execResult.CancelFunc = func() {
+	execCommand.OutputCh = outputCh
+	execCommand.StopFunc = func() {
 		// Close the response on cancellation. Copying will block until there's more to read from the
 		// exec output. For an action with no more output it may never return.
 		if opts.Tty {
@@ -112,7 +112,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}
 		resp.Close()
 	}
-	execResult.ExitCodeCB = func() (int, error) {
+	execCommand.ExitCodeCB = func() (int, error) {
 		if writeErr != nil {
 			return 0, err
 		}
@@ -130,5 +130,5 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return resp.ExitCode, nil
 	}
 
-	return execResult, nil
+	return execCommand, nil
 }

@@ -299,8 +299,8 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 }
 
 // Exec executes a command on the given entry
-func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error) {
-	execResult := ExecResult{}
+func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
+	execCmd := ExecCommand{}
 
 	// TODO: Figure out how to pass-in opts when we have entries
 	// besides Stdin. Could do something like
@@ -328,7 +328,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	if err := cmdObj.Start(); err != nil {
 		stdout.Close()
 		stderr.Close()
-		return execResult, err
+		return execCmd, err
 	}
 
 	// Wait for the command to finish
@@ -346,8 +346,8 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 		stderr.CloseWithError(err)
 	}()
 
-	execResult.OutputCh = outputCh
-	execResult.ExitCodeCB = func() (int, error) {
+	execCmd.OutputCh = outputCh
+	execCmd.ExitCodeCB = func() (int, error) {
 		if cmdWaitErr != nil {
 			return 0, cmdWaitErr
 		}
@@ -355,5 +355,5 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 		return exitCode, nil
 	}
 
-	return execResult, nil
+	return execCmd, nil
 }
