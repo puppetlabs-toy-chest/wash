@@ -16,7 +16,6 @@ func NewExecCommand(ctx context.Context) *ExecCommand {
 	closer := &multiCloser{ch: cmd.outputCh, countdown: 2}
 	cmd.stdout = &OutputStream{ctx: ctx, id: Stdout, ch: cmd.outputCh, closer: closer}
 	cmd.stderr = &OutputStream{ctx: ctx, id: Stderr, ch: cmd.outputCh, closer: closer}
-	// TODO: Stop the command here upon context cancellation
 	return cmd
 }
 
@@ -31,18 +30,16 @@ func (cmd *ExecCommand) Stderr() *OutputStream {
 }
 
 // CloseStreams closes the command's stdout and stderr
-// streams. Use this to signal that execution is
-// complete.
+// streams.
 func (cmd *ExecCommand) CloseStreams() {
 	cmd.CloseStreamsWithError(nil)
 }
 
 // CloseStreamsWithError closes the command's stdout and stderr
-// streams with the specified error. Use this to signal that
-// execution is complete.
+// streams with the specified error.
 func (cmd *ExecCommand) CloseStreamsWithError(err error) {
-	cmd.stdout.CloseWithError(err)
-	cmd.stderr.CloseWithError(err)
+	cmd.Stdout().CloseWithError(err)
+	cmd.Stderr().CloseWithError(err)
 }
 
 // Wait waits for the command to finish, passing in each chunk
@@ -51,4 +48,22 @@ func (cmd *ExecCommand) Wait(processChunk func(ExecOutputChunk)) {
 	for chunk := range cmd.outputCh {
 		processChunk(chunk)
 	}
+}
+
+// SetExitCodeCB sets the exit code callback. This is used to fetch the
+// command's exit code after execution completes. You should use this if
+// your plugin API requires a separate request to fetch the command's exit
+// code. See the implementation of Container#Exec in the Docker plugin for
+// an example.
+func (cmd *ExecCommand) SetExitCodeCB(exitCodeCB func() (int, error)) {
+	cmd.exitCodeCB = exitCodeCB
+}
+
+// ExitCode returns the command's exit code. This should be called after
+// the command's finished its execution.
+func (cmd *ExecCommand) ExitCode() (int, error) {
+	if cmd.exitCodeCB == nil {
+		panic("cmd.ExitCode called with a nil exit code callback")
+	}
+	return cmd.exitCodeCB()
 }

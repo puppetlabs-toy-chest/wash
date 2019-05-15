@@ -56,7 +56,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 		return nil, fmt.Errorf("exec errored: %v", errs)
 	}
 
-	exitcode, err := cmd.ExitCodeCB()
+	exitcode, err := cmd.ExitCode()
 	if err != nil {
 		return nil, err
 	} else if exitcode != 0 {

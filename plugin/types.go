@@ -111,8 +111,8 @@ type ExecOutputChunk struct {
 // StopFunc:    stops the command. It should noop for a finished command. StopFunc is called when
 //              the execution context completes to perform necessary termination.
 type ExecCommand struct {
-	ExitCodeCB func() (int, error)
 	StopFunc   func()
+	exitCodeCB func() (int, error)
 	outputCh   chan ExecOutputChunk
 	stdout     *OutputStream
 	stderr     *OutputStream

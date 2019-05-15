@@ -343,13 +343,13 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 		execCmd.CloseStreamsWithError(err)
 	}()
 
-	execCmd.ExitCodeCB = func() (int, error) {
+	execCmd.SetExitCodeCB(func() (int, error) {
 		if cmdWaitErr != nil {
 			return 0, cmdWaitErr
 		}
 
 		return exitCode, nil
-	}
+	})
 
 	return execCmd, nil
 }

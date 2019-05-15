@@ -183,9 +183,9 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execCommand.CloseStreamsWithError(err)
 	}()
 
-	execCommand.ExitCodeCB = func() (int, error) {
+	execCommand.SetExitCodeCB(func() (int, error) {
 		return exitcode, nil
-	}
+	})
 
 	return execCommand, nil
 }

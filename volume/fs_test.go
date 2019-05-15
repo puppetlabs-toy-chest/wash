@@ -47,9 +47,9 @@ func createResult(data string) *plugin.ExecCommand {
 		}
 		cmd.CloseStreams()
 	}()
-	cmd.ExitCodeCB = func() (int, error) {
+	cmd.SetExitCodeCB(func() (int, error) {
 		return 0, nil
-	}
+	})
 	return cmd
 }
 

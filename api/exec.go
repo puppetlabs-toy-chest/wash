@@ -27,23 +27,6 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	}
 }
 
-func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int, error)) {
-	if exitCodeCB == nil {
-		return
-	}
-
-	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
-
-	exitCode, err := exitCodeCB()
-	if err != nil {
-		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
-	} else {
-		packet.Data = exitCode
-	}
-
-	sendPacket(ctx, w, &packet)
-}
-
 // swagger:route POST /fs/exec exec executeCommand
 //
 // Execute a command on a remote system
@@ -109,6 +92,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	w.WriteHeader(http.StatusOK)
 	fw.Flush()
 
+	// Wait for the command to finish running
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
 	cmd.Wait(func(chunk plugin.ExecOutputChunk) {
 		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
@@ -120,6 +104,16 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 
 		sendPacket(ctx, enc, &packet)
 	})
-	streamExitCode(ctx, enc, cmd.ExitCodeCB)
+
+	// Stream the command's exit code
+	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
+	exitCode, err := cmd.ExitCode()
+	if err != nil {
+		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
+	} else {
+		packet.Data = exitCode
+	}
+	sendPacket(ctx, enc, &packet)
+
 	return nil
 }

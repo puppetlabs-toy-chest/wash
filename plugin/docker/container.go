@@ -110,7 +110,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}
 		resp.Close()
 	}
-	execCommand.ExitCodeCB = func() (int, error) {
+	execCommand.SetExitCodeCB(func() (int, error) {
 		if writeErr != nil {
 			return 0, err
 		}
@@ -126,7 +126,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 
 		activity.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
 		return resp.ExitCode, nil
-	}
+	})
 
 	return execCommand, nil
 }

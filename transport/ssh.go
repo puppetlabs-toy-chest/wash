@@ -170,13 +170,13 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 		activity.Record(ctx, "Closing session on context termination for %v: %v", id.Host, session.Close())
 	}
-	execCmd.ExitCodeCB = func() (int, error) {
+	execCmd.SetExitCodeCB(func() (int, error) {
 		if exitErr == nil {
 			return 0, nil
 		} else if err, ok := exitErr.(*ssh.ExitError); ok {
 			return err.ExitStatus(), nil
 		}
 		return 0, exitErr
-	}
+	})
 	return execCmd, nil
 }
