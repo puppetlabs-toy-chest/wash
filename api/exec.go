@@ -84,9 +84,9 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	w.WriteHeader(http.StatusOK)
 	fw.Flush()
 
-	// Wait for the command to finish running, streaming its output in the process.
+	// Stream the command's output
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
-	exitCode, err := cmd.Wait(func(chunk plugin.ExecOutputChunk) {
+	for chunk := range cmd.StreamOutput() {
 		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
 		if err := chunk.Err; err != nil {
 			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
@@ -95,10 +95,11 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		}
 
 		sendPacket(ctx, enc, &packet)
-	})
+	}
 
-	// Now stream the exit code
+	// Now stream its exit code
 	packet := apitypes.ExecPacket{TypeField: apitypes.Exitcode, Timestamp: time.Now()}
+	exitCode, err := cmd.ExitCode()
 	if err != nil {
 		packet.Err = newUnknownErrorObj(fmt.Errorf("could not get the exit code: %v", err))
 	} else {

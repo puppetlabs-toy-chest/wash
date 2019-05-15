@@ -102,29 +102,6 @@ func (cmd *RunningCommand) CloseStreams(err error) {
 	cmd.streamsClosed = true
 }
 
-// Wait waits for the command to finish, passing in each chunk
-// of the command's output to processChunk. It returns the command's
-// exit code, or an error if it failed to fetch the command's exit
-// code.
-func (cmd *RunningCommand) Wait(processChunk func(ExecOutputChunk)) (int, error) {
-	for chunk := range cmd.outputCh {
-		processChunk(chunk)
-	}
-	select {
-	// Note that the channels are only closed when the context is cancelled.
-	case exitCode, ok := <-cmd.exitCodeCh:
-		if !ok {
-			return 0, fmt.Errorf("failed to fetch the command's exit code: %v", cmd.ctx.Err())
-		}
-		return exitCode, nil
-	case err, ok := <-cmd.exitCodeErrCh:
-		if !ok {
-			return 0, fmt.Errorf("failed to fetch the command's exit code: %v", cmd.ctx.Err())
-		}
-		return 0, err
-	}
-}
-
 // SetExitCode sets the command's exit code. You should call this
 // function after closing the command's output streams.
 func (cmd *RunningCommand) SetExitCode(exitCode int) {
@@ -153,4 +130,27 @@ func (cmd *RunningCommand) SetExitCodeErr(err error) {
 	default:
 		cmd.exitCodeErrCh <- err
 	}
+}
+
+// StreamOutput streams the running command's output
+func (cmd *RunningCommand) StreamOutput() <-chan ExecOutputChunk {
+	return cmd.outputCh
+}
+
+// ExitCode returns the command's exit code. It will block until the command
+// has finished its execution, or until the execution context is cancelled.
+// ExitCode will return an error if it fails to fetch the command's exit code.
+func (cmd *RunningCommand) ExitCode() (int, error) {
+	select {
+		// Note that the channels are only closed when the context is cancelled.
+		case exitCode, ok := <-cmd.exitCodeCh:
+			if ok {
+				return exitCode, nil
+			}
+		case err, ok := <-cmd.exitCodeErrCh:
+			if ok {
+				return 0, err
+			}
+	}
+	return 0, fmt.Errorf("failed to fetch the command's exit code: %v", cmd.ctx.Err())
 }
