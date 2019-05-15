@@ -82,10 +82,10 @@
 <li>E.g. on CentOS: <code>yum install fuse fuse-libs</code></li>
 <li>E.g. on Ubuntu: <code>apt-get install fuse</code></li>
 </ul></li>
-<li>Start the server
+<li>Start <code>wash</code>
 
 <ul>
-<li><code>./wash server wash-root-dir</code></li>
+<li><code>./wash</code></li>
 </ul></li>
 </ol>
 
@@ -93,9 +93,9 @@
 
 <p>For more of a guided tour that includes spinning up some resources <code>wash</code> can talk to, check out our <a href="https://github.com/puppetlabs/wash#wash-by-example"><code>docker compose</code> example</a>.</p>
 
-<p>Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore <code>wash-root-dir</code>. You can then start experimenting with <code>wash</code> subcommands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more <code>wash</code>-optimized way.</p>
+<p>Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore. You can then start experimenting with <code>wash</code> subcommands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more <code>wash</code>-optimized way. <code>wash</code> provides wrappers for some of these; you can usually find the native POSIX variants in <code>/usr/bin</code> or <code>/bin</code>.</p>
 
-<p>When you&rsquo;re done, make sure there are no processes still using <code>wash-root-dir</code>, and you can just <code>Ctrl-C</code> the server.</p>
+<p>When you&rsquo;re done, <code>exit</code> the shell.</p>
 
 <h2 id="current-features">Current features</h2>
 

@@ -42,16 +42,16 @@ Exploring, understanding, and inspecting modern infrastructure should be simple 
    * E.g. on MacOS using homebrew: `brew cask install osxfuse`
    * E.g. on CentOS: `yum install fuse fuse-libs`
    * E.g. on Ubuntu: `apt-get install fuse`
-3. Start the server
-   * `./wash server wash-root-dir`
+3. Start `wash`
+   * `./wash`
 
 At this point, if you haven't already, you should fire up some resources that `wash` can actually introspect. Otherwise, as Han Solo would say, "this is going to be a real short trip". So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. 
 
 For more of a guided tour that includes spinning up some resources `wash` can talk to, check out our [`docker compose` example](https://github.com/puppetlabs/wash#wash-by-example).
 
-Once the server is up, you can use vanilla `ls`, `cd`, etc. to explore `wash-root-dir`. You can then start experimenting with `wash` subcommands, like `wash ls` and `wash tail`, to navigate that filesystem in a more `wash`-optimized way.
+Once the server is up, you can use vanilla `ls`, `cd`, etc. to explore. You can then start experimenting with `wash` subcommands, like `wash ls` and `wash tail`, to navigate that filesystem in a more `wash`-optimized way. `wash` provides wrappers for some of these; you can usually find the native POSIX variants in `/usr/bin` or `/bin`.
 
-When you're done, make sure there are no processes still using `wash-root-dir`, and you can just `Ctrl-C` the server.
+When you're done, `exit` the shell.
 
 ## Current features
 
