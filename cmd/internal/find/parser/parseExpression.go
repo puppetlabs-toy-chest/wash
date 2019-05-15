@@ -44,11 +44,11 @@ func OperandsTable() *cmdutil.Table {
 	return cmdutil.NewTable(
 		[]string{"Operands:",    ""},
 		[]string{"  ( e )",      "Parentheses operator. Evaluates to true if e evaluates to true"},
-		[]string{"  !, -not e", "Logical NOT operator. Evaluates to true if e evaluates to false"},
+		[]string{"  !, -not e",  "Logical NOT operator. Evaluates to true if e evaluates to false"},
 		[]string{"  e1 -and e2", "Logical AND operator. Evalutes to true if both e1 and e2 are true"},
 		[]string{"  e1 -a e2",   ""},
 		[]string{"  e1 e2",      ""},
-		[]string{"  e1 -or e2", "Logical OR operator. Evalutes to true if either e1 or e2 are true"},
+		[]string{"  e1 -or e2",  "Logical OR operator. Evalutes to true if either e1 or e2 are true"},
 		[]string{"  e1 -o e2",   ""},
 	)
 }
@@ -123,6 +123,5 @@ find ec2/instances -m .state.name running -m .tags[?] .key termination_date .val
     Print out all the running EC2 instances whose termination_date tag expired.
     Note that the ".key termination_date -a .value +0h" portion of the example
     is parsed as part of the meta primary's expression, not the top level
-    expression parser. The latter parses the example as "Meta(state.name, ...)
-    AND Meta(tags[?], ...)", which is two primaries being ANDed together.
+    expression parser.
 `

@@ -70,10 +70,10 @@ func OptionsTable() *cmdutil.Table {
 	return cmdutil.NewTable(
 		[]string{"Flags:",                 ""},
 		[]string{"      -depth",           "Visit the children first before the parent (default false)"},
-		[]string{"      -mindepth levels", "Do not print entries at levels less than levels (default 0)"},
-		[]string{"      -maxdepth levels", "Do not print entries at levels greater than levels (default infinity)"},
-		[]string{"  -h, -help",            "Print the usage"},
-		[]string{"  -h, -help <primary>",  "Print a detailed description of the specified primary"},
+		[]string{"      -mindepth depth",  "Do not print entries at levels less than depth (default 0)"},
+		[]string{"      -maxdepth depth",  "Do not print entries at levels greater than depth (default infinity)"},
+		[]string{"  -h, -help",            "Print this usage"},
+		[]string{"  -h, -help <primary>",  "Print a detailed description of the specified primary (e.g. \"-help meta\")"},
 		[]string{"  -h, -help syntax",     "Print a detailed description of find's expression syntax"},
 	)
 }

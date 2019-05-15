@@ -12,10 +12,10 @@ import (
 //
 //nolint
 var sizePrimary = Parser.add(&Primary{
-	Description: "Returns true if the entry's size attribute satisfies sizeP",
+	Description: "Returns true if the entry's size attribute satisfies the given size predicate",
 	DetailedDescription: sizeDetailedDescription,
 	name: "size",
-	args: "sizeP",
+	args: "[+|-]n[ckMGTP]",
 	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
@@ -49,7 +49,7 @@ const sizeDetailedDescription = `
 
 Returns true if the entry's size attribute is n 512-byte blocks,
 rounded up to the nearest block. If n is suffixed with a unit,
-then the size is compared as-is to n scaled as:
+then the raw size is compared to n scaled as:
 
 c        character (byte)
 k        kibibytes (1024 bytes)

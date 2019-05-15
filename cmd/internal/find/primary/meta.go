@@ -60,10 +60,10 @@ N                   => \d+ (i.e. some number > 0)
 */
 //nolint
 var metaPrimary = Parser.add(&Primary{
-    Description: "Returns true if the entry's meta attribute satisfies metaP",
+    Description: "Returns true if the entry's meta attribute satisfies the expression",
     DetailedDescription: metaDetailedDescription,
     name: "meta",
-    args: "metaP",
+    args: "<expression>",
     shortName: "m",
     parseFunc: meta.Parse,
     optionsSetter: func(opts *types.Options) {
@@ -519,8 +519,8 @@ In these examples, let "m" be the value of the entry's 'meta' attribute.
 
 -m .tags[?] .key \( sales -o product \)
     Returns true if m['tags'] has at least one object o s.t. o['key'] == sales OR product.
-    In the real world, this example filters out all EC2 instances that belong to the "sales"
-    or "product" departments.
+    In the real world, this example filters out all EC2 instances that have a "sales" or
+    "product" tag.
 
 -m .state.name pending -o running
     Returns true if m['state']['name'] == pending OR running. In the real world, this

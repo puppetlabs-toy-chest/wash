@@ -30,10 +30,10 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 // timeAttrPrimary => -<name> (+|-)?(\d+ | (numeric.DurationRegex)+)
 func newTimeAttrPrimary(name string) *Primary {
 	return Parser.add(&Primary{
-		Description: fmt.Sprintf("Returns true if the entry's %v attribute satisfies timeP", name),
+		Description: fmt.Sprintf("Returns true if the entry's %v attribute satisfies the given time predicate", name),
 		DetailedDescription: timeAttrDetailedDescription(name),
 		name: name,
-		args: "timeP",
+		args: "[+|-]n[smhdw]",
 		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 			if params.StartTime.IsZero() {
 				panic("Attempting to parse a time primary without setting params.StartTime")
@@ -77,7 +77,7 @@ func timeAttrDetailedDescription(name string) string {
 
 Returns true if the entry's {name} attribute is exactly n days,
 rounded up to the nearest day. If n is suffixed with a unit, then
-the {name} is compared as-is to n scaled as:
+the raw {name} is compared to n scaled as:
 
 s        second
 m        minute (60 seconds)
