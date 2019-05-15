@@ -97,19 +97,17 @@ type Identity struct {
 // Host *.compute.amazonaws.com
 //   StrictHostKeyChecking no
 // ```
-func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
-	var execCmd plugin.ExecCommand
-
+func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
 	// find port, username, etc from .ssh/config
 	port, err := ssh_config.GetStrict(id.Host, "Port")
 	if err != nil {
-		return execCmd, err
+		return nil, err
 	}
 
 	user := id.User
 	if user == "" {
 		if user, err = ssh_config.GetStrict(id.Host, "User"); err != nil {
-			return execCmd, err
+			return nil, err
 		}
 	}
 
@@ -119,30 +117,30 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 
 	strictHostKeyChecking, err := ssh_config.GetStrict(id.Host, "StrictHostKeyChecking")
 	if err != nil {
-		return execCmd, err
+		return nil, err
 	}
 
 	connection, err := sshConnect(id.Host, port, user, strictHostKeyChecking != "no")
 	if err != nil {
-		return execCmd, fmt.Errorf("Failed to connect: %s", err)
+		return nil, fmt.Errorf("Failed to connect: %s", err)
 	}
 
 	// Run command via session
 	session, err := connection.NewSession()
 	if err != nil {
-		return execCmd, fmt.Errorf("Failed to create session: %s", err)
+		return nil, fmt.Errorf("Failed to create session: %s", err)
 	}
 
 	if opts.Tty {
 		// sshd only processes signal codes if a TTY has been allocated. So set one up when requested.
 		modes := ssh.TerminalModes{ssh.ECHO: 0, ssh.TTY_OP_ISPEED: 14400, ssh.TTY_OP_OSPEED: 14400}
 		if err := session.RequestPty("xterm", 40, 80, modes); err != nil {
-			return execCmd, fmt.Errorf("Unable to setup a TTY: %v", err)
+			return nil, fmt.Errorf("Unable to setup a TTY: %v", err)
 		}
 	}
 
-	outputch, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
-	session.Stdin, session.Stdout, session.Stderr = opts.Stdin, stdout, stderr
+	execCmd := plugin.NewExecCommand(ctx)
+	session.Stdin, session.Stdout, session.Stderr = opts.Stdin, execCmd.Stdout(), execCmd.Stderr()
 
 	if opts.Elevate {
 		cmd = append([]string{"sudo"}, cmd...)
@@ -160,11 +158,9 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 	go func() {
 		exitErr = session.Wait()
 		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
-		stdout.Close()
-		stderr.Close()
+		execCmd.CloseStreams()
 	}()
 
-	execCmd.OutputCh = outputch
 	execCmd.StopFunc = func() {
 		// Close the session on context cancellation. Copying will block until there's more to read
 		// from the exec output. For an action with no more output it may never return.

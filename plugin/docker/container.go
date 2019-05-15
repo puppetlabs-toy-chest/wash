@@ -56,9 +56,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil
 }
 
-func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
-	execCommand := plugin.ExecCommand{}
-
+func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
 	command := append([]string{cmd}, args...)
 	activity.Record(ctx, "Exec %v on %v", command, c.Name())
 
@@ -68,21 +66,21 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 	created, err := c.client.ContainerExecCreate(ctx, c.id, cfg)
 	if err != nil {
-		return execCommand, err
+		return nil, err
 	}
 
 	resp, err := c.client.ContainerExecAttach(ctx, created.ID, types.ExecStartCheck{})
 	if err != nil {
-		return execCommand, err
+		return nil, err
 	}
 
-	// Asynchronously copy container exec output to an exec output channel.
-	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
+	execCommand := plugin.NewExecCommand(ctx)
+
+	// Asynchronously copy container exec output
 	go func() {
-		_, err := stdcopy.StdCopy(stdout, stderr, resp.Reader)
+		_, err := stdcopy.StdCopy(execCommand.Stdout(), execCommand.Stderr(), resp.Reader)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
-		stdout.CloseWithError(err)
-		stderr.CloseWithError(err)
+		execCommand.CloseStreamsWithError(err)
 		resp.Close()
 	}()
 
@@ -101,7 +99,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}()
 	}
 
-	execCommand.OutputCh = outputCh
+
 	execCommand.StopFunc = func() {
 		// Close the response on cancellation. Copying will block until there's more to read from the
 		// exec output. For an action with no more output it may never return.

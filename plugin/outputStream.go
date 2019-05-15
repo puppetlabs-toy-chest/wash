@@ -73,19 +73,3 @@ func (c *multiCloser) Close() {
 	}
 	c.mux.Unlock()
 }
-
-// CreateExecOutputStreams creates a pair of writers representing stdout
-// and stderr. They are used to transfer chunks of the Exec'ed cmd's
-// output in the order they're received by the corresponding API. The
-// writers maintain the ordering by writing to a channel.
-//
-// This method returns outputCh, stdout, and stderr, respectively.
-func CreateExecOutputStreams(ctx context.Context) (<-chan ExecOutputChunk, *OutputStream, *OutputStream) {
-	outputCh := make(chan ExecOutputChunk)
-	closer := &multiCloser{ch: outputCh, countdown: 2}
-
-	stdout := &OutputStream{ctx: ctx, id: Stdout, ch: outputCh, closer: closer}
-	stderr := &OutputStream{ctx: ctx, id: Stderr, ch: outputCh, closer: closer}
-
-	return outputCh, stdout, stderr
-}

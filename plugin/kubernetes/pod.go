@@ -119,7 +119,7 @@ func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return req.Stream()
 }
 
-func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
 	execRequest := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.Name()).
@@ -137,14 +137,12 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("stdin", "true")
 	}
 
-	execCommand := plugin.ExecCommand{}
-
 	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
 	if err != nil {
-		return execCommand, errors.Wrap(err, "kubernetes.pod.Exec request")
+		return nil, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
-	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
+	execCommand := plugin.NewExecCommand(ctx)
 	exitcode := 0
 
 	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
@@ -169,7 +167,12 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	}
 
 	go func() {
-		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: stdin, Tty: opts.Tty}
+		streamOpts := remotecommand.StreamOptions{
+			Stdout: execCommand.Stdout(),
+			Stderr: execCommand.Stderr(),
+			Stdin: stdin,
+			Tty: opts.Tty,
+		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
@@ -177,11 +180,9 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			err = nil
 		}
 
-		stdout.CloseWithError(err)
-		stderr.CloseWithError(err)
+		execCommand.CloseStreamsWithError(err)
 	}()
 
-	execCommand.OutputCh = outputCh
 	execCommand.ExitCodeCB = func() (int, error) {
 		return exitcode, nil
 	}

@@ -2,6 +2,7 @@ package volume
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -36,14 +37,19 @@ func (suite *fsTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
 }
 
-func createResult(data string) plugin.ExecCommand {
-	outputch := make(chan plugin.ExecOutputChunk, 1)
-	cmd := plugin.ExecCommand{
-		OutputCh:   outputch,
-		ExitCodeCB: func() (int, error) { return 0, nil },
+func createResult(data string) *plugin.ExecCommand {
+	cmd := plugin.NewExecCommand(context.Background())
+	go func() {
+		_, err := cmd.Stdout().Write([]byte(data))
+		if err != nil {
+			msg := fmt.Sprintf("Unexpected error while setting up mocks: %v", err)
+			panic(msg)
+		}
+		cmd.CloseStreams()
+	}()
+	cmd.ExitCodeCB = func() (int, error) {
+		return 0, nil
 	}
-	outputch <- plugin.ExecOutputChunk{StreamID: plugin.Stdout, Data: data}
-	close(outputch)
 	return cmd
 }
 
@@ -145,7 +151,7 @@ type mockExecutor struct {
 	mock.Mock
 }
 
-func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
-	return arger.Get(0).(plugin.ExecCommand), arger.Error(1)
+	return arger.Get(0).(*plugin.ExecCommand), arger.Error(1)
 }

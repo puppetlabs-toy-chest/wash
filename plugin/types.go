@@ -114,15 +114,17 @@ type ExecOutputChunk struct {
 // StopFunc:    stops the command. It should noop for a finished command. StopFunc is called when
 //              the execution context completes to perform necessary termination.
 type ExecCommand struct {
-	OutputCh   <-chan ExecOutputChunk
+	OutputCh   chan ExecOutputChunk
 	ExitCodeCB func() (int, error)
 	StopFunc   func()
+	stdout     *OutputStream
+	stderr     *OutputStream
 }
 
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
-	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (*ExecCommand, error)
 }
 
 // Streamable is an entry that returns a stream of updates.

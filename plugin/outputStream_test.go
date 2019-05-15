@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"testing"
 	"time"
 
@@ -173,6 +172,8 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 
 }
 
+/*
+TODO: Move this test over to execCommand.go
 func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 	outputCh, stdout, stderr := CreateExecOutputStreams(context.Background())
 
@@ -222,8 +223,8 @@ func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 
 	// outputCh should be closed, so assert that it is
 	suite.assertClosedChannel(outputCh)
-
 }
+*/
 
 func TestOutputStream(t *testing.T) {
 	suite.Run(t, new(OutputStreamTestSuite))
