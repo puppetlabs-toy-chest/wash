@@ -12,11 +12,25 @@ import (
 // TODO: Clarify the comments here a bit.
 func NewExecCommand(ctx context.Context) *ExecCommand {
 	cmd := &ExecCommand{}
+	cmd.ctx = ctx
+	// Create the output streams
 	cmd.outputCh = make(chan ExecOutputChunk)
 	closer := &multiCloser{ch: cmd.outputCh, countdown: 2}
-	cmd.stdout = &OutputStream{ctx: ctx, id: Stdout, ch: cmd.outputCh, closer: closer}
-	cmd.stderr = &OutputStream{ctx: ctx, id: Stderr, ch: cmd.outputCh, closer: closer}
+	cmd.stdout = &OutputStream{ctx: cmd.ctx, id: Stdout, ch: cmd.outputCh, closer: closer}
+	cmd.stderr = &OutputStream{ctx: cmd.ctx, id: Stderr, ch: cmd.outputCh, closer: closer}
 	return cmd
+}
+
+// SetStopFunc sets the function that stops the running command. stopFunc is called
+// when the execution context completes to perform necessary termination. Hence,
+// it should noop for a finished command.
+func (cmd *ExecCommand) SetStopFunc(stopFunc func()) {
+	if stopFunc != nil {
+		go func() {
+			<-cmd.ctx.Done()
+			stopFunc()
+		}()
+	}
 }
 
 // Stdout returns the command's stdout stream

@@ -81,14 +81,6 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}
 
-	// Setup context cancellation handling
-	if cmd.StopFunc != nil {
-		go func() {
-			<-ctx.Done()
-			cmd.StopFunc()
-		}()
-	}
-
 	w.WriteHeader(http.StatusOK)
 	fw.Flush()
 

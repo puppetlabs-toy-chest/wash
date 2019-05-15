@@ -161,7 +161,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		execCmd.CloseStreams()
 	}()
 
-	execCmd.StopFunc = func() {
+	execCmd.SetStopFunc(func() {
 		// Close the session on context cancellation. Copying will block until there's more to read
 		// from the exec output. For an action with no more output it may never return.
 		// If a TTY is setup and the session is still open, send Ctrl-C over before closing it.
@@ -169,7 +169,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 			activity.Record(ctx, "Sent SIGINT on context termination: %v", session.Signal(ssh.SIGINT))
 		}
 		activity.Record(ctx, "Closing session on context termination for %v: %v", id.Host, session.Close())
-	}
+	})
 	execCmd.SetExitCodeCB(func() (int, error) {
 		if exitErr == nil {
 			return 0, nil

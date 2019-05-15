@@ -155,14 +155,14 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			stdin = r
 		}
 
-		execCommand.StopFunc = func() {
+		execCommand.SetStopFunc(func() {
 			// Close the response on context cancellation. Copying will block until there's more to
 			// read from the exec output. For an action with no more output it may never return.
 			// Append Ctrl-C to input to signal end of execution.
 			_, err := w.Write([]byte{0x03})
 			activity.Record(ctx, "Sent ETX on context termination: %v", err)
 			w.Close()
-		}
+		})
 	}
 
 	go func() {

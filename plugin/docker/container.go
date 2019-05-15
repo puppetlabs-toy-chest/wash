@@ -100,7 +100,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 
 
-	execCommand.StopFunc = func() {
+	execCommand.SetStopFunc(func() {
 		// Close the response on cancellation. Copying will block until there's more to read from the
 		// exec output. For an action with no more output it may never return.
 		if opts.Tty {
@@ -109,7 +109,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 			activity.Record(ctx, "Sent ETX on context termination: %v", err)
 		}
 		resp.Close()
-	}
+	})
 	execCommand.SetExitCodeCB(func() (int, error) {
 		if writeErr != nil {
 			return 0, err
