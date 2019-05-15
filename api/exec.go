@@ -27,23 +27,6 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	}
 }
 
-func streamOutput(ctx context.Context, w *json.Encoder, outputCh <-chan plugin.ExecOutputChunk) {
-	if outputCh == nil {
-		return
-	}
-
-	for chunk := range outputCh {
-		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
-		if err := chunk.Err; err != nil {
-			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
-		} else {
-			packet.Data = chunk.Data
-		}
-
-		sendPacket(ctx, w, &packet)
-	}
-}
-
 func streamExitCode(ctx context.Context, w *json.Encoder, exitCodeCB func() (int, error)) {
 	if exitCodeCB == nil {
 		return
@@ -127,7 +110,16 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	fw.Flush()
 
 	enc := json.NewEncoder(&streamableResponseWriter{fw})
-	streamOutput(ctx, enc, cmd.OutputCh)
+	cmd.Wait(func(chunk plugin.ExecOutputChunk) {
+		packet := apitypes.ExecPacket{TypeField: chunk.StreamID, Timestamp: chunk.Timestamp}
+		if err := chunk.Err; err != nil {
+			packet.Err = newStreamingErrorObj(chunk.StreamID, err.Error())
+		} else {
+			packet.Data = chunk.Data
+		}
+
+		sendPacket(ctx, enc, &packet)
+	})
 	streamExitCode(ctx, enc, cmd.ExitCodeCB)
 	return nil
 }

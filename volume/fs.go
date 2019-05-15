@@ -41,7 +41,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 
 	var buf bytes.Buffer
 	var errs []error
-	for chunk := range cmd.OutputCh {
+	cmd.Wait(func(chunk plugin.ExecOutputChunk) {
 		if chunk.Err != nil {
 			errs = append(errs, chunk.Err)
 		} else {
@@ -49,8 +49,8 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 			if chunk.StreamID == plugin.Stdout {
 				fmt.Fprint(&buf, chunk.Data)
 			}
-		}
-	}
+		}	
+	})
 
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("exec errored: %v", errs)
@@ -115,11 +115,11 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 	go func() {
 		// Exec uses context; if it's canceled, the OutputCh will close. Close the writer.
 		var errs []error
-		for chunk := range cmd.OutputCh {
+		cmd.Wait(func(chunk plugin.ExecOutputChunk) {
 			if chunk.Err != nil {
 				activity.Record(ctx, "Error on exec: %v", chunk.Err)
 				errs = append(errs, chunk.Err)
-				continue
+				return
 			}
 
 			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
@@ -129,7 +129,7 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 					errs = append(errs, err)
 				}
 			}
-		}
+		})
 
 		if len(errs) > 0 {
 			err = w.CloseWithError(fmt.Errorf("Multiple errors from exec output: %v", errs))

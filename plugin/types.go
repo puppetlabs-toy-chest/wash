@@ -107,16 +107,13 @@ type ExecOutputChunk struct {
 // ExecCommand represents a running command that was invoked by Execable#exec.
 // Any of these fields can be nil.
 //
-// OutputCh:    contains timestamped chunks of the command's stdout/stderr. This should be set
-//              to the channel that's returned by plugin.CreateExecOutputStreams(). OutputCh
-//              must be closed to signal that execution is complete.
 // ExitCodeCB:  is called after execution completes to determine the final status of execution.
 // StopFunc:    stops the command. It should noop for a finished command. StopFunc is called when
 //              the execution context completes to perform necessary termination.
 type ExecCommand struct {
-	OutputCh   chan ExecOutputChunk
 	ExitCodeCB func() (int, error)
 	StopFunc   func()
+	outputCh   chan ExecOutputChunk
 	stdout     *OutputStream
 	stderr     *OutputStream
 }
