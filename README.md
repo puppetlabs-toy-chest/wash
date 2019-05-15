@@ -76,7 +76,7 @@ We've implemented some neat features inside of `wash` to support the above goals
 
 ### Binaries
 
-_TBD: See [GitHub releases](https://github.com/puppetlabs/wash/releases)._
+See [GitHub releases](https://github.com/puppetlabs/wash/releases).
 
 ### From Source
 

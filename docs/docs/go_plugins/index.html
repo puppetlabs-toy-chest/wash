@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Go Plugins | home</title>
+
+    <style>body{margin:40px auto;max-width:650px;line-height:1.6;font-size:18px;color:#444;padding:0 10px}h1,h2,h3{line-height:1.2}div.header h1{padding-top:0;padding-bottom:8px;margin-bottom:24px;font-size:18px;font-weight:400;border-bottom:1px solid}.header-menu{float:right}ul.pagination{list-style-type:none;text-align:center;padding:0}ul.pagination>li{padding:0 8px;display:inline-block}div.footer{border-top:1px solid;text-align:center}img{max-width:100%;max-height:100%;display:block;margin-left:auto;margin-right:auto}</style>
+    <link href="https://puppetlabs.github.io/wash/docs/go_plugins/index.xml" rel="alternate" type="application/rss+xml" title="home" />
+
+    <link rel="stylesheet" href="/wash/custom.css">
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:400,500" rel="stylesheet"> 
+<link href="https://fonts.googleapis.com/css?family=Comfortaa|Monoton|Merriweather" rel="stylesheet"> 
+
+</head>
+
+<body>
+<div class="header">
+    <h1>
+        <a href="/wash">home</a>
+        <div class="header-menu">
+            <a href="/wash/docs">docs</a>
+            <a href="/wash/#">news</a>
+            <a href="https://github.com/puppetlabs/wash">github</a>
+            <a href="https://github.com/puppetlabs/wash/releases">download</a>
+            <a href="https://puppetcommunity.slack.com/app_redirect?channel=wash">slack</a>
+        </div>
+    </h1>
+</div>
+<div id="content">
+
+
+
+<header>
+    <h1>Go Plugins</h1>
+    
+
+<div class="post-meta">
+    
+</div>
+</header>
+<article>
+    
+
+<h2 id="how-to-create-a-new-go-plugin">How to create a new Go plugin</h2>
+
+<p>The <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> package defines a set of interfaces that a plugin can implement to enable specific behaviors.</p>
+
+<h3 id="starting-a-plugin">Starting a plugin</h3>
+
+<p>Create a new directory in <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> for the plugin.</p>
+
+<p>Create an object that implements the <code>Root</code> profile, as in it has:</p>
+
+<ul>
+<li>a <code>Name</code> method to determine the name of the plugin when mounted</li>
+<li>an <code>Init</code> method that loads and validates credentials</li>
+<li>a <code>List</code> method that lists the first-level resources of the plugin</li>
+</ul>
+
+<h3 id="extending-the-plugin">Extending the plugin</h3>
+
+<p>Add new types representing the types of resources the plugin can list.</p>
+
+<ul>
+<li>To make them appear as a directory, implement the <code>Group</code> interface.</li>
+<li>Resources with metadata should implement the <code>Resource</code> interface.</li>
+<li>To give files content, implement the <code>Readable</code> interface.</li>
+<li>Log-type files can implement the <code>Pipe</code> interface to expose a stream of new data.</li>
+<li>Files and directories that exist on a remote system or volume should implement the <code>File</code> interface. Additionally the <a href="https://github.com/puppetlabs/wash/tree/master/volume">volume</a> package provides helpers for representing these types.</li>
+<li>To support executing commands on a resource, implement the <code>Execable</code> interface.</li>
+</ul>
+
+<p>Tip: base new resources on the <code>EntryBase</code> struct to simplify creating them and enable caching.</p>
+
+</article>
+
+
+
+<ul>
+    
+</ul>
+
+
+
+
+
+
+    </div>
+<div class="footer">
+    
+    
+
+    
+    
+    <div class="copyright">© 2019 — the wash maintainers</div>
+    
+</div>
+</body>
+
+</html>

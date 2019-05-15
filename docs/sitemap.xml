@@ -13,8 +13,20 @@
   </url>
   
   <url>
+    <loc>https://puppetlabs.github.io/wash/docs/external_plugins/</loc>
+  </url>
+  
+  <url>
+    <loc>https://puppetlabs.github.io/wash/docs/go_plugins/</loc>
+  </url>
+  
+  <url>
     <loc>https://puppetlabs.github.io/wash/tags/</loc>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://puppetlabs.github.io/wash/docs/</loc>
   </url>
   
 </urlset>

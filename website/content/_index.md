@@ -37,6 +37,7 @@ Exploring, understanding, and inspecting modern infrastructure should be simple 
 `wash` is distributed as a single binary, and the only prerequisite is [`libfuse`](https://github.com/libfuse/libfuse). Thus, getting going is pretty simple:
 
 1. [Download](https://github.com/puppetlabs/wash/releases) the `wash` binary for your platform
+   * or install with `brew install puppetlabs/puppet/wash`
 2. Install `libfuse`, if you haven't already
    * E.g. on MacOS using homebrew: `brew cask install osxfuse`
    * E.g. on CentOS: `yum install fuse fuse-libs`
