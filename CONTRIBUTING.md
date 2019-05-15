@@ -32,6 +32,10 @@ Versioning for the kubernetes and docker projects don't work well with Go module
 
 It should always be safe to run `go get -u=patch` to pickup patches.
 
+### Modifying APIs
+
+When making changes to Wash's APIs, remember to update the inline swagger documentation. Instructions for regenerating the API docs are [here](./website/README.md#regenerate-swagger-docs).
+
 ## Submitting Changes
 Fork the repo, make changes, file a Pull Request.
 
