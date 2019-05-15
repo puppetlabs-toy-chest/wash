@@ -1,5 +1,5 @@
 +++
-title= "Wash Plugins"
+title= "External Plugins"
 +++
 
 External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:
@@ -187,5 +187,5 @@ You might be wondering why we don't just lump `<path>` and `<state>` together in
 [Download](./examples/sshfs.sh)
 
 ```
-{{< snippet "static/plugins/examples/sshfs.sh" >}}
+{{< snippet "static/docs/external_plugins/examples/sshfs.sh" >}}
 ```

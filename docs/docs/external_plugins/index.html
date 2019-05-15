@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>External Plugins | home</title>
+
+    <style>body{margin:40px auto;max-width:650px;line-height:1.6;font-size:18px;color:#444;padding:0 10px}h1,h2,h3{line-height:1.2}div.header h1{padding-top:0;padding-bottom:8px;margin-bottom:24px;font-size:18px;font-weight:400;border-bottom:1px solid}.header-menu{float:right}ul.pagination{list-style-type:none;text-align:center;padding:0}ul.pagination>li{padding:0 8px;display:inline-block}div.footer{border-top:1px solid;text-align:center}img{max-width:100%;max-height:100%;display:block;margin-left:auto;margin-right:auto}</style>
+    <link href="https://puppetlabs.github.io/wash/docs/external_plugins/index.xml" rel="alternate" type="application/rss+xml" title="home" />
+
+    <link rel="stylesheet" href="/wash/custom.css">
+<link href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:400,500" rel="stylesheet"> 
+<link href="https://fonts.googleapis.com/css?family=Comfortaa|Monoton|Merriweather" rel="stylesheet"> 
+
+</head>
+
+<body>
+<div class="header">
+    <h1>
+        <a href="/wash">home</a>
+        <div class="header-menu">
+            <a href="/wash/docs">docs</a>
+            <a href="/wash/#">news</a>
+            <a href="https://github.com/puppetlabs/wash">github</a>
+            <a href="https://github.com/puppetlabs/wash/releases">download</a>
+            <a href="https://puppetcommunity.slack.com/app_redirect?channel=wash">slack</a>
+        </div>
+    </h1>
+</div>
+<div id="content">
+
+
+
+<header>
+    <h1>External Plugins</h1>
+    
+
+<div class="post-meta">
+    
+</div>
+</header>
+<article>
+    
+
+<p>External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:</p>
+
+<ol>
+<li><p>Think about what the plugin would look like if it were modeled as a filesystem. Some useful questions to ask here are:</p>
+
+<ul>
+<li>What are the things (entries) that I want this plugin to represent?</li>
+<li>What things are my directories? What things are my files?</li>
+<li>What Wash actions should I support on these things?</li>
+</ul></li>
+
+<li><p>Write the <a href="#plugin-script">plugin script</a>. This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.</p></li>
+
+<li><p>Add the plugin to the (configurable) <code>plugins.yaml</code> file by specifying a path to the plugin script. The name will be determined by invoking the script with the <code>init</code> action. An example <code>plugins.yaml</code> file is shown below:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">- script: &#39;/Users/enis.inan/wash/external-plugins/external-aws.rb&#39;
+- script: &#39;/Users/enis.inan/wash/external-plugins/network.sh&#39;</pre></td></tr></table>
+</div>
+</div></li>
+
+<li><p>Start the Wash server to see your plugin in action.</p></li>
+</ol>
+
+<p><strong>NOTE:</strong> You can override the default <code>plugins.yaml</code> path via the <code>external-plugins</code> flag. See <code>wash help server</code> for more information.</p>
+
+<h2 id="plugin-script">Plugin Script</h2>
+
+<p>Wash shells out to the external plugin&rsquo;s script whenever it needs to invoke an action on one of its entries. The script must have the following usage:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+</div>
+</div>
+<p>where</p>
+
+<ul>
+<li><code>&lt;action&gt;</code> is the Wash action that&rsquo;s being invoked</li>
+<li><code>&lt;path&gt;</code> is the entry&rsquo;s filesystem path relative to Wash&rsquo;s mountpoint</li>
+<li><code>&lt;state&gt;</code> consists of the minimum amount of information required to reconstruct the entry inside the plugin</li>
+<li><code>&lt;args...&gt;</code> are the arguments passed to the specific action.</li>
+</ul>
+
+<p><code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> can be a bit confusing. To understand them, we recommend reading the <a href="#aside">Aside</a>, and to look at the provided <a href="#bash-example">Bash</a> + Ruby external plugin examples to see how they&rsquo;re used. <strong>TODO: Link a Ruby example</strong></p>
+
+<p>The remaining sections describe all possible values of <code>&lt;action&gt;</code> that can be passed-in, including each action&rsquo;s calling and error conventions, and the expected results.</p>
+
+<h2 id="init">init</h2>
+
+<p>The <code>init</code> action is special. It is invoked as <code>&lt;plugin_script&gt; init</code>, and it is invoked only once, when the external plugin is loaded. When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. Here&rsquo;s an example:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
+  &#34;name&#34;: &#34;aws&#34;,
+  &#34;supported_actions&#34;: [
+    &#34;list&#34;
+  ]
+}</pre></td></tr></table>
+</div>
+</div>
+<p>This example shows the <em>minimum</em> amount of information required for Wash to construct the plugin root. In fact, the example shows the minimum amount of information required for Wash to construct <em>any</em> external plugin entry. This information consists of the entry&rsquo;s name and its supported actions.</p>
+
+<p>You can include additional keys in the printed JSON object. These keys are:</p>
+
+<ul>
+<li><code>cache_ttls</code>. This specifies how many seconds each supported action&rsquo;s result should be cached (<code>ttl</code> is short for time to live).</li>
+<li><code>attributes</code>. This represents the entry&rsquo;s filesystem attributes, if any. These are the access time <code>atime</code>, last modified time <code>mtime</code>, creation time <code>ctime</code>, mode <code>mode</code>, and size <code>size</code>. The individual time attributes are specified in Unix seconds. Octal modes must be prefixed with the <code>0</code> delimiter (e.g. like <code>0777</code>). Hexadecimal modes must be prefixed with the <code>0x</code> delimiter (e.g. like <code>0xabcd</code>).</li>
+<li><code>state</code>. This corresponds to the <code>&lt;state&gt;</code> parameter in the plugin script&rsquo;s usage.</li>
+</ul>
+
+<p>Below is an example JSON object showcasing all possible keys at once.</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
+  &#34;name&#34;: &#34;some_entry&#34;,
+  &#34;supported_actions&#34;: [
+    &#34;list&#34;
+  ],
+  &#34;cache_ttls&#34;: {
+    &#34;list&#34;: 30
+  },
+  &#34;attributes&#34;: {
+    &#34;atime&#34;: 1551942012,
+    &#34;mtime&#34;: 1551942012,
+    &#34;ctime&#34;: 1551942012,
+    &#34;mode&#34;: 511,
+    &#34;size&#34;: 15600
+  },
+  &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;AWS::Profile\&#34;}&#34;
+}</pre></td></tr></table>
+</div>
+</div>
+<p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> action will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has some filesystem attributes that are defined (note that the mode is <code>0777</code>; <code>511</code> is its Base-10 representation). Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its supported actions. In this case, only <code>list</code> is supported, and <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>AWS::Profile</code>) in whatever language the plugin script was written in.</p>
+
+<p>The <code>init</code> action adopts the standard error conventions described in the <a href="#errors">Errors</a> section.</p>
+
+<h2 id="list">list</h2>
+
+<p>The <code>list</code> action is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the <code>init</code> section (hence, <code>list</code> outputs an array of entries). Below is an example of valid output from the <code>list</code> action.</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">[
+	{
+		&#34;name&#34;: &#34;LARGE_FILE.txt&#34;,
+		&#34;supported_actions&#34;: [
+			&#34;metadata&#34;,
+			&#34;read&#34;,
+			&#34;stream&#34;
+		],
+		&#34;attributes&#34;: {
+			&#34;Mtime&#34;: 1551459978,
+			&#34;Size&#34;: 100000000
+		},
+		&#34;state&#34;: &#34;{\&#34;name\&#34;:\&#34;LARGE_FILE.txt\&#34;,\&#34;profile\&#34;:\&#34;default\&#34;,\&#34;region\&#34;:\&#34;us-west-1\&#34;,\&#34;bucket\&#34;:\&#34;my-stupid-bucket-enis\&#34;,\&#34;attributes\&#34;:{\&#34;Mtime\&#34;:1551459978,\&#34;Size\&#34;:100000000},\&#34;klass\&#34;:\&#34;S3Object\&#34;}&#34;
+	},
+	{
+		&#34;name&#34;: &#34;my_json_file.json&#34;,
+		&#34;supported_actions&#34;: [
+			&#34;metadata&#34;,
+			&#34;read&#34;,
+			&#34;stream&#34;
+		],
+		&#34;attributes&#34;: {
+			&#34;Mtime&#34;: 1549572670,
+			&#34;Size&#34;: 9336
+		},
+		&#34;state&#34;: &#34;{\&#34;name\&#34;:\&#34;my_json_file.json\&#34;,\&#34;profile\&#34;:\&#34;default\&#34;,\&#34;region\&#34;:\&#34;us-west-1\&#34;,\&#34;bucket\&#34;:\&#34;my-stupid-bucket-enis\&#34;,\&#34;attributes\&#34;:{\&#34;Mtime\&#34;:1549572670,\&#34;Size\&#34;:9336},\&#34;klass\&#34;:\&#34;S3Object\&#34;}&#34;
+	}
+]</pre></td></tr></table>
+</div>
+</div>
+<p><strong>NOTE:</strong> Remember that the state displayed here is the same <code>&lt;state&gt;</code> parameter that will be passed in to other actions invoked on that entry. For example, if the <code>read</code> action is invoked on <code>LARGE_FILE.txt</code> via <code>&lt;plugin_script&gt; read &lt;parent_path&gt;/LARGE_FILE.txt &lt;state&gt;</code>, then the value of <code>LARGE_FILE.txt</code>&rsquo;s <code>state</code> key will be passed-in for <code>&lt;state&gt;</code>.</p>
+
+<p>The <code>list</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<h2 id="read">read</h2>
+
+<p>The <code>read</code> action is invoked as <code>&lt;plugin_script&gt; read &lt;path&gt; &lt;state&gt;</code>. When <code>read</code> is invoked, the script must output the entry&rsquo;s content.</p>
+
+<p>The <code>read</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<h2 id="metadata">metadata</h2>
+
+<p>The <code>metadata</code> action is invoked as <code>&lt;plugin_script&gt; metadata &lt;path&gt; &lt;state&gt;</code>. When <code>metadata</code> is invoked, the script must output a JSON object representing the entry&rsquo;s metadata. Below is an example of acceptable <code>metadata</code> output:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
+  &#34;key1&#34;: &#34;value1&#34;,
+  &#34;key2&#34;: &#34;value2&#34;
+}</pre></td></tr></table>
+</div>
+</div>
+<p>The <code>metadata</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<h2 id="stream">stream</h2>
+
+<p>The <code>stream</code> action is invoked as <code>&lt;plugin_script&gt; stream &lt;path&gt; &lt;state&gt;</code>. When <code>stream</code> is invoked, the first line of the script&rsquo;s output must contain the <code>200</code> header. This header tells Wash that the entry&rsquo;s data is about to the streamed. After it outputs the header, the script must then stream the entry&rsquo;s data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request. In the latter case, Wash will send the <code>SIGTERM</code> signal to the streaming process.</p>
+
+<p>The <code>stream</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<h2 id="exec">exec</h2>
+
+<p>The <code>exec</code> action is invoked as <code>&lt;plugin_script&gt; exec &lt;path&gt; &lt;state&gt; &lt;cmd&gt; &lt;args...&gt;</code>. If the <code>input</code> key is included as part of <code>opts</code> in a request to the <code>exec</code> endpoint, then its content is passed-in as stdin to the plugin script. When <code>exec</code> is invoked, the plugin script&rsquo;s stdout and stderr must be connected to <code>cmd</code>&rsquo;s stdout and stderr, and it must exit the <code>exec</code> invocation with <code>cmd</code>&rsquo;s exit code.</p>
+
+<p>Because the <code>exec</code> action effectively hijacks <code>&lt;plugin_script&gt; exec</code> with <code>&lt;cmd&gt; &lt;args...&gt;</code>, there is currently no way for external plugins to report any <code>exec</code> errors to Wash. Thus, if <code>&lt;plugin_script&gt; exec</code> fails to exec <code>&lt;cmd&gt; &lt;args...&gt;</code> (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of <code>&lt;cmd&gt; &lt;args...&gt;</code>&rsquo;s output when running <code>wash exec</code>.</p>
+
+<h2 id="errors-a-name-errors-a">Errors <a name="errors"></a></h2>
+
+<p>All errors are printed to <code>stderr</code>. An action invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of <code>stderr</code> into an error object, then documents that error in the process&rsquo; activity and the server logs.</p>
+
+<p><strong>NOTE:</strong> Not all actions adopt this error handling convention (e.g. <code>exec</code>). The error handling for these &ldquo;snowflake&rdquo; actions is described in their respective sections.</p>
+
+<h2 id="aside-optional-a-name-aside-a">Aside (optional)<a name="aside"></a></h2>
+
+<p>This section talks about the reasoning behind the plugin script&rsquo;s usage, shown below for convenience:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+</div>
+</div>
+<p>If we let <code>&lt;entry&gt; = &lt;path&gt; &lt;state&gt;</code>, then our usage becomes:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;entry&gt; &lt;args...&gt;</pre></td></tr></table>
+</div>
+</div>
+<p>If we ignore <code>&lt;plugin_script&gt;</code> then the above turns into <code>&lt;action&gt; &lt;entry&gt; &lt;args...&gt;</code>. When read out loud, this looks like the function call <code>&lt;action&gt;(&lt;entry&gt;, &lt;args...&gt;)</code>. If we imagine <code>&lt;entry&gt;</code> as an object in an OOP language, this is semantically equivalent to:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;entry&gt;.&lt;action&gt;(&lt;args...&gt;)</pre></td></tr></table>
+</div>
+</div>
+<p>For example, if <code>&lt;entry&gt; = myS3Bucket</code>, <code>&lt;action&gt; = list</code>, and <code>&lt;args...&gt;</code> is empty, then we can read the above as <code>myS3Bucket.list()</code>. Thus, the plugin script&rsquo;s usage can be thought of as invoking an action (<code>&lt;action&gt;</code>) on the specified entry (<code>&lt;path&gt; &lt;state&gt;</code>) with the given arguments (<code>&lt;args...&gt;</code>).</p>
+
+<p>You might be wondering why we don&rsquo;t just lump <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together into <code>&lt;entry&gt;</code> so that the plugin script&rsquo;s usage becomes <code>&lt;plugin_script&gt; &lt;action&gt; &lt;entry&gt; &lt;args...&gt;</code>. There&rsquo;s several reasons. One, having the <code>&lt;path&gt;</code> is helpful for debugging purposes. You can directly see the acting entry in the logs, which frees you from having to figure that information out yourself. Two, it mirrors the API&rsquo;s structure of <code>/fs/&lt;action&gt;/&lt;path&gt;</code>. And three, sometimes the <code>&lt;path&gt;</code> is all you need to write your plugin script. While you could always print the <code>&lt;path&gt;</code> yourself and make that the <code>&lt;state&gt;</code> parameter for Wash to pass around, it can be annoying to have to constantly do that, especially when you&rsquo;re writing simple plugins. Thus, <code>&lt;path&gt;</code> is really more of a convenience. You should use <code>&lt;path&gt;</code> if that&rsquo;s what you need to write your plugin. Otherwise, if you&rsquo;re writing a more complicated plugin that needs to maintain some state (e.g. like the entry&rsquo;s class name and its constructor arguments), then use <code>&lt;state&gt;</code>. However, try to avoid using <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together in the same plugin script, as doing so can make it hard to reason about your code. Use either <code>&lt;path&gt;</code> or <code>&lt;state&gt;</code>, but not both.</p>
+
+<p><strong>NOTE:</strong> The <code>init</code> action is special. Its usage is <code>&lt;plugin_script&gt; init</code> &ndash; there is no <code>&lt;path&gt;</code> or <code>&lt;state</code>&gt; so there is no <code>&lt;entry&gt;</code>. Thus, the OOP call of <code>&lt;entry&gt;.&lt;action&gt;(&lt;args...&gt;)</code> doesn&rsquo;t make sense for <code>init</code>. So how do you reason about it? Why do we have an <code>init</code> action? Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry by repeatedly invoking the <code>list</code> action. The <code>init</code> action is how you describe that &lsquo;root&rsquo;.</p>
+
+<h2 id="bash-example">Bash Example</h2>
+
+<p><a href="./examples/sshfs.sh">Download</a></p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">#!/usr/bin/env bash
+
+# This examples implements an SSH filesystem in Bash.
+# The filesystem is laid out as:
+#   /sshfs
+#     &lt;vm1&gt;
+#       &lt;vm1_root_dir&gt;
+#     &lt;vm2&gt;
+#       &lt;vm2_root_dir&gt;
+#     ...
+#
+# For simplicity, our SSH filesystem consists of two VMs
+# specified by the SSHFS_VM_ONE and SSHFS_VM_TWO environment
+# variables. The VMs are listed by their fqdns. It is assumed
+# that both VMs are known hosts, and that you can ssh into them
+# as the root user. For example, it assumes that something like
+# &#34;ssh root@&lt;vm&gt; ls&#34; works.
+#
+# If you&#39;d like to try this plugin out, then add the following to
+# your plugins.yaml file:
+#
+#   - name: &#39;sshfs&#39;
+#     script: &#39;&lt;wash_parent&gt;/wash/docs/external_plugins/examples/sshfs.sh&#39;
+#
+# and start-up the Wash server
+
+# Below are some helpers. The main script comes after them.
+
+# Gets the root directory of a given path. For example, if
+# path is something like /sshfs/&lt;vm&gt;/..., then this returns
+# /sshfs
+function get_root {
+  local path=&#34;$1&#34;
+
+  echo &#34;${path}&#34; | sed -E &#39;s:.*^/([^/]&#43;).*:\1:&#39;
+}
+
+# Strips the root directory of a given path. For example, if
+# path is something like /sshfs/&lt;vm&gt;/..., then this returns
+# /&lt;vm&gt;/...
+function strip_root {
+  local path=&#34;$1&#34;
+
+  echo &#34;${path}&#34; | sed -E &#39;s:^/([^/]&#43;)::&#39;
+}
+
+function vm_exec {
+  local vm=&#34;$1&#34;
+  local cmd=&#34;$2&#34;
+
+  ssh root@&#34;${vm}&#34; &#34;${cmd}&#34;
+}
+
+function to_json_array {
+  local list=&#34;$1&#34;
+
+  echo -n &#34;[&#34;
+
+  local has_multiple_elem=&#34;&#34;
+  for elem in ${list}; do
+    if [[ -n ${has_multiple_elem} ]]; then
+      echo -n &#34;,&#34;
+    else
+      has_multiple_elem=&#34;true&#34;
+    fi
+
+    echo -n &#34;${elem}&#34;
+  done
+
+  echo -n &#34;]&#34;
+}
+
+# Prints the given entry&#39;s JSON object. This is used by the
+# `init` and `list` actions.
+#
+# Remember, only the entry name and supported actions are
+# required.
+function print_entry_json() {
+  local name=&#34;$1&#34;
+  local supported_actions=&#34;$2&#34;
+
+  local attributes_json=&#34;$3&#34;
+  if [[ -z &#34;${attributes_json}&#34; ]]; then
+    # The attributes_json is optional. We chose to print something
+    # here to make the code a little cleaner. Don&#39;t worry, Wash knows
+    # that an empty attributes object translates to the entry not having
+    # any filesystem attributes.
+    attributes_json=&#34;{}&#34;
+  fi
+
+  local supported_actions_json=`to_json_array &#34;${supported_actions}&#34;`
+
+  echo &#34;{\
+\&#34;name\&#34;:\&#34;${name}\&#34;,\
+\&#34;supported_actions\&#34;:${supported_actions_json},\
+\&#34;attributes\&#34;:${attributes_json}\
+}&#34;
+}
+
+# Prints the given file&#39;s JSON object. The file parameters are parsed from
+# its corresponding stat output.
+function print_file_json {
+  local isDir=&#34;$1&#34;
+  local size=&#34;$2&#34;
+  local atime=&#34;$3&#34;
+  local mtime=&#34;$4&#34;
+  local ctime=&#34;$5&#34;
+  local mode=&#34;$6&#34;
+  local path=&#34;$7&#34;
+
+  name=`basename &#34;${path}&#34;`
+
+  intMode=$(echo $((16#${mode})))
+  if [[ ${isDir} -eq 0 ]]; then
+    supported_actions=&#39;&#34;list&#34;&#39;
+
+    # Unfortunately, Wash doesn&#39;t handle symlinks well. Thus
+    # for now, we&#39;ll assume that sym-linked directories are
+    # regular directories.
+    intMode=$(echo $((${intMode} | 16384)))
+  else
+    supported_actions=&#39;&#34;read&#34; &#34;stream&#34;&#39;
+  fi
+
+  attributes_json=$(echo &#34;{\
+\&#34;atime\&#34;:${atime},\
+\&#34;mtime\&#34;:${mtime},\
+\&#34;ctime\&#34;:${ctime},\
+\&#34;mode\&#34;:${intMode},\
+\&#34;size\&#34;:${size}\
+}&#34;)
+
+  print_entry_json &#34;${name}&#34; &#34;${supported_actions}&#34; &#34;${attributes_json}&#34;
+}
+
+# Prints the children of the specified directory. The code here
+# does a few optimizations with xargs to make this sshfs plugin
+# fast-enough for interactive use. However, the key-takeaway here
+# is the end-result: that stdout contains an array of JSON objects
+# corresponding to the directory&#39;s children.
+function print_children {
+  local vm=&#34;$1&#34;
+  local dir=&#34;$2&#34;
+
+  # The code here is equivalent to ls&#39;ing the directory, then invoking
+  # `test-d` and stat on each entry to obtain the following information:
+  #   &lt;is_dir&gt; &lt;sizeAttr&gt; &lt;atime&gt; &lt;mtime&gt; &lt;ctime&gt; &lt;mode&gt; &lt;path&gt;
+  stat_output=`vm_exec ${vm} &#34;find ${dir} -mindepth 1 -maxdepth 1 | xargs -n1 -r -I {} bash -c &#39;(test -d \\$@; echo -n \&#34;\\$? \&#34;) &amp;&amp; stat -c \&#34;%s %X %Y %Z %f %n\&#34; \\$@&#39; _ {}&#34;`
+  if [[ -z &#34;${stat_output}&#34; ]]; then
+    echo &#34;[]&#34;
+    return 0
+  fi
+
+  # Each line of stat_output is a child. The following code creates a pipeline
+  # that takes each line, converts it to the corresponding child JSON object, then
+  # prints the result. We stream the JSON objects for performance reasons. The important
+  # bit here is to note that after print_children exits, stdout should look something like:
+  #
+  # [
+  # &lt;child_json&gt;,
+  # &lt;child_json&gt;,
+  # ...
+  # &lt;child_json&gt; 
+  # ]
+  #
+  # which satisfies Wash.
+
+  echo &#34;[&#34;
+
+  # Print all children except for the last child.
+  num_children=`echo &#34;${stat_output}&#34; | wc -l | awk &#39;{print $1}&#39;`
+  if [[ num_children -gt 1 ]]; then
+    export -f to_json_array
+    export -f print_file_json
+    export -f print_entry_json
+    export -f vm_exec
+    
+    echo &#34;${stat_output}&#34;\
+       | head -n$((num_children-1))\
+       | xargs -n7 -P 10 -I {} bash -c &#39;print_file_json $@&#39; _ {}\
+       | sed s/$/,/
+  fi
+
+  # Now print the last child
+  print_file_json `echo &#34;${stat_output}&#34; | tail -n1`
+
+  echo &#34;]&#34;
+}
+
+action=&#34;$1&#34;
+if [[ &#34;${action}&#34; == &#34;init&#34; ]]; then
+  # Our root&#39;s name is &#34;sshfs.&#34; It only supports the &#34;list&#34;
+  # action.
+  print_entry_json &#34;sshfs&#34; &#39;&#34;list&#34;&#39;
+  exit 0
+fi
+
+path=&#34;$2&#34;
+
+path=`strip_root ${path}`
+if [[ &#34;${path}&#34; == &#34;&#34; ]]; then
+  # Our action&#39;s being invoked on the root. Since Wash only passes
+  # in supported actions, and since our root only supports the
+  # &#34;list&#34; action, we can assume that action == &#34;list&#34; here.
+  #
+  # Since we&#39;ve structured our filesystem as /sshfs/&lt;vm&gt;/...,
+  # ls&#39;ing our root consists of listing the VMs.
+  function print_vm_json() {
+      local name=&#34;$1&#34;
+
+      # VMs support the &#34;list&#34;, &#34;exec&#34; and &#34;metadata&#34; actions
+      print_entry_json &#34;${name}&#34; &#39;&#34;list&#34; &#34;exec&#34; &#34;metadata&#34;&#39;
+  }
+
+  to_json_array &#34;`print_vm_json ${SSHFS_VM_ONE}` `print_vm_json ${SSHFS_VM_TWO}`&#34;
+  exit 0
+fi
+
+# path is of the form /&lt;vm&gt;/... so get the VM&#39;s name
+vm=`get_root ${path}`
+
+path=`strip_root ${path}`
+if [[ &#34;${path}&#34; == &#34;&#34; ]]; then
+  # Our action&#39;s being invoked on a VM. Since a VM only supports the
+  # &#34;list&#34;, &#34;exec&#34; and &#34;metadata&#34; actions, we case our code on those
+  # actions
+  case &#34;${action}&#34; in
+  &#34;list&#34;)
+    # &#34;list&#34;&#39;ing a VM is equivalent to listing its root
+    print_children ${vm} &#34;/&#34;
+    exit 0
+  ;;
+  &#34;exec&#34;)
+    cmd=&#34;$3&#34;
+
+    shift
+    shift
+    shift
+    args=&#34;$@&#34;
+
+    # exec&#39;ing &lt;cmd&gt; &lt;args&gt; on a VM is equivalent to invoking them
+    # on the VM via. ssh (vm_exec)
+    #
+    # TODO: Handle stdin
+    vm_exec &#34;${vm}&#34; &#34;${cmd} ${args}&#34;
+    exit &#34;$?&#34;
+  ;;
+  &#34;metadata&#34;)
+    # We could provide more metadata here, such as the VM&#39;s platform,
+    # architecture, and processor information. However, the example
+    # below is good enough for Wash.
+    echo &#34;{\
+\&#34;provider\&#34;:\&#34;vmware\&#34;\
+}&#34;
+    exit 0
+  ;;
+  *)
+    # Notice how we print errors to stderr then exit with a non-zero
+    # exit code. This tells Wash that our invocation failed.
+    echo &#34;missing a case statement for the ${action} action&#34; &gt;2
+    exit 1
+  ;;
+  esac
+fi
+
+# Our path is an absolute path in the VM&#39;s filesystem.
+# Thus, we can just case on all the possible actions that can
+# be passed-in.
+case &#34;${action}&#34; in
+&#34;list&#34;)
+  print_children ${vm} &#34;${path}/&#34;
+  exit 0
+;;
+&#34;read&#34;)
+  vm_exec &#34;${vm}&#34; &#34;cat ${path}&#34;
+  exit 0
+;;
+&#34;stream&#34;)
+  # Notice how we print the header first before anything else.
+  # This way, Wash knows that we&#39;re about to stream some data.
+  echo &#34;200&#34;
+
+  # We could also `cat` here, which is useful for large files.
+  # Instead, we choose `tail -f` to show that external plugins
+  # can implement their own `tail -f` like behavior. Don&#39;t worry,
+  # Wash will send the SIGTERM signal to our process when it no
+  # longer needs our streamed data.
+  vm_exec &#34;${vm}&#34; &#34;tail -f ${path}&#34;
+  exit 0
+;;
+*)
+  echo &#34;missing a case statement for the ${action} action&#34; &gt;2
+  exit 1
+;;
+esac
+</pre></td></tr></table>
+</div>
+</div>
+</article>
+
+
+
+<ul>
+    
+</ul>
+
+
+
+
+
+
+    </div>
+<div class="footer">
+    
+    
+
+    
+    
+    <div class="copyright">© 2019 — the wash maintainers</div>
+    
+</div>
+</body>
+
+</html>

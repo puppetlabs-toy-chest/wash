@@ -31,13 +31,9 @@ pygmentsStyle = "vs"
 [menu]
   # Header
   [[menu.main]]
-    url = "plugins"
-    name = "plugins"
+    url = "docs"
+    name = "docs"
     weight = 1
-  [[menu.main]]
-    url = "api"
-    name = "api"
-    weight = 2
   [[menu.main]]
     url = "#"
     name = "news"
