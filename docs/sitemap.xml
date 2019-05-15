@@ -17,4 +17,8 @@
     <priority>0</priority>
   </url>
   
+  <url>
+    <loc>https://puppetlabs.github.io/wash/plugins/</loc>
+  </url>
+  
 </urlset>

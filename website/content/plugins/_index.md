@@ -1,4 +1,28 @@
-# Plugin Script
++++
+title= "Wash Plugins"
++++
+
+External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:
+
+1. Think about what the plugin would look like if it were modeled as a filesystem. Some useful questions to ask here are:
+    * What are the things (entries) that I want this plugin to represent?
+    * What things are my directories? What things are my files?
+    * What Wash actions should I support on these things?
+
+2. Write the [plugin script](#plugin-script). This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.
+
+3. Add the plugin to the (configurable) `plugins.yaml` file by specifying a path to the plugin script. The name will be determined by invoking the script with the `init` action. An example `plugins.yaml` file is shown below:
+
+    ```
+    - script: '/Users/enis.inan/wash/external-plugins/external-aws.rb'
+    - script: '/Users/enis.inan/wash/external-plugins/network.sh'
+    ```
+4. Start the Wash server to see your plugin in action.
+
+**NOTE:** You can override the default `plugins.yaml` path via the `external-plugins` flag. See `wash help server` for more information.
+
+## Plugin Script
+
 Wash shells out to the external plugin's script whenever it needs to invoke an action on one of its entries. The script must have the following usage:
 
 ```
@@ -12,7 +36,7 @@ where
 * `<state>` consists of the minimum amount of information required to reconstruct the entry inside the plugin
 * `<args...>` are the arguments passed to the specific action.
 
-`<path>` and `<state>` can be a bit confusing. To understand them, we recommend reading the [Aside](#aside), and to look at the provided [Bash](examples/sshfs.sh) + Ruby external plugin examples to see how they're used. **TODO: Link a Ruby example**
+`<path>` and `<state>` can be a bit confusing. To understand them, we recommend reading the [Aside](#aside), and to look at the provided [Bash](#bash-example) + Ruby external plugin examples to see how they're used. **TODO: Link a Ruby example**
 
 The remaining sections describe all possible values of `<action>` that can be passed-in, including each action's calling and error conventions, and the expected results.
 
@@ -157,3 +181,11 @@ For example, if `<entry> = myS3Bucket`, `<action> = list`, and `<args...>` is em
 You might be wondering why we don't just lump `<path>` and `<state>` together into `<entry>` so that the plugin script's usage becomes `<plugin_script> <action> <entry> <args...>`. There's several reasons. One, having the `<path>` is helpful for debugging purposes. You can directly see the acting entry in the logs, which frees you from having to figure that information out yourself. Two, it mirrors the API's structure of `/fs/<action>/<path>`. And three, sometimes the `<path>` is all you need to write your plugin script. While you could always print the `<path>` yourself and make that the `<state>` parameter for Wash to pass around, it can be annoying to have to constantly do that, especially when you're writing simple plugins. Thus, `<path>` is really more of a convenience. You should use `<path>` if that's what you need to write your plugin. Otherwise, if you're writing a more complicated plugin that needs to maintain some state (e.g. like the entry's class name and its constructor arguments), then use `<state>`. However, try to avoid using `<path>` and `<state>` together in the same plugin script, as doing so can make it hard to reason about your code. Use either `<path>` or `<state>`, but not both.
 
 **NOTE:** The `init` action is special. Its usage is `<plugin_script> init` -- there is no `<path>` or `<state`> so there is no `<entry>`. Thus, the OOP call of `<entry>.<action>(<args...>)` doesn't make sense for `init`. So how do you reason about it? Why do we have an `init` action? Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry by repeatedly invoking the `list` action. The `init` action is how you describe that 'root'.
+
+## Bash Example
+
+[Download](./examples/sshfs.sh)
+
+```
+{{< snippet "static/plugins/examples/sshfs.sh" >}}
+```
