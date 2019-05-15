@@ -173,7 +173,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 }
 
 /*
-TODO: Move this test over to execCommand.go
+TODO: Move this test over to runningCommand.go
 func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 	outputCh, stdout, stderr := CreateExecOutputStreams(context.Background())
 

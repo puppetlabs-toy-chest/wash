@@ -182,7 +182,7 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 	return nil, fmt.Errorf("could not access the latest console log: %v", err)
 }
 
-func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
+func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.RunningCommand, error) {
 	meta, err := inst.Metadata(ctx)
 	if err != nil {
 		return nil, err

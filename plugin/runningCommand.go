@@ -4,14 +4,23 @@ import (
 	"context"
 )
 
-// This file contains the implementation of the ExecCommand type
 
-// NewExecCommand creates a new ExecCommand object that's tied to
+// RunningCommand represents a running command that was invoked by Execable#exec.
+// Use plugin.NewRunningCommand to create these objects.
+type RunningCommand struct {
+	ctx        context.Context
+	exitCodeCB func() (int, error)
+	outputCh   chan ExecOutputChunk
+	stdout     *OutputStream
+	stderr     *OutputStream
+}
+
+// NewRunningCommand creates a new RunningCommand object that's tied to
 // the passed-in execution context. You should call this function
 // once you've verified that your plugin API has successfully
 // started executing the command.
-func NewExecCommand(ctx context.Context) *ExecCommand {
-	cmd := &ExecCommand{}
+func NewRunningCommand(ctx context.Context) *RunningCommand {
+	cmd := &RunningCommand{}
 	cmd.ctx = ctx
 	// Create the output streams
 	cmd.outputCh = make(chan ExecOutputChunk)
@@ -24,7 +33,7 @@ func NewExecCommand(ctx context.Context) *ExecCommand {
 // SetStopFunc sets the function that stops the running command. stopFunc
 // is called when the execution context completes to perform necessary
 // termination. Hence, it should noop for a finished command.
-func (cmd *ExecCommand) SetStopFunc(stopFunc func()) {
+func (cmd *RunningCommand) SetStopFunc(stopFunc func()) {
 	if stopFunc != nil {
 		go func() {
 			<-cmd.ctx.Done()
@@ -35,32 +44,32 @@ func (cmd *ExecCommand) SetStopFunc(stopFunc func()) {
 
 // Stdout returns the command's stdout stream. Attach this to your
 // plugin API's stdout stream.
-func (cmd *ExecCommand) Stdout() *OutputStream {
+func (cmd *RunningCommand) Stdout() *OutputStream {
 	return cmd.stdout
 }
 
 // Stderr returns the command's stderr stream. Attach this to your
 // plugin API's stderr stream.
-func (cmd *ExecCommand) Stderr() *OutputStream {
+func (cmd *RunningCommand) Stderr() *OutputStream {
 	return cmd.stderr
 }
 
 // CloseStreams closes the command's stdout and stderr
 // streams.
-func (cmd *ExecCommand) CloseStreams() {
+func (cmd *RunningCommand) CloseStreams() {
 	cmd.CloseStreamsWithError(nil)
 }
 
 // CloseStreamsWithError closes the command's stdout and stderr
 // streams with the specified error.
-func (cmd *ExecCommand) CloseStreamsWithError(err error) {
+func (cmd *RunningCommand) CloseStreamsWithError(err error) {
 	cmd.Stdout().CloseWithError(err)
 	cmd.Stderr().CloseWithError(err)
 }
 
 // Wait waits for the command to finish, passing in each chunk
 // of the command's output to processChunk.
-func (cmd *ExecCommand) Wait(processChunk func(ExecOutputChunk)) {
+func (cmd *RunningCommand) Wait(processChunk func(ExecOutputChunk)) {
 	for chunk := range cmd.outputCh {
 		processChunk(chunk)
 	}
@@ -73,13 +82,13 @@ func (cmd *ExecCommand) Wait(processChunk func(ExecOutputChunk)) {
 //
 // See the implementation of Container#Exec in the Docker plugin for an
 // example of how this is used.
-func (cmd *ExecCommand) SetExitCodeCB(exitCodeCB func() (int, error)) {
+func (cmd *RunningCommand) SetExitCodeCB(exitCodeCB func() (int, error)) {
 	cmd.exitCodeCB = exitCodeCB
 }
 
 // SetExitCode sets the command's exit code. Use this after the command's
 // finished its execution.
-func (cmd *ExecCommand) SetExitCode(exitCode int) {
+func (cmd *RunningCommand) SetExitCode(exitCode int) {
 	cmd.exitCodeCB = func() (int, error) {
 		return exitCode, nil
 	}
@@ -87,7 +96,7 @@ func (cmd *ExecCommand) SetExitCode(exitCode int) {
 
 // ExitCode returns the command's exit code. This should be called after
 // the command's finished its execution.
-func (cmd *ExecCommand) ExitCode() (int, error) {
+func (cmd *RunningCommand) ExitCode() (int, error) {
 	if cmd.exitCodeCB == nil {
 		panic("cmd.ExitCode called with a nil exit code callback")
 	}

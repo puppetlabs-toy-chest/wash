@@ -119,7 +119,7 @@ func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return req.Stream()
 }
 
-func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.RunningCommand, error) {
 	execRequest := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.Name()).
@@ -142,7 +142,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		return nil, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
-	execCommand := plugin.NewExecCommand(ctx)
+	cmdObj := plugin.NewRunningCommand(ctx)
 
 	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
 	// when a Tty is allocated commands expect user input and will respond to control signals.
@@ -155,7 +155,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			stdin = r
 		}
 
-		execCommand.SetStopFunc(func() {
+		cmdObj.SetStopFunc(func() {
 			// Close the response on context cancellation. Copying will block until there's more to
 			// read from the exec output. For an action with no more output it may never return.
 			// Append Ctrl-C to input to signal end of execution.
@@ -167,20 +167,20 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 
 	go func() {
 		streamOpts := remotecommand.StreamOptions{
-			Stdout: execCommand.Stdout(),
-			Stderr: execCommand.Stderr(),
+			Stdout: cmdObj.Stdout(),
+			Stderr: cmdObj.Stderr(),
 			Stdin: stdin,
 			Tty: opts.Tty,
 		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
-			execCommand.SetExitCode(exerr.ExitStatus())
+			cmdObj.SetExitCode(exerr.ExitStatus())
 			err = nil
 		}
 
-		execCommand.CloseStreamsWithError(err)
+		cmdObj.CloseStreamsWithError(err)
 	}()
 
-	return execCommand, nil
+	return cmdObj, nil
 }

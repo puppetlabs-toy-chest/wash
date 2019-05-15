@@ -97,7 +97,7 @@ type Identity struct {
 // Host *.compute.amazonaws.com
 //   StrictHostKeyChecking no
 // ```
-func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
+func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (*plugin.RunningCommand, error) {
 	// find port, username, etc from .ssh/config
 	port, err := ssh_config.GetStrict(id.Host, "Port")
 	if err != nil {
@@ -139,8 +139,8 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 	}
 
-	execCmd := plugin.NewExecCommand(ctx)
-	session.Stdin, session.Stdout, session.Stderr = opts.Stdin, execCmd.Stdout(), execCmd.Stderr()
+	cmdObj := plugin.NewRunningCommand(ctx)
+	session.Stdin, session.Stdout, session.Stderr = opts.Stdin, cmdObj.Stdout(), cmdObj.Stderr()
 
 	if opts.Elevate {
 		cmd = append([]string{"sudo"}, cmd...)
@@ -148,7 +148,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 
 	cmdStr := shellquote.Join(cmd...)
 	if err := session.Start(cmdStr); err != nil {
-		return execCmd, err
+		return cmdObj, err
 	}
 
 	// Wait for session to complete and stash result. This is done asynchronously because the
@@ -158,10 +158,10 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 	go func() {
 		exitErr = session.Wait()
 		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
-		execCmd.CloseStreams()
+		cmdObj.CloseStreams()
 	}()
 
-	execCmd.SetStopFunc(func() {
+	cmdObj.SetStopFunc(func() {
 		// Close the session on context cancellation. Copying will block until there's more to read
 		// from the exec output. For an action with no more output it may never return.
 		// If a TTY is setup and the session is still open, send Ctrl-C over before closing it.
@@ -170,7 +170,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 		activity.Record(ctx, "Closing session on context termination for %v: %v", id.Host, session.Close())
 	})
-	execCmd.SetExitCodeCB(func() (int, error) {
+	cmdObj.SetExitCodeCB(func() (int, error) {
 		if exitErr == nil {
 			return 0, nil
 		} else if err, ok := exitErr.(*ssh.ExitError); ok {
@@ -178,5 +178,5 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 		return 0, exitErr
 	})
-	return execCmd, nil
+	return cmdObj, nil
 }

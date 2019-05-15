@@ -37,8 +37,8 @@ func (suite *fsTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
 }
 
-func createResult(data string) *plugin.ExecCommand {
-	cmd := plugin.NewExecCommand(context.Background())
+func createResult(data string) *plugin.RunningCommand {
+	cmd := plugin.NewRunningCommand(context.Background())
 	go func() {
 		_, err := cmd.Stdout().Write([]byte(data))
 		if err != nil {
@@ -149,7 +149,7 @@ type mockExecutor struct {
 	mock.Mock
 }
 
-func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.ExecCommand, error) {
+func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (*plugin.RunningCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
-	return arger.Get(0).(*plugin.ExecCommand), arger.Error(1)
+	return arger.Get(0).(*plugin.RunningCommand), arger.Error(1)
 }

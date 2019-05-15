@@ -104,20 +104,10 @@ type ExecOutputChunk struct {
 	Err       error
 }
 
-// ExecCommand represents a running command that was invoked by Execable#exec.
-// You should use plugin.NewExecCommand to create these objects.
-type ExecCommand struct {
-	ctx        context.Context
-	exitCodeCB func() (int, error)
-	outputCh   chan ExecOutputChunk
-	stdout     *OutputStream
-	stderr     *OutputStream
-}
-
 // Execable is an entry that can have a command run on it.
 type Execable interface {
 	Entry
-	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (*ExecCommand, error)
+	Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (*RunningCommand, error)
 }
 
 // Streamable is an entry that returns a stream of updates.
