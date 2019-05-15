@@ -3,6 +3,8 @@ package types
 import (
 	"flag"
 	"io/ioutil"
+
+	"github.com/puppetlabs/wash/cmd/util"
 )
 
 // Options represents the find command's options.
@@ -10,6 +12,7 @@ type Options struct {
 	Depth    bool
 	Mindepth uint
 	Maxdepth int
+	Help HelpOption
 	setFlags map[string]struct{}
 }
 
@@ -54,11 +57,41 @@ func (opts *Options) MarkAsSet(flag string) {
 func (opts *Options) FlagSet() *flag.FlagSet {
 	// Create the flag-set that's tied to our options.
 	fs := flag.NewFlagSet("options", flag.ContinueOnError)
-	// TODO: Handle usage later
-	fs.Usage = func() {}
 	fs.SetOutput(ioutil.Discard)
 	fs.BoolVar(&opts.Depth, DepthFlag, opts.Depth, "")
 	fs.UintVar(&opts.Mindepth, MindepthFlag, opts.Mindepth, "")
 	fs.IntVar(&opts.Maxdepth, MaxdepthFlag, opts.Maxdepth, "")
 	return fs
 }
+
+// OptionsTable returns a table containing all of `wash find`'s available
+// options
+func OptionsTable() *cmdutil.Table {
+	return cmdutil.NewTable(
+		[]string{"Flags:",                 ""},
+		[]string{"      -depth",           "Visit the children first before the parent (default false)"},
+		[]string{"      -mindepth depth",  "Do not print entries at levels less than depth (default 0)"},
+		[]string{"      -maxdepth depth",  "Do not print entries at levels greater than depth (default infinity)"},
+		[]string{"  -h, -help",            "Print this usage"},
+		[]string{"  -h, -help <primary>",  "Print a detailed description of the specified primary (e.g. \"-help meta\")"},
+		[]string{"  -h, -help syntax",     "Print a detailed description of find's expression syntax"},
+	)
+}
+
+// HelpOption represents the -help option. If HasValue is set, then
+// that means the input was "-help <primary>|syntax". In that case,
+// only one of Primary/Syntax is set. Otherwise, the input was "-help".
+//
+// See the comments in parser.parseOptions for more details on why
+// this does not implement the Value interface.
+type HelpOption struct {
+	Requested bool
+	HasValue bool
+	// Cannot use *primary.Primary here b/c doing so would introduce
+	// an import cycle. Resolving that import cycle for a slightly
+	// cleaner implementation is not worth the additional complexity
+	// associated with introducing more fine-grained packages.
+	Primary string
+	Syntax bool
+}
+

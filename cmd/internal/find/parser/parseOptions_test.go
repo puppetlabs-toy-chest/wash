@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"flag"
 	"fmt"
 	"regexp"
 	"strings"
@@ -86,6 +87,43 @@ func (suite *ParseOptionsTestSuite) TestParseOptionsNoOptions() {
 
 func (suite *ParseOptionsTestSuite) TestParseOptionInvalidOption() {
 	suite.runTestCases(nPOETC("-unknown", "flag.*unknown"))
+}
+
+func (suite *ParseOptionsTestSuite) TestParseOptionHelpFlag() {
+	for _, helpFlag := range []string{"-h", "-help"} {
+		o, _, err := parseOptions([]string{helpFlag})
+		if suite.Equal(flag.ErrHelp, err) {
+			suite.True(o.Help.Requested)
+			suite.False(o.Help.HasValue)
+		}
+
+		o, _, err = parseOptions([]string{helpFlag, ""})
+		if suite.Equal(flag.ErrHelp, err) {
+			suite.True(o.Help.Requested)
+			suite.False(o.Help.HasValue)
+		}
+
+		o, _, err = parseOptions([]string{helpFlag, "-maxdepth"})
+		if suite.Equal(flag.ErrHelp, err) {
+			suite.True(o.Help.Requested)
+			suite.False(o.Help.HasValue)
+		}
+
+		o, _, err = parseOptions([]string{helpFlag, "foo"})
+		if suite.Equal(flag.ErrHelp, err) {
+			suite.True(o.Help.Requested)
+			suite.True(o.Help.HasValue)
+			suite.False(o.Help.Syntax)
+			suite.Equal("foo", o.Help.Primary)
+		}
+
+		o, _, err = parseOptions([]string{helpFlag, "syntax"})
+		if suite.Equal(flag.ErrHelp, err) {
+			suite.True(o.Help.Requested)
+			suite.True(o.Help.HasValue)
+			suite.True(o.Help.Syntax)
+		}
+	}
 }
 
 func (suite *ParseOptionsTestSuite) TestParseOptionsValidOptions() {

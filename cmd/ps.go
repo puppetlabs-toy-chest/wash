@@ -153,7 +153,7 @@ func formatStats(stats []psresult) string {
 			st.command,
 		}
 	}
-	return cmdutil.FormatTable(headers, table)
+	return cmdutil.NewTableWithHeaders(headers, table).Format()
 }
 
 func psMain(cmd *cobra.Command, args []string) exitCode {

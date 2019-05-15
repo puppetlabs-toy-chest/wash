@@ -10,15 +10,12 @@ import (
 
 // sizePrimary => -size (+|-)?(\d+ | numeric.SizeRegex)
 //
-// Example inputs:
-//   -size 2   (true if the entry's size in 512-byte blocks, rounded up, is 2)
-//   -size +2  (true if the entry's size in 512-byte blocks, rounded up, is greater than 2)
-//   -size -2  (true if the entry's size in 512-byte blocks, rounded up, is less than 2)
-//   -size +1k (true if the entry's size is greater than 1 kibibyte (1024 bytes))
-//
 //nolint
-var sizePrimary = Parser.add(&primary{
-	tokens: []string{"-size"},
+var sizePrimary = Parser.add(&Primary{
+	Description: "Returns true if the entry's size attribute satisfies the given size predicate",
+	DetailedDescription: sizeDetailedDescription,
+	name: "size",
+	args: "[+|-]n[ckMGTP]",
 	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
@@ -46,3 +43,34 @@ var sizePrimary = Parser.add(&primary{
 		return p, tokens[1:], nil
 	},
 })
+
+const sizeDetailedDescription = `
+-size [+|-]n[ckMGTP]
+
+Returns true if the entry's size attribute is n 512-byte blocks,
+rounded up to the nearest block. If n is suffixed with a unit,
+then the raw size is compared to n scaled as:
+
+c        character (byte)
+k        kibibytes (1024 bytes)
+M        mebibytes (1024 kibibytes)
+G        gibibytes (1024 mebibytes)
+T        tebibytes (1024 gibibytes)
+P        pebibytes (1024 tebibytes)
+
+If n is prefixed with a +/-, then the comparison returns true if
+the size is greater-than/less-than n.
+
+Examples:
+  -size 2        Returns true if the entry's size is 2 512-byte blocks,
+                 rounded up to the nearest block
+
+  -size +2       Returns true if the entry's size is greater than 2
+                 512-byte blocks, rounded up to the nearest block
+
+  -size -2       Returns true if the entry's size is less than 2
+                 512-byte blocks, rounded up to the nearest block
+
+  -size +1k      Returns true if the entry's size is greater than 1
+                 kibibyte
+`

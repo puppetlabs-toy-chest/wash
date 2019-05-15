@@ -7,9 +7,10 @@ import (
 )
 
 //nolint
-func newBooleanPrimary(val bool) *primary {
-	return Parser.add(&primary{
-		tokens: []string{fmt.Sprintf("-%v", val)},
+func newBooleanPrimary(val bool) *Primary {
+	return Parser.add(&Primary{
+		Description: fmt.Sprintf("Always returns %v", val),
+		name: fmt.Sprintf("%v", val),
 		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 			return func(e types.Entry) bool {
 				return val
