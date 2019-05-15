@@ -330,26 +330,14 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	}
 
 	// Wait for the command to finish
-	var exitCode int
-	var cmdWaitErr error
 	go func() {
 		ec, err := ExitCodeFromErr(cmdObj.Wait())
 		if err != nil {
-			cmdWaitErr = err
-		} else {
-			exitCode = ec
+			execCmd.CloseStreamsWithError(err)
+			return
 		}
-
-		execCmd.CloseStreamsWithError(err)
+		execCmd.SetExitCode(ec)
 	}()
-
-	execCmd.SetExitCodeCB(func() (int, error) {
-		if cmdWaitErr != nil {
-			return 0, cmdWaitErr
-		}
-
-		return exitCode, nil
-	})
-
+	
 	return execCmd, nil
 }

@@ -143,7 +143,6 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 	}
 
 	execCommand := plugin.NewExecCommand(ctx)
-	exitcode := 0
 
 	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
 	// when a Tty is allocated commands expect user input and will respond to control signals.
@@ -176,16 +175,12 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
-			exitcode = exerr.ExitStatus()
+			execCommand.SetExitCode(exerr.ExitStatus())
 			err = nil
 		}
 
 		execCommand.CloseStreamsWithError(err)
 	}()
-
-	execCommand.SetExitCodeCB(func() (int, error) {
-		return exitcode, nil
-	})
 
 	return execCommand, nil
 }

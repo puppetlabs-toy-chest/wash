@@ -53,10 +53,20 @@ func (cmd *ExecCommand) Wait(processChunk func(ExecOutputChunk)) {
 // SetExitCodeCB sets the exit code callback. This is used to fetch the
 // command's exit code after execution completes. You should use this if
 // your plugin API requires a separate request to fetch the command's exit
-// code. See the implementation of Container#Exec in the Docker plugin for
-// an example.
+// code. Otherwise, use cmd.SetExitCode to set the exit code.
+//
+// See the implementation of Container#Exec in the Docker plugin for an
+// example of how this is used.
 func (cmd *ExecCommand) SetExitCodeCB(exitCodeCB func() (int, error)) {
 	cmd.exitCodeCB = exitCodeCB
+}
+
+// SetExitCode sets the command's exit code. Use this after the command's
+// finished its execution.
+func (cmd *ExecCommand) SetExitCode(exitCode int) {
+	cmd.exitCodeCB = func() (int, error) {
+		return exitCode, nil
+	}
 }
 
 // ExitCode returns the command's exit code. This should be called after

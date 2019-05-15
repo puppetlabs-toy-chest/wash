@@ -46,10 +46,8 @@ func createResult(data string) *plugin.ExecCommand {
 			panic(msg)
 		}
 		cmd.CloseStreams()
+		cmd.SetExitCode(0)
 	}()
-	cmd.SetExitCodeCB(func() (int, error) {
-		return 0, nil
-	})
 	return cmd
 }
 
