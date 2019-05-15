@@ -148,19 +148,8 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 
 	cmdStr := shellquote.Join(cmd...)
 	if err := session.Start(cmdStr); err != nil {
-		return cmdObj, err
+		return nil, err
 	}
-
-	// Wait for session to complete and stash result. This is done asynchronously because the
-	// exitcode callback won't be called until stdout/stderr are closed, but they're not closed by
-	// session.Start.
-	var exitErr error
-	go func() {
-		exitErr = session.Wait()
-		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
-		cmdObj.CloseStreams()
-	}()
-
 	cmdObj.SetStopFunc(func() {
 		// Close the session on context cancellation. Copying will block until there's more to read
 		// from the exec output. For an action with no more output it may never return.
@@ -170,13 +159,19 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 		activity.Record(ctx, "Closing session on context termination for %v: %v", id.Host, session.Close())
 	})
-	cmdObj.SetExitCodeCB(func() (int, error) {
-		if exitErr == nil {
-			return 0, nil
-		} else if err, ok := exitErr.(*ssh.ExitError); ok {
-			return err.ExitStatus(), nil
+
+	// Wait for session to complete and stash result.
+	go func() {
+		err := session.Wait()
+		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
+		cmdObj.CloseStreams(nil)
+		if err == nil {
+			cmdObj.SetExitCode(0)
+		} else if exitErr, ok := err.(*ssh.ExitError); ok {
+			cmdObj.SetExitCode(exitErr.ExitStatus())
+		} else {
+			cmdObj.SetExitCodeErr(err)
 		}
-		return 0, exitErr
-	})
+	}()
 	return cmdObj, nil
 }

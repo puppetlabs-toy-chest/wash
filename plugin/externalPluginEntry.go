@@ -325,7 +325,6 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// Start the command
 	activity.Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
 	if err := cmdObj.Start(); err != nil {
-		runningCmd.CloseStreams()
 		return nil, err
 	}
 
@@ -333,7 +332,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	go func() {
 		ec, err := ExitCodeFromErr(cmdObj.Wait())
 		if err != nil {
-			runningCmd.CloseStreamsWithError(err)
+			runningCmd.CloseStreams(err)
 			return
 		}
 		runningCmd.SetExitCode(ec)

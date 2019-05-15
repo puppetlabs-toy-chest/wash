@@ -45,7 +45,7 @@ func createResult(data string) *plugin.RunningCommand {
 			msg := fmt.Sprintf("Unexpected error while setting up mocks: %v", err)
 			panic(msg)
 		}
-		cmd.CloseStreams()
+		cmd.CloseStreams(nil)
 		cmd.SetExitCode(0)
 	}()
 	return cmd

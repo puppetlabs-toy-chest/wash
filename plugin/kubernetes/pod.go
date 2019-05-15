@@ -179,7 +179,7 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			err = nil
 		}
 
-		cmdObj.CloseStreamsWithError(err)
+		cmdObj.CloseStreams(err)
 	}()
 
 	return cmdObj, nil

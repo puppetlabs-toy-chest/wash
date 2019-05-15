@@ -41,7 +41,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 
 	var buf bytes.Buffer
 	var errs []error
-	cmd.Wait(func(chunk plugin.ExecOutputChunk) {
+	exitcode, exitErr := cmd.Wait(func(chunk plugin.ExecOutputChunk) {
 		if chunk.Err != nil {
 			errs = append(errs, chunk.Err)
 		} else {
@@ -56,8 +56,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 		return nil, fmt.Errorf("exec errored: %v", errs)
 	}
 
-	exitcode, err := cmd.ExitCode()
-	if err != nil {
+	if exitErr != nil {
 		return nil, err
 	} else if exitcode != 0 {
 		// Can happen due to permission denied. Leave handling up to the caller.
@@ -107,7 +106,7 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 	go func() {
 		// Exec uses context; if it's canceled, the OutputCh will close. Close the writer.
 		var errs []error
-		cmd.Wait(func(chunk plugin.ExecOutputChunk) {
+		_, _ = cmd.Wait(func(chunk plugin.ExecOutputChunk) {
 			if chunk.Err != nil {
 				activity.Record(ctx, "Error on exec: %v", chunk.Err)
 				errs = append(errs, chunk.Err)

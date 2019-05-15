@@ -75,31 +75,6 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 
 	cmdObj := plugin.NewRunningCommand(ctx)
-
-	// Asynchronously copy container exec output
-	go func() {
-		_, err := stdcopy.StdCopy(cmdObj.Stdout(), cmdObj.Stderr(), resp.Reader)
-		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
-		cmdObj.CloseStreamsWithError(err)
-		resp.Close()
-	}()
-
-	// If stdin is supplied, asynchronously copy it to container exec input.
-	var writeErr error
-	if opts.Stdin != nil {
-		go func() {
-			_, writeErr = io.Copy(resp.Conn, opts.Stdin)
-			// If using a Tty, wait until done reading in case we need to send Ctrl-C; when a Tty is
-			// allocated commands expect user input and will respond to control signals. Otherwise close
-			// input now to ensure commands that depend on EOF execute correctly.
-			if !opts.Tty {
-				respErr := resp.CloseWrite()
-				activity.Record(ctx, "Closed execution input stream for %v: %v, %v", c.Name(), writeErr, respErr)
-			}
-		}()
-	}
-
-
 	cmdObj.SetStopFunc(func() {
 		// Close the response on cancellation. Copying will block until there's more to read from the
 		// exec output. For an action with no more output it may never return.
@@ -110,23 +85,41 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}
 		resp.Close()
 	})
-	cmdObj.SetExitCodeCB(func() (int, error) {
-		if writeErr != nil {
-			return 0, err
-		}
 
+	// If stdin is supplied, asynchronously copy it to container exec input.
+	if opts.Stdin != nil {
+		go func() {
+			_, writeErr := io.Copy(resp.Conn, opts.Stdin)
+			// If using a Tty, wait until done reading in case we need to send Ctrl-C; when a Tty is
+			// allocated commands expect user input and will respond to control signals. Otherwise close
+			// input now to ensure commands that depend on EOF execute correctly.
+			if !opts.Tty {
+				respErr := resp.CloseWrite()
+				activity.Record(ctx, "Closed execution input stream for %v: %v, %v", c.Name(), writeErr, respErr)
+			}
+		}()
+	}
+
+	// Asynchronously copy container exec output, then send over the exit code
+	go func() {
+		_, err := stdcopy.StdCopy(cmdObj.Stdout(), cmdObj.Stderr(), resp.Reader)
+		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
+		cmdObj.CloseStreams(err)
+		resp.Close()
+
+		// Command's finished. Now send the exit code.
 		resp, err := c.client.ContainerExecInspect(ctx, created.ID)
 		if err != nil {
-			return 0, err
+			cmdObj.SetExitCodeErr(err)
+			return
 		}
-
 		if resp.Running {
-			return 0, fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF")
+			cmdObj.SetExitCodeErr(fmt.Errorf("the command was marked as 'Running' even though the output streams reached EOF"))
+			return
 		}
-
 		activity.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
-		return resp.ExitCode, nil
-	})
+		cmdObj.SetExitCode(resp.ExitCode)
+	}()
 
 	return cmdObj, nil
 }

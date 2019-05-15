@@ -113,7 +113,7 @@ func (suite *OutputStreamTestSuite) TestClose() {
 	ch := make(chan ExecOutputChunk)
 	stream := OutputStream{ch: ch, closer: &multiCloser{ch: ch, countdown: 1}}
 
-	stream.Close()
+	stream.close()
 	suite.assertClosedChannel(stream.ch)
 }
 
@@ -125,7 +125,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 
 	// Test that if err == nil, then nothing was sent to the channel
 	stream := newOutputStream(context.Background())
-	stream.CloseWithError(nil)
+	stream.closeWithError(nil)
 	suite.assertClosedChannel(stream.ch)
 
 	// Useful assertion for the subsequent tests
@@ -150,7 +150,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	// Test that if err != nil, then the error is sent to the channel
 	stream = newOutputStream(context.Background())
 	sentErr := fmt.Errorf("an arbitrary error")
-	stream.CloseWithError(sentErr)
+	stream.closeWithError(sentErr)
 	assertSentError(stream, sentErr)
 	suite.assertClosedChannel(stream.ch)
 
@@ -159,7 +159,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	stream = newOutputStream(ctx)
 	cancelFunc()
-	stream.CloseWithError(ctx.Err())
+	stream.closeWithError(ctx.Err())
 	assertSentError(stream, ctx.Err())
 	suite.assertClosedChannel(stream.ch)
 
@@ -167,7 +167,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	// a previous Write sent it
 	stream = newOutputStream(ctx)
 	stream.sentCtxErr = true
-	stream.CloseWithError(ctx.Err())
+	stream.closeWithError(ctx.Err())
 	suite.assertClosedChannel(stream.ch)
 
 }
@@ -184,8 +184,8 @@ func (suite *OutputStreamTestSuite) TestCreateExecOutputStreams() {
 		// which means that outputCh should be closed before
 		// expectedChunksCh.
 		defer close(expectedChunksCh)
-		defer stdout.Close()
-		defer stderr.Close()
+		defer stdout.close()
+		defer stderr.close()
 
 		writeTo := func(streamName string, stream *OutputStream, data string) {
 			expectedChunksCh <- ExecOutputChunk{StreamID: stream.id, Data: data}
