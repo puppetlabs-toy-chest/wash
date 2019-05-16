@@ -104,7 +104,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	go func() {
 		_, err := stdcopy.StdCopy(cmdObj.Stdout(), cmdObj.Stderr(), resp.Reader)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
-		cmdObj.CloseStreams(err)
+		cmdObj.CloseStreamsWithError(err)
 		resp.Close()
 
 		// Command's finished. Now send the exit code.

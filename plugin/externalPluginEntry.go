@@ -332,7 +332,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	go func() {
 		ec, err := ExitCodeFromErr(cmdObj.Wait())
 		if err != nil {
-			runningCmd.CloseStreams(err)
+			runningCmd.CloseStreamsWithError(err)
 			return
 		}
 		runningCmd.SetExitCode(ec)

@@ -109,14 +109,6 @@ func (suite *OutputStreamTestSuite) assertClosedChannel(ch <-chan ExecOutputChun
 	}
 }
 
-func (suite *OutputStreamTestSuite) TestClose() {
-	ch := make(chan ExecOutputChunk)
-	stream := OutputStream{ch: ch, closer: &multiCloser{ch: ch, countdown: 1}}
-
-	stream.close()
-	suite.assertClosedChannel(stream.ch)
-}
-
 func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	newOutputStream := func(ctx context.Context) OutputStream {
 		ch := make(chan ExecOutputChunk, 1)
@@ -125,7 +117,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 
 	// Test that if err == nil, then nothing was sent to the channel
 	stream := newOutputStream(context.Background())
-	stream.closeWithError(nil)
+	stream.CloseWithError(nil)
 	suite.assertClosedChannel(stream.ch)
 
 	// Useful assertion for the subsequent tests
@@ -150,7 +142,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	// Test that if err != nil, then the error is sent to the channel
 	stream = newOutputStream(context.Background())
 	sentErr := fmt.Errorf("an arbitrary error")
-	stream.closeWithError(sentErr)
+	stream.CloseWithError(sentErr)
 	assertSentError(stream, sentErr)
 	suite.assertClosedChannel(stream.ch)
 
@@ -159,7 +151,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	stream = newOutputStream(ctx)
 	cancelFunc()
-	stream.closeWithError(ctx.Err())
+	stream.CloseWithError(ctx.Err())
 	assertSentError(stream, ctx.Err())
 	suite.assertClosedChannel(stream.ch)
 
@@ -167,7 +159,7 @@ func (suite *OutputStreamTestSuite) TestCloseWithError() {
 	// a previous Write sent it
 	stream = newOutputStream(ctx)
 	stream.sentCtxErr = true
-	stream.closeWithError(ctx.Err())
+	stream.CloseWithError(ctx.Err())
 	suite.assertClosedChannel(stream.ch)
 
 }

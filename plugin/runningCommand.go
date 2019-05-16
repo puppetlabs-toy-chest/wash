@@ -56,12 +56,11 @@ func (cmd *RunningCommand) Stderr() *OutputStream {
 	return cmd.stderr
 }
 
-// CloseStreams closes the command's stdout/stderr streams with the
-// specified error. It should only be called when the command's
-// finished its execution.
-func (cmd *RunningCommand) CloseStreams(err error) {
-	cmd.Stdout().closeWithError(err)
-	cmd.Stderr().closeWithError(err)
+// CloseStreamsWithError closes the command's stdout/stderr streams
+// with the given error.
+func (cmd *RunningCommand) CloseStreamsWithError(err error) {
+	cmd.Stdout().CloseWithError(err)
+	cmd.Stderr().CloseWithError(err)
 }
 
 // SetExitCode sets the command's exit code. You should call this

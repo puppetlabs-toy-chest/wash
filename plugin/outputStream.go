@@ -41,13 +41,8 @@ func (s *OutputStream) Write(data []byte) (int, error) {
 	return len(data), err
 }
 
-// close ensures the channel is closed when the last OutputStream is closed.
-func (s *OutputStream) close() {
-	s.closer.Close()
-}
-
-// closeWithError sends the given error before calling close()
-func (s *OutputStream) closeWithError(err error) {
+// CloseWithError sends the given error before closing the OutputStream.
+func (s *OutputStream) CloseWithError(err error) {
 	if err != nil {
 		// Avoid re-sending ctx.Err() if it was already sent
 		// by OutputStream#Write
@@ -56,7 +51,7 @@ func (s *OutputStream) closeWithError(err error) {
 		}
 	}
 
-	s.close()
+	s.closer.Close()
 }
 
 type multiCloser struct {

@@ -164,7 +164,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 	go func() {
 		err := session.Wait()
 		activity.Record(ctx, "Closing session for %v: %v", id.Host, session.Close())
-		cmdObj.CloseStreams(nil)
+		cmdObj.CloseStreamsWithError(nil)
 		if err == nil {
 			cmdObj.SetExitCode(0)
 		} else if exitErr, ok := err.(*ssh.ExitError); ok {
