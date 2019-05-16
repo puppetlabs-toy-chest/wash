@@ -74,18 +74,6 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		return nil, err
 	}
 
-	cmdObj := plugin.NewRunningCommand(ctx)
-	cmdObj.SetStopFunc(func() {
-		// Close the response on cancellation. Copying will block until there's more to read from the
-		// exec output. For an action with no more output it may never return.
-		if opts.Tty {
-			// If resp.Conn is still open, send Ctrl-C over resp.Conn before closing it.
-			_, err := resp.Conn.Write([]byte{0x03})
-			activity.Record(ctx, "Sent ETX on context termination: %v", err)
-		}
-		resp.Close()
-	})
-
 	// If stdin is supplied, asynchronously copy it to container exec input.
 	if opts.Stdin != nil {
 		go func() {
@@ -100,7 +88,19 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		}()
 	}
 
-	// Asynchronously copy container exec output, then send over the exit code
+	cmdObj := plugin.NewRunningCommand(ctx)
+	cmdObj.SetStopFunc(func() {
+		// Close the response on cancellation. Copying will block until there's more to read from the
+		// exec output. For an action with no more output it may never return.
+		if opts.Tty {
+			// If resp.Conn is still open, send Ctrl-C over resp.Conn before closing it.
+			_, err := resp.Conn.Write([]byte{0x03})
+			activity.Record(ctx, "Sent ETX on context termination: %v", err)
+		}
+		resp.Close()
+	})
+	// Asynchronously copy container exec output, then fetch the exit code once
+	// the copy's finished.
 	go func() {
 		_, err := stdcopy.StdCopy(cmdObj.Stdout(), cmdObj.Stderr(), resp.Reader)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
@@ -120,6 +120,5 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		activity.Record(ctx, "Exec on %v exited %v", c.Name(), resp.ExitCode)
 		cmdObj.SetExitCode(resp.ExitCode)
 	}()
-
 	return cmdObj, nil
 }
