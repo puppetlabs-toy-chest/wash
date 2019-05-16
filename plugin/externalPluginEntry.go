@@ -233,7 +233,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
 		activity.Record(ctx, "Waiting for command: %v", cmdStr)
-		_, err := ExitCodeFromErr(cmd.Wait())
+		err = cmd.Wait()
 		if err != nil {
 			activity.Record(ctx, "Failed waiting for command: %v", err)
 		}
@@ -333,12 +333,13 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 
 	// Wait for the command to finish
 	go func() {
-		ec, err := ExitCodeFromErr(cmdObj.Wait())
-		if err != nil {
-			execCmd.CloseStreamsWithError(err)
-			return
+		err := cmdObj.Wait()
+		exitCode := cmdObj.ProcessState.ExitCode()
+		if exitCode < 0 {
+			execCmd.SetExitCodeErr(err)
+		} else {
+			execCmd.SetExitCode(exitCode)
 		}
-		execCmd.SetExitCode(ec)
 	}()
 	
 	return execCmd, nil

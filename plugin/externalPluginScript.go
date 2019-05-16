@@ -40,8 +40,8 @@ func (s externalPluginScriptImpl) InvokeAndWait(ctx context.Context, args ...str
 
 	err := cmd.Run()
 
-	exitCode, err := ExitCodeFromErr(err)
-	if err != nil {
+	exitCode := cmd.ProcessState.ExitCode()
+	if exitCode < 0 {
 		return nil, err
 	}
 

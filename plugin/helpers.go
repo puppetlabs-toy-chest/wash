@@ -122,19 +122,3 @@ func CreateCommand(cmd string, args ...string) (*exec.Cmd, io.ReadCloser, io.Rea
 
 	return cmdObj, stdout, stderr, nil
 }
-
-// ExitCodeFromErr attempts to get the exit-code from the passed-in
-// error object. If successful, it returns the exit-code. Otherwise,
-// it returns the passed-in error object as the error.
-func ExitCodeFromErr(err error) (int, error) {
-	if err == nil {
-		return 0, nil
-	}
-
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
-		return 0, err
-	}
-
-	return exitErr.ExitCode(), nil
-}
