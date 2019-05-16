@@ -299,9 +299,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 }
 
 // Exec executes a command on the given entry
-func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecResult, error) {
-	execResult := ExecResult{}
-
+func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	// TODO: Figure out how to pass-in opts when we have entries
 	// besides Stdin. Could do something like
 	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
@@ -318,42 +316,27 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 		cmdObj.Stdin = opts.Stdin
 	}
 
+	execCmd := NewExecCommand(ctx)
+
 	// Set-up the output streams
-	outputCh, stdout, stderr := CreateExecOutputStreams(ctx)
-	cmdObj.Stdout = stdout
-	cmdObj.Stderr = stderr
+	cmdObj.Stdout = execCmd.Stdout()
+	cmdObj.Stderr = execCmd.Stderr()
 
 	// Start the command
 	activity.Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
 	if err := cmdObj.Start(); err != nil {
-		stdout.Close()
-		stderr.Close()
-		return execResult, err
+		return nil, err
 	}
 
 	// Wait for the command to finish
-	var exitCode int
-	var cmdWaitErr error
 	go func() {
 		ec, err := ExitCodeFromErr(cmdObj.Wait())
 		if err != nil {
-			cmdWaitErr = err
-		} else {
-			exitCode = ec
+			execCmd.CloseStreamsWithError(err)
+			return
 		}
-
-		stdout.CloseWithError(err)
-		stderr.CloseWithError(err)
+		execCmd.SetExitCode(ec)
 	}()
-
-	execResult.OutputCh = outputCh
-	execResult.ExitCodeCB = func() (int, error) {
-		if cmdWaitErr != nil {
-			return 0, cmdWaitErr
-		}
-
-		return exitCode, nil
-	}
-
-	return execResult, nil
+	
+	return execCmd, nil
 }

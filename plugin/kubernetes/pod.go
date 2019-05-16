@@ -119,7 +119,7 @@ func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return req.Stream()
 }
 
-func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
+func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	execRequest := p.client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(p.Name()).
@@ -137,15 +137,12 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		execRequest = execRequest.Param("stdin", "true")
 	}
 
-	execResult := plugin.ExecResult{}
-
 	executor, err := remotecommand.NewSPDYExecutor(p.config, "POST", execRequest.URL())
 	if err != nil {
-		return execResult, errors.Wrap(err, "kubernetes.pod.Exec request")
+		return nil, errors.Wrap(err, "kubernetes.pod.Exec request")
 	}
 
-	outputCh, stdout, stderr := plugin.CreateExecOutputStreams(ctx)
-	exitcode := 0
+	execCmd := plugin.NewExecCommand(ctx)
 
 	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
 	// when a Tty is allocated commands expect user input and will respond to control signals.
@@ -158,33 +155,32 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 			stdin = r
 		}
 
-		execResult.CancelFunc = func() {
+		execCmd.SetStopFunc(func() {
 			// Close the response on context cancellation. Copying will block until there's more to
 			// read from the exec output. For an action with no more output it may never return.
 			// Append Ctrl-C to input to signal end of execution.
 			_, err := w.Write([]byte{0x03})
 			activity.Record(ctx, "Sent ETX on context termination: %v", err)
 			w.Close()
-		}
+		})
 	}
 
 	go func() {
-		streamOpts := remotecommand.StreamOptions{Stdout: stdout, Stderr: stderr, Stdin: stdin, Tty: opts.Tty}
+		streamOpts := remotecommand.StreamOptions{
+			Stdout: execCmd.Stdout(),
+			Stderr: execCmd.Stderr(),
+			Stdin: stdin,
+			Tty: opts.Tty,
+		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
 		if exerr, ok := err.(k8exec.ExitError); ok {
-			exitcode = exerr.ExitStatus()
+			execCmd.SetExitCode(exerr.ExitStatus())
 			err = nil
 		}
 
-		stdout.CloseWithError(err)
-		stderr.CloseWithError(err)
+		execCmd.CloseStreamsWithError(err)
 	}()
 
-	execResult.OutputCh = outputCh
-	execResult.ExitCodeCB = func() (int, error) {
-		return exitcode, nil
-	}
-
-	return execResult, nil
+	return execCmd, nil
 }

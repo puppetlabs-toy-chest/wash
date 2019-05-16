@@ -2,6 +2,7 @@ package volume
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -26,33 +27,43 @@ const varLogFixture = `
 
 type fsTestSuite struct {
 	suite.Suite
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 func (suite *fsTestSuite) SetupSuite() {
 	plugin.SetTestCache(datastore.NewMemCache())
+	suite.ctx, suite.cancelFunc = context.WithCancel(context.Background())
 }
 
 func (suite *fsTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
+	// Cancelling the context ensures that the tests don't leave any
+	// dangling goroutines waiting on a context cancellation. These
+	// goroutines are created by ExecCommandImpl
+	suite.cancelFunc()
 }
 
-func createResult(data string) plugin.ExecResult {
-	outputch := make(chan plugin.ExecOutputChunk, 1)
-	execResult := plugin.ExecResult{
-		OutputCh:   outputch,
-		ExitCodeCB: func() (int, error) { return 0, nil },
-	}
-	outputch <- plugin.ExecOutputChunk{StreamID: plugin.Stdout, Data: data}
-	close(outputch)
-	return execResult
+func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
+	cmd := plugin.NewExecCommand(suite.ctx)
+	go func() {
+		_, err := cmd.Stdout().Write([]byte(data))
+		if err != nil {
+			msg := fmt.Sprintf("Unexpected error while setting up mocks: %v", err)
+			panic(msg)
+		}
+		cmd.CloseStreamsWithError(nil)
+		cmd.SetExitCode(0)
+	}()
+	return cmd
 }
 
-func createExec() *mockExecutor {
+func (suite *fsTestSuite) createExec() *mockExecutor {
 	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	// Used when recording activity.
 	exec.SetTestID("/instance")
 	cmd := StatCmd("/var/log")
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(createResult(varLogFixture), nil)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(varLogFixture), nil)
 	return exec
 }
 
@@ -76,7 +87,7 @@ func (suite *fsTestSuite) find(grp plugin.Group, path string) plugin.Entry {
 }
 
 func (suite *fsTestSuite) TestFSList() {
-	exec := createExec()
+	exec := suite.createExec()
 	fs := NewFS("fs", exec)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
@@ -116,7 +127,7 @@ func (suite *fsTestSuite) TestFSList() {
 }
 
 func (suite *fsTestSuite) TestFSRead() {
-	exec := createExec()
+	exec := suite.createExec()
 	fs := NewFS("fs", exec)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
@@ -124,7 +135,7 @@ func (suite *fsTestSuite) TestFSRead() {
 	entry := suite.find(fs, "var/log/path1/a file")
 	suite.Equal("a file", plugin.Name(entry))
 
-	execResult := createResult("hello")
+	execResult := suite.createResult("hello")
 	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
 	rdr, err := entry.(plugin.Readable).Open(context.Background())
 	suite.NoError(err)
@@ -145,7 +156,7 @@ type mockExecutor struct {
 	mock.Mock
 }
 
-func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecResult, error) {
+func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
-	return arger.Get(0).(plugin.ExecResult), arger.Error(1)
+	return arger.Get(0).(plugin.ExecCommand), arger.Error(1)
 }

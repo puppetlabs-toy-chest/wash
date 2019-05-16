@@ -34,14 +34,14 @@ func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
 var errNonZero = fmt.Errorf("Exec exited non-zero")
 
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
-	result, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{Elevate: true})
+	cmd, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{Elevate: true})
 	if err != nil {
 		return nil, err
 	}
 
 	var buf bytes.Buffer
 	var errs []error
-	for chunk := range result.OutputCh {
+	for chunk := range cmd.OutputCh() {
 		if chunk.Err != nil {
 			errs = append(errs, chunk.Err)
 		} else {
@@ -56,7 +56,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 		return nil, fmt.Errorf("exec errored: %v", errs)
 	}
 
-	exitcode, err := result.ExitCodeCB()
+	exitcode, err := cmd.ExitCode()
 	if err != nil {
 		return nil, err
 	} else if exitcode != 0 {
@@ -97,25 +97,17 @@ func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, e
 func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
 	execOpts := plugin.ExecOptions{Elevate: true, Tty: true}
-	result, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, execOpts)
+	cmd, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, execOpts)
 	if err != nil {
 		activity.Record(ctx, "Exec error in VolumeRead: %v", err)
 		return nil, err
-	}
-
-	// Setup context cancellation handling
-	if result.CancelFunc != nil {
-		go func() {
-			<-ctx.Done()
-			result.CancelFunc()
-		}()
 	}
 
 	r, w := io.Pipe()
 	go func() {
 		// Exec uses context; if it's canceled, the OutputCh will close. Close the writer.
 		var errs []error
-		for chunk := range result.OutputCh {
+		for chunk := range cmd.OutputCh() {
 			if chunk.Err != nil {
 				activity.Record(ctx, "Error on exec: %v", chunk.Err)
 				errs = append(errs, chunk.Err)
