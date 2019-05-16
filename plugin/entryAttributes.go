@@ -177,11 +177,11 @@ func (a *EntryAttributes) Meta() JSONObject {
 	return a.meta
 }
 
-// SetMeta sets the entry's meta attribute to obj, which should be the raw
-// object that's returned by the plugin API's List endpoint. For example,
-// if the entry represents a Docker container, then obj would be a Container
-// struct. If the entry represents a Docker volume, then obj would be a
-// Volume struct.
+// SetMeta sets the entry's meta attribute to obj. This is typically the
+// raw object that's returned by the plugin API's List endpoint, or a wrapper
+// that includes the raw object + some additional information. For example, if
+// the entry represents a Docker container, then obj would be a Container struct.
+// If the entry represents a Docker volume, then obj would be a Volume struct.
 //
 // SetMeta will panic if obj does not serialize to a JSON object.
 func (a *EntryAttributes) SetMeta(obj interface{}) *EntryAttributes {
