@@ -31,8 +31,6 @@ import (
 var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	history := activity.History()
 
-	w.WriteHeader(http.StatusOK)
-
 	commands := make([]apitypes.Activity, len(history))
 	for i, item := range history {
 		commands[i].Description = item.Description
@@ -86,7 +84,6 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 		}
 	}()
 
-	w.WriteHeader(http.StatusOK)
 	if _, err := io.Copy(w, rdr); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not read journal %v: %v", journal, err))
 	}

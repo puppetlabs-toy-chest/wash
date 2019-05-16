@@ -35,7 +35,6 @@ var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRe
 	}
 	activity.Record(r.Context(), "API: Cache DELETE %v %+v", path, deleted)
 
-	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(deleted); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal deleted keys for %v: %v", path, err))

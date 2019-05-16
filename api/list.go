@@ -62,7 +62,6 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 	activity.Record(ctx, "API: List %v %+v", path, result)
 
-	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(result); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
