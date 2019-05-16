@@ -142,6 +142,8 @@ func assertSentError(suite suite.Suite, stream *OutputStream, err error) {
 func (suite *OutputStreamTestSuite) TestCloseWithError_NoError() {
 	stream := newOutputStream(context.Background())
 	stream.CloseWithError(nil)
+	// Note that if an error was sent, then assertClosed would fail
+	// because it'd read-in the sent error.
 	suite.assertClosed(stream)
 }
 
