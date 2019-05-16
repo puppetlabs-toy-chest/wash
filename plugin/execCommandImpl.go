@@ -5,8 +5,30 @@ import (
 	"fmt"
 )
 
-// ExecCommandImpl implements the plugin.ExecCommand interface.
-// Use plugin.NewExecCommand to create instances of these objects.
+/*
+ExecCommandImpl implements the plugin.ExecCommand interface.
+Use plugin.NewExecCommand to create instances of these objects.
+
+ExecCommandImpl provides Stdout/Stderr streams that you can wire-up
+to your plugin's API. These streams ensure that your API's stdout/stderr
+ordering is preserved. For example, if your API sends over Stderr, Stdout,
+and Stderr packets (in that order), then ExecCommand's OutputCh will
+stream them as Stderr, Stdout, and Stderr packets to your clients.
+
+Once the command's finished its execution, use SetExitCode to set the
+command's exit code. If your API fails to retrieve the command's exit
+code, then use SetExitCodeErr to set an appropriate error that ExitCode()
+can return.
+
+ExecCommandImpl also includes helpers that handle context-cancellation
+related cleanup for you. plugin.NewExecCommand ensures that the OutputCh
+is closed upon context-cancellation so that clients streaming your command's
+output are not blocked. SetStopFunc ensures that the exec'ing command is
+stopped upon context-cancellation, which prevents orphaned processes.
+
+See Container#Exec in the Docker plugin and ExecSSH in the transport
+package for examples of how ExecCommandImpl is used.
+*/
 type ExecCommandImpl struct {
 	ctx           context.Context
 	outputCh      chan ExecOutputChunk
@@ -17,7 +39,10 @@ type ExecCommandImpl struct {
 }
 
 // NewExecCommand creates a new ExecCommandImpl object whose
-// lifetime is tied to the passed-in execution context.
+// lifetime is tied to the passed-in execution context. This
+// ctx should match what's passed into Execable#Exec. Note that
+// NewExecCommand ensures that the OutputCh is closed when ctx
+// is cancelled.
 func NewExecCommand(ctx context.Context) *ExecCommandImpl {
 	if ctx == nil {
 		panic("plugin.NewExecCommand called with a nil context")
@@ -47,8 +72,9 @@ func NewExecCommand(ctx context.Context) *ExecCommandImpl {
 }
 
 // SetStopFunc sets the function that stops the running command. stopFunc
-// is called when the execution context completes to perform necessary
-// termination.
+// is called when cmd.ctx is cancelled.
+//
+// NOTE: SetStopFunc can be used to avoid orphaned processes.
 func (cmd *ExecCommandImpl) SetStopFunc(stopFunc func()) {
 	// Thankfully, goroutines are cheap. Otherwise, mixing this in with
 	// the goroutine in NewExecCommand heavily complicates things.
@@ -84,7 +110,8 @@ func (cmd *ExecCommandImpl) CloseStreamsWithError(err error) {
 	cmd.Stderr().CloseWithError(err)
 }
 
-// SetExitCode sets the command's exit code.
+// SetExitCode sets the command's exit code that will be returned by
+// cmd.ExitCode().
 func (cmd *ExecCommandImpl) SetExitCode(exitCode int) {
 	select {
 	case <-cmd.ctx.Done():
@@ -94,13 +121,8 @@ func (cmd *ExecCommandImpl) SetExitCode(exitCode int) {
 	}
 }
 
-// SetExitCodeErr sets the exit code error, which occurs when the
-// plugin API fails to fetch the comand's exit code.
-//
-// NOTE: You should only use this function if your plugin API requires
-// a separate request to fetch the command's exit code. Otherwise,
-// use SetExitCode. See the implementation of Container#Exec in the
-// Docker plugin for an example of when and how this is used.
+// SetExitCodeErr sets the error that will be returned by cmd.ExitCode().
+// Use it if your plugin API fails to get the command's exit code.
 func (cmd *ExecCommandImpl) SetExitCodeErr(err error) {
 	select {
 	case <-cmd.ctx.Done():
