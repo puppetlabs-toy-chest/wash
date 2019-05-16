@@ -95,15 +95,6 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 	return cachedPdInfo.(podInfoResult), nil
 }
 
-func (p *pod) Metadata(ctx context.Context) (plugin.JSONObject, error) {
-	pdInfo, err := p.cachedPodInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return pdInfo.toMeta(), nil
-}
-
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 	pdInfo, err := p.cachedPodInfo(ctx)
 	if err != nil {
