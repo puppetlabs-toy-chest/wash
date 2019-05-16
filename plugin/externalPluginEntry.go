@@ -233,7 +233,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 	// do this in a separate goroutine?
 	waitForCommandToFinish := func() {
 		activity.Record(ctx, "Waiting for command: %v", cmdStr)
-		_, err := ExitCodeFromErr(cmd.Wait())
+		err = cmd.Wait()
 		if err != nil {
 			activity.Record(ctx, "Failed waiting for command: %v", err)
 		}
@@ -303,7 +303,8 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// TODO: Figure out how to pass-in opts when we have entries
 	// besides Stdin. Could do something like
 	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
-	cmdObj := exec.Command(
+	cmdObj := exec.CommandContext(
+		ctx,
 		e.script.Path(),
 		append(
 			[]string{"exec", e.id(), e.state, cmd},
@@ -327,15 +328,19 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	if err := cmdObj.Start(); err != nil {
 		return nil, err
 	}
+	// Note that CommandContext handles context-cancellation cleanup for us,
+	// so we don't have to use execCmd.SetStopFunc.
 
 	// Wait for the command to finish
 	go func() {
-		ec, err := ExitCodeFromErr(cmdObj.Wait())
-		if err != nil {
-			execCmd.CloseStreamsWithError(err)
-			return
+		err := cmdObj.Wait()
+		execCmd.CloseStreamsWithError(nil)
+		exitCode := cmdObj.ProcessState.ExitCode()
+		if exitCode < 0 {
+			execCmd.SetExitCodeErr(err)
+		} else {
+			execCmd.SetExitCode(exitCode)
 		}
-		execCmd.SetExitCode(ec)
 	}()
 	
 	return execCmd, nil
