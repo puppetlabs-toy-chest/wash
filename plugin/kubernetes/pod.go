@@ -56,8 +56,8 @@ type podInfoResult struct {
 	logContent []byte
 }
 
-func (pdInfo podInfoResult) toMeta() plugin.EntryMetadata {
-	meta := plugin.ToMeta(pdInfo.pd)
+func (pdInfo podInfoResult) toMeta() plugin.JSONObject {
+	meta := plugin.ToJSONObject(pdInfo.pd)
 	meta["LogSize"] = len(pdInfo.logContent)
 	return meta
 }
@@ -95,7 +95,7 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 	return cachedPdInfo.(podInfoResult), nil
 }
 
-func (p *pod) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (p *pod) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	pdInfo, err := p.cachedPodInfo(ctx)
 	if err != nil {
 		return nil, err

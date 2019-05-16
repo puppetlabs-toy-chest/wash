@@ -32,10 +32,10 @@ func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
 	return n.resourcetypes, nil
 }
 
-func (n *namespace) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (n *namespace) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	activity.Record(ctx, "Metadata for namespace %v: %+v", n.Name(), n.metadata)
 	if n.metadata != nil {
-		return plugin.ToMeta(n.metadata), nil
+		return plugin.ToJSONObject(n.metadata), nil
 	}
-	return plugin.EntryMetadata{}, nil
+	return plugin.JSONObject{}, nil
 }

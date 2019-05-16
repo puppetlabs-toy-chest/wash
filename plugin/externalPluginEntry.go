@@ -124,13 +124,13 @@ func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 }
 
 // Metadata displays the entry's metadata
-func (e *externalPluginEntry) Metadata(ctx context.Context) (EntryMetadata, error) {
+func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.id(), e.state)
 	if err != nil {
 		return nil, err
 	}
 
-	var metadata EntryMetadata
+	var metadata JSONObject
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
 		activity.Record(
 			ctx,

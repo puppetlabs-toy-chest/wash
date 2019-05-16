@@ -19,14 +19,14 @@ type container struct {
 	client *client.Client
 }
 
-func (c *container) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	// Use raw to also get the container size.
 	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.id, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return plugin.ToMeta(raw), nil
+	return plugin.ToJSONObject(raw), nil
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {

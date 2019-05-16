@@ -10,28 +10,30 @@ import (
 	"github.com/puppetlabs/wash/munge"
 )
 
-// EntryMetadata represents the entry's metadata
-// as returned by Entry#Metadata.
-type EntryMetadata map[string]interface{}
+// JSONObject is a typedef to a map[string]interface{}
+// object.
+type JSONObject = map[string]interface{}
 
-// ToMeta converts an object to an EntryMetadata object. If the input is already an
-// array of bytes, it must contain a serialized JSON object. Will panic if given something
-// besides a struct or []byte.
-func ToMeta(obj interface{}) EntryMetadata {
+// ToJSONObject serializes v to a JSON object. It will panic
+// if the serialization fails.
+func ToJSONObject(v interface{}) JSONObject {
+	if obj, ok := v.(JSONObject); ok {
+		return obj
+	}
 	var err error
 	var inrec []byte
-	if arr, ok := obj.([]byte); ok {
+	if arr, ok := v.([]byte); ok {
 		inrec = arr
 	} else {
-		if inrec, err = json.Marshal(obj); err != nil {
+		if inrec, err = json.Marshal(v); err != nil {
 			// Internal error if we can't marshal an object
 			panic(err)
 		}
 	}
-	var meta EntryMetadata
+	var obj JSONObject
 	// Internal error if not a JSON object
-	errz.Fatal(json.Unmarshal(inrec, &meta))
-	return meta
+	errz.Fatal(json.Unmarshal(inrec, &obj))
+	return obj
 }
 
 /*
@@ -57,7 +59,7 @@ type EntryAttributes struct {
 	hasMode bool
 	size    uint64
 	hasSize bool
-	meta    EntryMetadata
+	meta    JSONObject
 }
 
 // We can't just export EntryAttributes' fields because there's no way
@@ -160,13 +162,14 @@ func (a *EntryAttributes) SetSize(size uint64) *EntryAttributes {
 	return a
 }
 
-// Meta returns the portion of the entry's metadata that's returned by the
-// plugin API's List endpoint. This may or may not match what's returned by
-// e.Metadata (i.e. the entry's full metadata). That detail is plugin-specific.
-//
-// If a.SetMeta(m) was called, then this returns m. Otherwise, it returns
+// Meta returns the entry's meta attribute. If a.SetMeta(obj) was called,
+// then this returns obj serialized to JSONObject. Otherwise, it returns
 // a.ToMap(false).
-func (a *EntryAttributes) Meta() EntryMetadata {
+//
+// NOTE: The meta attribute is a subset of the entry's full metadata, which
+// is what e.Metadata returns. It is typically provided by the plugin API's
+// List endpoint.
+func (a *EntryAttributes) Meta() JSONObject {
 	if a.meta == nil {
 		return a.ToMap(false)
 	}
@@ -174,9 +177,15 @@ func (a *EntryAttributes) Meta() EntryMetadata {
 	return a.meta
 }
 
-// SetMeta sets the entry's metadata
-func (a *EntryAttributes) SetMeta(meta EntryMetadata) *EntryAttributes {
-	a.meta = meta
+// SetMeta sets the entry's meta attribute to obj, which should be the raw
+// object that's returned by the plugin API's List endpoint. For example,
+// if the entry represents a Docker container, then obj would be a Container
+// struct. If the entry represents a Docker volume, then obj would be a
+// Volume struct.
+//
+// SetMeta will panic if obj does not serialize to a JSON object.
+func (a *EntryAttributes) SetMeta(obj interface{}) *EntryAttributes {
+	a.meta = ToJSONObject(obj)
 	return a
 }
 
@@ -252,12 +261,9 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 		}
 		a.SetSize(sz)
 	}
-	var meta EntryMetadata
-	if rawMeta, ok := mp["meta"]; ok {
-		meta, ok = rawMeta.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("meta is not a JSON object")
-		}
+	meta, ok := mp["meta"].(JSONObject)
+	if !ok {
+		return fmt.Errorf("meta is not a JSON object")
 	}
 	a.SetMeta(meta)
 	return nil

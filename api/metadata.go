@@ -12,7 +12,7 @@ import (
 // swagger:response
 //nolint:deadcode,unused
 type entryMetadata struct {
-	EntryMetadata plugin.EntryMetadata
+	JSONObject plugin.JSONObject
 }
 
 // swagger:route GET /fs/metadata metadata getMetadata

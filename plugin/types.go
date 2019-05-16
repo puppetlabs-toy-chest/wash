@@ -40,7 +40,7 @@ import (
 // Metadata returns a complete description of the entry. See the EntryBase documentation for more
 // details on when to override it.
 type Entry interface {
-	Metadata(ctx context.Context) (EntryMetadata, error)
+	Metadata(ctx context.Context) (JSONObject, error)
 	name() string
 	attributes() EntryAttributes
 	slashReplacementChar() rune

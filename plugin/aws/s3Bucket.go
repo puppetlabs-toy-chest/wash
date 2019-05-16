@@ -176,16 +176,16 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
 }
 
-func (b *s3Bucket) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	request := &s3Client.GetBucketTaggingInput{
 		Bucket: awsSDK.String(b.Name()),
 	}
 
 	resp, err := b.client.GetBucketTaggingWithContext(ctx, request)
 
-	var metadata plugin.EntryMetadata
+	var metadata plugin.JSONObject
 	if err == nil {
-		metadata = plugin.ToMeta(resp)
+		metadata = plugin.ToJSONObject(resp)
 	} else if awserr, ok := err.(awserr.Error); ok {
 		// Check if this is a NoSuchTagSet error. If yes, then that means
 		// this bucket doesn't have any tags.
@@ -194,7 +194,7 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
 		// if you're interested in knowing why AWS does not return
 		// an empty TagSet instead of a NoSuchTagSet error
 		if awserr.Code() == "NoSuchTagSet" {
-			metadata = plugin.EntryMetadata{}
+			metadata = plugin.JSONObject{}
 		} else {
 			return nil, err
 		}

@@ -137,9 +137,9 @@ func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
 	return args.Get(0).(SizedReader), args.Error(1)
 }
 
-func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (EntryMetadata, error) {
+func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	args := e.Called(ctx)
-	return args.Get(0).(EntryMetadata), args.Error(1)
+	return args.Get(0).(JSONObject), args.Error(1)
 }
 
 type cachedDefaultOpFunc func(ctx context.Context, e Entry) (interface{}, error)
@@ -337,8 +337,8 @@ func (suite *CacheTestSuite) TestCachedOpen() {
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
-	mockEntryMetadata := EntryMetadata{"foo": "bar"}
-	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockEntryMetadata, mockEntryMetadata, func(ctx context.Context, e Entry) (interface{}, error) {
+	mockJSONObject := JSONObject{"foo": "bar"}
+	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockJSONObject, mockJSONObject, func(ctx context.Context, e Entry) (interface{}, error) {
 		return CachedMetadata(ctx, e)
 	})
 }

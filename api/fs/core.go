@@ -25,7 +25,7 @@ func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
 		SetMtime(finfo.ModTime()).
 		SetMode(finfo.Mode()).
 		SetSize(uint64(finfo.Size())).
-		SetMeta(plugin.ToMeta(newFileInfo(finfo)))
+		SetMeta(plugin.ToJSONObject(newFileInfo(finfo)))
 
 	n := &fsnode{
 		EntryBase: plugin.NewEntry(finfo.Name()),

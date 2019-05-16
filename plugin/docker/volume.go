@@ -42,18 +42,18 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		SetCtime(startTime).
 		SetMtime(startTime).
 		SetAtime(startTime).
-		SetMeta(plugin.ToMeta(v))
+		SetMeta(plugin.ToJSONObject(v))
 	vol.SetAttributes(attr)
 
 	return vol, nil
 }
 
-func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (v *volume) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
 	if err != nil {
 		return nil, err
 	}
-	return plugin.ToMeta(raw), nil
+	return plugin.ToJSONObject(raw), nil
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {

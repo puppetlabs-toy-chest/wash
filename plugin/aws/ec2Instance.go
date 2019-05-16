@@ -87,7 +87,7 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 		}
 	}
 
-	meta := plugin.ToMeta(inst)
+	meta := plugin.ToJSONObject(inst)
 	meta["CreationTime"] = ctime
 	meta["LastModifiedTime"] = mtime
 

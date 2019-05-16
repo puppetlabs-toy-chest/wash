@@ -45,14 +45,14 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 	return vol
 }
 
-func (v *pvc) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (v *pvc) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 	activity.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
 
-	return plugin.ToMeta(obj), nil
+	return plugin.ToJSONObject(obj), nil
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {

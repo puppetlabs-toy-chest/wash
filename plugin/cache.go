@@ -206,7 +206,7 @@ func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 }
 
 // CachedMetadata caches an entry's Metadata method
-func CachedMetadata(ctx context.Context, e Entry) (EntryMetadata, error) {
+func CachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
 		return e.Metadata(ctx)
 	})
@@ -215,7 +215,7 @@ func CachedMetadata(ctx context.Context, e Entry) (EntryMetadata, error) {
 		return nil, err
 	}
 
-	return cachedMetadata.(EntryMetadata), nil
+	return cachedMetadata.(JSONObject), nil
 }
 
 // Common helper for CachedList, CachedOpen and CachedMetadata

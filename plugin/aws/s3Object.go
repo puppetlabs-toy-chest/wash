@@ -67,13 +67,13 @@ func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOu
 	return resp.(*s3Client.HeadObjectOutput), nil
 }
 
-func (o *s3Object) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	metadata, err := o.cachedHeadObject(ctx)
 	if err != nil {
 		return nil, nil
 	}
 
-	return plugin.ToMeta(metadata), nil
+	return plugin.ToJSONObject(metadata), nil
 }
 
 func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {

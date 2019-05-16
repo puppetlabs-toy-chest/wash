@@ -61,7 +61,7 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 
 	meta, err := e.Metadata(context.Background())
 	if suite.NoError(err) {
-		suite.Equal(EntryMetadata{}, meta)
+		suite.Equal(JSONObject{}, meta)
 	}
 	suite.assertOpTTL(e, MetadataOp, "Metadata", -1)
 }
