@@ -25,10 +25,21 @@ func NewRunningCommand(ctx context.Context) *RunningCommand {
 		exitCodeCh: make(chan int, 1),
 		exitCodeErrCh: make(chan error, 1),
 	}
+
+	// Create the output streams
 	cmd.outputCh = make(chan ExecOutputChunk)
 	closer := &multiCloser{ch: cmd.outputCh, countdown: 2}
 	cmd.stdout = &OutputStream{ctx: cmd.ctx, id: Stdout, ch: cmd.outputCh, closer: closer}
 	cmd.stderr = &OutputStream{ctx: cmd.ctx, id: Stderr, ch: cmd.outputCh, closer: closer}
+
+	// Ensure that the output streams are closed when the context
+	// is cancelled. This guarantees that callers won't be blocked
+	// when they are streaming our command's output.
+	go func() {
+		<-cmd.ctx.Done()
+		cmd.CloseStreamsWithError(ctx.Err())
+	}()
+
 	return cmd
 }
 
@@ -36,6 +47,13 @@ func NewRunningCommand(ctx context.Context) *RunningCommand {
 // is called when the execution context completes to perform necessary
 // termination. Hence, it should noop for a finished command.
 func (cmd *RunningCommand) SetStopFunc(stopFunc func()) {
+	// Thankfully, goroutines are cheap. Otherwise, mixing this in with
+	// the goroutine in NewRunningCommand heavily complicates things.
+	// For example, we'd have to worry about the possibility that the
+	// NewRunningCommand goroutine is invoked before the Execable#Exec
+	// implementation can set a stopFunc, which can happen if the context
+	// is prematurely cancelled. That can result in an orphaned process
+	// in some plugin APIs, which is bad.
 	if stopFunc != nil {
 		go func() {
 			<-cmd.ctx.Done()
@@ -63,10 +81,14 @@ func (cmd *RunningCommand) CloseStreamsWithError(err error) {
 	cmd.Stderr().CloseWithError(err)
 }
 
-// SetExitCode sets the command's exit code. You should call this
-// function after closing the command's output streams.
+// SetExitCode sets the command's exit code.
 func (cmd *RunningCommand) SetExitCode(exitCode int) {
-	cmd.exitCodeCh <- exitCode
+	select {
+	case <-cmd.ctx.Done():
+		// Don't send anything if the context is cancelled.
+	default:
+		cmd.exitCodeCh <- exitCode
+	}
 }
 
 // SetExitCodeErr sets the exit code error, which occurs when the
@@ -78,7 +100,12 @@ func (cmd *RunningCommand) SetExitCode(exitCode int) {
 // use SetExitCode. See the implementation of Container#Exec in the
 // Docker plugin for an example of when and how this is used.
 func (cmd *RunningCommand) SetExitCodeErr(err error) {
-	cmd.exitCodeErrCh <- err
+	select {
+	case <-cmd.ctx.Done():
+		// Don't send anything if the context is cancelled.
+	default:
+		cmd.exitCodeErrCh <- err
+	}
 }
 
 // StreamOutput streams the running command's output
@@ -86,9 +113,9 @@ func (cmd *RunningCommand) StreamOutput() <-chan ExecOutputChunk {
 	return cmd.outputCh
 }
 
-// ExitCode returns the command's exit code. It will block until the command
-// has finished its execution, or until the execution context is cancelled.
-// ExitCode will return an error if it fails to fetch the command's exit code.
+// ExitCode returns the command's exit code. It will block until the command's
+// exit code is set, or until the execution context is cancelled. ExitCode will
+// return an error if it fails to fetch the command's exit code.
 func (cmd *RunningCommand) ExitCode() (int, error) {
 	select {
 	case <-cmd.ctx.Done():

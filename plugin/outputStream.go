@@ -13,6 +13,8 @@ type OutputStream struct {
 	id         ExecPacketType
 	ch         chan ExecOutputChunk
 	closer     *multiCloser
+	mux        sync.Mutex
+	closed     bool
 }
 
 func (s *OutputStream) sendData(timestamp time.Time, data string) {
@@ -42,7 +44,18 @@ func (s *OutputStream) Write(data []byte) (int, error) {
 }
 
 // CloseWithError sends the given error before closing the OutputStream.
+// It will noop if the OutputStream's already closed.
 func (s *OutputStream) CloseWithError(err error) {
+	// The lock's necessary because this can be called by multiple
+	// threads.
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if s.closed {
+		return
+	}
+	defer func() {
+		s.closed = true
+	}()
 	if err != nil {
 		// Avoid re-sending ctx.Err() if it was already sent
 		// by OutputStream#Write
@@ -50,7 +63,6 @@ func (s *OutputStream) CloseWithError(err error) {
 			s.sendError(time.Now(), err)
 		}
 	}
-
 	s.closer.Close()
 }
 
