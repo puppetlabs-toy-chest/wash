@@ -225,16 +225,18 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 		}
 
 		// The response will be empty if the bucket is in Amazon's default region (us-east-1)
-		region := s3Client.NormalizeBucketLocation(awsSDK.StringValue(resp.LocationConstraint))
-		// Update client to be region-specific
-		b.client = s3Client.New(b.session, aws.NewConfig().WithRegion(region))
-
-		return region, nil
+		return s3Client.NormalizeBucketLocation(awsSDK.StringValue(resp.LocationConstraint)), nil
 	})
 
 	if err != nil {
 		return "", err
 	}
 
-	return resp.(string), nil
+	region := resp.(string)
+	if awsSDK.StringValue(b.client.Config.Region) != region {
+		// Update client to be region-specific
+		b.client = s3Client.New(b.session, aws.NewConfig().WithRegion(resp.(string)))
+	}
+
+	return region, nil
 }
