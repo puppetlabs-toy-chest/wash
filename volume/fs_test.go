@@ -27,18 +27,25 @@ const varLogFixture = `
 
 type fsTestSuite struct {
 	suite.Suite
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 func (suite *fsTestSuite) SetupSuite() {
 	plugin.SetTestCache(datastore.NewMemCache())
+	suite.ctx, suite.cancelFunc = context.WithCancel(context.Background())
 }
 
 func (suite *fsTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
+	// Cancelling the context ensures that the tests don't leave any
+	// dangling goroutines waiting on a context cancellation. These
+	// goroutines are created by ExecCommandImpl
+	suite.cancelFunc()
 }
 
-func createResult(data string) plugin.ExecCommand {
-	cmd := plugin.NewExecCommand(context.Background())
+func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
+	cmd := plugin.NewExecCommand(suite.ctx)
 	go func() {
 		_, err := cmd.Stdout().Write([]byte(data))
 		if err != nil {
@@ -51,12 +58,12 @@ func createResult(data string) plugin.ExecCommand {
 	return cmd
 }
 
-func createExec() *mockExecutor {
+func (suite *fsTestSuite) createExec() *mockExecutor {
 	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	// Used when recording activity.
 	exec.SetTestID("/instance")
 	cmd := StatCmd("/var/log")
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(createResult(varLogFixture), nil)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(varLogFixture), nil)
 	return exec
 }
 
@@ -80,7 +87,7 @@ func (suite *fsTestSuite) find(grp plugin.Group, path string) plugin.Entry {
 }
 
 func (suite *fsTestSuite) TestFSList() {
-	exec := createExec()
+	exec := suite.createExec()
 	fs := NewFS("fs", exec)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
@@ -120,7 +127,7 @@ func (suite *fsTestSuite) TestFSList() {
 }
 
 func (suite *fsTestSuite) TestFSRead() {
-	exec := createExec()
+	exec := suite.createExec()
 	fs := NewFS("fs", exec)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
@@ -128,7 +135,7 @@ func (suite *fsTestSuite) TestFSRead() {
 	entry := suite.find(fs, "var/log/path1/a file")
 	suite.Equal("a file", plugin.Name(entry))
 
-	execResult := createResult("hello")
+	execResult := suite.createResult("hello")
 	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
 	rdr, err := entry.(plugin.Readable).Open(context.Background())
 	suite.NoError(err)
