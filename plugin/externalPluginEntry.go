@@ -334,6 +334,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// Wait for the command to finish
 	go func() {
 		err := cmdObj.Wait()
+		execCmd.CloseStreamsWithError(nil)
 		exitCode := cmdObj.ProcessState.ExitCode()
 		if exitCode < 0 {
 			execCmd.SetExitCodeErr(err)
