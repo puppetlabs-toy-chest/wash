@@ -303,7 +303,8 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// TODO: Figure out how to pass-in opts when we have entries
 	// besides Stdin. Could do something like
 	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
-	cmdObj := exec.Command(
+	cmdObj := exec.CommandContext(
+		ctx,
 		e.script.Path(),
 		append(
 			[]string{"exec", e.id(), e.state, cmd},
@@ -327,6 +328,8 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	if err := cmdObj.Start(); err != nil {
 		return nil, err
 	}
+	// Note that CommandContext handles context-cancellation cleanup for us,
+	// so we don't have to use execCmd.SetStopFunc.
 
 	// Wait for the command to finish
 	go func() {

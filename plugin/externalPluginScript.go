@@ -27,15 +27,12 @@ func (s externalPluginScriptImpl) Path() string {
 // InvokeAndWait shells out to the plugin script, passing it the given
 // arguments. It waits for the script to exit, then returns its standard
 // output.
-//
-// TODO: Add a suitable timeout. This could be done w/ CommandContext per
-// https://golang.org/pkg/os/exec/#Cmd.Wait. Could this be specified by
-// plugin authors in the top-level YAML file? Should it be a per-entry
-// thing?
 func (s externalPluginScriptImpl) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
 	activity.Record(ctx, "Running command: %v %v", s.Path(), strings.Join(args, " "))
 
-	cmd := exec.Command(s.Path(), args...)
+	// Use CommandContext to ensure that the process is killed when the context
+	// is cancelled
+	cmd := exec.CommandContext(ctx, s.Path(), args...)
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
