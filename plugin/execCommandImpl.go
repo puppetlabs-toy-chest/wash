@@ -19,6 +19,10 @@ type ExecCommandImpl struct {
 // NewExecCommand creates a new ExecCommandImpl object whose
 // lifetime is tied to the passed-in execution context.
 func NewExecCommand(ctx context.Context) *ExecCommandImpl {
+	if ctx == nil {
+		panic("plugin.NewExecCommand called with a nil context")
+	}
+	
 	cmd := &ExecCommandImpl{
 		ctx: ctx,
 		exitCodeCh: make(chan int, 1),
