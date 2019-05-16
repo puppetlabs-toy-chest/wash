@@ -13,6 +13,19 @@ type OutputStreamTestSuite struct {
 	suite.Suite
 }
 
+func newOutputStream(ctx context.Context) *OutputStream {
+	ch := make(chan ExecOutputChunk, 1)
+	return &OutputStream{
+		ctx: ctx,
+		id: Stdout,
+		ch: ch,
+		closer: &multiCloser{
+			ch: ch,
+			countdown: 1,
+		},
+	}
+}
+
 func (suite *OutputStreamTestSuite) EqualChunk(expected ExecOutputChunk, actual ExecOutputChunk) bool {
 	expectedStreamName := expected.StreamID
 	eqlStreamName := suite.Equal(
@@ -58,11 +71,8 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 		}
 	}()
 
-	ch := make(chan ExecOutputChunk, 1)
-	defer close(ch)
-
-	stream := OutputStream{ctx: ctx, id: Stdout, ch: ch}
-
+	stream := newOutputStream(ctx)
+	
 	// Test a successful write
 	data := []byte("data")
 	nw, writeErr := stream.Write(data)
@@ -109,68 +119,72 @@ func (suite *OutputStreamTestSuite) assertClosedChannel(ch <-chan ExecOutputChun
 	}
 }
 
-func (suite *OutputStreamTestSuite) TestCloseWithError() {
-	newOutputStream := func(ctx context.Context) *OutputStream {
-		ch := make(chan ExecOutputChunk, 1)
-		return &OutputStream{ctx: ctx, id: Stdout, ch: ch, closer: &multiCloser{ch: ch, countdown: 1}}
-	}
-
-	// Test that if err == nil, then nothing was sent to the channel
-	stream := newOutputStream(context.Background())
-	suite.False(stream.closed)
-	stream.CloseWithError(nil)
+func (suite *OutputStreamTestSuite) assertClosed(stream *OutputStream) {
 	suite.assertClosedChannel(stream.ch)
 	suite.True(stream.closed)
+}
 
-	// Useful assertion for the subsequent tests
-	assertSentError := func(stream *OutputStream, err error) {
-		sentErrorMsg := fmt.Sprintf("Expected the error '%v' to be sent", err)
-
-		select {
-		case chunk, ok := <-stream.ch:
-			if !ok {
-				suite.Fail(sentErrorMsg + ", but the channel was closed")
-			} else {
-				suite.EqualChunk(
-					ExecOutputChunk{StreamID: stream.id, Err: err},
-					chunk,
-				)
-			}
-		default:
-			suite.Fail(sentErrorMsg + ", but nothing was sent on the channel")
+func (suite *OutputStreamTestSuite) assertSentError(stream *OutputStream, err error) {
+	sentErrorMsg := fmt.Sprintf("Expected the error '%v' to be sent", err)
+	select {
+	case chunk, ok := <-stream.ch:
+		if !ok {
+			suite.Fail(sentErrorMsg + ", but the channel was closed")
+		} else {
+			suite.EqualChunk(
+				ExecOutputChunk{StreamID: stream.id, Err: err},
+				chunk,
+			)
 		}
+	default:
+		suite.Fail(sentErrorMsg + ", but nothing was sent on the channel")
 	}
+}
 
-	// Test that if err != nil, then the error is sent to the channel
-	stream = newOutputStream(context.Background())
-	sentErr := fmt.Errorf("an arbitrary error")
-	suite.False(stream.closed)
-	stream.CloseWithError(sentErr)
-	assertSentError(stream, sentErr)
-	suite.assertClosedChannel(stream.ch)
-	suite.True(stream.closed)
+func (suite *OutputStreamTestSuite) TestCloseWithError_NoError() {
+	stream := newOutputStream(context.Background())
+	stream.CloseWithError(nil)
+	suite.assertClosed(stream)
+}
 
-	// Test that if err == ctx.Err(), then ctx.Err() is sent if a previous
-	// Write did not send it
+func (suite *OutputStreamTestSuite) TestCloseWithError_WithError() {
+	stream := newOutputStream(context.Background())
+	err := fmt.Errorf("an arbitrary error")
+	stream.CloseWithError(err)
+	suite.assertSentError(stream, err)
+	suite.assertClosed(stream)
+}
+
+func (suite *OutputStreamTestSuite) TestCloseWithError_ContextError_NotSent() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	stream = newOutputStream(ctx)
 	cancelFunc()
-	suite.False(stream.closed)
+	stream := newOutputStream(ctx)
 	stream.CloseWithError(ctx.Err())
-	assertSentError(stream, ctx.Err())
-	suite.assertClosedChannel(stream.ch)
-	suite.True(stream.closed)
+	suite.assertSentError(stream, ctx.Err())
+	suite.assertClosed(stream)
+}
 
-	// Now, test that if err == ctx.Err(), then ctx.Err() is _not_ sent if
-	// a previous Write sent it
-	stream = newOutputStream(ctx)
+func (suite *OutputStreamTestSuite) TestCloseWithError_ContextError_Sent() {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	cancelFunc()
+	stream := newOutputStream(ctx)
 	stream.sentCtxErr = true
-	suite.False(stream.closed)
 	stream.CloseWithError(ctx.Err())
-	suite.assertClosedChannel(stream.ch)
-	suite.True(stream.closed)
+	// Note that if CloseWithError sent the passed-in ctx.Err(),
+	// then assertClosed would fail because it'd read-in the sent
+	// ctx.Err()
+	suite.assertClosed(stream)
+}
 
-	// TODO: Add test to ensure that consecutive closes noop
+func (suite *OutputStreamTestSuite) TestCloseWithError_ConsecutiveCloses() {
+	// Main thing to test here is to ensure that multiple close calls
+	// won't panic by trying to close stream.ch when it is already
+	// closed
+	stream := newOutputStream(context.Background())
+	stream.CloseWithError(nil)
+	suite.assertClosed(stream)
+	stream.CloseWithError(nil)
+	suite.assertClosed(stream)
 }
 
 /*
