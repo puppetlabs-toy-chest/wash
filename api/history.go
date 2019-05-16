@@ -147,11 +147,10 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 		}
 
 		// Ensure the reader is closed when context stops.
-		go func() {
-			<-r.Context().Done()
+		streamCleanup(r.Context(), "Journal "+journal.String(), func() error {
 			rdr.Cleanup()
-			activity.Record(r.Context(), "API: Journal %v closed by completed context: %v", journal, rdr.Stop())
-		}()
+			return rdr.Stop()
+		})
 
 		// Do an initial flush to send the header.
 		w.WriteHeader(http.StatusOK)
@@ -164,6 +163,7 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 			if _, err := fmt.Fprintln(f, line.Text); err != nil {
 				return unknownErrorResponse(err)
 			}
+			// Flush every line to the client.
 			f.Flush()
 		}
 	} else {
@@ -172,9 +172,7 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 			return journalUnavailableResponse(journal.String(), err.Error())
 		}
 
-		defer func() {
-			activity.Record(r.Context(), "API: Journal %v closed by completed context: %v", journal, rdr.Close())
-		}()
+		streamCleanup(r.Context(), "Journal "+journal.String(), rdr.Close)
 
 		if _, err := io.Copy(w, rdr); err != nil {
 			return unknownErrorResponse(fmt.Errorf("Could not read journal %v: %v", journal, err))
