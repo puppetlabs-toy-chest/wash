@@ -44,7 +44,6 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 	}
 	activity.Record(ctx, "API: Metadata %v %+v", path, metadata)
 
-	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	if err = jsonEncoder.Encode(metadata); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))

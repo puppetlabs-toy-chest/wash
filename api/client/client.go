@@ -32,8 +32,8 @@ type Client interface {
 	Metadata(path string) (map[string]interface{}, error)
 	Stream(path string) (io.ReadCloser, error)
 	Exec(path string, command string, args []string, opts apitypes.ExecOptions) (<-chan apitypes.ExecPacket, error)
-	History() ([]apitypes.Activity, error)
-	ActivityJournal(index int) (io.ReadCloser, error)
+	History(bool) (chan apitypes.Activity, error)
+	ActivityJournal(index int, follow bool) (io.ReadCloser, error)
 	Clear(path string) ([]string, error)
 }
 
@@ -197,10 +197,15 @@ func (c *domainSocketClient) Exec(path string, command string, args []string, op
 	return events, nil
 }
 
-// History returns the command history for the current wash server session.
-func (c *domainSocketClient) History() ([]apitypes.Activity, error) {
+// History returns a command history channel for the current wash server session.
+// If follow is false, it closes when all current activity has been delivered.
+func (c *domainSocketClient) History(follow bool) (chan apitypes.Activity, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
-	resp, err := c.Get(domainSocketBaseURL + "/history")
+	url := domainSocketBaseURL + "/history"
+	if follow {
+		url += "?follow=true"
+	}
+	resp, err := c.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -209,24 +214,34 @@ func (c *domainSocketClient) History() ([]apitypes.Activity, error) {
 		return nil, unmarshalErrorResp(resp)
 	}
 
-	defer func() { errz.Log(resp.Body.Close()) }()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+	acts := make(chan apitypes.Activity)
+	go func() {
+		defer func() { errz.Log(resp.Body.Close()) }()
+		dec := json.NewDecoder(resp.Body)
+		for dec.More() {
+			var act apitypes.Activity
+			if err := dec.Decode(&act); err != nil {
+				log.Println(err)
+				close(acts)
+				return
+			}
+			acts <- act
+		}
+		close(acts)
+	}()
 
-	var result apitypes.HistoryResponse
-	if err := json.Unmarshal(body, &result.Activities); err != nil {
-		return nil, fmt.Errorf("Non-JSON body at %v: %v", "/history", string(body))
-	}
-
-	return result.Activities, nil
+	return acts, nil
 }
 
 // ActivityJournal returns a reader for the journal associated with a particular command in history.
-func (c *domainSocketClient) ActivityJournal(index int) (io.ReadCloser, error) {
+// If follow is true, it streams new updates instead of returning the whole journal.
+func (c *domainSocketClient) ActivityJournal(index int, follow bool) (io.ReadCloser, error) {
 	// Intentionally skip journaling activity associated with history because that would modify it.
-	resp, err := c.Get(domainSocketBaseURL + "/history/" + strconv.Itoa(index))
+	url := domainSocketBaseURL + "/history/" + strconv.Itoa(index)
+	if follow {
+		url += "?follow=true"
+	}
+	resp, err := c.Get(url)
 	if err != nil {
 		return nil, err
 	}

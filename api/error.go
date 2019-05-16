@@ -139,6 +139,14 @@ func outOfBoundsRequest(size int, reason string) *errorResponse {
 	)}
 }
 
+func invalidBoolParam(name, value string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.InvalidBool,
+		fmt.Sprintf("Invalid boolean value '%v' given for %v parameter", value, name),
+		apitypes.ErrorFields{"value": value},
+	)}
+}
+
 func invalidPathsResponse(paths []string) *errorResponse {
 	return &errorResponse{http.StatusBadRequest, newErrorObj(
 		apitypes.InvalidPaths,

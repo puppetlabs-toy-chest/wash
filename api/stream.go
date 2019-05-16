@@ -26,7 +26,6 @@ import (
 //       404: errorResp
 //       500: errorResp
 var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
-	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
@@ -41,6 +40,7 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return unknownErrorResponse(fmt.Errorf("Cannot stream %v, response handler does not support flushing", path))
 	}
 
+	ctx := r.Context()
 	rdr, err := entry.(plugin.Streamable).Stream(ctx)
 
 	if err != nil {
@@ -48,18 +48,15 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	}
 	activity.Record(ctx, "API: Streaming %v", path)
 
+	// Do an initial flush to send the header.
 	w.WriteHeader(http.StatusOK)
-	// Ensure every write is a flush, and do an initial flush to send the header.
-	wf := &streamableResponseWriter{f}
 	f.Flush()
 
 	// Ensure it's closed when the context is cancelled.
-	go func() {
-		<-r.Context().Done()
-		activity.Record(ctx, "API: Stream %v closed by completed context: %v", path, rdr.Close())
-	}()
+	streamCleanup(ctx, "Stream "+path, rdr.Close)
 
-	if _, err := io.Copy(wf, rdr); err != nil {
+	// Ensure every write is a flush with streamableResponseWriter.
+	if _, err := io.Copy(&streamableResponseWriter{f}, rdr); err != nil {
 		// Common for copy to error when the caller closes the connection.
 		activity.Record(ctx, "API: Streaming %v errored: %v", path, err)
 	}

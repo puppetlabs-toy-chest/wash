@@ -28,7 +28,6 @@ var infoHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return errResp
 	}
 
-	w.WriteHeader(http.StatusOK)
 	jsonEncoder := json.NewEncoder(w)
 	// TODO: Include the entry's full metadata?
 	apiEntry := toAPIEntry(entry)

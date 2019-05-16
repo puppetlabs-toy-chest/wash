@@ -42,7 +42,6 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 	activity.Record(ctx, "API: Reading %v", path)
 
-	w.WriteHeader(http.StatusOK)
 	n, err := io.Copy(w, io.NewSectionReader(content, 0, content.Size()))
 	if n != content.Size() {
 		activity.Record(ctx, "API: Reading %v incomplete: %v/%v", path, n, content.Size())

@@ -299,6 +299,14 @@
         ],
         "summary": "Get command history",
         "operationId": "retrieveHistory",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "stream updates when true",
+            "name": "Follow",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/HistoryResponse"
@@ -330,6 +338,14 @@
         ],
         "summary": "Get logs for a particular entry in history",
         "operationId": "getJournal",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "stream updates when true",
+            "name": "Follow",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/octetResponse"

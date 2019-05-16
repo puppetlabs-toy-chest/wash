@@ -81,6 +81,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}
 
+	// Ensure every write is a flush, and do an initial flush to send the header.
 	w.WriteHeader(http.StatusOK)
 	fw.Flush()
 

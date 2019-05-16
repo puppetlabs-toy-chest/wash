@@ -50,6 +50,12 @@
         "operationId": "executeCommand",
         "parameters": [
           {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          },
+          {
             "x-go-name": "Cmd",
             "description": "Name of the executable to invoke",
             "name": "cmd",
@@ -78,12 +84,6 @@
             "schema": {
               "$ref": "#/definitions/ExecOptions"
             }
-          },
-          {
-            "type": "string",
-            "description": "uniquely identifies an entry",
-            "name": "Path",
-            "in": "query"
           }
         ],
         "responses": {
@@ -299,6 +299,14 @@
         ],
         "summary": "Get command history",
         "operationId": "retrieveHistory",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "stream updates when true",
+            "name": "Follow",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/HistoryResponse"
@@ -330,6 +338,14 @@
         ],
         "summary": "Get logs for a particular entry in history",
         "operationId": "getJournal",
+        "parameters": [
+          {
+            "type": "boolean",
+            "description": "stream updates when true",
+            "name": "Follow",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/octetResponse"
