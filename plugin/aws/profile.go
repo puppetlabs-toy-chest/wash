@@ -3,10 +3,10 @@ package aws
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -25,11 +25,19 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 
 	activity.Record(ctx, "Creating a new AWS session for the %v profile", name)
 
+	// profile-specific stdin prompt
+	tokenProvider := func() (string, error) {
+		fmt.Fprintf(os.Stderr, "Assume Role MFA token code for %v: ", name)
+		var v string
+		_, err := fmt.Scanln(&v)
+		return v, err
+	}
+
 	// Create the session. SharedConfigEnable tells AWS to load the profile
 	// config from the ~/.aws/credentials and ~/.aws/config files
 	sess, err := session.NewSessionWithOptions(session.Options{
 		Profile:                 name,
-		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		AssumeRoleTokenProvider: tokenProvider,
 		// TODO: make this configurable. Different IAM configs may allow different durations.
 		// Use the minimum IAM limit of 1 hour.
 		AssumeRoleTokenDuration: 1 * time.Hour,
