@@ -37,13 +37,12 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		return nil, err
 	}
 
-	attr := plugin.EntryAttributes{}
-	attr.
+	cl.
+		Attributes().
 		SetCtime(output.mtime).
 		SetMtime(output.mtime).
 		SetAtime(output.mtime).
 		SetSize(uint64(len(output.content)))
-	cl.SetAttributes(attr)
 
 	return cl, nil
 }

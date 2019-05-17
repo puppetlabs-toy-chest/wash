@@ -20,19 +20,17 @@ func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
 	// TODO: finfo.Sys() contains more detailed file attributes,
 	// but it's platform-specific. We should eventually use it for
 	// a more complete implementation of apifs.
-	attr := plugin.EntryAttributes{}
-	attr.
-		SetMtime(finfo.ModTime()).
-		SetMode(finfo.Mode()).
-		SetSize(uint64(finfo.Size())).
-		SetMeta(plugin.ToJSONObject(newFileInfo(finfo)))
-
 	n := &fsnode{
 		EntryBase: plugin.NewEntry(finfo.Name()),
 		path:      path,
 	}
-	n.DisableDefaultCaching()
-	n.SetAttributes(attr)
+	n.
+		DisableDefaultCaching().
+		Attributes().
+		SetMtime(finfo.ModTime()).
+		SetMode(finfo.Mode()).
+		SetSize(uint64(finfo.Size())).
+		SetMeta(plugin.ToJSONObject(newFileInfo(finfo)))
 	return n
 }
 

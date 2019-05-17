@@ -40,13 +40,12 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	}
 
 	meta := pdInfo.toMeta()
-	attr := plugin.EntryAttributes{}
-	attr.
+	pd.
+		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
-		SetAtime(attr.Ctime()).
+		SetAtime(p.CreationTimestamp.Time).
 		SetSize(uint64(meta["LogSize"].(int))).
 		SetMeta(meta)
-	pd.SetAttributes(attr)
 
 	return pd, nil
 }

@@ -24,9 +24,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 		&pvcs{plugin.NewEntry("persistentvolumeclaims"), c, name},
 	}
 	// TODO: Figure out other attributes that we could set here, if any.
-	attr := plugin.EntryAttributes{}
-	attr.SetMeta(meta)
-	ns.SetAttributes(attr)
+	ns.Attributes().SetMeta(meta)
 	return ns
 }
 

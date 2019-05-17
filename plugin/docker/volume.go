@@ -37,13 +37,12 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		client:    c,
 	}
 
-	attr := plugin.EntryAttributes{}
-	attr.
+	vol.
+		Attributes().
 		SetCtime(startTime).
 		SetMtime(startTime).
 		SetAtime(startTime).
 		SetMeta(v)
-	vol.SetAttributes(attr)
 
 	return vol, nil
 }

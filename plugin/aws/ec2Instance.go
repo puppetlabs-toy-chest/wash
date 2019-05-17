@@ -56,10 +56,10 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 		session:   session,
 		client:    client,
 	}
-	ec2Instance.SetTTLOf(plugin.ListOp, 30*time.Second)
-	ec2Instance.DisableCachingFor(plugin.MetadataOp)
-
-	ec2Instance.SetAttributes(getAttributes(inst))
+	ec2Instance.
+		SetTTLOf(plugin.ListOp, 30*time.Second).
+		DisableCachingFor(plugin.MetadataOp).
+		SetAttributes(getAttributes(inst))
 
 	return ec2Instance
 }

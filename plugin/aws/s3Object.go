@@ -39,14 +39,13 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	// TODO: Export a mungeSize helper to abstract away the common
 	// logic of validating a negative size
 	mtime := awsSDK.TimeValue(o.LastModified)
-	attr := plugin.EntryAttributes{}
-	attr.
+	s3Obj.
+		Attributes().
 		SetCtime(mtime).
 		SetMtime(mtime).
 		SetAtime(mtime).
 		SetSize(uint64(awsSDK.Int64Value(o.Size))).
 		SetMeta(o)
-	s3Obj.SetAttributes(attr)
 
 	return s3Obj
 }
