@@ -12,8 +12,8 @@ import (
 
 type ExecCommandImplTestSuite struct {
 	suite.Suite
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 func (suite *ExecCommandImplTestSuite) SetupTest() {
@@ -89,7 +89,8 @@ func (suite *ExecCommandImplTestSuite) TestNewExecCommand_CancelledContext_Close
 func (suite *ExecCommandImplTestSuite) TestSetStopFunc_CancelledContext_StopsCommand() {
 	execCmd := suite.NewExecCommand()
 	stoppedCh := make(chan bool, 1)
-	time.AfterFunc(1 * time.Second, func() {
+	// Allow lots of time for slow testing with `-race`.
+	time.AfterFunc(10*time.Second, func() {
 		close(stoppedCh)
 	})
 	execCmd.SetStopFunc(func() {
@@ -179,4 +180,3 @@ func (suite *ExecCommandImplTestSuite) TestExitCode_ReturnsExitCodeErrIfSet() {
 func TestExecCommandImpl(t *testing.T) {
 	suite.Run(t, new(ExecCommandImplTestSuite))
 }
-
