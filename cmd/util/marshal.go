@@ -3,7 +3,8 @@ package cmdutil
 import (
 	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v2"
+
+	"github.com/ghodss/yaml"
 )
 
 const (
@@ -26,7 +27,15 @@ func NewMarshaller(format string) (Marshaller, error) {
 			return json.MarshalIndent(v, "", "  ")
 		}), nil
 	case YAML:
-		return Marshaller(yaml.Marshal), nil
+		return Marshaller(func(v interface{}) ([]byte, error) {
+			// Use a JSONToYAML style encoding so that objects do not
+			// have to implement multiple Marshal* interfaces.
+			jsonBytes, err := json.Marshal(v)
+			if err != nil {
+				return nil, err
+			}
+			return yaml.JSONToYAML(jsonBytes)
+		}), nil
 	default:
 		return nil, fmt.Errorf("the %v format is not supported. Supported formats are 'json' or 'yaml'", format)
 	}

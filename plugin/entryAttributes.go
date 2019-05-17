@@ -214,8 +214,11 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 	return mp
 }
 
-// MarshalJSON marshals the entry's attributes to JSON.
-func (a *EntryAttributes) MarshalJSON() ([]byte, error) {
+// MarshalJSON marshals the entry's attributes to JSON. It takes
+// a value receiver so that the attributes are still marshaled
+// when they're referenced as interface{} objects. See
+// https://stackoverflow.com/a/21394657 for more details.
+func (a EntryAttributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.ToMap(true))
 }
 
