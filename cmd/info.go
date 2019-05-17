@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
@@ -10,24 +11,22 @@ import (
 	"github.com/spf13/viper"
 )
 
-func metaCommand() *cobra.Command {
-	metaCmd := &cobra.Command{
-		Use:   "meta <file>",
-		Short: "Prints the metadata of a file",
+func infoCommand() *cobra.Command {
+	infoCmd := &cobra.Command{
+		Use:   "info <path>",
+		Short: "Prints the entry's info at the specified path",
 		Args:  cobra.ExactArgs(1),
 	}
 
-	metaCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
-	if err := viper.BindPFlag("output", metaCmd.Flags().Lookup("output")); err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-	}
+	infoCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
+	errz.Fatal(viper.BindPFlag("output", infoCmd.Flags().Lookup("output")))
 
-	metaCmd.RunE = toRunE(metaMain)
+	infoCmd.RunE = toRunE(infoMain)
 
-	return metaCmd
+	return infoCmd
 }
 
-func metaMain(cmd *cobra.Command, args []string) exitCode {
+func infoMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 
 	output := viper.GetString("output")
@@ -39,19 +38,19 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	metadata, err := conn.Metadata(path)
+	entry, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
-	prettyMetadata, err := marshaller.Marshal(metadata)
+	marshalledEntry, err := marshaller.Marshal(entry)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
-	fmt.Println(prettyMetadata)
+	fmt.Println(marshalledEntry)
 
 	return exitCode{0}
 }

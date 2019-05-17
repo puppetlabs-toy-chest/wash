@@ -19,14 +19,14 @@ type container struct {
 	client *client.Client
 }
 
-func (c *container) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	// Use raw to also get the container size.
 	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.id, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return plugin.ToMeta(raw), nil
+	return plugin.ToJSONObject(raw), nil
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -38,9 +38,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmAttr := plugin.EntryAttributes{}
-	cmAttr.SetSize(uint64(content.Size()))
-	cm.SetAttributes(cmAttr)
+	cm.Attributes().SetSize(uint64(content.Size()))
 
 	clf := &containerLogFile{plugin.NewEntry("log"), c.id, c.client}
 	clf.DisableCachingFor(plugin.MetadataOp)
@@ -48,9 +46,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	clfAttr := plugin.EntryAttributes{}
-	clfAttr.SetSize(uint64(content.Size()))
-	clf.SetAttributes(clfAttr)
+	clf.Attributes().SetSize(uint64(content.Size()))
 
 	// Include a view of the remote filesystem using volume.FS
 	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil

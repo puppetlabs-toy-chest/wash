@@ -19,8 +19,21 @@ const (
 
 var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
-// EntryBase implements Entry, making it easy to create new entries.
-// You should use plugin.NewEntry to create new EntryBase objects.
+/*
+EntryBase implements Entry, making it easy to create new entries.
+You should use plugin.NewEntry to create new EntryBase objects.
+
+Each of the setters supports the builder pattern, which enables you
+to do something like
+
+	e := plugin.NewEntry("foo")
+	e.
+		DisableCachingFor(plugin.ListOp).
+		Attributes().
+		SetCtime(ctime).
+		SetMtime(mtime).
+		SetMeta(meta)
+*/
 type EntryBase struct {
 	entryName          string
 	attr               EntryAttributes
@@ -49,10 +62,8 @@ func NewEntry(name string) EntryBase {
 // ENTRY INTERFACE
 
 // Metadata returns the entry's meta attribute (see plugin.EntryAttributes).
-// This should be overridden if e's full metadata does not match the meta
-// attribute, which is true if the plugin API's List endpoint returns only a
-// subset of the full metadata.
-func (e *EntryBase) Metadata(ctx context.Context) (EntryMetadata, error) {
+// Override this if e has additional metadata.
+func (e *EntryBase) Metadata(ctx context.Context) (JSONObject, error) {
 	// Disable Metadata's caching in case the plugin author forgot to do this
 	e.DisableCachingFor(MetadataOp)
 
@@ -94,10 +105,18 @@ func (e *EntryBase) Name() string {
 	return e.name()
 }
 
-// SetAttributes sets the entry's attributes. Use it
-// after creating the entry via a call to NewEntry.
-func (e *EntryBase) SetAttributes(attr EntryAttributes) {
+// Attributes returns a pointer to the entry's attributes. Use it
+// to individually set the entry's attributes
+func (e *EntryBase) Attributes() *EntryAttributes {
+	return &e.attr
+}
+
+// SetAttributes sets the entry's attributes. Use it to set
+// the entry's attributes in a single operation, which is useful
+// when you've already pre-computed them.
+func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 	e.attr = attr
+	return e
 }
 
 /*
@@ -106,30 +125,34 @@ character of '#' to char. The '/' replacement character is used
 when determining the entry's cname. See plugin.CName for more
 details.
 */
-func (e *EntryBase) SetSlashReplacementChar(char rune) {
+func (e *EntryBase) SetSlashReplacementChar(char rune) *EntryBase {
 	if char == '/' {
 		panic("e.SetSlashReplacementChar called with '/'")
 	}
 
 	e.slashReplacementCh = char
+	return e
 }
 
 // SetTTLOf sets the specified op's TTL
-func (e *EntryBase) SetTTLOf(op defaultOpCode, ttl time.Duration) {
+func (e *EntryBase) SetTTLOf(op defaultOpCode, ttl time.Duration) *EntryBase {
 	e.ttl[op] = ttl
+	return e
 }
 
 // DisableCachingFor disables caching for the specified op
-func (e *EntryBase) DisableCachingFor(op defaultOpCode) {
+func (e *EntryBase) DisableCachingFor(op defaultOpCode) *EntryBase {
 	e.SetTTLOf(op, -1)
+	return e
 }
 
 // DisableDefaultCaching disables the default caching
 // for List, Open and Metadata.
-func (e *EntryBase) DisableDefaultCaching() {
+func (e *EntryBase) DisableDefaultCaching() *EntryBase {
 	for op := range e.ttl {
 		e.DisableCachingFor(defaultOpCode(op))
 	}
+	return e
 }
 
 // SetTestID sets the entry's cache ID for testing.

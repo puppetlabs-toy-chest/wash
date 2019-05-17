@@ -13,19 +13,21 @@ type EntryAttributesTestSuite struct {
 	suite.Suite
 }
 
-func (suite *EntryAttributesTestSuite) TestToMeta() {
+func (suite *EntryAttributesTestSuite) TestToJSONObject() {
 	cases := []struct {
 		input    interface{}
-		expected EntryMetadata
+		expected JSONObject
 	}{
-		{[]byte(`{"hello": [1, 2, 3]}`), EntryMetadata{"hello": []interface{}{1.0, 2.0, 3.0}}},
+		{[]byte(`{"hello": [1, 2, 3]}`), JSONObject{"hello": []interface{}{1.0, 2.0, 3.0}}},
 		{struct {
 			Name  string
 			Value []int
-		}{"me", []int{1, 2, 3}}, EntryMetadata{"Name": "me", "Value": []interface{}{1.0, 2.0, 3.0}}},
+		}{"me", []int{1, 2, 3}}, JSONObject{"Name": "me", "Value": []interface{}{1.0, 2.0, 3.0}}},
+		{map[string]interface{}{"1": 2}, JSONObject{"1": 2}},
+		{JSONObject{"1": 2}, JSONObject{"1": 2}},
 	}
 	for _, c := range cases {
-		actual := ToMeta(c.input)
+		actual := ToJSONObject(c.input)
 		suite.Equal(c.expected, actual)
 	}
 }
@@ -46,9 +48,9 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 		return unmarshaledTime
 	}
 	attr := EntryAttributes{}
-	attr.meta = EntryMetadata{}
+	attr.meta = JSONObject{}
 	expectedMp := make(map[string]interface{})
-	expectedMp["meta"] = EntryMetadata{}
+	expectedMp["meta"] = JSONObject{}
 	doUnmarshalJSONTests := func() {
 		attrJSON, err := json.Marshal(expectedMp)
 		if err != nil {
@@ -117,8 +119,8 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	doUnmarshalJSONTests()
 
 	// Tests for Meta
-	suite.Equal(EntryMetadata{}, attr.Meta())
-	meta := EntryMetadata{"foo": "bar"}
+	suite.Equal(JSONObject{}, attr.Meta())
+	meta := JSONObject{"foo": "bar"}
 	attr.SetMeta(meta)
 	expectedMp["meta"] = meta
 	suite.Equal(meta, attr.Meta())

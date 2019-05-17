@@ -35,24 +35,14 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		podi:      pd,
 	}
 
-	attr := plugin.EntryAttributes{}
-	attr.
+	vol.
+		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
-		SetMtime(attr.Ctime()).
-		SetAtime(attr.Ctime())
-	vol.SetAttributes(attr)
+		SetMtime(p.CreationTimestamp.Time).
+		SetAtime(p.CreationTimestamp.Time).
+		SetMeta(p)
 
 	return vol
-}
-
-func (v *pvc) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	obj, err := v.pvci.Get(v.Name(), metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	activity.Record(ctx, "Metadata for persistent volume claim %v: %+v", v.Name(), obj)
-
-	return plugin.ToMeta(obj), nil
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {

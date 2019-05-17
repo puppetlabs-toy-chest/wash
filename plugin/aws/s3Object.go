@@ -39,13 +39,13 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	// TODO: Export a mungeSize helper to abstract away the common
 	// logic of validating a negative size
 	mtime := awsSDK.TimeValue(o.LastModified)
-	attr := plugin.EntryAttributes{}
-	attr.
+	s3Obj.
+		Attributes().
 		SetCtime(mtime).
 		SetMtime(mtime).
 		SetAtime(mtime).
-		SetSize(uint64(awsSDK.Int64Value(o.Size)))
-	s3Obj.SetAttributes(attr)
+		SetSize(uint64(awsSDK.Int64Value(o.Size))).
+		SetMeta(o)
 
 	return s3Obj
 }
@@ -67,13 +67,13 @@ func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOu
 	return resp.(*s3Client.HeadObjectOutput), nil
 }
 
-func (o *s3Object) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
+func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	metadata, err := o.cachedHeadObject(ctx)
 	if err != nil {
 		return nil, nil
 	}
 
-	return plugin.ToMeta(metadata), nil
+	return plugin.ToJSONObject(metadata), nil
 }
 
 func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {

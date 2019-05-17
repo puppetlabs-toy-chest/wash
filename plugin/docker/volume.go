@@ -37,23 +37,14 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		client:    c,
 	}
 
-	attr := plugin.EntryAttributes{}
-	attr.
+	vol.
+		Attributes().
 		SetCtime(startTime).
 		SetMtime(startTime).
 		SetAtime(startTime).
-		SetMeta(plugin.ToMeta(v))
-	vol.SetAttributes(attr)
+		SetMeta(v)
 
 	return vol, nil
-}
-
-func (v *volume) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	_, raw, err := v.client.VolumeInspectWithRaw(ctx, v.Name())
-	if err != nil {
-		return nil, err
-	}
-	return plugin.ToMeta(raw), nil
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {

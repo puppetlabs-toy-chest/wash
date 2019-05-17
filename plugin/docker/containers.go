@@ -42,12 +42,12 @@ func (cs *containers) List(ctx context.Context) ([]plugin.Entry, error) {
 		}
 
 		startTime := time.Unix(inst.Created, 0)
-		attr := plugin.EntryAttributes{}
-		attr.
+		cont.
+			Attributes().
 			SetCtime(startTime).
 			SetMtime(startTime).
-			SetAtime(startTime)
-		cont.SetAttributes(attr)
+			SetAtime(startTime).
+			SetMeta(inst)
 
 		keys[i] = cont
 	}

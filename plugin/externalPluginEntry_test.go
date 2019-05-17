@@ -234,7 +234,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	metadata, err := entry.Metadata(ctx)
 	if suite.NoError(err) {
-		expectedMetadata := EntryMetadata{"key": "value"}
+		expectedMetadata := JSONObject{"key": "value"}
 		suite.Equal(expectedMetadata, metadata)
 	}
 }

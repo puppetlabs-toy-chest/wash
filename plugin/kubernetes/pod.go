@@ -40,13 +40,12 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	}
 
 	meta := pdInfo.toMeta()
-	attr := plugin.EntryAttributes{}
-	attr.
+	pd.
+		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
-		SetAtime(attr.Ctime()).
+		SetAtime(p.CreationTimestamp.Time).
 		SetSize(uint64(meta["LogSize"].(int))).
 		SetMeta(meta)
-	pd.SetAttributes(attr)
 
 	return pd, nil
 }
@@ -56,8 +55,8 @@ type podInfoResult struct {
 	logContent []byte
 }
 
-func (pdInfo podInfoResult) toMeta() plugin.EntryMetadata {
-	meta := plugin.ToMeta(pdInfo.pd)
+func (pdInfo podInfoResult) toMeta() plugin.JSONObject {
+	meta := plugin.ToJSONObject(pdInfo.pd)
 	meta["LogSize"] = len(pdInfo.logContent)
 	return meta
 }
@@ -93,15 +92,6 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 	}
 
 	return cachedPdInfo.(podInfoResult), nil
-}
-
-func (p *pod) Metadata(ctx context.Context) (plugin.EntryMetadata, error) {
-	pdInfo, err := p.cachedPodInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return pdInfo.toMeta(), nil
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
