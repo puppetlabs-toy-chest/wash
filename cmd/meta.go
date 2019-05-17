@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/puppetlabs/wash/api/client"
@@ -9,7 +8,6 @@ import (
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
 )
 
 func metaCommand() *cobra.Command {
@@ -33,14 +31,9 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 
 	output := viper.GetString("output")
-	var marshaller func(interface{}) ([]byte, error)
-	switch output {
-	case "json":
-		marshaller = func(in interface{}) ([]byte, error) { return json.MarshalIndent(in, "", "  ") }
-	case "yaml":
-		marshaller = yaml.Marshal
-	default:
-		cmdutil.ErrPrintf("output must be either 'json' or 'yaml'\n")
+	marshaller, err := cmdutil.NewMarshaller(output)
+	if err != nil {
+		cmdutil.ErrPrintf(err.Error())
 		return exitCode{1}
 	}
 
@@ -52,13 +45,13 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	prettyMetadata, err := marshaller(metadata)
+	prettyMetadata, err := marshaller.Marshal(metadata)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
 
-	fmt.Println(string(prettyMetadata))
+	fmt.Println(prettyMetadata)
 
 	return exitCode{0}
 }
