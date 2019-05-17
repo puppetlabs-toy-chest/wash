@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -27,7 +28,8 @@ type Opts struct {
 	CPUProfilePath      string
 	ExternalPluginsPath string
 	LogFile             string
-	LogLevel            log.Level
+	// LogLevel can be "warn", "info", "debug", or "trace".
+	LogLevel string
 }
 
 type controlChannels struct {
@@ -44,6 +46,13 @@ type Server struct {
 	fuse       controlChannels
 }
 
+var levelMap = map[string]log.Level{
+	"warn":  log.WarnLevel,
+	"info":  log.InfoLevel,
+	"debug": log.DebugLevel,
+	"trace": log.TraceLevel,
+}
+
 // New creates a new Server.
 func New(mountpoint string, opts Opts) *Server {
 	return &Server{mountpoint: mountpoint, opts: opts}
@@ -51,7 +60,16 @@ func New(mountpoint string, opts Opts) *Server {
 
 // Start starts the server. It returns once the server is ready.
 func (s *Server) Start() error {
-	log.SetLevel(s.opts.LogLevel)
+	level, ok := levelMap[s.opts.LogLevel]
+	if !ok {
+		allLevels := make([]string, 0, len(levelMap))
+		for level := range levelMap {
+			allLevels = append(allLevels, level)
+		}
+		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s, strings.Join(allLevels, ", "))
+	}
+
+	log.SetLevel(level)
 	if s.opts.LogFile != "" {
 		logFH, err := os.Create(s.opts.LogFile)
 		if err != nil {
