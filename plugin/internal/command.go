@@ -1,3 +1,6 @@
+// Package internal contains utility classes and helpers that are used
+// by the plugin package. Its purpose is to modularize the plugin package's
+// code without exporting its implementation.
 package internal
 
 import (
