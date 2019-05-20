@@ -2,8 +2,6 @@ package plugin
 
 import (
 	"fmt"
-	"io"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -99,26 +97,4 @@ func (e ErrCouldNotDetermineSizeAttr) Error() string {
 // Attributes returns the entry's attribtues
 func Attributes(e Entry) EntryAttributes {
 	return e.attributes()
-}
-
-// CreateCommand creates a cmd object encapsulating the given cmd and its args.
-// It returns the cmd object + its stdout and stderr pipes.
-//
-// TODO: Maybe useful to create our own Command object that wraps *exec.Cmd.
-// This way, we can extend it. For example, we could add a method that returns the
-// full command string, which would be useful for logging.
-func CreateCommand(cmd string, args ...string) (*exec.Cmd, io.ReadCloser, io.ReadCloser, error) {
-	cmdObj := exec.Command(cmd, args...)
-
-	stdout, err := cmdObj.StdoutPipe()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	stderr, err := cmdObj.StderrPipe()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return cmdObj, stdout, stderr, nil
 }

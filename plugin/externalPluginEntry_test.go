@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/puppetlabs/wash/plugin/internal"
+
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,16 +23,37 @@ func (m *mockExternalPluginScript) Path() string {
 	return m.path
 }
 
-func (m *mockExternalPluginScript) InvokeAndWait(ctx context.Context, args ...string) ([]byte, error) {
-	retValues := m.Called(ctx, args)
+func (m *mockExternalPluginScript) InvokeAndWait(
+	ctx context.Context,
+	method string,
+	entry *externalPluginEntry,
+	args ...string,
+) ([]byte, error) {
+	retValues := m.Called(ctx, method, entry, args)
 	return retValues.Get(0).([]byte), retValues.Error(1)
+}
+
+func (m *mockExternalPluginScript) NewInvocation(
+	ctx context.Context,
+	method string,
+	entry *externalPluginEntry,
+	args ...string,
+) *internal.Command {
+	// A stub's still necessary to satisfy the externalPluginScript
+	// interface
+	panic("mockExternalPluginScript#NewInvocation called by tests")
 }
 
 // We make ctx an interface{} so that this method could
 // be used when the caller generates a context using e.g.
 // context.Background()
-func (m *mockExternalPluginScript) OnInvokeAndWait(ctx interface{}, args ...string) *mock.Call {
-	return m.On("InvokeAndWait", ctx, args)
+func (m *mockExternalPluginScript) OnInvokeAndWait(
+	ctx interface{},
+	method string,
+	entry *externalPluginEntry,
+	args ...string,
+) *mock.Call {
+	return m.On("InvokeAndWait", ctx, method, entry, args)
 }
 
 type ExternalPluginEntryTestSuite struct {
@@ -45,20 +68,20 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 	decodedEntry.Name = "decodedEntry"
 
 	_, err = decodedEntry.toExternalPluginEntry()
-	suite.Regexp(regexp.MustCompile("action"), err)
-	decodedEntry.SupportedActions = []string{"list"}
+	suite.Regexp(regexp.MustCompile("methods"), err)
+	decodedEntry.Methods = []string{"list"}
 
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
-		suite.Equal(decodedEntry.SupportedActions, entry.supportedActions)
+		suite.Equal(decodedEntry.Methods, entry.methods)
 	}
 }
 
 func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 	return decodedExternalPluginEntry{
 		Name:             name,
-		SupportedActions: []string{"list"},
+		Methods:          []string{"list"},
 	}
 }
 
@@ -129,11 +152,11 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 // and TestMetadata that could be refactored. Not worth doing right
 // now since the refactor may make the tests harder to understand,
 // but could be worth considering later if we add similarly structured
-// actions.
+// methods.
 
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := externalPluginEntry{
+	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
@@ -141,7 +164,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry.id(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then List returns its error
@@ -158,7 +181,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	// Test that List properly decodes the entries from stdout
 	stdout := "[" +
-		"{\"name\":\"foo\",\"supported_actions\":[\"list\"]}" +
+		"{\"name\":\"foo\",\"methods\":[\"list\"]}" +
 		"]"
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
@@ -166,7 +189,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 		expectedEntries := []Entry{
 			&externalPluginEntry{
 				EntryBase:        NewEntry("foo"),
-				supportedActions: []string{"list"},
+				methods:          []string{"list"},
 				script:           entry.script,
 			},
 		}
@@ -177,7 +200,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := externalPluginEntry{
+	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
@@ -185,7 +208,7 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "read", entry.id(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "read", entry).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Open returns its error
@@ -204,17 +227,37 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestMetadata() {
+func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
 		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+	}
+	expectedMeta := JSONObject{"foo": "bar"}
+	entry.Attributes().SetMeta(expectedMeta)
+
+	// If metadata is not implemented, then e.Metadata should return
+	// EntryBase#Metadata, which returns the meta attribute.
+	meta, err := entry.Metadata(context.Background())
+	if suite.NoError(err) {
+		suite.Equal(expectedMeta, meta)
+	}
+	// Make sure that Wash did not shell out to the plugin script
+	mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		methods:   []string{"metadata"},
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "metadata", entry.id(), entry.state).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "metadata", entry).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Metadata returns its error

@@ -1,7 +1,7 @@
 #!/bin/sh
 echo '{
   "name": "test",
-  "supported_actions": [
+  "methods": [
     "list"
   ]
 }'

@@ -70,9 +70,11 @@ func Actions() map[string]Action {
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
 	case *externalPluginRoot:
-		return t.supportedActions
+		return t.methods
 	case *externalPluginEntry:
-		return t.supportedActions
+		// The supported actions are a subset of an external plugin
+		// entry's methods
+		return t.methods
 	default:
 		actions := make([]string, 0)
 

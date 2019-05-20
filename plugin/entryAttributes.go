@@ -264,11 +264,13 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 		}
 		a.SetSize(sz)
 	}
-	meta, ok := mp["meta"].(JSONObject)
-	if !ok {
-		return fmt.Errorf("meta is not a JSON object")
+	if rawMeta, ok := mp["meta"]; ok {
+		meta, isObj := rawMeta.(JSONObject)
+		if !isObj {
+			return fmt.Errorf("meta is not a JSON object")
+		}
+		a.SetMeta(meta)
 	}
-	a.SetMeta(meta)
 	return nil
 }
 

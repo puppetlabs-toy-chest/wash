@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os/exec"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/puppetlabs/wash/activity"
+	"github.com/puppetlabs/wash/plugin/internal"
 )
 
 type decodedCacheTTLs struct {
@@ -24,7 +23,7 @@ type decodedCacheTTLs struct {
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
 	Name                 string           `json:"name"`
-	SupportedActions     []string         `json:"supported_actions"`
+	Methods             []string          `json:"methods"`
 	SlashReplacementChar string           `json:"slash_replacement_char"`
 	CacheTTLs            decodedCacheTTLs `json:"cache_ttls"`
 	Attributes           EntryAttributes  `json:"attributes"`
@@ -35,13 +34,12 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 	if e.Name == "" {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
-	if e.SupportedActions == nil {
-		return nil, fmt.Errorf("the entry's supported actions must be provided")
+	if e.Methods == nil {
+		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
-
 	entry := &externalPluginEntry{
 		EntryBase:        NewEntry(e.Name),
-		supportedActions: e.SupportedActions,
+		methods:          e.Methods,
 		state:            e.State,
 	}
 	entry.SetAttributes(e.Attributes)
@@ -54,17 +52,14 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 
 		entry.SetSlashReplacementChar([]rune(e.SlashReplacementChar)[0])
 	}
-
 	return entry, nil
 }
 
-// externalPluginEntry represents an entry from an external plugin. It consists
-// of its name, its object (as serialized JSON), and the path to its
-// main plugin script.
+// externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
 	script           externalPluginScript
-	supportedActions []string
+	methods         []string
 	state            string
 }
 
@@ -80,25 +75,32 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 	}
 }
 
-// List lists the entry's children, if it has any.
+// implements returns true if the entry implements the given method,
+// false otherwise
+func (e *externalPluginEntry) implements(method string) bool {
+	for _, m := range e.methods {
+		if method == m {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "list", e.id(), e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "list", e)
 	if err != nil {
 		return nil, err
 	}
-
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		activity.Record(
+		return nil, newStdoutDecodeErr(
 			ctx,
-			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
-			strings.TrimSpace(string(stdout)),
-			"[{\"name\":\"<name_of_first_entry>\",\"supported_actions\":[\"list\"]},{\"name\":\"<name_of_second_entry>\",\"supported_actions\":[\"list\"]}]",
+			"the entries",
+			err,
+			stdout,
+			"[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]",
 		)
-
-		return nil, fmt.Errorf("could not decode the entries from stdout: %v", err)
 	}
-
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
 		entry, err := decodedExternalPluginEntry.toExternalPluginEntry()
@@ -106,108 +108,73 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 			return nil, err
 		}
 		entry.script = e.script
-
 		entries[i] = entry
 	}
-
 	return entries, nil
 }
 
-// Open returns the entry's content
 func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "read", e.id(), e.state)
+	stdout, err := e.script.InvokeAndWait(ctx, "read", e)
 	if err != nil {
 		return nil, err
 	}
-
 	return bytes.NewReader(stdout), nil
 }
 
-// Metadata displays the entry's metadata
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e.id(), e.state)
+	if !e.implements("metadata") {
+		// The entry does not override the "Metadata" method so invoke
+		// the default
+		return e.EntryBase.Metadata(ctx)
+	}
+	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e)
 	if err != nil {
 		return nil, err
 	}
-
 	var metadata JSONObject
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		activity.Record(
+		return nil, newStdoutDecodeErr(
 			ctx,
-			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
-			strings.TrimSpace(string(stdout)),
+			"the metadata",
+			err,
+			stdout,
 			"{\"key1\":\"value1\",\"key2\":\"value2\"}",
 		)
-
-		return nil, fmt.Errorf("could not decode the metadata from stdout: %v", err)
 	}
-
 	return metadata, nil
 }
 
-type stdoutStreamer struct {
-	stdoutRdr io.ReadCloser
-	cmd       *exec.Cmd
-}
-
-func (s *stdoutStreamer) Read(p []byte) (int, error) {
-	return s.stdoutRdr.Read(p)
-}
-
-func (s *stdoutStreamer) Close() error {
-	var err error
-
-	if closeErr := s.stdoutRdr.Close(); closeErr != nil {
-		err = fmt.Errorf("error closing stdout: %v", closeErr)
-	}
-
-	if signalErr := s.cmd.Process.Signal(syscall.SIGTERM); signalErr != nil {
-		signalErr = fmt.Errorf(
-			"error sending SIGTERM to process with PID %v: %v",
-			s.cmd.Process.Pid,
-			signalErr,
-		)
-
-		if err != nil {
-			err = fmt.Errorf("%v; and %v", err, signalErr)
-		} else {
-			err = signalErr
-		}
-	}
-
-	return err
-}
-
-// Stream streams the entry's content
 func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
-	cmd, stdoutR, stderrR, err := CreateCommand(
-		e.script.Path(),
-		"stream",
-		e.id(),
-		e.state,
-	)
-
+	cmd := e.script.NewInvocation(ctx, "stream", e)
+	stdoutR, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
 	}
-
-	cmdStr := fmt.Sprintf("%v %v %v %v", e.script.Path(), "stream", e.id(), e.state)
-
-	activity.Record(ctx, "Starting command: %v", cmdStr)
-	if err := cmd.Start(); err != nil {
-		activity.Record(ctx, "Closed command stdout: %v", stdoutR.Close())
-		activity.Record(ctx, "Closed command stderr: %v", stderrR.Close())
+	stderrR, err := cmd.StderrPipe()
+	if err != nil {
 		return nil, err
 	}
+	activity.Record(ctx, "Starting %v", cmd)
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	// "wait" will be used in Stream's error handlers. It will be wrapped
+	// in a "defer" call to ensure that cmd.Wait()'s called once we've read
+	// all of stdout/stderr. These are the preconditions specified in
+	// exec.Cmd#Wait's docs.
+	wait := func() {
+		if err := cmd.Wait(); err != nil {
+			activity.Record(ctx, "Failed waiting for %v to finish: %v", cmd, err)
+		}
+	}
 
+	// Wait for the header to appear on stdout. This lets us know that
+	// the plugin's ready for streaming.
 	header := "200"
 	headerRdrCh := make(chan error, 1)
 	go func() {
-		defer close(headerRdrCh)
-
 		headerBytes := []byte(header + "\n")
 		buf := make([]byte, len(headerBytes), cap(headerBytes))
-
 		n, err := stdoutR.Read(buf)
 		if err != nil {
 			headerRdrCh <- err
@@ -217,68 +184,33 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 			headerRdrCh <- fmt.Errorf("read an invalid header: %v", string(buf))
 			return
 		}
-
-		// Good to go.
 		headerRdrCh <- nil
 	}()
-
 	timeout := 5 * time.Second
 	timer := time.After(timeout)
-
-	// Waiting for the command to finish ensures that the
-	// stdout + stderr readers are closed
-	//
-	// TODO: Talk about how to handle timeout here, i.e.
-	// whether we should kill the command or not. Should we
-	// do this in a separate goroutine?
-	waitForCommandToFinish := func() {
-		activity.Record(ctx, "Waiting for command: %v", cmdStr)
-		err = cmd.Wait()
-		if err != nil {
-			activity.Record(ctx, "Failed waiting for command: %v", err)
-		}
-	}
-
 	select {
 	case err := <-headerRdrCh:
 		if err != nil {
-			defer waitForCommandToFinish()
-
-			// Try to get more context from stderr, if there is
-			// any
+			defer wait()
+			// Try to get more context from stderr
 			stderr, readErr := ioutil.ReadAll(stderrR)
 			if readErr == nil && len(stderr) != 0 {
 				err = fmt.Errorf(string(stderr))
 			}
-
 			return nil, fmt.Errorf("failed to read the header: %v", err)
 		}
-
-		// Keep reading from stderr so that the streaming isn't
-		// blocked when its buffer is full.
+		// err == nil, meaning we've received the header. Keep reading from
+		// stderr so that the streaming isn't blocked when its buffer is full.
 		go func() {
-			defer func() {
-				activity.Record(ctx, "Closed stream stderr: %v", stderrR.Close())
-			}()
-
-			buf := make([]byte, 4096)
-			for {
-				_, err := stderrR.Read(buf)
-				if err != nil {
-					break
-				}
-			}
+			_, _ = io.Copy(ioutil.Discard, stderrR)
 		}()
-
-		return &stdoutStreamer{stdoutR, cmd}, nil
+		return &stdoutStreamer{cmd, stdoutR}, nil
 	case <-timer:
-		defer waitForCommandToFinish()
-
-		// We timed out while waiting for the streaming header to appear,
-		// so log an appropriate error message using whatever was printed
-		// on stderr
+		defer wait()
+		// We timed out while waiting for the streaming header to appear.
+		// Return an appropriate error message using whatever was printed
+		// on stderr.
 		errMsgFmt := fmt.Sprintf("did not see the %v header after %v seconds:", header, timeout) + " %v"
-
 		stderr, err := ioutil.ReadAll(stderrR)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -286,62 +218,66 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 				fmt.Sprintf("cannot report reason: stderr i/o error: %v", err),
 			)
 		}
-
 		if len(stderr) == 0 {
 			return nil, fmt.Errorf(
 				errMsgFmt,
 				fmt.Sprintf("cannot report reason: nothing was printed to stderr"),
 			)
 		}
-
 		return nil, fmt.Errorf(errMsgFmt, string(stderr))
 	}
 }
 
-// Exec executes a command on the given entry
 func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
-	// TODO: Figure out how to pass-in opts when we have entries
-	// besides Stdin. Could do something like
-	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
-	cmdObj := exec.CommandContext(
-		ctx,
-		e.script.Path(),
-		append(
-			[]string{"exec", e.id(), e.state, cmd},
-			args...,
-		)...,
-	)
-
-	// Set-up stdin
-	if opts.Stdin != nil {
-		cmdObj.Stdin = opts.Stdin
-	}
-
+	// Start the command.
+	cmdObj := e.script.NewInvocation(ctx, "exec", e, append([]string{cmd}, args...)...)
 	execCmd := NewExecCommand(ctx)
-
-	// Set-up the output streams
-	cmdObj.Stdout = execCmd.Stdout()
-	cmdObj.Stderr = execCmd.Stderr()
-
-	// Start the command
-	activity.Record(ctx, "Starting command: %v %v", cmdObj.Path, strings.Join(cmdObj.Args, " "))
+	cmdObj.SetStdout(execCmd.Stdout())
+	cmdObj.SetStderr(execCmd.Stderr())
+	if opts.Stdin != nil {
+		cmdObj.SetStdin(opts.Stdin)
+	}
+	activity.Record(ctx, "Starting %v", cmdObj)
 	if err := cmdObj.Start(); err != nil {
 		return nil, err
 	}
-	// Note that CommandContext handles context-cancellation cleanup for us,
-	// so we don't have to use execCmd.SetStopFunc.
+	// internal.Command handles context-cancellation cleanup
+	// for us, so we don't have to use execCmd.SetStopFunc.
 
-	// Wait for the command to finish
+	// Asynchronously wait for the command to finish
 	go func() {
 		err := cmdObj.Wait()
 		execCmd.CloseStreamsWithError(nil)
-		exitCode := cmdObj.ProcessState.ExitCode()
+		exitCode := cmdObj.ProcessState().ExitCode()
 		if exitCode < 0 {
 			execCmd.SetExitCodeErr(err)
 		} else {
 			execCmd.SetExitCode(exitCode)
 		}
 	}()
-	
 	return execCmd, nil
+}
+
+type stdoutStreamer struct {
+	cmd    *internal.Command 
+	stdout io.ReadCloser
+}
+
+func (s *stdoutStreamer) Read(p []byte) (int, error) {
+	return s.stdout.Read(p)
+}
+
+func (s *stdoutStreamer) Close() error {
+	return s.cmd.Wait()
+}
+
+func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, stdout []byte, example string) error {
+	activity.Record(
+		ctx,
+		"could not decode %v from stdout\nreceived:\n%v\nexpected something like:\n%v",
+		decodedThing,
+		strings.TrimSpace(string(stdout)),
+		example,
+	)
+	return fmt.Errorf("could not decode %v from stdout: %v", decodedThing, reason)
 }
