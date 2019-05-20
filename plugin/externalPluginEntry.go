@@ -233,10 +233,10 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	// Start the command.
 	cmdObj := e.script.NewInvocation(ctx, "exec", e, append([]string{cmd}, args...)...)
 	execCmd := NewExecCommand(ctx)
-	cmdObj.Stdout = execCmd.Stdout()
-	cmdObj.Stderr = execCmd.Stderr()
+	cmdObj.SetStdout(execCmd.Stdout())
+	cmdObj.SetStderr(execCmd.Stderr())
 	if opts.Stdin != nil {
-		cmdObj.Stdin = opts.Stdin
+		cmdObj.SetStdin(opts.Stdin)
 	}
 	activity.Record(ctx, "Starting %v", cmdObj)
 	if err := cmdObj.Start(); err != nil {
@@ -249,7 +249,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	go func() {
 		err := cmdObj.Wait()
 		execCmd.CloseStreamsWithError(nil)
-		exitCode := cmdObj.ProcessState.ExitCode()
+		exitCode := cmdObj.ProcessState().ExitCode()
 		if exitCode < 0 {
 			execCmd.SetExitCodeErr(err)
 		} else {

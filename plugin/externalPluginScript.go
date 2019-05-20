@@ -34,11 +34,11 @@ func (s externalPluginScriptImpl) InvokeAndWait(
 ) ([]byte, error) {
 	cmd := s.NewInvocation(ctx, method, entry, args...)
 	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
+	cmd.SetStdout(&stdoutBuf)
+	cmd.SetStderr(&stderrBuf)
 	activity.Record(ctx, "Invoking %v", cmd)
 	err := cmd.Run()
-	exitCode := cmd.ProcessState.ExitCode()
+	exitCode := cmd.ProcessState().ExitCode()
 	if exitCode < 0 {
 		return nil, err
 	}
