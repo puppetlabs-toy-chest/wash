@@ -74,26 +74,6 @@ func TrackTime(start time.Time, name string) {
 	log.Infof("%s took %s", name, elapsed)
 }
 
-// ErrNegativeSizeAttr indicates that a negative value for the
-// size attribute was returned
-type ErrNegativeSizeAttr struct {
-	size int64
-}
-
-func (e ErrNegativeSizeAttr) Error() string {
-	return fmt.Sprintf("returned a negative value for the size: %v", e.size)
-}
-
-// ErrCouldNotDetermineSizeAttr indicates that the size attribute
-// could not be determined
-type ErrCouldNotDetermineSizeAttr struct {
-	reason string
-}
-
-func (e ErrCouldNotDetermineSizeAttr) Error() string {
-	return fmt.Sprintf("could not determine the size attribute: %v", e.reason)
-}
-
 // Attributes returns the entry's attribtues
 func Attributes(e Entry) EntryAttributes {
 	return e.attributes()
