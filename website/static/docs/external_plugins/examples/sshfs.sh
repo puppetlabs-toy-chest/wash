@@ -60,7 +60,7 @@ function vm_exec {
     #
     # NOTE: This type of plugin-specific cleanup is the plugin
     # author's responsibility, not Wash's.
-    ssh -t -t root@"${vm}" "${cmd}"
+    ssh -tt root@"${vm}" "${cmd}"
   else
     ssh root@"${vm}" "${cmd}"
   fi

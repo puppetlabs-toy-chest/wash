@@ -231,10 +231,6 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 
 func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	// Start the command.
-	//
-	// TODO: Handle other options. Go with
-	//   <plugin_script> exec <path> <state> <opts> <cmd> <args...>
-	// (opts is the JSON-serialization of Exec's options)
 	cmdObj := e.script.NewInvocation(ctx, "exec", e, append([]string{cmd}, args...)...)
 	execCmd := NewExecCommand(ctx)
 	cmdObj.Stdout = execCmd.Stdout()
