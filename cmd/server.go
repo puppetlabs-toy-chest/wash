@@ -19,36 +19,20 @@ import (
 
 func serverCommand() *cobra.Command {
 	serverCmd := &cobra.Command{
-		Use:   "server <mountpoint>",
-		Short: "Sets up the Wash API and FUSE servers",
-		Long:  "Initializes all of the plugins, then sets up the Wash API and FUSE servers",
-		Args:  cobra.MinimumNArgs(1),
+		Use:    "server <mountpoint>",
+		Short:  "Sets up the Wash API and FUSE servers",
+		Long:   "Initializes all of the plugins, then sets up the Wash API and FUSE servers",
+		Args:   cobra.MinimumNArgs(1),
+		PreRun: bindServerArgs,
+		RunE:   toRunE(serverMain),
 	}
-
-	serverCmd.Flags().String("loglevel", "info", "Set the logging level")
-	errz.Fatal(viper.BindPFlag("loglevel", serverCmd.Flags().Lookup("loglevel")))
-
-	serverCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
-	errz.Fatal(viper.BindPFlag("logfile", serverCmd.Flags().Lookup("logfile")))
-
-	serverCmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
-	errz.Fatal(viper.BindPFlag("external-plugins", serverCmd.Flags().Lookup("external-plugins")))
-
-	serverCmd.Flags().String("cpuprofile", "", "Write cpu profile to file")
-	errz.Fatal(viper.BindPFlag("cpuprofile", serverCmd.Flags().Lookup("cpuprofile")))
-
-	serverCmd.RunE = toRunE(serverMain)
+	addServerArgs(serverCmd)
 
 	return serverCmd
 }
 
 func serverMain(cmd *cobra.Command, args []string) exitCode {
 	mountpoint := args[0]
-	loglevel := viper.GetString("loglevel")
-	logfile := viper.GetString("logfile")
-	externalPluginsPath := viper.GetString("external-plugins")
-	cpuprofile := viper.GetString("cpuprofile")
-
 	mountpoint, err := filepath.Abs(mountpoint)
 	if err != nil {
 		cmdutil.ErrPrintf("Could not compute the absolute path of the mountpoint %v: %v", mountpoint, err)
@@ -59,27 +43,42 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		FullTimestamp:   true,
 		TimestampFormat: time.RFC3339Nano,
 	})
-	level, err := cmdutil.ParseLevel(loglevel)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
 
 	// On Ctrl-C, trigger the clean-up. This consists of shutting down the API
 	// server and unmounting the FS.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	srv := server.New(mountpoint, server.Opts{
-		CPUProfilePath:      cpuprofile,
-		ExternalPluginsPath: externalPluginsPath,
-		LogFile:             logfile,
-		LogLevel:            level,
-	})
+	srv := server.New(mountpoint, serverOptsFromFlags())
 	if err := srv.Start(); err != nil {
 		log.Warn(err)
 		return exitCode{1}
 	}
 	srv.Wait(sigCh)
 	return exitCode{0}
+}
+
+func addServerArgs(cmd *cobra.Command) {
+	cmd.Flags().String("loglevel", "info", "Set the logging level")
+	cmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
+	cmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
+	cmd.Flags().String("cpuprofile", "", "Write cpu profile to file")
+}
+
+func bindServerArgs(cmd *cobra.Command, args []string) {
+	// Only bind config lookup when invoking the specific command as viper bindings are global.
+	errz.Fatal(viper.BindPFlag("loglevel", cmd.Flags().Lookup("loglevel")))
+	errz.Fatal(viper.BindPFlag("logfile", cmd.Flags().Lookup("logfile")))
+	errz.Fatal(viper.BindPFlag("external-plugins", cmd.Flags().Lookup("external-plugins")))
+	errz.Fatal(viper.BindPFlag("cpuprofile", cmd.Flags().Lookup("cpuprofile")))
+}
+
+// OptsFromFlags returns server.Opts as set by command-line flags.
+func serverOptsFromFlags() server.Opts {
+	return server.Opts{
+		CPUProfilePath:      viper.GetString("cpuprofile"),
+		ExternalPluginsPath: viper.GetString("external-plugins"),
+		LogFile:             viper.GetString("logfile"),
+		LogLevel:            viper.GetString("loglevel"),
+	}
 }

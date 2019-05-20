@@ -11,7 +11,6 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Create an executable file at the given path that invokes the given wash subcommand.
@@ -95,15 +94,6 @@ func runShell(cachedir, mountpath string) exitCode {
 // Start the wash server, then present the default system shell.
 // On exit, stop the server and return any errors.
 func rootMain(cmd *cobra.Command, args []string) exitCode {
-	loglevel := viper.GetString("loglevel")
-	logfile := viper.GetString("logfile")
-
-	level, err := cmdutil.ParseLevel(loglevel)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
-	}
-
 	// Configure logrus to emit simple text
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 
@@ -129,7 +119,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
-	srv := server.New(mountpath, server.Opts{LogFile: logfile, LogLevel: level})
+	srv := server.New(mountpath, serverOptsFromFlags())
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}

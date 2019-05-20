@@ -2,10 +2,8 @@
 package cmd
 
 import (
-	"github.com/Benchkram/errz"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Unfortunately, cobra.Command.Execute() can only return error objects.
@@ -39,8 +37,9 @@ func rootCommand() *cobra.Command {
 		// TODO: Set this to "" when we're ready to ship so that
 		// when we alias our custom commands, someone typing in
 		// e.g. `meta --help` will not see `wash meta` in the usage
-		Use:  "wash",
-		RunE: toRunE(rootMain),
+		Use:    "wash",
+		PreRun: bindServerArgs,
+		RunE:   toRunE(rootMain),
 		// Need to set these so that Cobra will not output the usage +
 		// error object when Execute() returns an error, which will always
 		// happen in our case because the exitCode object is technically
@@ -48,12 +47,7 @@ func rootCommand() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-
-	rootCmd.Flags().String("loglevel", "info", "Set the logging level")
-	errz.Fatal(viper.BindPFlag("loglevel", rootCmd.Flags().Lookup("loglevel")))
-
-	rootCmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
-	errz.Fatal(viper.BindPFlag("logfile", rootCmd.Flags().Lookup("logfile")))
+	addServerArgs(rootCmd)
 
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(serverCommand())
