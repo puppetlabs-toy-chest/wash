@@ -54,14 +54,3 @@ func (r *externalPluginRoot) Init() error {
 	r.externalPluginEntry.script = script
 	return nil
 }
-
-// List lists the root's entries.
-//
-// We need this b/c *externalPluginEntry#List has a different receiver
-// (*externalPluginEntry) than *externalPluginRoot (i.e. b/c Go's
-// typechecker complains about it)
-//
-// TODO: Is this still an issue?
-func (r *externalPluginRoot) List(ctx context.Context) ([]Entry, error) {
-	return r.externalPluginEntry.List(ctx)
-}
