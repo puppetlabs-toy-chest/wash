@@ -48,14 +48,28 @@ function vm_exec {
   local vm="$1"
   local cmd="$2"
 
-  ssh root@"${vm}" "${cmd}"
+  local tty="$3"
+  if [[ -z "${tty}" || "${tty}" == "true" ]]; then
+    # Wash can prematurely kill our process while the remote SSH
+    # command is running. Setting up a tty ensures that the remote
+    # SSH command is killed when the calling process (our
+    # process) is killed. This avoids orphaned SSH processes.
+    #
+    # NOTE: We make TTY optional because it is one of the passed-in
+    # Exec options.
+    #
+    # NOTE: This type of plugin-specific cleanup is the plugin
+    # author's responsibility, not Wash's.
+    ssh -t -t root@"${vm}" "${cmd}"
+  else
+    ssh root@"${vm}" "${cmd}"
+  fi
 }
 
 function to_json_array {
   local list="$1"
 
   echo -n "["
-
   local has_multiple_elem=""
   for elem in ${list}; do
     if [[ -n ${has_multiple_elem} ]]; then
@@ -63,36 +77,34 @@ function to_json_array {
     else
       has_multiple_elem="true"
     fi
-
     echo -n "${elem}"
   done
-
   echo -n "]"
 }
 
-# Prints the given entry's JSON object. This is used by the
-# `init` and `list` actions.
+# Prints the given entry's JSON object. This is used by `init`
+# and `list`.
 #
-# Remember, only the entry name and supported actions are
-# required.
+# Remember, only the entry name and its implemented methods
+# are required. The attributes should be provided if your
+# entry's a resource (e.g. like a file, container, VM, database,
+# etc.).
 function print_entry_json() {
   local name="$1"
-  local supported_actions="$2"
+  local methods="$2"
 
   local attributes_json="$3"
   if [[ -z "${attributes_json}" ]]; then
     # The attributes_json is optional. We chose to print something
     # here to make the code a little cleaner. Don't worry, Wash knows
-    # that an empty attributes object translates to the entry not having
-    # any filesystem attributes.
+    # that an empty attributes JSON means that the entry doesn't have
+    # any attributes.
     attributes_json="{}"
   fi
-
-  local supported_actions_json=`to_json_array "${supported_actions}"`
-
+  local methods_json=`to_json_array "${methods}"`
   echo "{\
 \"name\":\"${name}\",\
-\"supported_actions\":${supported_actions_json},\
+\"methods\":${methods_json},\
 \"attributes\":${attributes_json}\
 }"
 }
@@ -109,28 +121,28 @@ function print_file_json {
   local path="$7"
 
   name=`basename "${path}"`
-
-  intMode=$(echo $((16#${mode})))
+  intMode=$((16#${mode}))
   if [[ ${isDir} -eq 0 ]]; then
-    supported_actions='"list"'
-
+    methods='"list"'
     # Unfortunately, Wash doesn't handle symlinks well. Thus
     # for now, we'll assume that sym-linked directories are
     # regular directories.
-    intMode=$(echo $((${intMode} | 16384)))
+    intMode=$((${intMode} | 16384))
   else
-    supported_actions='"read" "stream"'
+    methods='"read" "stream"'
   fi
-
-  attributes_json=$(echo "{\
+  # We could include additional information about the
+  # file/directory in the "meta" attribute (e.g. like its
+  # inode number), but doing so complicates the code a
+  # bit.
+  attributes_json="{\
 \"atime\":${atime},\
 \"mtime\":${mtime},\
 \"ctime\":${ctime},\
 \"mode\":${intMode},\
 \"size\":${size}\
-}")
-
-  print_entry_json "${name}" "${supported_actions}" "${attributes_json}"
+}"
+  print_entry_json "${name}" "${methods}" "${attributes_json}"
 }
 
 # Prints the children of the specified directory. The code here
@@ -145,7 +157,10 @@ function print_children {
   # The code here is equivalent to ls'ing the directory, then invoking
   # `test-d` and stat on each entry to obtain the following information:
   #   <is_dir> <sizeAttr> <atime> <mtime> <ctime> <mode> <path>
-  stat_output=`vm_exec ${vm} "find ${dir} -mindepth 1 -maxdepth 1 | xargs -n1 -r -I {} bash -c '(test -d \\$@; echo -n \"\\$? \") && stat -c \"%s %X %Y %Z %f %n\" \\$@' _ {}"`
+  #
+  # TODO: Handle TTY strangeness in the returned output. For now, it is
+  # enough to set it to false.
+  stat_output=`vm_exec ${vm} "find ${dir} -mindepth 1 -maxdepth 1 -exec bash -c 'test -d \\$0; echo -n \"\\$? \"' {} \; -exec stat -c '%s %X %Y %Z %f %n' {} \;" false`
   if [[ -z "${stat_output}" ]]; then
     echo "[]"
     return 0
@@ -164,33 +179,27 @@ function print_children {
   # ]
   #
   # which satisfies Wash.
-
   echo "["
-
   # Print all children except for the last child.
   num_children=`echo "${stat_output}" | wc -l | awk '{print $1}'`
   if [[ num_children -gt 1 ]]; then
     export -f to_json_array
     export -f print_file_json
     export -f print_entry_json
-    export -f vm_exec
-    
+
     echo "${stat_output}"\
        | head -n$((num_children-1))\
        | xargs -n7 -P 10 -I {} bash -c 'print_file_json $@' _ {}\
        | sed s/$/,/
   fi
-
   # Now print the last child
   print_file_json `echo "${stat_output}" | tail -n1`
-
   echo "]"
 }
 
-action="$1"
-if [[ "${action}" == "init" ]]; then
-  # Our root's name is "sshfs." It only supports the "list"
-  # action.
+method="$1"
+if [[ "${method}" == "init" ]]; then
+  # Our root's name is "sshfs." It only implements "list"
   print_entry_json "sshfs" '"list"'
   exit 0
 fi
@@ -199,17 +208,38 @@ path="$2"
 
 path=`strip_root ${path}`
 if [[ "${path}" == "" ]]; then
-  # Our action's being invoked on the root. Since Wash only passes
-  # in supported actions, and since our root only supports the
-  # "list" action, we can assume that action == "list" here.
+  # Wash is invoking a method on our root. Since Wash only passes
+  # in implemented methods, and since our root only implements
+  # "list", we can assume that method == "list" here.
   #
   # Since we've structured our filesystem as /sshfs/<vm>/...,
-  # ls'ing our root consists of listing the VMs.
+  # "listing" our root consists of listing the VMs.
   function print_vm_json() {
       local name="$1"
+      local methods='"list" "exec" "metadata"'
+      # A VM can be modified, so some sort of mtime attribute
+      # makes sense. The other attributes (ctime, atime, mode,
+      # size) don't make sense, so don't set them. Notice how we
+      # also include the VM's partial metadata via the "meta" attribute.
+      # This would typically be the raw JSON object returned by
+      # an API's "list" endpoint (e.g. like a "/vms" REST endpoint).
+      # However, since we're not using any kind of API in our sshfs
+      # example, we'll just set "meta" to something random.
+      #
+      # NOTE: The mtime is in Unix seconds. It corresponds to
+      # May 17th, 2019 at 3:15 AM UTC. We recommend passing back
+      # Unix seconds for all your time-attribute values since they
+      # are the easiest for Wash to parse.
+      local mtime="1558062927"
+      local attributes="{\
+\"mtime\":${mtime},\
+\"meta\":{\
+\"LastModifiedTime\":${mtime},\
+\"Owner\":\"Alice\"\
+}\
+}"
 
-      # VMs support the "list", "exec" and "metadata" actions
-      print_entry_json "${name}" '"list" "exec" "metadata"'
+      print_entry_json "${name}" "${methods}" "${attributes}"
   }
 
   to_json_array "`print_vm_json ${SSHFS_VM_ONE}` `print_vm_json ${SSHFS_VM_TWO}`"
@@ -221,10 +251,9 @@ vm=`get_root ${path}`
 
 path=`strip_root ${path}`
 if [[ "${path}" == "" ]]; then
-  # Our action's being invoked on a VM. Since a VM only supports the
-  # "list", "exec" and "metadata" actions, we case our code on those
-  # actions
-  case "${action}" in
+  # The method's being invoked on a VM. Since a VM implements "list",
+  # "exec", and "metadata", we case our code on those methods.
+  case "${method}" in
   "list")
     # "list"'ing a VM is equivalent to listing its root
     print_children ${vm} "/"
@@ -238,35 +267,42 @@ if [[ "${path}" == "" ]]; then
     shift
     args="$@"
 
-    # exec'ing <cmd> <args> on a VM is equivalent to invoking them
+    # exec'ing <cmd> <args> on a VM is equivalent to exec'ing it
     # on the VM via. ssh (vm_exec)
     #
-    # TODO: Handle stdin
-    vm_exec "${vm}" "${cmd} ${args}"
+    # TODO: Handle stdin + other exec options.
+    vm_exec "${vm}" "${cmd} ${args}" "false"
     exit "$?"
   ;;
   "metadata")
-    # We could provide more metadata here, such as the VM's platform,
-    # architecture, and processor information. However, the example
-    # below is good enough for Wash.
+    # Wash is requesting the VM's full metadata.
+    #
+    # NOTE: Only implement "metadata" if there is additional information
+    # about your resource that is not provided by the "meta" attribute.
+    # In our example, the additional information is the VM's platform.
+    #
+    # NOTE: Since "metadata" is meant to return a complete description of
+    # the entry, it should be a superset of the "meta" attribute.
     echo "{\
-\"provider\":\"vmware\"\
+\"LastModifiedTime\":1558062927,\
+\"Owner\":\"Alice\",\
+\"Platform\":\"CentOS\"\
 }"
     exit 0
   ;;
   *)
-    # Notice how we print errors to stderr then exit with a non-zero
+    # We print errors to stderr then exit with a non-zero
     # exit code. This tells Wash that our invocation failed.
-    echo "missing a case statement for the ${action} action" >2
+    echo "missing a case statement for the '${method}'' method" >2
     exit 1
   ;;
   esac
 fi
 
 # Our path is an absolute path in the VM's filesystem.
-# Thus, we can just case on all the possible actions that can
-# be passed-in.
-case "${action}" in
+# Thus, we can just case on all the possible methods that
+# can be passed-in.
+case "${method}" in
 "list")
   print_children ${vm} "${path}/"
   exit 0
@@ -276,20 +312,20 @@ case "${action}" in
   exit 0
 ;;
 "stream")
-  # Notice how we print the header first before anything else.
-  # This way, Wash knows that we're about to stream some data.
+  # Notice how we print the "200" header first before anything
+  # else. In HTTP, "200" is the "OK" status code. Thus, printing
+  # this header tells Wash that everything's "OK", and that we
+  # are about to stream some stuff.
   echo "200"
 
-  # We could also `cat` here, which is useful for large files.
-  # Instead, we choose `tail -f` to show that external plugins
-  # can implement their own `tail -f` like behavior. Don't worry,
-  # Wash will send the SIGTERM signal to our process when it no
-  # longer needs our streamed data.
+  # Use `tail -f` to stream the file's content. Wash will send
+  # the SIGTERM signal to our process when it no longer needs
+  # our streamed data.
   vm_exec "${vm}" "tail -f ${path}"
   exit 0
 ;;
 *)
-  echo "missing a case statement for the ${action} action" >2
+  echo "missing a case statement for the '${method}' method" >2
   exit 1
 ;;
 esac
