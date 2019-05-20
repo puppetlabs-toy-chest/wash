@@ -20,7 +20,11 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	}}
 
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(mock.AnythingOfType("context.Context"), "init").Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(
+			mock.AnythingOfType("context.Context"),
+			"init",
+			nil,
+		).Return(stdout, err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Init returns its error
@@ -36,14 +40,14 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	suite.Regexp(regexp.MustCompile("stdout"), err)
 
 	// Test that Init properly decodes the root from stdout
-	stdout := "{\"name\":\"foo\",\"supported_actions\":[\"list\"]}"
+	stdout := "{\"name\":\"foo\",\"wmethods\":[\"list\"]}"
 	mockInvokeAndWait([]byte(stdout), nil)
 	err = root.Init()
 	if suite.NoError(err) {
 		expectedRoot := &externalPluginRoot{
 			externalPluginEntry: &externalPluginEntry{
 				EntryBase:        NewEntry("foo"),
-				supportedActions: []string{"list"},
+				methods:          []string{"list"},
 				script:           root.script,
 			},
 		}
