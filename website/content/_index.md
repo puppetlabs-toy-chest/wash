@@ -62,50 +62,25 @@ When you're done, `exit` the shell.
 * serves up an HTTP API for everything
 * caches information, for better performance
 
-We've implemented a number of handy `wash` subcommands:
+We've implemented a number of handy `wash` subcommands ([docs](/wash/docs#wash-commands)):
 
 * `wash ls` - a version of `ls` that uses our API to enhance directory listings with `wash`-specific info
   - _e.g. show you what primitives are supported for each resource_
 * `wash meta` - emits a resource's metadata to standard out
 * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
-* `wash find` - find resources using powerful selection predicates (WIP)
+* `wash find` - find resources using powerful selection predicates
 * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
 * `wash ps` - lists running processes on indicated compute instances that support the `exec` primitive
 * `wash history` - lists all activity through `wash`; `wash history <id>` can be used to view logs for a specific activity
 * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
 
-Core plugins (and we're [adding more all the time](https://github.com/puppetlabs/wash#roadmap)):
+[Core plugins](/wash/docs#core-plugins) (and we're [adding more all the time](https://github.com/puppetlabs/wash#roadmap), see our [docs](/wash/docs#plugin-concepts) for how to help):
 
-* `docker`
-  - containers and volumes
-  - found from the local socket or via `DOCKER` environment variables
-  - supports streaming, and remote command execution
-* `kubernetes`
-  - pods, containers, and persistent volume claims
-  - uses contexts from `~/.kube/config`
-  - supports streaming, and remote command execution
-  - supports listing of volume contents
-* `aws`
-  - EC2 and S3
-  - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
-  - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). Note that currently `region` will also need to be specified with the profile.
-  - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
-  - supports streaming, and remote command execution via `ssh` or AWS-SSM
-  - supports full metadata for S3 content
+* [docker](/wash/docs#docker): containers and volumes
+* [kubernetes](/wash/docs#kubernetes): pods, containers, and persistent volume claims
+* [aws](/wash/docs#aws): EC2 and S3
 
-`wash` supports the following primitives for resources it knows about, where appropriate:
-
-* `list` - lets you ask any resource what's contained inside of it, and what primitives it supports. 
-  - _e.g. listing a Kubernetes pod returns its constituent containers_
-* `read` - lets you read the contents of a given resource
-  - _e.g. represent an EC2 instance's console output as a regular file you can open in a regular editor_
-* `stream` - gives you streaming-read access to a resource
-  - _e.g. to let you follow a container's output as its running_
-* `exec` - lets you execute a command against a resource
-  - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
-* these are all available programmatically via the API, or on the CLI via `wash` subcommands
-
-[External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins):
+[External plugins](/wash/docs/external_plugins):
 
 * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
 * `wash` handles the plugin lifecycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic

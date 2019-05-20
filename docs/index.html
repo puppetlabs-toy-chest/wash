@@ -108,7 +108,7 @@
 <li>caches information, for better performance</li>
 </ul>
 
-<p>We&rsquo;ve implemented a number of handy <code>wash</code> subcommands:</p>
+<p>We&rsquo;ve implemented a number of handy <code>wash</code> subcommands (<a href="/wash/docs#wash-commands">docs</a>):</p>
 
 <ul>
 <li><code>wash ls</code> - a version of <code>ls</code> that uses our API to enhance directory listings with <code>wash</code>-specific info
@@ -118,70 +118,22 @@
 </ul></li>
 <li><code>wash meta</code> - emits a resource&rsquo;s metadata to standard out</li>
 <li><code>wash exec</code> - uses the <code>exec</code> primitive to let you invoke commands against resources</li>
-<li><code>wash find</code> - find resources using powerful selection predicates (WIP)</li>
+<li><code>wash find</code> - find resources using powerful selection predicates</li>
 <li><code>wash tail -f</code> - follow updates to resources that support the <code>stream</code> primitive as well as normal files</li>
 <li><code>wash ps</code> - lists running processes on indicated compute instances that support the <code>exec</code> primitive</li>
 <li><code>wash history</code> - lists all activity through <code>wash</code>; <code>wash history &lt;id&gt;</code> can be used to view logs for a specific activity</li>
 <li><code>wash clear</code> - clears cached data for a subhierarchy rooted at the supplied path so <code>wash</code> will re-request it</li>
 </ul>
 
-<p>Core plugins (and we&rsquo;re <a href="https://github.com/puppetlabs/wash#roadmap">adding more all the time</a>):</p>
+<p><a href="/wash/docs#core-plugins">Core plugins</a> (and we&rsquo;re <a href="https://github.com/puppetlabs/wash#roadmap">adding more all the time</a>, see our <a href="/wash/docs#plugin-concepts">docs</a> for how to help):</p>
 
 <ul>
-<li><code>docker</code>
-
-<ul>
-<li>containers and volumes</li>
-<li>found from the local socket or via <code>DOCKER</code> environment variables</li>
-<li>supports streaming, and remote command execution</li>
-</ul></li>
-<li><code>kubernetes</code>
-
-<ul>
-<li>pods, containers, and persistent volume claims</li>
-<li>uses contexts from <code>~/.kube/config</code></li>
-<li>supports streaming, and remote command execution</li>
-<li>supports listing of volume contents</li>
-</ul></li>
-<li><code>aws</code>
-
-<ul>
-<li>EC2 and S3</li>
-<li>uses <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK</li>
-<li>IAM roles are supported when configured as described <a href="https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html">here</a>. Note that currently <code>region</code> will also need to be specified with the profile.</li>
-<li>if using MFA, <code>wash</code> will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under <code>wash/aws-credentials</code> in your <a href="#user-cache-directory">user cache directory</a> so they can be re-used across server restarts. <code>wash</code> may have to re-prompt for a new MFA token in response to navigating the <code>wash</code> environment to authorize a new session.</li>
-<li>supports streaming, and remote command execution via <code>ssh</code> or AWS-SSM</li>
-<li>supports full metadata for S3 content</li>
-</ul></li>
+<li><a href="/wash/docs#docker">docker</a>: containers and volumes</li>
+<li><a href="/wash/docs#kubernetes">kubernetes</a>: pods, containers, and persistent volume claims</li>
+<li><a href="/wash/docs#aws">aws</a>: EC2 and S3</li>
 </ul>
 
-<p><code>wash</code> supports the following primitives for resources it knows about, where appropriate:</p>
-
-<ul>
-<li><code>list</code> - lets you ask any resource what&rsquo;s contained inside of it, and what primitives it supports.
-
-<ul>
-<li><em>e.g. listing a Kubernetes pod returns its constituent containers</em></li>
-</ul></li>
-<li><code>read</code> - lets you read the contents of a given resource
-
-<ul>
-<li><em>e.g. represent an EC2 instance&rsquo;s console output as a regular file you can open in a regular editor</em></li>
-</ul></li>
-<li><code>stream</code> - gives you streaming-read access to a resource
-
-<ul>
-<li><em>e.g. to let you follow a container&rsquo;s output as its running</em></li>
-</ul></li>
-<li><code>exec</code> - lets you execute a command against a resource
-
-<ul>
-<li><em>e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc.</em></li>
-</ul></li>
-<li>these are all available programmatically via the API, or on the CLI via <code>wash</code> subcommands</li>
-</ul>
-
-<p><a href="https://github.com/puppetlabs/wash/tree/master/docs/external_plugins">External plugins</a>:</p>
+<p><a href="/wash/docs/external_plugins">External plugins</a>:</p>
 
 <ul>
 <li><code>wash</code> allows for easy creation of out-of-process plugins using any language you want, from <code>bash</code> to <code>go</code> or anything in-between!</li>
