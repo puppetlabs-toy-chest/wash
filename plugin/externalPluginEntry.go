@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin/internal"
 )
@@ -93,14 +94,13 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	}
 	var decodedEntries []decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		activity.Record(
+		return nil, newStdoutDecodeErr(
 			ctx,
-			"could not decode the entries from stdout\nreceived:\n%v\nexpected something like:\n%v",
-			strings.TrimSpace(string(stdout)),
-			"[{\"name\":\"<name_of_first_entry>\",\"wmethods\":[\"list\"]},{\"name\":\"<name_of_second_entry>\",\"wmethods\":[\"list\"]}]",
+			"the entries",
+			err,
+			stdout,
+			"[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]",
 		)
-
-		return nil, fmt.Errorf("could not decode the entries from stdout: %v", err)
 	}
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
@@ -134,13 +134,13 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 	}
 	var metadata JSONObject
 	if err := json.Unmarshal(stdout, &metadata); err != nil {
-		activity.Record(
+		return nil, newStdoutDecodeErr(
 			ctx,
-			"could not decode the metadata from stdout\nreceived:\n%v\nexpected something like:\n%v",
-			strings.TrimSpace(string(stdout)),
+			"the metadata",
+			err,
+			stdout,
 			"{\"key1\":\"value1\",\"key2\":\"value2\"}",
 		)
-		return nil, fmt.Errorf("could not decode the metadata from stdout: %v", err)
 	}
 	return metadata, nil
 }
@@ -274,4 +274,19 @@ func (s *stdoutStreamer) Read(p []byte) (int, error) {
 
 func (s *stdoutStreamer) Close() error {
 	return s.cmd.Wait()
+}
+
+func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, stdout []byte, example string) error {
+	logMsg := fmt.Sprintf(
+		"could not decode %v from stdout\nreceived:\n%v\nexpected something like:\n%v",
+		decodedThing,
+		strings.TrimSpace(string(stdout)),
+		example,
+	)
+	if ctx == nil {
+		log.Warn(logMsg)
+	} else {
+		activity.Record(ctx, logMsg)
+	}
+	return fmt.Errorf("could not decode %v from stdout: %v", decodedThing, reason)
 }

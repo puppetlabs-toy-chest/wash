@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
-
-	"github.com/puppetlabs/wash/activity"
 )
 
 // externalPluginRoot represents an external plugin's root.
@@ -40,13 +37,13 @@ func (r *externalPluginRoot) Init() error {
 	}
 	var decodedRoot decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
-		activity.Record(
-			ctx,
-			"could not decode the plugin root from stdout\nreceived:\n%v\nexpected something like:\n%v",
-			strings.TrimSpace(string(stdout)),
-			"{\"name\":\"<name_of_root_dir>\",\"methods\":[\"list\"]}",
+		return newStdoutDecodeErr(
+			nil,
+			"the plugin root",
+			err,
+			stdout,
+			"{\"name\":\"plugin_name\",\"methods\":[\"list\"]}",
 		)
-		return fmt.Errorf("could not decode the plugin root from stdout: %v", err)
 	}
 	entry, err := decodedRoot.toExternalPluginEntry()
 	if err != nil {
