@@ -70,10 +70,17 @@ func unmarshalErrorResp(resp *http.Response) error {
 	return &errorObj
 }
 
-func (c *domainSocketClient) doRequest(method, endpoint, path string, body io.Reader) (io.ReadCloser, error) {
-	path, err := filepath.Abs(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not calculate the absolute path of %v: %v", path, err)
+func (c *domainSocketClient) doRequest(method, endpoint string, params url.Values, body io.Reader) (io.ReadCloser, error) {
+	// Do common parameter munging.
+	if paths, ok := params["path"]; ok {
+		if len(paths) != 1 {
+			panic("path parameter should have a single element")
+		}
+		path, err := filepath.Abs(paths[0])
+		if err != nil {
+			return nil, fmt.Errorf("could not calculate the absolute path of %v: %v", path, err)
+		}
+		params["path"] = []string{path}
 	}
 
 	req, err := http.NewRequest(method, domainSocketBaseURL, body)
@@ -82,7 +89,7 @@ func (c *domainSocketClient) doRequest(method, endpoint, path string, body io.Re
 	}
 
 	req.URL.Path = endpoint
-	req.URL.RawQuery = url.Values{"path": []string{path}}.Encode()
+	req.URL.RawQuery = params.Encode()
 
 	journal := activity.JournalForPID(os.Getpid())
 	req.Header.Set(apitypes.JournalIDHeader, journal.ID)
@@ -99,8 +106,8 @@ func (c *domainSocketClient) doRequest(method, endpoint, path string, body io.Re
 	return nil, unmarshalErrorResp(resp)
 }
 
-func (c *domainSocketClient) getRequest(endpoint, path string, result interface{}) error {
-	respBody, err := c.doRequest(http.MethodGet, endpoint, path, nil)
+func (c *domainSocketClient) getRequest(endpoint string, params url.Values, result interface{}) error {
+	respBody, err := c.doRequest(http.MethodGet, endpoint, params, nil)
 	if err != nil {
 		return err
 	}
@@ -121,7 +128,7 @@ func (c *domainSocketClient) getRequest(endpoint, path string, result interface{
 // Info retrieves the information of the resource located at "path"
 func (c *domainSocketClient) Info(path string) (apitypes.Entry, error) {
 	var e apitypes.Entry
-	if err := c.getRequest("/fs/info", path, &e); err != nil {
+	if err := c.getRequest("/fs/info", url.Values{"path": []string{path}}, &e); err != nil {
 		return e, err
 	}
 
@@ -131,7 +138,7 @@ func (c *domainSocketClient) Info(path string) (apitypes.Entry, error) {
 // List lists the resources located at "path".
 func (c *domainSocketClient) List(path string) ([]apitypes.Entry, error) {
 	var ls []apitypes.Entry
-	if err := c.getRequest("/fs/list", path, &ls); err != nil {
+	if err := c.getRequest("/fs/list", url.Values{"path": []string{path}}, &ls); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +148,7 @@ func (c *domainSocketClient) List(path string) ([]apitypes.Entry, error) {
 // Metadata gets the metadata of the resource located at "path".
 func (c *domainSocketClient) Metadata(path string) (map[string]interface{}, error) {
 	var metadata map[string]interface{}
-	if err := c.getRequest("/fs/metadata", path, &metadata); err != nil {
+	if err := c.getRequest("/fs/metadata", url.Values{"path": []string{path}}, &metadata); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +157,7 @@ func (c *domainSocketClient) Metadata(path string) (map[string]interface{}, erro
 
 // Stream updates for the resource located at "path".
 func (c *domainSocketClient) Stream(path string) (io.ReadCloser, error) {
-	respBody, err := c.doRequest(http.MethodGet, "/fs/stream", path, nil)
+	respBody, err := c.doRequest(http.MethodGet, "/fs/stream", url.Values{"path": []string{path}}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +176,7 @@ func (c *domainSocketClient) Exec(path string, command string, args []string, op
 		return nil, err
 	}
 
-	respBody, err := c.doRequest(http.MethodPost, "/fs/exec", path, bytes.NewReader(jsonBody))
+	respBody, err := c.doRequest(http.MethodPost, "/fs/exec", url.Values{"path": []string{path}}, bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
 	}
@@ -200,24 +207,19 @@ func (c *domainSocketClient) Exec(path string, command string, args []string, op
 // History returns a command history channel for the current wash server session.
 // If follow is false, it closes when all current activity has been delivered.
 func (c *domainSocketClient) History(follow bool) (chan apitypes.Activity, error) {
-	// Intentionally skip journaling activity associated with history because that would modify it.
-	url := domainSocketBaseURL + "/history"
+	var params url.Values
 	if follow {
-		url += "?follow=true"
+		params = url.Values{"follow": []string{"true"}}
 	}
-	resp, err := c.Get(url)
+	respBody, err := c.doRequest(http.MethodGet, "/history", params, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, unmarshalErrorResp(resp)
-	}
-
 	acts := make(chan apitypes.Activity)
 	go func() {
-		defer func() { errz.Log(resp.Body.Close()) }()
-		dec := json.NewDecoder(resp.Body)
+		defer func() { errz.Log(respBody.Close()) }()
+		dec := json.NewDecoder(respBody)
 		for dec.More() {
 			var act apitypes.Activity
 			if err := dec.Decode(&act); err != nil {
@@ -236,26 +238,16 @@ func (c *domainSocketClient) History(follow bool) (chan apitypes.Activity, error
 // ActivityJournal returns a reader for the journal associated with a particular command in history.
 // If follow is true, it streams new updates instead of returning the whole journal.
 func (c *domainSocketClient) ActivityJournal(index int, follow bool) (io.ReadCloser, error) {
-	// Intentionally skip journaling activity associated with history because that would modify it.
-	url := domainSocketBaseURL + "/history/" + strconv.Itoa(index)
+	var params url.Values
 	if follow {
-		url += "?follow=true"
+		params = url.Values{"follow": []string{"true"}}
 	}
-	resp, err := c.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, unmarshalErrorResp(resp)
-	}
-
-	return resp.Body, nil
+	return c.doRequest(http.MethodGet, "/history/"+strconv.Itoa(index), params, nil)
 }
 
 // Clear the cache at "path".
 func (c *domainSocketClient) Clear(path string) ([]string, error) {
-	respBody, err := c.doRequest(http.MethodDelete, "/cache", path, nil)
+	respBody, err := c.doRequest(http.MethodDelete, "/cache", url.Values{"path": []string{path}}, nil)
 	if err != nil {
 		return nil, err
 	}
