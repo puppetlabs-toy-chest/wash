@@ -18,7 +18,9 @@ func historyCommand() *cobra.Command {
 	historyCmd := &cobra.Command{
 		Use:   "history [-f] [<id>]",
 		Short: "Prints the wash command history, or journal of a particular item",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Wash maintains a history of commands executed through it. Print that command history, or specify an
+<id> to print a log of activity related to a particular command.`,
+		Args: cobra.MaximumNArgs(1),
 	}
 
 	historyCmd.Flags().BoolP("follow", "f", false, "Follow new updates")

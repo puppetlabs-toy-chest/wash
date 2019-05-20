@@ -19,9 +19,10 @@ import (
 
 func serverCommand() *cobra.Command {
 	serverCmd := &cobra.Command{
-		Use:    "server <mountpoint>",
-		Short:  "Sets up the Wash API and FUSE servers",
-		Long:   "Initializes all of the plugins, then sets up the Wash API and FUSE servers",
+		Use:   "server <mountpoint>",
+		Short: "Sets up the Wash daemon (API and FUSE servers)",
+		Long: `Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers).
+To stop it, make sure you're not using the filesystem at <mountpoint>, then enter Ctrl-C.`,
 		Args:   cobra.MinimumNArgs(1),
 		PreRun: bindServerArgs,
 		RunE:   toRunE(serverMain),

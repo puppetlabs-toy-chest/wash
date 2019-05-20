@@ -13,9 +13,14 @@ import (
 
 func execCommand() *cobra.Command {
 	execCmd := &cobra.Command{
-		Use:   "exec path command arg arg arg...",
+		Use:   "exec <path> <command> [<arg>...]",
 		Short: "Executes the given command on the indicated target",
-		Args:  cobra.MinimumNArgs(2),
+		Long: `For a Wash resource (specified by <path>) that implements the ability to execute a command, run the
+specified command and arguments. The results will be forwarded from the target on stdout, stderr,
+and exit code.`,
+		Example: `exec docker/containers/example_1 printenv USER
+  print the USER environment variable from a Docker container instance`,
+		Args: cobra.MinimumNArgs(2),
 	}
 
 	execCmd.RunE = toRunE(execMain)

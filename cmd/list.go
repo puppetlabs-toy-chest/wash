@@ -16,9 +16,9 @@ import (
 
 func listCommand() *cobra.Command {
 	listCmd := &cobra.Command{
-		Use:     "list [file]",
+		Use:     "list [<file>]",
 		Aliases: []string{"ls"},
-		Short:   "Lists the resources at the indicated path.",
+		Short:   "Lists the resources at the indicated path",
 		Args:    cobra.MaximumNArgs(1),
 	}
 

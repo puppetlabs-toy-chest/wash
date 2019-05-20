@@ -20,8 +20,10 @@ import (
 
 func tailCommand() *cobra.Command {
 	tailCmd := &cobra.Command{
-		Use:   "tail -f [file...]",
+		Use:   "tail -f [<file>...]",
 		Short: "Displays new output of files or resources that support the stream action",
+		Long: `Output any new updates to files and/or resources (that support the stream action). Currently
+requires the '-f' option to run. Attempts to mimic the functionality of 'tail -f' for remote logs.`,
 	}
 
 	tailCmd.Flags().BoolP("follow", "f", false, "Follow new output (required)")
