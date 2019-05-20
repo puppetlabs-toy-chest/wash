@@ -19,9 +19,9 @@ title= "Wash Documentation"
   * [Docker](#docker)
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
-  * [External plugins]
-  * [Go Plugins]
-  * [Server API]
+  * [➠External plugins]
+  * [➠Go Plugins]
+  * [➠Server API]
 
 ## Wash Commands
 
@@ -121,10 +121,10 @@ Primitives can be accessed programmatically via the Wash API, or on the CLI via 
 
 For more on implementing plugins, see:
 
-* [External plugins]
-* [Go Plugins]
-* [Server API]
+* [➠External plugins]
+* [➠Go Plugins]
+* [➠Server API]
 
-[External plugins]: /wash/docs/external_plugins
-[Go plugins]: /wash/docs/go_plugins
-[Server API]: /wash/docs/api
+[➠External plugins]: /wash/docs/external_plugins
+[➠Go plugins]: /wash/docs/go_plugins
+[➠Server API]: /wash/docs/api
