@@ -49,6 +49,9 @@ func (r *externalPluginRoot) Init() error {
 	if err != nil {
 		return err
 	}
+	if !ListAction().IsSupportedOn(entry) {
+		return fmt.Errorf("plugin roots must implement 'list'")
+	}
 	script := r.script
 	r.externalPluginEntry = entry
 	r.externalPluginEntry.script = script

@@ -39,6 +39,12 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	err = root.Init()
 	suite.Regexp(regexp.MustCompile("stdout"), err)
 
+	// Test that Init returns an error if the root does not implement
+	// "list"
+	mockInvokeAndWait([]byte("{\"name\":\"root\",\"methods\":[]}"), nil)
+	err = root.Init()
+	suite.Regexp("implement.*list", err)
+
 	// Test that Init properly decodes the root from stdout
 	stdout := "{\"name\":\"foo\",\"wmethods\":[\"list\"]}"
 	mockInvokeAndWait([]byte(stdout), nil)
