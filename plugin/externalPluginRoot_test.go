@@ -3,6 +3,7 @@ package plugin
 import (
 	"fmt"
 	"regexp"
+	"testing"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -21,7 +22,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 
 	mockInvokeAndWait := func(stdout []byte, err error) {
 		mockScript.OnInvokeAndWait(
-			mock.AnythingOfType("context.Context"),
+			mock.Anything,
 			"init",
 			nil,
 		).Return(stdout, err).Once()
@@ -46,7 +47,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	suite.Regexp("implement.*list", err)
 
 	// Test that Init properly decodes the root from stdout
-	stdout := "{\"name\":\"foo\",\"wmethods\":[\"list\"]}"
+	stdout := "{\"name\":\"foo\",\"methods\":[\"list\"]}"
 	mockInvokeAndWait([]byte(stdout), nil)
 	err = root.Init()
 	if suite.NoError(err) {
@@ -60,5 +61,8 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 
 		suite.Equal(expectedRoot, root)
 	}
+}
 
+func TestExternalPluginRoot(t *testing.T) {
+	suite.Run(t, new(ExternalPluginRootTestSuite))
 }
