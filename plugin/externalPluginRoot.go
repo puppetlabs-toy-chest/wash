@@ -38,7 +38,7 @@ func (r *externalPluginRoot) Init() error {
 	var decodedRoot decodedExternalPluginEntry
 	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
 		return newStdoutDecodeErr(
-			nil,
+			context.Background(),
 			"the plugin root",
 			err,
 			stdout,

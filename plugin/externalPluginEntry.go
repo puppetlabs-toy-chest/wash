@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin/internal"
 )
@@ -273,16 +272,12 @@ func (s *stdoutStreamer) Close() error {
 }
 
 func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, stdout []byte, example string) error {
-	logMsg := fmt.Sprintf(
+	activity.Record(
+		ctx,
 		"could not decode %v from stdout\nreceived:\n%v\nexpected something like:\n%v",
 		decodedThing,
 		strings.TrimSpace(string(stdout)),
 		example,
 	)
-	if ctx == nil {
-		log.Warn(logMsg)
-	} else {
-		activity.Record(ctx, logMsg)
-	}
 	return fmt.Errorf("could not decode %v from stdout: %v", decodedThing, reason)
 }
