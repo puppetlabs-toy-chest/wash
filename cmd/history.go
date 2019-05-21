@@ -11,7 +11,6 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func historyCommand() *cobra.Command {
@@ -23,12 +22,7 @@ func historyCommand() *cobra.Command {
 		Args: cobra.MaximumNArgs(1),
 		RunE: toRunE(historyMain),
 	}
-
 	historyCmd.Flags().BoolP("follow", "f", false, "Follow new updates")
-	if err := viper.BindPFlag("follow", historyCmd.Flags().Lookup("follow")); err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-	}
-
 	return historyCmd
 }
 
@@ -71,9 +65,11 @@ func printHistory(follow bool) error {
 }
 
 func historyMain(cmd *cobra.Command, args []string) exitCode {
-	follow := viper.GetBool("follow")
+	follow, err := cmd.Flags().GetBool("follow")
+	if err != nil {
+		panic(err.Error())
+	}
 
-	var err error
 	if len(args) > 0 {
 		err = printJournalEntry(args[0], follow)
 	} else {
