@@ -53,6 +53,7 @@ func runShell(cachedir, mountpath string) exitCode {
 		"wexec":    "exec",
 		"find":     "find",
 		"help":     "help",
+		"winfo":    "info",
 		"whistory": "history",
 		"list":     "list",
 		"meta":     "meta",

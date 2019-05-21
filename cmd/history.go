@@ -15,8 +15,9 @@ import (
 
 func historyCommand() *cobra.Command {
 	historyCmd := &cobra.Command{
-		Use:   "history [-f] [<id>]",
-		Short: "Prints the wash command history, or journal of a particular item",
+		Use:     "history [-f] [<id>]",
+		Aliases: []string{"whistory"},
+		Short:   "Prints the wash command history, or journal of a particular item",
 		Long: `Wash maintains a history of commands executed through it. Print that command history, or specify an
 <id> to print a log of activity related to a particular command.`,
 		Args: cobra.MaximumNArgs(1),

@@ -13,8 +13,9 @@ import (
 
 func execCommand() *cobra.Command {
 	execCmd := &cobra.Command{
-		Use:   "exec <path> <command> [<arg>...]",
-		Short: "Executes the given command on the indicated target",
+		Use:     "exec <path> <command> [<arg>...]",
+		Aliases: []string{"wexec"},
+		Short:   "Executes the given command on the indicated target",
 		Long: `For a Wash resource (specified by <path>) that implements the ability to execute a command, run the
 specified command and arguments. The results will be forwarded from the target on stdout, stderr,
 and exit code.`,
