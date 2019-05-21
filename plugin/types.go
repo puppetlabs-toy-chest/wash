@@ -66,6 +66,7 @@ type Root interface {
 // Examples of potential features: user, privileged, map of environment variables, timeout.
 type ExecOptions struct {
 	// Stdin can be used to pass a stream of input to write to stdin when executing the command.
+	// It is not included in ExecOption's JSON serialization.
 	Stdin io.Reader `json:"-"`
 
 	// Tty instructs the executor to allocate a TTY (pseudo-terminal), which lets Wash communicate
