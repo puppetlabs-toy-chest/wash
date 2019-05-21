@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/api"
@@ -26,10 +24,10 @@ import (
 // Opts exposes additional configuration for server operation.
 type Opts struct {
 	CPUProfilePath      string
-	ExternalPluginsPath string
+	ExternalPlugins     []plugin.ExternalPluginSpec
 	LogFile             string
 	// LogLevel can be "warn", "info", "debug", or "trace".
-	LogLevel string
+	LogLevel            string
 }
 
 type controlChannels struct {
@@ -82,8 +80,8 @@ func (s *Server) Start() error {
 
 	registry := plugin.NewRegistry()
 	loadInternalPlugins(registry)
-	if s.opts.ExternalPluginsPath != "" {
-		loadExternalPlugins(registry, s.opts.ExternalPluginsPath)
+	if len(s.opts.ExternalPlugins) > 0 {
+		loadExternalPlugins(registry, s.opts.ExternalPlugins)
 	}
 	if len(registry.Plugins()) == 0 {
 		return fmt.Errorf("No plugins loaded")
@@ -184,31 +182,8 @@ func loadInternalPlugins(registry *plugin.Registry) {
 	log.Debug("Finished loading internal plugins")
 }
 
-func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) {
-	logError := func(err error) {
-		log.Warnf("Failed to load external plugins: %v\n", err)
-	}
-
+func loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
 	log.Infof("Loading external plugins")
-
-	externalPluginsFH, err := os.Open(externalPluginsPath)
-	if err != nil {
-		logError(err)
-		return
-	}
-	defer func() {
-		if err := externalPluginsFH.Close(); err != nil {
-			log.Infof("Error closing %v: %+v", externalPluginsPath, err)
-		}
-	}()
-
-	d := yaml.NewDecoder(externalPluginsFH)
-	var externalPlugins []plugin.ExternalPluginSpec
-	if err := d.Decode(&externalPlugins); err != nil {
-		logError(err)
-		return
-	}
-
 	for _, p := range externalPlugins {
 		log.Infof("Loading %v", p.Script)
 		if err := registry.RegisterExternalPlugin(p); err != nil {
@@ -216,6 +191,5 @@ func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) 
 			log.Warnf("%v failed to load: %+v", p.Script, err)
 		}
 	}
-
 	log.Infof("Finished loading external plugins")
 }
