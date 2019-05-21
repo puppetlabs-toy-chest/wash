@@ -13,51 +13,47 @@ type ArrayPredicateTestSuite struct {
 }
 
 func (s *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
-	s.RunTestCases(
-		s.NPETC("", `expected an opening '\['`, true),
-		s.NPETC("]", `expected an opening '\['`, false),
-		s.NPETC("f", `expected an opening '\['`, true),
-		s.NPETC("[", `expected a closing '\]'`, false),
-		s.NPETC("[a", `expected a closing '\]'`, false),
-		s.NPETC("[]", `expected a '\*', '\?', or an array index inside '\[\]'`, false),
-		s.NPETC("[*a]", `expected a closing '\]' after '\*'`, false),
-		s.NPETC("[?a]", `expected a closing '\]' after '\?'`, false),
-		s.NPETC("[a]", `expected an array index inside '\[\]'`, false),
-		s.NPETC("[-15]", `expected an array index inside '\[\]'`, false),
-		s.NPETC("[?]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false),
-		s.NPETC("[?]", `expected a predicate after \[\?\]`, false),
-		s.NPETC("[*]", `expected a predicate after \[\*\]`, false),
-		s.NPETC("[15]", `expected a predicate after \[15\]`, false),
-		s.NPETC("[?] +{", "expected.*closing.*}", false),
-		// Test predicate expression errors
-		s.NPETC("[?] )", `\): no beginning '\('`, false),
-		s.NPETC("[?] (", `\(: missing closing '\)'`, false),
-		s.NPETC("[?] ( -true", `\(: missing closing '\)'`, false),
-		s.NPETC("[?] ( )", `\(\): empty inner expression`, false),
-		s.NPETC("[?] ( -true -false -foo", "unknown predicate -foo", false),
-	)
+	s.RETC("", `expected an opening '\['`, true)
+	s.RETC("]", `expected an opening '\['`, false)
+	s.RETC("f", `expected an opening '\['`, true)
+	s.RETC("[", `expected a closing '\]'`, false)
+	s.RETC("[a", `expected a closing '\]'`, false)
+	s.RETC("[]", `expected a '\*', '\?', or an array index inside '\[\]'`, false)
+	s.RETC("[*a]", `expected a closing '\]' after '\*'`, false)
+	s.RETC("[?a]", `expected a closing '\]' after '\?'`, false)
+	s.RETC("[a]", `expected an array index inside '\[\]'`, false)
+	s.RETC("[-15]", `expected an array index inside '\[\]'`, false)
+	s.RETC("[?]-true", `expected a '\.' or '\[' after '\]' but got -true instead`, false)
+	s.RETC("[?]", `expected a predicate after \[\?\]`, false)
+	s.RETC("[*]", `expected a predicate after \[\*\]`, false)
+	s.RETC("[15]", `expected a predicate after \[15\]`, false)
+	s.RETC("[?] +{", "expected.*closing.*}", false)
+	// Test predicate expression errors
+	s.RETC("[?] )", `\): no beginning '\('`, false)
+	s.RETC("[?] (", `\(: missing closing '\)'`, false)
+	s.RETC("[?] ( -true", `\(: missing closing '\)'`, false)
+	s.RETC("[?] ( )", `\(\): empty inner expression`, false)
+	s.RETC("[?] ( -true -false -foo", "unknown predicate -foo", false)
 }
 
 func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 	mp := make(map[string]interface{})
 	mp["key"] = true
-	s.RunTestCases(
-		// Test -empty
-		s.NPTC("-empty", "", []interface{}{}),
-		// Test each of the possible arrayPs
-		s.NPTC("[?] -true -size", "-size", toA(false, true)),
-		s.NPTC("[*] -true -size", "-size", toA(true, true)),
-		s.NPTC("[0] -true -size", "-size", toA(true)),
-		// Test key sequences
-		s.NPTC("[?][?] -true -size", "-size", toA(toA(true))),
-		s.NPTC("[?].key -true -size", "-size", toA(mp)),
-		// Now test predicate expressions. The predicate expression parser's
-		// already well tested, so these are just some sanity checks.
-		s.NPNTC("[0] ( -true -a -false ) -size", "-size", toA(true)),
-		s.NPTC("[0] ( -true -o -false ) -size", "-size", toA(true)),
-		s.NPTC("[0] ( ! -false ) -size", "-size", toA(true)),
-		s.NPTC("[0] ( ! ( -true -a -false ) ) -size", "-size", toA(true)),
-	)
+	// Test -empty
+	s.RTC("-empty", "", []interface{}{})
+	// Test each of the possible arrayPs
+	s.RTC("[?] -true -size", "-size", toA(false, true))
+	s.RTC("[*] -true -size", "-size", toA(true, true))
+	s.RTC("[0] -true -size", "-size", toA(true))
+	// Test key sequences
+	s.RTC("[?][?] -true -size", "-size", toA(toA(true)))
+	s.RTC("[?].key -true -size", "-size", toA(mp))
+	// Now test predicate expressions. The predicate expression parser's
+	// already well tested, so these are just some sanity checks.
+	s.RNTC("[0] ( -true -a -false ) -size", "-size", toA(true))
+	s.RTC("[0] ( -true -o -false ) -size", "-size", toA(true))
+	s.RTC("[0] ( ! -false ) -size", "-size", toA(true))
+	s.RTC("[0] ( ! ( -true -a -false ) ) -size", "-size", toA(true))
 }
 
 func (s *ArrayPredicateTestSuite) TestParseArrayPredicateType() {

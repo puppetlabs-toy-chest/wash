@@ -30,23 +30,21 @@ func (s *ObjectPredicateTestSuite) TestKeyRegex() {
 }
 
 func (s *ObjectPredicateTestSuite) TestParseObjectPredicateErrors() {
-	s.RunTestCases(
-		s.NPETC("", "expected a key sequence", true),
-		s.NPETC("foo", "key sequences must begin with a '.'", true),
-		s.NPETC(".", "expected a key sequence after '.'", false),
-		s.NPETC(".[", "expected a key sequence after '.'", false),
-		s.NPETC(".key", "expected a predicate after key", false),
-		s.NPETC(".key -foo", "expected a predicate after key", false),
-		s.NPETC(".key +{", "expected.*closing.*}", false),
-		s.NPETC(".key]", `expected an opening '\['`, false),
-		s.NPETC(".key[", `expected a closing '\]'`, false),
-		// Test predicate expression errors
-		s.NPETC(".key )", `\): no beginning '\('`, false),
-		s.NPETC(".key (", `\(: missing closing '\)'`, false),
-		s.NPETC(".key ( -true", `\(: missing closing '\)'`, false),
-		s.NPETC(".key ( )", `\(\): empty inner expression`, false),
-		s.NPETC(".key ( -true -false -foo", "unknown predicate -foo", false),
-	)
+	s.RETC("", "expected a key sequence", true)
+	s.RETC("foo", "key sequences must begin with a '.'", true)
+	s.RETC(".", "expected a key sequence after '.'", false)
+	s.RETC(".[", "expected a key sequence after '.'", false)
+	s.RETC(".key", "expected a predicate after key", false)
+	s.RETC(".key -foo", "expected a predicate after key", false)
+	s.RETC(".key +{", "expected.*closing.*}", false)
+	s.RETC(".key]", `expected an opening '\['`, false)
+	s.RETC(".key[", `expected a closing '\]'`, false)
+	// Test predicate expression errors
+	s.RETC(".key )", `\): no beginning '\('`, false)
+	s.RETC(".key (", `\(: missing closing '\)'`, false)
+	s.RETC(".key ( -true", `\(: missing closing '\)'`, false)
+	s.RETC(".key ( )", `\(\): empty inner expression`, false)
+	s.RETC(".key ( -true -false -foo", "unknown predicate -foo", false)
 }
 
 func (s *ObjectPredicateTestSuite) TestParseObjectPredicateValidInput() {
@@ -61,23 +59,20 @@ func (s *ObjectPredicateTestSuite) TestParseObjectPredicateValidInput() {
 	mp3 := make(map[string]interface{})
 	mp3["key"] = toA(true)
 
-	// Run the tests
-	s.RunTestCases(
-		// Test -empty
-		s.NPTC("-empty -size", "-size", make(map[string]interface{})),
-		// Test a non-key sequence
-		s.NPTC(".key -true -size", "-size", mp1),
-		// Test an object key sequence
-		s.NPTC(".key1.key2 -true -size", "-size", mp2),
-		// Test an array key sequence
-		s.NPTC(".key[?] -true -size", "-size", mp3),
-		// Now test predicate expressions. The predicate expression parser's
-		// already well tested, so these are just some sanity checks.
-		s.NPNTC(".key ( -true -a -false ) -size", "-size", mp1),
-		s.NPTC(".key ( -true -o -false ) -size", "-size", mp1),
-		s.NPTC(".key ( ! -false ) -size", "-size", mp1),
-		s.NPTC(".key ( ! ( -true -a -false ) ) -size", "-size", mp1),
-	)
+	// Test -empty
+	s.RTC("-empty -size", "-size", make(map[string]interface{}))
+	// Test a non-key sequence
+	s.RTC(".key -true -size", "-size", mp1)
+	// Test an object key sequence
+	s.RTC(".key1.key2 -true -size", "-size", mp2)
+	// Test an array key sequence
+	s.RTC(".key[?] -true -size", "-size", mp3)
+	// Now test predicate expressions. The predicate expression parser's
+	// already well tested, so these are just some sanity checks.
+	s.RNTC(".key ( -true -a -false ) -size", "-size", mp1)
+	s.RTC(".key ( -true -o -false ) -size", "-size", mp1)
+	s.RTC(".key ( ! -false ) -size", "-size", mp1)
+	s.RTC(".key ( ! ( -true -a -false ) ) -size", "-size", mp1)
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_NotAnObject() {

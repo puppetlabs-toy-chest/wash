@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
@@ -54,21 +53,19 @@ func (s *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 // These tests use the ctimePrimary as the representative test case
 
 func (s *TimeAttrPrimaryTestSuite) TestErrors() {
-	// NIVTC => NewIllegalValueTestCase
-	NIVTC := func(v string) parsertest.Case {
-		return s.NPETC(v, fmt.Sprintf("%v: illegal time value", regexp.QuoteMeta(v)))
+	// RIVTC => RunIllegalValueTestCase
+	RIVTC := func(v string) {
+		s.RETC(v, fmt.Sprintf("%v: illegal time value", regexp.QuoteMeta(v)))
 	}
-	s.RunTestCases(
-		s.NPETC("", "requires additional arguments"),
-		NIVTC("foo"),
-		NIVTC("+"),
-		NIVTC("+++++1"),
-		NIVTC("1hr"),
-		NIVTC("+1hr"),
-		NIVTC("++++++1hr"),
-		NIVTC("1h30min"),
-		NIVTC("+1h30min"),
-	)
+	s.RETC("", "requires additional arguments")
+	RIVTC("foo")
+	RIVTC("+")
+	RIVTC("+++++1")
+	RIVTC("1hr")
+	RIVTC("+1hr")
+	RIVTC("++++++1hr")
+	RIVTC("1h30min")
+	RIVTC("+1h30min")
 }
 
 func (s *TimeAttrPrimaryTestSuite) TestValidInput() {

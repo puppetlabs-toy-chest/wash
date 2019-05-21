@@ -12,24 +12,17 @@ type primaryTestSuite struct {
 	ConstructEntry func(v interface{}) types.Entry
 }
 
-func (s *primaryTestSuite) NPETC(input string, errRegex string) parsertest.Case {
-	return s.Suite.NPETC(input, errRegex, false)
+func (s *primaryTestSuite) RETC(input string, errRegex string) {
+	s.Suite.RETC(input, errRegex, false)
 }
 
-func (s *primaryTestSuite) NPTC(input string, remInput string, trueValue interface{}) parsertest.Case {
-	return s.Suite.NPTC(input, remInput, s.ConstructEntry(trueValue))
+func (s *primaryTestSuite) RTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+	s.Suite.RTC(input, remInput, s.ConstructEntry(trueValue))
+	if len(falseValue) > 0 {
+		s.Suite.RNTC(input, remInput, s.ConstructEntry(falseValue[0]))
+	}
 }
 
-func (s *primaryTestSuite) NPNTC(input string, remInput string, falseValue interface{}) parsertest.Case {
-	return s.Suite.NPNTC(input, remInput, s.ConstructEntry(falseValue))
-}
-
-// RTC => RunTestCase.
-//
-// TODO: May be worth changing NPTC/NPNTC/NPETC => RPTC/RPNTC/RPETC in the toplevel parser test suite.
-func (s *primaryTestSuite) RTC(input string, remInput string, trueValue interface{}, falseValue interface{}) {
-	s.RunTestCases(
-		s.NPTC(input, remInput, trueValue),
-		s.NPNTC(input, remInput, falseValue),
-	)
+func (s *primaryTestSuite) RNTC(input string, remInput string, falseValue interface{}) {
+	s.Suite.RNTC(input, remInput, s.ConstructEntry(falseValue))
 }

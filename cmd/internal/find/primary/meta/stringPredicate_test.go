@@ -13,19 +13,15 @@ type StringPredicateTestSuite struct {
 }
 
 func (s *StringPredicateTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", "expected a nonempty string", true),
-	)
+	s.RETC("", "expected a nonempty string", true)
 
 	_, _, err := parseStringPredicate([]string{""})
 	s.Regexp("expected a nonempty string", err)
 }
 
 func (s *StringPredicateTestSuite) TestValidInput() {
-	s.RunTestCases(
-		s.NPTC("foo -size", "-size", "foo"),
-		s.NPNTC("foo -size", "-size", "bar"),
-	)
+	s.RTC("foo -size", "-size", "foo")
+	s.RNTC("foo -size", "-size", "bar")
 }
 
 func (s *StringPredicateTestSuite) TestStringP_NotAString() {

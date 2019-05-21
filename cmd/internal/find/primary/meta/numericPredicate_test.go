@@ -14,28 +14,24 @@ type NumericPredicateTestSuite struct {
 }
 
 func (s *NumericPredicateTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", `expected a \+, -, or a digit`, true),
-		s.NPETC("foo", "expected.*number.*foo", true),
-		s.NPETC("--15", "expected.*positive", false),
-	)
+	s.RETC("", `expected a \+, -, or a digit`, true)
+	s.RETC("foo", "expected.*number.*foo", true)
+	s.RETC("--15", "expected.*positive", false)
 }
 
 func (s *NumericPredicateTestSuite) TestValidInput() {
-	s.RunTestCases(
-		// Test a plain numeric value
-		s.NPTC("200 -size", "-size", float64(200)),
-		s.NPTC("+200 -size", "-size", float64(201)),
-		s.NPTC("-200 -size", "-size", float64(199)),
-		// Test a plain, negative numeric value
-		s.NPTC("{200} -size", "-size", float64(-200)),
-		s.NPTC("+{200} -size", "-size", float64(-199)),
-		s.NPTC("-{200} -size", "-size", float64(-201)),
-		// Test a size value
-		s.NPTC("2G -size", "-size", float64(2*numeric.BytesOf('G'))),
-		s.NPTC("+2G -size", "-size", float64(3*numeric.BytesOf('G'))),
-		s.NPTC("-2G -size", "-size", float64(1*numeric.BytesOf('G'))),
-	)
+	// Test a plain numeric value
+	s.RTC("200 -size", "-size", float64(200))
+	s.RTC("+200 -size", "-size", float64(201))
+	s.RTC("-200 -size", "-size", float64(199))
+	// Test a plain, negative numeric value
+	s.RTC("{200} -size", "-size", float64(-200))
+	s.RTC("+{200} -size", "-size", float64(-199))
+	s.RTC("-{200} -size", "-size", float64(-201))
+	// Test a size value
+	s.RTC("2G -size", "-size", float64(2*numeric.BytesOf('G')))
+	s.RTC("+2G -size", "-size", float64(3*numeric.BytesOf('G')))
+	s.RTC("-2G -size", "-size", float64(1*numeric.BytesOf('G')))
 }
 
 func (s *NumericPredicateTestSuite) TestNumericP_NotANumber() {
