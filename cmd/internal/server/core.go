@@ -11,7 +11,6 @@ import (
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/api"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/plugin/aws"
@@ -38,6 +37,7 @@ type controlChannels struct {
 // Server encapsulates a running wash server with both Socket and FUSE servers.
 type Server struct {
 	mountpoint string
+	socket     string
 	opts       Opts
 	logFH      *os.File
 	api        controlChannels
@@ -52,8 +52,8 @@ var levelMap = map[string]log.Level{
 }
 
 // New creates a new Server.
-func New(mountpoint string, opts Opts) *Server {
-	return &Server{mountpoint: mountpoint, opts: opts}
+func New(mountpoint string, socket string, opts Opts) *Server {
+	return &Server{mountpoint: mountpoint, socket: socket, opts: opts}
 }
 
 // Start starts the server. It returns once the server is ready.
@@ -89,7 +89,7 @@ func (s *Server) Start() error {
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, s.mountpoint, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, s.mountpoint, s.socket)
 	if err != nil {
 		return err
 	}

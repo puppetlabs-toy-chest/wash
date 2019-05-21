@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	log "github.com/sirupsen/logrus"
@@ -126,7 +127,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	srv := server.New(mountpath, serverOpts)
+	srv := server.New(mountpath, config.Socket, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}
