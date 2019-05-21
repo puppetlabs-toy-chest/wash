@@ -15,7 +15,6 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func tailCommand() *cobra.Command {
@@ -24,15 +23,9 @@ func tailCommand() *cobra.Command {
 		Short: "Displays new output of files or resources that support the stream action",
 		Long: `Output any new updates to files and/or resources (that support the stream action). Currently
 requires the '-f' option to run. Attempts to mimic the functionality of 'tail -f' for remote logs.`,
+		RunE: toRunE(tailMain),
 	}
-
 	tailCmd.Flags().BoolP("follow", "f", false, "Follow new output (required)")
-	if err := viper.BindPFlag("follow", tailCmd.Flags().Lookup("follow")); err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-	}
-
-	tailCmd.RunE = toRunE(tailMain)
-
 	return tailCmd
 }
 
@@ -121,7 +114,11 @@ func tailFile(agg chan line, path string) io.Closer {
 }
 
 func tailMain(cmd *cobra.Command, args []string) exitCode {
-	follow := viper.GetBool("follow")
+	follow, err := cmd.Flags().GetBool("follow")
+	if err != nil {
+		panic(err.Error())
+	}
+
 	if !follow {
 		cmdutil.ErrPrintf("Please use -f, other operations are not yet supported\n")
 		return exitCode{1}

@@ -14,10 +14,8 @@ func versionCommand() *cobra.Command {
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print wash version",
+		RunE:  toRunE(versionMain),
 	}
-
-	versionCmd.RunE = toRunE(versionMain)
-
 	return versionCmd
 }
 

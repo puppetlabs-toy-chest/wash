@@ -14,6 +14,7 @@ func findCommand() *cobra.Command {
 		DisableFlagParsing: true,
 		Use:                "find",
 		Short:              "Prints out all entries that satisfy the given expression",
+		RunE:               toRunE(findMain),
 	}
 	findCmd.SetUsageFunc(func(_ *cobra.Command) error {
 		fmt.Print(find.Usage())
@@ -25,8 +26,6 @@ func findCommand() *cobra.Command {
 	// argument. We need it so that Cobra does not interpet our primaries (e.g.
 	// like -name) as single-dash flags.
 	findCmd.Flags().SetInterspersed(false)
-
-	findCmd.RunE = toRunE(findMain)
 
 	return findCmd
 }

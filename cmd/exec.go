@@ -13,17 +13,17 @@ import (
 
 func execCommand() *cobra.Command {
 	execCmd := &cobra.Command{
-		Use:   "exec <path> <command> [<arg>...]",
-		Short: "Executes the given command on the indicated target",
+		Use:     "exec <path> <command> [<arg>...]",
+		Aliases: []string{"wexec"},
+		Short:   "Executes the given command on the indicated target",
 		Long: `For a Wash resource (specified by <path>) that implements the ability to execute a command, run the
 specified command and arguments. The results will be forwarded from the target on stdout, stderr,
 and exit code.`,
 		Example: `exec docker/containers/example_1 printenv USER
   print the USER environment variable from a Docker container instance`,
 		Args: cobra.MinimumNArgs(2),
+		RunE: toRunE(execMain),
 	}
-
-	execCmd.RunE = toRunE(execMain)
 
 	// Don't interpret any flags after the first positional argument. Those should
 	// instead get interpreted by this command as normal args, not flags.

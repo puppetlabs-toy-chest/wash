@@ -7,26 +7,20 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func clearCommand() *cobra.Command {
 	clearCmd := &cobra.Command{
-		Use:   "clear [<path>]",
-		Short: "Clears the cache at <path>, or the current directory if not specified",
+		Use:     "clear [<path>]",
+		Aliases: []string{"wclear"},
+		Short:   "Clears the cache at <path>, or the current directory if not specified",
 		Long: `Wash caches most operations. If the resource you're querying appears out-of-date, use this
 subcommand to reset the cache for resources at or contained within <path>. Defaults to the current
 directory if <path> is not specified.`,
 		Args: cobra.MaximumNArgs(1),
+		RunE: toRunE(clearMain),
 	}
-
 	clearCmd.Flags().BoolP("verbose", "v", false, "Print paths that were cleared from the cache")
-	if err := viper.BindPFlag("verbose", clearCmd.Flags().Lookup("verbose")); err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-	}
-
-	clearCmd.RunE = toRunE(clearMain)
-
 	return clearCmd
 }
 
@@ -35,7 +29,10 @@ func clearMain(cmd *cobra.Command, args []string) exitCode {
 	if len(args) > 0 {
 		path = args[0]
 	}
-	verbose := viper.GetBool("verbose")
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		panic(err.Error())
+	}
 
 	conn := client.ForUNIXSocket(config.Socket)
 	cleared, err := conn.Clear(path)

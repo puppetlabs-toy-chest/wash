@@ -11,25 +11,19 @@ import (
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func historyCommand() *cobra.Command {
 	historyCmd := &cobra.Command{
-		Use:   "history [-f] [<id>]",
-		Short: "Prints the wash command history, or journal of a particular item",
+		Use:     "history [-f] [<id>]",
+		Aliases: []string{"whistory"},
+		Short:   "Prints the wash command history, or journal of a particular item",
 		Long: `Wash maintains a history of commands executed through it. Print that command history, or specify an
 <id> to print a log of activity related to a particular command.`,
 		Args: cobra.MaximumNArgs(1),
+		RunE: toRunE(historyMain),
 	}
-
 	historyCmd.Flags().BoolP("follow", "f", false, "Follow new updates")
-	if err := viper.BindPFlag("follow", historyCmd.Flags().Lookup("follow")); err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-	}
-
-	historyCmd.RunE = toRunE(historyMain)
-
 	return historyCmd
 }
 
@@ -72,9 +66,11 @@ func printHistory(follow bool) error {
 }
 
 func historyMain(cmd *cobra.Command, args []string) exitCode {
-	follow := viper.GetBool("follow")
+	follow, err := cmd.Flags().GetBool("follow")
+	if err != nil {
+		panic(err.Error())
+	}
 
-	var err error
 	if len(args) > 0 {
 		err = printJournalEntry(args[0], follow)
 	} else {
