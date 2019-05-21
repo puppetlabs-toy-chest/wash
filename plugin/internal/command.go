@@ -9,12 +9,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/puppetlabs/wash/activity"
+	"github.com/kballard/go-shellquote"
 )
 
 // Command is a wrapper to exec.Cmd. It handles context-cancellation cleanup
@@ -118,8 +118,8 @@ func (cmd *Command) String() string {
 	if cmd.pgid >= 0 {
 		str += fmt.Sprintf("(PGID %v) ", cmd.pgid)
 	}
-	str += strings.Join(cmd.c.Args, " ")
-	return "'" + str + "'"
+	str += shellquote.Join(cmd.c.Args...)
+	return str
 }
 
 // Run is a wrapper to exec.Cmd#Run

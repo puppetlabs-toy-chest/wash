@@ -66,7 +66,8 @@ type Root interface {
 // Examples of potential features: user, privileged, map of environment variables, timeout.
 type ExecOptions struct {
 	// Stdin can be used to pass a stream of input to write to stdin when executing the command.
-	Stdin io.Reader
+	// It is not included in ExecOption's JSON serialization.
+	Stdin io.Reader `json:"-"`
 
 	// Tty instructs the executor to allocate a TTY (pseudo-terminal), which lets Wash communicate
 	// with the running process via its Stdin. The TTY is used to send a process termination signal
@@ -81,10 +82,10 @@ type ExecOptions struct {
 	// NOTE TO CALLERS: The Tty option is useful for executing your own stream-like commands (e.g.
 	// tail -f), because it ensures that there are no orphaned processes after the request is
 	// cancelled/finished.
-	Tty bool
+	Tty bool `json:"tty"`
 
 	// Elevate execution to run as a privileged user if not already running as a privileged user.
-	Elevate bool
+	Elevate bool `json:"elevate"`
 }
 
 // ExecPacketType identifies the packet type.
