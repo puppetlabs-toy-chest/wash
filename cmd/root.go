@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -68,6 +69,11 @@ current system shell with shortcuts configured for wash subcommands.`,
 
 // Execute executes the root command, returning the exit code
 func Execute() int {
+	if err := config.Load(); err != nil {
+		cmdutil.ErrPrintf("Failed to load Wash's config: %v", err)
+		return 1
+	}
+
 	err := rootCommand().Execute()
 	if err == nil {
 		// This can happen if the user invokes `wash` without any

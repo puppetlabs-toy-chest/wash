@@ -13,7 +13,7 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 

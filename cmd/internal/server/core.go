@@ -13,7 +13,7 @@ import (
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/api"
-	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/plugin/aws"

@@ -14,7 +14,7 @@ import (
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 )
 
 func psCommand() *cobra.Command {
