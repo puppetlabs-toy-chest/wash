@@ -27,35 +27,38 @@ type Case struct {
 	IsMatchError    bool
 }
 
-// NPTC => NewCase. Saves some typing
-func (suite *Suite) NPTC(input string, remInput string, trueValue interface{}) Case {
-	return Case{
+// RTC => RunTestCase. Saves some typing
+func (suite *Suite) RTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+	suite.runTestCase(Case{
 		Input:           input,
 		RemInput:        remInput,
 		SatisfyingValue: trueValue,
+	})
+	if len(falseValue) > 0 {
+		suite.RNTC(input, remInput, falseValue[0])
 	}
 }
 
-// NPNTC => NewParserNegativeTestCase. Saves some typing
-func (suite *Suite) NPNTC(input string, remInput string, falseValue interface{}) Case {
-	return Case{
+// RNTC => RunNegativeTestCase. Saves some typing
+func (suite *Suite) RNTC(input string, remInput string, falseValue interface{}) {
+	suite.runTestCase(Case{
 		Input:           input,
 		RemInput:        remInput,
 		SatisfyingValue: falseV{falseValue},
-	}
+	})
 }
 
-// NPETC => NewParserErrorTestCase
-func (suite *Suite) NPETC(input string, errRegex string, isMatchError bool) Case {
-	return Case{
+// RETC => RunErrorTestCase
+func (suite *Suite) RETC(input string, errRegex string, isMatchError bool) {
+	suite.runTestCase(Case{
 		Input:        input,
 		ErrRegex:     regexp.MustCompile(errRegex),
 		IsMatchError: isMatchError,
-	}
+	})
 }
 
-// RunTestCases runs the given test cases.
-func (suite *Suite) RunTestCases(cases ...Case) {
+// runTestCase runs the given test case
+func (suite *Suite) runTestCase(c Case) {
 	var input string
 	defer func() {
 		if r := recover(); r != nil {
@@ -63,25 +66,23 @@ func (suite *Suite) RunTestCases(cases ...Case) {
 			panic(r)
 		}
 	}()
-	for _, c := range cases {
-		input = c.Input
-		p, tokens, err := suite.Parser.Parse(suite.ToTks(input))
-		if c.ErrRegex != nil {
-			if c.IsMatchError {
-				suite.True(errz.IsMatchError(err), "Input %v: expected an errz.MatchError", input)
-			} else {
-				suite.False(errz.IsMatchError(err), "Input %v: received an unexpected errz.MatchError", input)
-			}
-			suite.Regexp(c.ErrRegex, err, "Input: %v", input)
+	input = c.Input
+	p, tokens, err := suite.Parser.Parse(suite.ToTks(input))
+	if c.ErrRegex != nil {
+		if c.IsMatchError {
+			suite.True(errz.IsMatchError(err), "Input %v: expected an errz.MatchError", input)
 		} else {
-			if suite.NoError(err, "Input: %v", input) {
-				suite.Equal(suite.ToTks(c.RemInput), tokens, "Input: %v", input)
-				falseV, ok := c.SatisfyingValue.(falseV)
-				if ok {
-					suite.False(p.IsSatisfiedBy(falseV.v), "Input: %v, Value: %t", input, falseV.v)
-				} else {
-					suite.True(p.IsSatisfiedBy(c.SatisfyingValue), "Input: %v, Value: %t", input, c.SatisfyingValue)
-				}
+			suite.False(errz.IsMatchError(err), "Input %v: received an unexpected errz.MatchError", input)
+		}
+		suite.Regexp(c.ErrRegex, err, "Input: %v", input)
+	} else {
+		if suite.NoError(err, "Input: %v", input) {
+			suite.Equal(suite.ToTks(c.RemInput), tokens, "Input: %v", input)
+			falseV, ok := c.SatisfyingValue.(falseV)
+			if ok {
+				suite.False(p.IsSatisfiedBy(falseV.v), "Input: %v, Value: %t", input, falseV.v)
+			} else {
+				suite.True(p.IsSatisfiedBy(c.SatisfyingValue), "Input: %v, Value: %t", input, c.SatisfyingValue)
 			}
 		}
 	}

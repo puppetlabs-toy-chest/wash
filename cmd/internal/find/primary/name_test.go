@@ -12,10 +12,8 @@ type NamePrimaryTestSuite struct {
 }
 
 func (s *NamePrimaryTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", "requires additional arguments"),
-		s.NPETC("[a", "invalid glob: unexpected end of input"),
-	)
+	s.RETC("", "requires additional arguments")
+	s.RETC("[a", "invalid glob: unexpected end of input")
 }
 
 func (s *NamePrimaryTestSuite) TestValidInput() {

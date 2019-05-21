@@ -13,16 +13,12 @@ type EmptyPredicateTestSuite struct {
 }
 
 func (s *EmptyPredicateTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", "expected '-empty'", true),
-		s.NPETC("foo", "expected '-empty'", true),
-	)
+	s.RETC("", "expected '-empty'", true)
+	s.RETC("foo", "expected '-empty'", true)
 }
 
 func (s *EmptyPredicateTestSuite) TestValidInput() {
-	s.RunTestCases(
-		s.NPTC("-empty", "", []interface{}{}),
-	)
+	s.RTC("-empty", "", []interface{}{})
 }
 
 func (s *EmptyPredicateTestSuite) TestEmptyPInvalidType() {

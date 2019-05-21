@@ -14,31 +14,27 @@ type PrimitivePredicateTestSuite struct {
 }
 
 func (s *PrimitivePredicateTestSuite) TestErrors() {
-	s.RunTestCases(
-		// These cases ensure that parsePrimitivePredicate
-		// returns a MatchError if it cannot parse a primitive
-		// predicate
-		s.NPETC("", "expected a primitive predicate", true),
-		// These cases ensure that parsePrimitivePredicate
-		// returns any parse errors found while parsing the
-		// primitive predicates
-		s.NPETC("--15", "positive.*number", false),
-		s.NPETC("+{", ".*closing.*}", false),
-	)
+	// These cases ensure that parsePrimitivePredicate
+	// returns a MatchError if it cannot parse a primitive
+	// predicate
+	s.RETC("", "expected a primitive predicate", true)
+	// These cases ensure that parsePrimitivePredicate
+	// returns any parse errors found while parsing the
+	// primitive predicates
+	s.RETC("--15", "positive.*number", false)
+	s.RETC("+{", ".*closing.*}", false)
 }
 
 func (s *PrimitivePredicateTestSuite) TestValidInput() {
-	s.RunTestCases(
-		s.NPTC("-null", "", nil),
-		s.NPTC("-exists", "", "not nil"),
-		s.NPTC("-true", "", true),
-		s.NPTC("-false", "", false),
-		s.NPTC("200", "", float64(200)),
-		s.NPTC("+1h", "", addTST(-2*numeric.DurationOf('h'))),
-		s.NPTC("+{1h}", "", addTST(2*numeric.DurationOf('h'))),
-		s.NPTC("foo", "", "foo"),
-		s.NPTC("+foo", "", "+foo"),
-	)
+	s.RTC("-null", "", nil)
+	s.RTC("-exists", "", "not nil")
+	s.RTC("-true", "", true)
+	s.RTC("-false", "", false)
+	s.RTC("200", "", float64(200))
+	s.RTC("+1h", "", addTST(-2*numeric.DurationOf('h')))
+	s.RTC("+{1h}", "", addTST(2*numeric.DurationOf('h')))
+	s.RTC("foo", "", "foo")
+	s.RTC("+foo", "", "+foo")
 }
 
 func (s *PrimitivePredicateTestSuite) TestNullP() {

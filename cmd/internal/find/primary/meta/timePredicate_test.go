@@ -16,37 +16,31 @@ type TimePredicateTestSuite struct {
 }
 
 func (s *TimePredicateTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", `expected a \+, -, or a digit`, true),
-		s.NPETC("200", "expected a duration", true),
-		s.NPETC("+{", ".*closing.*}", false),
-	)
+	s.RETC("", `expected a \+, -, or a digit`, true)
+	s.RETC("200", "expected a duration", true)
+	s.RETC("+{", ".*closing.*}", false)
 }
 
 func (s *TimePredicateTestSuite) TestValidInputTrueValues() {
 	// Test the happy cases first
-	s.RunTestCases(
-		s.NPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h'))),
-		s.NPTC("-2h -size", "-size", addTST(-1*numeric.DurationOf('h'))),
-		s.NPTC("+{2h} -size", "-size", addTST(3*numeric.DurationOf('h'))),
-		s.NPTC("-{2h} -size", "-size", addTST(1*numeric.DurationOf('h'))),
-		// Test a stringified time to ensure that munge.ToTime's called
-		s.NPTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String()),
-	)
+	s.RTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')))
+	s.RTC("-2h -size", "-size", addTST(-1*numeric.DurationOf('h')))
+	s.RTC("+{2h} -size", "-size", addTST(3*numeric.DurationOf('h')))
+	s.RTC("-{2h} -size", "-size", addTST(1*numeric.DurationOf('h')))
+	// Test a stringified time to ensure that munge.ToTime's called
+	s.RTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String())
 }
 
 func (s *TimePredicateTestSuite) TestValidInputFalseValues() {
-	s.RunTestCases(
-		s.NPNTC("+2h", "", "not_a_valid_time_value"),
-		s.NPNTC("+2h", "", addTST(-1*numeric.DurationOf('h'))),
-		s.NPNTC("-2h", "", addTST(-3*numeric.DurationOf('h'))),
-		s.NPNTC("+{2h}", "", addTST(1*numeric.DurationOf('h'))),
-		s.NPNTC("-{2h}", "", addTST(3*numeric.DurationOf('h'))),
-		// Test time mis-matches. First case is a future/past mismatch,
-		// while the second case is a past/future mismatch.
-		s.NPNTC("-{2h}", "", addTST(-5*numeric.DurationOf('h'))),
-		s.NPNTC("-2h", "", addTST(5*numeric.DurationOf('h'))),
-	)
+	s.RNTC("+2h", "", "not_a_valid_time_value")
+	s.RNTC("+2h", "", addTST(-1*numeric.DurationOf('h')))
+	s.RNTC("-2h", "", addTST(-3*numeric.DurationOf('h')))
+	s.RNTC("+{2h}", "", addTST(1*numeric.DurationOf('h')))
+	s.RNTC("-{2h}", "", addTST(3*numeric.DurationOf('h')))
+	// Test time mis-matches. First case is a future/past mismatch,
+	// while the second case is a past/future mismatch.
+	s.RNTC("-{2h}", "", addTST(-5*numeric.DurationOf('h')))
+	s.RNTC("-2h", "", addTST(5*numeric.DurationOf('h')))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation_NotATime() {

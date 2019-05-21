@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -16,18 +15,16 @@ type SizePrimaryTestSuite struct {
 }
 
 func (s *SizePrimaryTestSuite) TestErrors() {
-	// NIVTC => NewIllegalValueTestCase
-	NIVTC := func(v string) parsertest.Case {
-		return s.NPETC(v, fmt.Sprintf("%v: illegal size value", regexp.QuoteMeta(v)))
+	// RIVTC => RIllegalValueTestCase
+	RIVTC := func(v string) {
+		s.RETC(v, fmt.Sprintf("%v: illegal size value", regexp.QuoteMeta(v)))
 	}
-	s.RunTestCases(
-		s.NPETC("", "requires additional arguments"),
-		NIVTC("foo"),
-		NIVTC("+"),
-		NIVTC("+++++1"),
-		NIVTC("+1kb"),
-		NIVTC("+1kb"),
-	)
+	s.RETC("", "requires additional arguments")
+	RIVTC("foo")
+	RIVTC("+")
+	RIVTC("+++++1")
+	RIVTC("+1kb")
+	RIVTC("+1kb")
 }
 
 func (s *SizePrimaryTestSuite) TestValidInput() {

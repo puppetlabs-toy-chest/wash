@@ -12,10 +12,8 @@ type ActionPrimaryTestSuite struct {
 }
 
 func (s *ActionPrimaryTestSuite) TestErrors() {
-	s.RunTestCases(
-		s.NPETC("", "requires additional arguments"),
-		s.NPETC("foo", "foo is an invalid action. Valid actions are.*list"),
-	)
+	s.RETC("", "requires additional arguments")
+	s.RETC("foo", "foo is an invalid action. Valid actions are.*list")
 }
 
 func (s *ActionPrimaryTestSuite) TestValidInput() {
