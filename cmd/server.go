@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Benchkram/errz"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 
@@ -50,7 +51,12 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	srv := server.New(mountpoint, serverOptsFromFlags())
+	serverOpts, err := serverOptsFor(cmd)
+	if err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return exitCode{1}
+	}
+	srv := server.New(mountpoint, serverOpts)
 	if err := srv.Start(); err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -64,6 +70,7 @@ func addServerArgs(cmd *cobra.Command) {
 	cmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
 	cmd.Flags().String("external-plugins", "", "Specify the file to load any external plugins")
 	cmd.Flags().String("cpuprofile", "", "Write cpu profile to file")
+	cmd.Flags().String("config-file", config.DefaultFile(), "Set the config file's location")
 }
 
 func bindServerArgs(cmd *cobra.Command, args []string) {
@@ -74,12 +81,19 @@ func bindServerArgs(cmd *cobra.Command, args []string) {
 	errz.Fatal(viper.BindPFlag("cpuprofile", cmd.Flags().Lookup("cpuprofile")))
 }
 
-// OptsFromFlags returns server.Opts as set by command-line flags.
-func serverOptsFromFlags() server.Opts {
+// serverOptsFor returns server.Opts for the given command.
+func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
+	configFile, err := cmd.Flags().GetString("config-file")
+	if err != nil {
+		panic(err.Error())
+	}
+	if err := config.ReadFrom(configFile); err != nil {
+		return server.Opts{}, err
+	}
 	return server.Opts{
 		CPUProfilePath:      viper.GetString("cpuprofile"),
 		ExternalPluginsPath: viper.GetString("external-plugins"),
 		LogFile:             viper.GetString("logfile"),
 		LogLevel:            viper.GetString("loglevel"),
-	}
+	}, nil
 }

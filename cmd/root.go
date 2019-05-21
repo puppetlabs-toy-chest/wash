@@ -69,8 +69,8 @@ current system shell with shortcuts configured for wash subcommands.`,
 
 // Execute executes the root command, returning the exit code
 func Execute() int {
-	if err := config.Load(); err != nil {
-		cmdutil.ErrPrintf("Failed to load Wash's config: %v", err)
+	if err := config.Init(); err != nil {
+		cmdutil.ErrPrintf("Failed to initialize Wash's config: %v", err)
 		return 1
 	}
 

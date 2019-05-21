@@ -121,7 +121,12 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
-	srv := server.New(mountpath, serverOptsFromFlags())
+	serverOpts, err := serverOptsFor(cmd)
+	if err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return exitCode{1}
+	}
+	srv := server.New(mountpath, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}
