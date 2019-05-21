@@ -66,7 +66,7 @@ func (s *Server) Start() error {
 		for level := range levelMap {
 			allLevels = append(allLevels, level)
 		}
-		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s, strings.Join(allLevels, ", "))
+		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s.opts.LogLevel, strings.Join(allLevels, ", "))
 	}
 
 	log.SetLevel(level)
