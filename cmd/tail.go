@@ -24,14 +24,13 @@ func tailCommand() *cobra.Command {
 		Short: "Displays new output of files or resources that support the stream action",
 		Long: `Output any new updates to files and/or resources (that support the stream action). Currently
 requires the '-f' option to run. Attempts to mimic the functionality of 'tail -f' for remote logs.`,
+		RunE: toRunE(tailMain),
 	}
 
 	tailCmd.Flags().BoolP("follow", "f", false, "Follow new output (required)")
 	if err := viper.BindPFlag("follow", tailCmd.Flags().Lookup("follow")); err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 	}
-
-	tailCmd.RunE = toRunE(tailMain)
 
 	return tailCmd
 }

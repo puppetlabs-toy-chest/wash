@@ -18,14 +18,13 @@ func clearCommand() *cobra.Command {
 subcommand to reset the cache for resources at or contained within <path>. Defaults to the current
 directory if <path> is not specified.`,
 		Args: cobra.MaximumNArgs(1),
+		RunE: toRunE(clearMain),
 	}
 
 	clearCmd.Flags().BoolP("verbose", "v", false, "Print paths that were cleared from the cache")
 	if err := viper.BindPFlag("verbose", clearCmd.Flags().Lookup("verbose")); err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 	}
-
-	clearCmd.RunE = toRunE(clearMain)
 
 	return clearCmd
 }

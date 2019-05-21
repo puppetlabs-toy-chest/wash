@@ -21,14 +21,13 @@ func historyCommand() *cobra.Command {
 		Long: `Wash maintains a history of commands executed through it. Print that command history, or specify an
 <id> to print a log of activity related to a particular command.`,
 		Args: cobra.MaximumNArgs(1),
+		RunE: toRunE(historyMain),
 	}
 
 	historyCmd.Flags().BoolP("follow", "f", false, "Follow new updates")
 	if err := viper.BindPFlag("follow", historyCmd.Flags().Lookup("follow")); err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 	}
-
-	historyCmd.RunE = toRunE(historyMain)
 
 	return historyCmd
 }

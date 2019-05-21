@@ -17,12 +17,11 @@ func infoCommand() *cobra.Command {
 		Short: "Prints the entry's info at the specified path",
 		Long:  `Print all info Wash has about the specified path, including filesystem attributes and metadata.`,
 		Args:  cobra.ExactArgs(1),
+		RunE:  toRunE(infoMain),
 	}
 
 	infoCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
 	errz.Fatal(viper.BindPFlag("output", infoCmd.Flags().Lookup("output")))
-
-	infoCmd.RunE = toRunE(infoMain)
 
 	return infoCmd
 }

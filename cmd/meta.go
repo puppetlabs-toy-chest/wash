@@ -15,14 +15,13 @@ func metaCommand() *cobra.Command {
 		Use:   "meta <path>",
 		Short: "Prints the metadata of a resource",
 		Args:  cobra.ExactArgs(1),
+		RunE:  toRunE(metaMain),
 	}
 
 	metaCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
 	if err := viper.BindPFlag("output", metaCmd.Flags().Lookup("output")); err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 	}
-
-	metaCmd.RunE = toRunE(metaMain)
 
 	return metaCmd
 }

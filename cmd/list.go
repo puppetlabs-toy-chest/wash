@@ -20,10 +20,8 @@ func listCommand() *cobra.Command {
 		Aliases: []string{"ls"},
 		Short:   "Lists the resources at the indicated path",
 		Args:    cobra.MaximumNArgs(1),
+		RunE:    toRunE(listMain),
 	}
-
-	listCmd.RunE = toRunE(listMain)
-
 	return listCmd
 }
 

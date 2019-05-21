@@ -21,9 +21,8 @@ and exit code.`,
 		Example: `exec docker/containers/example_1 printenv USER
   print the USER environment variable from a Docker container instance`,
 		Args: cobra.MinimumNArgs(2),
+		RunE: toRunE(execMain),
 	}
-
-	execCmd.RunE = toRunE(execMain)
 
 	// Don't interpret any flags after the first positional argument. Those should
 	// instead get interpreted by this command as normal args, not flags.
