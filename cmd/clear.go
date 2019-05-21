@@ -14,7 +14,10 @@ func clearCommand() *cobra.Command {
 	clearCmd := &cobra.Command{
 		Use:   "clear [<path>]",
 		Short: "Clears the cache at <path>, or the current directory if not specified",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Wash caches most operations. If the resource you're querying appears out-of-date, use this
+subcommand to reset the cache for resources at or contained within <path>. Defaults to the current
+directory if <path> is not specified.`,
+		Args: cobra.MaximumNArgs(1),
 	}
 
 	clearCmd.Flags().BoolP("verbose", "v", false, "Print paths that were cleared from the cache")

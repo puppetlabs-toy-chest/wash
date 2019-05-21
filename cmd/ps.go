@@ -19,8 +19,10 @@ import (
 
 func psCommand() *cobra.Command {
 	psCmd := &cobra.Command{
-		Use:   "ps [node...]",
+		Use:   "ps [<node>...]",
 		Short: "Lists the processes running on the indicated compute instances.",
+		Long: `Captures /proc/*/{cmdline,stat,statm} on each node by executing 'cat' on them. Collects the output
+to display running processes on all listed nodes. Errors on paths that don't implement exec.`,
 	}
 
 	psCmd.RunE = toRunE(psMain)

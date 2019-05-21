@@ -4,7 +4,7 @@
 
 `wash` helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love!
 
-• [COMMUNITY](#community-feedback) • [FEATURES](#features) • [INSTALLATION](#installation) • [USAGE](#usage) • [ISSUES](#known-issues) • [ROADMAP](#roadmap) • [CONTRIBUTING](#contributing) •
+• [COMMUNITY](#community-feedback) • [INSTALLATION](#installation) • [USAGE](#usage) • [ISSUES](#known-issues) • [ROADMAP](#roadmap) • [CONTRIBUTING](#contributing) •
 
 [![asciicast](https://asciinema.org/a/245046.svg)](https://asciinema.org/a/245046?cols=120&rows=30)
 
@@ -17,62 +17,13 @@ Exploring, understanding, and inspecting modern infrastructure should be simple 
 * render into text that which can be rendered into text (cuz text is a universal interface!) for easy viewing, editing, and UNIXy slicing-and-dicing
 * build new versions of basic, UNIX tools to support the above goals (but reuse existing ones if they work!)
 
+See the [wash website](https://puppetlabs.github.io/wash#current-features) for a list of current features.
+
 ## Community Feedback
 
 We're actively soliciting community feedback and input on our [roadmap](#roadmap)! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on [`#wash`](https://puppetcommunity.slack.com/app_redirect?channel=wash) on [Slack](https://slack.puppet.com/).
 
 See the [roadmap](#roadmap) below to see what we've got planned!
-
-## Features
-
-We've implemented some neat features inside of `wash` to support the above goals:
-
-* The `wash` daemon
-    * presents a FUSE filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways
-    * preserves history of all executed commands, facilitating debugging
-    * serves up an HTTP API for everything
-    * caches information, for better performance
-
-* Primitives - the basic building blocks that form the foundation of `wash`, and dictate what kinds of things you can do to all the resources `wash` knows about
-    * `list` - lets you ask any resource what's contained inside of it, and what primitives it supports. 
-        - _e.g. listing a Kubernetes pod returns its constituent containers_
-    * `read` - lets you read the contents of a given resource
-        - _e.g. represent an EC2 instance's console output as a regular file you can open in a regular editor_
-    * `stream` - gives you streaming-read access to a resource
-        - _e.g. to let you follow a container's output as its running_
-    * `exec` - lets you execute a command against a resource
-        - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
-
-* CLI tools
-    * `wash ls` - a version of `ls` that uses our API to enhance directory listings with `wash`-specific info
-        - _e.g. show you what primitives are supported for each resource_
-    * `wash meta` - emits a resource's metadata to standard out
-    * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
-    * `wash find` - find resources using powerful selection predicates (WIP)
-    * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
-    * `wash ps` - lists running processes on indicated compute instances that support the `exec` primitive
-    * `wash history` - lists all activity through `wash`; `wash history <id>` can be used to view logs for a specific activity
-    * `wash clear` - clears cached data for a subhierarchy rooted at the supplied path so `wash` will re-request it
-
-* Core plugins (see the _Roadmap_ below for more details)
-    * `docker` - presents a filesystem hierarchy of containers and volumes
-        - found from the local socket or via `DOCKER` environment variables
-    * `kubernetes` - presents a filesystem hierarchy of pods, containers, and persistent volume claims
-        - uses contexts from `~/.kube/config`
-    * `aws` - presents a filesystem hierarchy for EC2 and S3
-        - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK
-        - IAM roles are supported when configured as described [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html). Note that currently `region` will also need to be specified with the profile.
-        - if using MFA, `wash` will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your [user cache directory](#user-cache-directory) so they can be re-used across server restarts. `wash` may have to re-prompt for a new MFA token in response to navigating the `wash` environment to authorize a new session.
-        - SSH is used to connect to EC2 instances. It relies on an `ssh-agent` for credentials, your SSH config to override the default user (`ec2-user`) and port (`22`), and `~/.ssh/known_hosts`. If you don't want to add the target to your `known_hosts` file, you can disable strict host key checking in your SSH config with
-          ```
-          Host *.compute.amazonaws.com
-            StrictHostKeyChecking no
-          ```
-
-* [External plugins](https://github.com/puppetlabs/wash/tree/master/docs/external_plugins)
-    * `wash` allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
-    * `wash` handles the plugin lifecycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic
-    * users interact with external plugins the exact same way as core plugins; they are first-class citizens
 
 ## Installation
 
@@ -212,9 +163,7 @@ Project maintainers are not actively working on all of these things, but any of 
 
 * [ ] colorized output for `ls`, similar to `exa -l`
 * [ ] make `ls` emit something useful when used against non-`wash` resources
-* [ ] `tail` that works for `wash` resources that support `stream`
 * [ ] `exec` should work in parallel across multiple target resources
-* [ ] `find` that lets you refer to `wash` primitives _(e.g. find all the resources under `/docker` that support `exec`)_
 * [ ] build an interactive shell that works over `exec` _(need to update plugins API to support this, most likely)_
 * [ ] a version of `top` that works using `wash` primitives to get information to display from multiple targets
 

@@ -41,12 +41,162 @@
 </div>
 </header>
 <article>
-    <p>You can find Wash documentation here. It&rsquo;s a work in progress!</p>
+    
 
 <ul>
-<li><a href="/wash/docs/external_plugins">External plugins</a></li>
-<li><a href="/wash/docs/go_plugins">Go Plugins</a></li>
-<li><a href="/wash/docs/api">Server API</a></li>
+<li><a href="#wash-commands">Wash Commands</a>
+
+<ul>
+<li><a href="#wash">wash</a></li>
+<li><a href="#wash-clear">wash clear</a></li>
+<li><a href="#wash-exec">wash exec</a></li>
+<li><a href="#wash-find">wash find</a></li>
+<li><a href="#wash-history">wash history</a></li>
+<li><a href="#wash-info">wash info</a></li>
+<li><a href="#wash-list-ls">wash list</a></li>
+<li><a href="#wash-meta">wash meta</a></li>
+<li><a href="#wash-ps">wash ps</a></li>
+<li><a href="#wash-server">wash server</a></li>
+<li><a href="#wash-tail">wash tail</a></li>
+</ul></li>
+<li><a href="#core-plugins">Core Plugins</a>
+
+<ul>
+<li><a href="#aws">AWS</a></li>
+<li><a href="#docker">Docker</a></li>
+<li><a href="#kubernetes">Kubernetes</a></li>
+</ul></li>
+<li><a href="#plugin-concepts">Plugin Concepts</a>
+
+<ul>
+<li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
+<li><a href="/wash/docs/go_plugins">➠Go Plugins</a></li>
+<li><a href="/wash/docs/api">➠Server API</a></li>
+</ul></li>
+</ul>
+
+<h2 id="wash-commands">Wash Commands</h2>
+
+<p>Wash commands aim to be well-documented in the tool. Try <code>wash help</code> and <code>wash help &lt;subcommand&gt;</code> for specific options.</p>
+
+<p>Most commands operate on Wash resources, which are addressed by their path in the filesystem.</p>
+
+<h3 id="wash">wash</h3>
+
+<p>The <code>wash</code> command can be invoked on its own to enter a Wash shell.</p>
+
+<p>Invoking <code>wash</code> starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the <a href="#wash-server"><code>wash server</code></a> settings are also supported with <code>wash</code>.</p>
+
+<h3 id="wash-clear">wash clear</h3>
+
+<p>Wash caches most operations. If the resource you&rsquo;re querying appears out-of-date, use this subcommand to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.</p>
+
+<h3 id="wash-exec">wash exec</h3>
+
+<p>For a Wash resource that implements the ability to execute a command, run the specified command and arguments. The results will be forwarded from the target on stdout, stderr, and exit code.</p>
+
+<h3 id="wash-find">wash find</h3>
+
+<p>Recursively descends the directory tree of the specified path, evaluating an <code>expression</code> composed of <code>primaries</code> and <code>operands</code> for each entry in the tree.</p>
+
+<h3 id="wash-history">wash history</h3>
+
+<p>Wash maintains a history of commands executed through it. Print that command history, or specify an <code>id</code> to print a log of activity related to a particular command.</p>
+
+<h3 id="wash-info">wash info</h3>
+
+<p>Print all info Wash has about the specified path, including filesystem attributes and metadata.</p>
+
+<h3 id="wash-list-ls">wash list/ls</h3>
+
+<p>Lists the resources at the indicated path.</p>
+
+<h3 id="wash-meta">wash meta</h3>
+
+<p>Prints the metadata of a resource.</p>
+
+<h3 id="wash-ps">wash ps</h3>
+
+<p>Captures /proc/*/{cmdline,stat,statm} on each node by executing &lsquo;cat&rsquo; on them. Collects the output
+to display running processes on all listed nodes. Errors on paths that don&rsquo;t implement exec.</p>
+
+<h3 id="wash-server">wash server</h3>
+
+<p>Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers). To stop it, make sure you&rsquo;re not using the filesystem at the specified mountpoint, then enter Ctrl-C.</p>
+
+<p>Server API docs can be found <a href="/wash/docs/api">here</a>.</p>
+
+<h3 id="wash-tail">wash tail</h3>
+
+<p>Output any new updates to files and/or resources (that support the stream action). Currently requires the &lsquo;-f&rsquo; option to run. Attempts to mimic the functionality of <code>tail -f</code> for remote logs.</p>
+
+<h2 id="core-plugins">Core Plugins</h2>
+
+<h3 id="aws">AWS</h3>
+
+<ul>
+<li>EC2 and S3</li>
+<li>uses <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK.</li>
+<li>IAM roles are supported when configured as described here. Note that currently region will also need to be specified with the profile.</li>
+<li>if using MFA, wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under <code>wash/aws-credentials</code> in your user cache directory so they can be re-used across server restarts. wash may have to re-prompt for a new MFA token in response to navigating the wash environment to authorize a new session.</li>
+<li>supports streaming, and remote command execution via ssh</li>
+<li>supports full metadata for S3 content</li>
+</ul>
+
+<h3 id="docker">Docker</h3>
+
+<ul>
+<li>containers and volumes</li>
+<li>found from the local socket or via <code>DOCKER</code> environment variables</li>
+<li>supports streaming, and remote command execution</li>
+</ul>
+
+<h3 id="kubernetes">Kubernetes</h3>
+
+<ul>
+<li>pods, containers, and persistent volume claims</li>
+<li>uses contexts from <code>~/.kube/config</code></li>
+<li>supports streaming, and remote command execution</li>
+<li>supports listing of volume contents</li>
+</ul>
+
+<h2 id="plugin-concepts">Plugin Concepts</h2>
+
+<p>Wash&rsquo;s plugin system is designed around a set of primitives that resources can implement. A plugin requires a root that can list things it contains, and implements a tree structure under that where each node represents a resource or an arbitrary grouping. Wash will translate that tree structure into a file hierarchy.</p>
+
+<p>Wash supports the following primitives:</p>
+
+<ul>
+<li><code>list</code> - lets you ask any resource what&rsquo;s contained inside of it, and what primitives it supports.
+
+<ul>
+<li><em>e.g. listing a Kubernetes pod returns its constituent containers</em></li>
+</ul></li>
+<li><code>read</code> - lets you read the contents of a given resource
+
+<ul>
+<li><em>e.g. represent an EC2 instance&rsquo;s console output as a regular file you can open in a regular editor</em></li>
+</ul></li>
+<li><code>stream</code> - gives you streaming-read access to a resource
+
+<ul>
+<li><em>e.g. to let you follow a container&rsquo;s output as its running</em></li>
+</ul></li>
+<li><code>exec</code> - lets you execute a command against a resource
+
+<ul>
+<li><em>e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc.</em></li>
+</ul></li>
+</ul>
+
+<p>Primitives can be accessed programmatically via the Wash API, or on the CLI via <code>wash</code> subcommands and filesystem interactions.</p>
+
+<p>For more on implementing plugins, see:</p>
+
+<ul>
+<li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
+<li><a href="/wash/docs/go_plugins">➠Go Plugins</a></li>
+<li><a href="/wash/docs/api">➠Server API</a></li>
 </ul>
 
 </article>

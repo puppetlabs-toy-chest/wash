@@ -49,13 +49,14 @@ func runShell(cachedir, mountpath string) exitCode {
 	// These are executables instead of aliases because putting alias declarations at the beginning
 	// of stdin for the command doesn't work right.
 	aliases := map[string]string{
-		"wclear":  "clear",
-		"wexec":   "exec",
-		"find":    "find",
-		"history": "history",
-		"list":    "list",
-		"meta":    "meta",
-		"tail":    "tail",
+		"wclear":   "clear",
+		"wexec":    "exec",
+		"find":     "find",
+		"help":     "help",
+		"whistory": "history",
+		"list":     "list",
+		"meta":     "meta",
+		"tail":     "tail",
 	}
 	for name, subcommand := range aliases {
 		if err := writeAlias(filepath.Join(runpath, name), subcommand); err != nil {
@@ -126,8 +127,8 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	fmt.Println(`Welcome to Wash!
-  Wash includes several built-in commands: wclear, wexec, find, list, meta, tail.
-  Commands run with wash can be seen via 'history', and logs for those commands with 'history <id>'.`)
+  Wash includes several built-in commands: wclear, wexec, find, list, meta, tail. Try 'help'.
+  Commands run with wash can be seen via 'whistory', and logs for those commands with 'whistory <id>'.`)
 
 	exit := runShell(cachedir, mountpath)
 

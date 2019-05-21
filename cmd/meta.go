@@ -12,8 +12,8 @@ import (
 
 func metaCommand() *cobra.Command {
 	metaCmd := &cobra.Command{
-		Use:   "meta <file>",
-		Short: "Prints the metadata of a file",
+		Use:   "meta <path>",
+		Short: "Prints the metadata of a resource",
 		Args:  cobra.ExactArgs(1),
 	}
 
