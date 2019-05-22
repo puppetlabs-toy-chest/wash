@@ -7,9 +7,11 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
+// Name is the name primary
+//
 // namePrimary => -name ShellGlob
 //nolint
-var namePrimary = Parser.add(&Primary{
+var Name = Parser.add(&Primary{
 	Description: "Returns true if the entry's cname matches glob",
 	name: "name",
 	args: "glob",

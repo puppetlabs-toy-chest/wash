@@ -13,8 +13,8 @@ import (
 // TimePredicate => (+|-)? Duration
 // Duration      => numeric.DurationRegex | '{' numeric.DurationRegex '}'
 func parseTimePredicate(tokens []string) (predicate.Predicate, []string, error) {
-	if params.StartTime.IsZero() {
-		panic("meta.parseTimePredicate called without setting params.StartTime")
+	if params.ReferenceTime.IsZero() {
+		panic("meta.parseTimePredicate called without setting params.ReferenceTime")
 	}
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a +, -, or a digit")
@@ -33,17 +33,17 @@ func parseTimePredicate(tokens []string) (predicate.Predicate, []string, error) 
 		// err is a parse error, so return it.
 		return nil, nil, err
 	}
-	subFromStartTime := true
+	subFromReferenceTime := true
 	if parserID == 1 {
 		// User passed-in something like +{1h}. This means they want to
 		// base the predicate off of 'timeV - StartTime' instead of
 		// 'StartTime - timeV'.
-		subFromStartTime = false
+		subFromReferenceTime = false
 	}
-	return timeP(subFromStartTime, p), tokens[1:], nil
+	return timeP(subFromReferenceTime, p), tokens[1:], nil
 }
 
-func timeP(subFromStartTime bool, p numeric.Predicate) predicate.Predicate {
+func timeP(subFromReferenceTime bool, p numeric.Predicate) predicate.Predicate {
 	return &timePredicate{
 		genericPredicate: func(v interface{}) bool {
 			timeV, err := munge.ToTime(v)
@@ -51,10 +51,10 @@ func timeP(subFromStartTime bool, p numeric.Predicate) predicate.Predicate {
 				return false
 			}
 			var diff int64
-			if subFromStartTime {
-				diff = int64(params.StartTime.Sub(timeV))
+			if subFromReferenceTime {
+				diff = int64(params.ReferenceTime.Sub(timeV))
 			} else {
-				diff = int64(timeV.Sub(params.StartTime))
+				diff = int64(timeV.Sub(params.ReferenceTime))
 			}
 			if diff < 0 {
 				// Time predicates query either the past or the future, but not both.
@@ -68,17 +68,17 @@ func timeP(subFromStartTime bool, p numeric.Predicate) predicate.Predicate {
 			}
 			return p(diff)
 		},
-		subFromStartTime: subFromStartTime,
+		subFromReferenceTime: subFromReferenceTime,
 		p: p,
 	}
 }
 
 type timePredicate struct {
 	genericPredicate
-	subFromStartTime bool
+	subFromReferenceTime bool
 	p numeric.Predicate
 }
 
 func (tp *timePredicate) Negate() predicate.Predicate {
-	return timeP(tp.subFromStartTime, tp.p.Negate().(numeric.Predicate))
+	return timeP(tp.subFromReferenceTime, tp.p.Negate().(numeric.Predicate))
 }

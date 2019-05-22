@@ -41,7 +41,7 @@ func (s *SizePrimaryTestSuite) TestValidInput() {
 
 func TestSizePrimary(t *testing.T) {
 	s := new(SizePrimaryTestSuite)
-	s.Parser = sizePrimary
+	s.Parser = Size
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		e := types.Entry{}
 		e.Attributes.SetSize(uint64(v.(int64)))

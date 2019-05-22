@@ -22,7 +22,7 @@ func (s *NamePrimaryTestSuite) TestValidInput() {
 
 func TestNamePrimary(t *testing.T) {
 	s := new(NamePrimaryTestSuite)
-	s.Parser = namePrimary
+	s.Parser = Name
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		e := types.Entry{}
 		e.CName = v.(string)

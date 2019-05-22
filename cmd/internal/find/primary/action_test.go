@@ -24,7 +24,7 @@ func (s *ActionPrimaryTestSuite) TestValidInput() {
 
 func TestActionPrimary(t *testing.T) {
 	s := new(ActionPrimaryTestSuite)
-	s.Parser = actionPrimary
+	s.Parser = Action
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		e := types.Entry{}
 		e.Actions = v.([]string)

@@ -110,6 +110,10 @@ find . -name "*c" -a -mtime +1h
 find . -name "*c" -o -name "*d"
     Print out all entries whose cname ends with a "c" or a "d"
 
+find . -daystart -name "*.log" -mtime 0
+find . -daystart -name "*.log" -a -mtime 0
+    Print out all log files that were updated today.
+
 find . -path "docker*containers*" \( -name "*c" -o -name "*d" \) -a -mtime -1h
 find . -path "docker*containers*" \( -name "*c" -o -name "*d" \) -mtime -1h
     Print out all the Docker containers whose cname ends with a "c"
@@ -117,6 +121,15 @@ find . -path "docker*containers*" \( -name "*c" -o -name "*d" \) -mtime -1h
     without the parentheses, the latter part of the expression would
     have been parsed as '-name "*c" OR ( -name "*d" AND -mtime -1h)',
     which is a completely different predicate.
+
+find kubernetes -maxdepth -1 -daystart -m .status.startTime -{1d}
+    Print out all the Kubernetes pods that started today. Note that the "maxdepth -1"
+    option tells find to recurse (the meta primary turns this off by default).
+
+find docker/containers -daystart -fullmeta -m .state.startedAt -{1d}
+    Prints out all the Docker containers that were started today. Note that the
+    "fullmeta" option is necessary because the "meta" attribute for a Docker container
+    does not include the container's start time.
 
 find ec2/instances -m .state.name running -a -m .tags[?] .key termination_date -a .value +0h
 find ec2/instances -m .state.name running -m .tags[?] .key termination_date .value +0h

@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -25,7 +24,6 @@ func Parse(args []string) (Result, error) {
 	if err != nil {
 		return r, err
 	}
-	primary.Parser.Options = &r.Options
 	r.Predicate, err = parseExpression(args)
 	return r, err
 }

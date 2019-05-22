@@ -14,7 +14,6 @@ func Parse(tokens []string) (types.EntryPredicate, []string, error) {
 		return nil, nil, err
 	}
 	return func(e types.Entry) bool {
-		mp := map[string]interface{}(e.Attributes.Meta())
-		return p.IsSatisfiedBy(mp)
+		return p.IsSatisfiedBy(e.Metadata)
 	}, tokens, nil
 }

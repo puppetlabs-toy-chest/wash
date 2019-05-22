@@ -130,7 +130,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 	m := make(map[string]interface{})
 	m["key"] = "foo"
 	entry := types.Entry{}
-	entry.Attributes.SetMeta(m)
+	entry.Metadata = m
 
 	s.RTC("( -true -o -true ) -false", false)
 	// Should be parsed as (-true -a -false) -o -true which evaluates to true.

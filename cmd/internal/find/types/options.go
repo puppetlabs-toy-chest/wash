@@ -10,9 +10,11 @@ import (
 // Options represents the find command's options.
 type Options struct {
 	Depth    bool
-	Mindepth uint
 	Maxdepth int
-	Help HelpOption
+	Mindepth uint
+	Daystart bool
+	Fullmeta bool
+	Help     HelpOption
 	setFlags map[string]struct{}
 }
 
@@ -28,6 +30,8 @@ func NewOptions() Options {
 		// We make Maxdepth an int because of the `meta` primary.
 		// See the comments in `primary/meta.go` for more details.
 		Maxdepth: DefaultMaxdepth,
+		Daystart: false,
+		Fullmeta: false,
 		setFlags: make(map[string]struct{}),
 	}
 }
@@ -39,6 +43,10 @@ const (
 	MindepthFlag = "mindepth"
 	// MaxdepthFlag is the name of the maxdepth option's flag
 	MaxdepthFlag = "maxdepth"
+	// DaystartFlag is the name of the daystart option's flag
+	DaystartFlag = "daystart"
+	// FullmetaFlag is the name of the fullmeta option's flag
+	FullmetaFlag = "fullmeta"
 )
 
 // IsSet returns true if the flag was set, false otherwise.
@@ -61,6 +69,8 @@ func (opts *Options) FlagSet() *flag.FlagSet {
 	fs.BoolVar(&opts.Depth, DepthFlag, opts.Depth, "")
 	fs.UintVar(&opts.Mindepth, MindepthFlag, opts.Mindepth, "")
 	fs.IntVar(&opts.Maxdepth, MaxdepthFlag, opts.Maxdepth, "")
+	fs.BoolVar(&opts.Daystart, DaystartFlag, opts.Daystart, "")
+	fs.BoolVar(&opts.Fullmeta, FullmetaFlag, opts.Fullmeta, "")
 	return fs
 }
 
@@ -72,6 +82,8 @@ func OptionsTable() *cmdutil.Table {
 		[]string{"      -depth",           "Visit the children first before the parent (default false)"},
 		[]string{"      -mindepth depth",  "Do not print entries at levels less than depth (default 0)"},
 		[]string{"      -maxdepth depth",  "Do not print entries at levels greater than depth (default infinity)"},
+		[]string{"      -daystart",        "Set the reference time to the start of the current day (default false)"},
+		[]string{"      -fullmeta",        "Use the entry's full metadata in meta primary predicates (default false)"},
 		[]string{"  -h, -help",            "Print this usage"},
 		[]string{"  -h, -help <primary>",  "Print a detailed description of the specified primary (e.g. \"-help meta\")"},
 		[]string{"  -h, -help syntax",     "Print a detailed description of find's expression syntax"},

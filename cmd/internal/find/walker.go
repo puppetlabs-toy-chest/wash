@@ -5,6 +5,7 @@ import (
 
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
@@ -53,7 +54,18 @@ func (w *walker) walk(e types.Entry, depth uint) {
 }
 
 func (w *walker) visit(e types.Entry, depth uint) {
-	if depth >= w.opts.Mindepth && w.p(e) {
+	if depth < w.opts.Mindepth {
+		return
+	}
+	if primary.IsSet(primary.Meta) && w.opts.IsSet(types.FullmetaFlag) {
+		// Fetch the entry's full metadata
+		meta, err := w.conn.Metadata(e.Path)
+		if err != nil {
+			cmdutil.ErrPrintf("could not get full metadata of %v: %v\n", e.NormalizedPath, err)
+		}
+		e.Metadata = meta
+	}
+	if w.p(e) {
 		fmt.Printf("%v\n", e.NormalizedPath)
 	}
 }

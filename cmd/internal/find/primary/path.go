@@ -7,9 +7,11 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
+// Path is the path primary
+//
 // pathPrimary => -path ShellGlob
 //nolint
-var pathPrimary = Parser.add(&Primary{
+var Path = Parser.add(&Primary{
 	Description: "Returns true if the entry's normalized path matches glob",
 	name: "path",
 	args: "glob",

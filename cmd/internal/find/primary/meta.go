@@ -1,14 +1,12 @@
 package primary
 
 import (
-    "fmt"
-    "os"
-
-    "github.com/puppetlabs/wash/cmd/internal/find/types"
     "github.com/puppetlabs/wash/cmd/internal/find/primary/meta"
 )
 
 /*
+Meta is the meta primary
+
 metaPrimary         => (-meta|-m) Expression
 
 Expression          => EmptyPredicate | KeySequence PredicateExpression
@@ -59,43 +57,38 @@ StringPredicate     => [^-].*
 N                   => \d+ (i.e. some number > 0)
 */
 //nolint
-var metaPrimary = Parser.add(&Primary{
-    Description: "Returns true if the entry's meta attribute satisfies the expression",
+var Meta = Parser.add(&Primary{
+    Description: "Returns true if the entry's metadata satisfies the expression",
     DetailedDescription: metaDetailedDescription,
     name: "meta",
     args: "<expression>",
     shortName: "m",
     parseFunc: meta.Parse,
-    optionsSetter: func(opts *types.Options) {
-        if !opts.IsSet(types.MaxdepthFlag) {
-            // The `meta` primary's a specialized filter. It should only be used
-            // if a user needs to filter on something that isn't in plugin.EntryAttributes
-            // (e.g. like an EC2 instance tag, a Docker container's image, etc.). Thus, it
-            // wouldn't make sense for `wash find` to recurse when someone's using the `meta`
-            // primary since it is likely that siblings or children will have a different meta
-            // schema. For example, if we're filtering EC2 instances based on a tag, then `wash find`
-            // shouldn't recurse down into the EC2 instance's console output + metadata.json files
-            // because those entries don't have tags and, even if they did, they'd likely be under a
-            // different key (e.g. like "Labels" for Docker containers). Thus to avoid the unnecessary
-            // recursion, we default maxdepth to 1 if the flag was not set by the user. Note that users
-            // who want to recurse down into subdirectories can just set maxdepth to -1. The recursion
-            // is useful when running `wash find` inside a directory whose entries and subdirectory entries
-            // all have the same `meta` schema (e.g. like in an S3 bucket).
-            fmt.Fprintln(os.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
-            opts.Maxdepth = 1
-        }
-    },
 })
 
 const metaDetailedDescription = `
-The meta primary constructs a predicate on the entry's meta attribute.
-It is a specialized filter, so you should only use it if you need to
+The meta primary constructs a predicate on the entry's metadata. By
+default, this is the meta attribute. If you'd like to construct the
+predicate on the entry's full metadata, then set the "fullmeta" option.
+Be careful when you do this, because find will make O(N) API requests
+to retrieve this information (N = the number of visited entries).
+
+Meta is a specialized filter, so you should only use it if you need to
 filter your entries on a property that isn't captured by the common Wash
 attributes. For example, the meta primary can be used to filter EC2
 instances on a specific tag. It can be used to filter Docker containers
 with a specified label. In general, the meta primary can be used to filter
 on any property that's specified in the entry's meta attribute. See the
 EXAMPLES section for some interesting real-world examples.
+
+NOTE: If your plugin's API is not subscription based (like AWS) or if
+individual API requests are cheap, then feel free to always set the
+"fullmeta" option for more complete filtering. This is very useful when
+your plugin API's over a Unix socket.
+
+NOTE: If find fails to retrieve the entry's full metadata, then it will
+fallback to the meta attribute. This condition only applies when the
+"fullmeta" option is set.
 
 NOTE: Because it is a specialized filter, the meta primary defaults
 maxdepth to 1 if the -maxdepth flag is not provided. This is to avoid
@@ -366,7 +359,7 @@ being compared. Then:
     of time values include stringified dates or unix seconds.
 
   * If Nu is specified, where Nu means N suffixed with a unit, then the difference "d"
-    between find's start time and v will be compared to N scaled as: 
+    between the reference time and v will be compared to N scaled as: 
         s        second
         m        minute (60 seconds)
         h        hour   (60 minutes)
@@ -378,7 +371,7 @@ being compared. Then:
 
   * If -Nu is specified, then the predicate returns "d" < Nu
 
-  * If {Nu} is specified, then "d" is the difference between v and find's start time.
+  * If {Nu} is specified, then "d" is the difference between v and the reference time.
     Brackets are useful to distinguish "future" queries from "past" queries.
 
 NOTE: If "d" < 0, then the predicate always returns false. "d" < 0 represents a time
@@ -424,6 +417,9 @@ NOTE: As the expiration_date example shows, the "{}" distinguish a "future"
 query from a "past" query. Future queries are a useful way of filtering out
 entries that are going to expire within the next N minutes/hours/days/weeks
 (e.g. security policies, tagged EC2 instances, user credentials, etc.)
+
+NOTE: If the "daystart" option is set, then "-{1d}" returns true if the time
+value is within the current day (i.e. today).
 
 STRING PREDICATE:
 Any input that doesn't begin with a "+", "-", "!", "(", or ")" is treated as
