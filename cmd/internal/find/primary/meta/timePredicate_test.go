@@ -23,24 +23,24 @@ func (s *TimePredicateTestSuite) TestErrors() {
 
 func (s *TimePredicateTestSuite) TestValidInputTrueValues() {
 	// Test the happy cases first
-	s.RTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')))
-	s.RTC("-2h -size", "-size", addTST(-1*numeric.DurationOf('h')))
-	s.RTC("+{2h} -size", "-size", addTST(3*numeric.DurationOf('h')))
-	s.RTC("-{2h} -size", "-size", addTST(1*numeric.DurationOf('h')))
+	s.RTC("+2h -size", "-size", addTRT(-3*numeric.DurationOf('h')))
+	s.RTC("-2h -size", "-size", addTRT(-1*numeric.DurationOf('h')))
+	s.RTC("+{2h} -size", "-size", addTRT(3*numeric.DurationOf('h')))
+	s.RTC("-{2h} -size", "-size", addTRT(1*numeric.DurationOf('h')))
 	// Test a stringified time to ensure that munge.ToTime's called
-	s.RTC("+2h -size", "-size", addTST(-3*numeric.DurationOf('h')).String())
+	s.RTC("+2h -size", "-size", addTRT(-3*numeric.DurationOf('h')).String())
 }
 
 func (s *TimePredicateTestSuite) TestValidInputFalseValues() {
 	s.RNTC("+2h", "", "not_a_valid_time_value")
-	s.RNTC("+2h", "", addTST(-1*numeric.DurationOf('h')))
-	s.RNTC("-2h", "", addTST(-3*numeric.DurationOf('h')))
-	s.RNTC("+{2h}", "", addTST(1*numeric.DurationOf('h')))
-	s.RNTC("-{2h}", "", addTST(3*numeric.DurationOf('h')))
+	s.RNTC("+2h", "", addTRT(-1*numeric.DurationOf('h')))
+	s.RNTC("-2h", "", addTRT(-3*numeric.DurationOf('h')))
+	s.RNTC("+{2h}", "", addTRT(1*numeric.DurationOf('h')))
+	s.RNTC("-{2h}", "", addTRT(3*numeric.DurationOf('h')))
 	// Test time mis-matches. First case is a future/past mismatch,
 	// while the second case is a past/future mismatch.
-	s.RNTC("-{2h}", "", addTST(-5*numeric.DurationOf('h')))
-	s.RNTC("-2h", "", addTST(5*numeric.DurationOf('h')))
+	s.RNTC("-{2h}", "", addTRT(-5*numeric.DurationOf('h')))
+	s.RNTC("-2h", "", addTRT(5*numeric.DurationOf('h')))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation_NotATime() {
@@ -60,15 +60,15 @@ func (s *TimePredicateTestSuite) TestTimeP_Negation_TimeMismatch() {
 	tp := timeP(true, func(n int64) bool {
 		return n > d
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTST(d+1)))
-	s.False(tp.Negate().IsSatisfiedBy(addTST(d-1)))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(d+1)))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(d-1)))
 
 	// Test future queries
 	tp = timeP(false, func(n int64) bool {
 		return n > d 
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d+1))))
-	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d-1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d+1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d-1))))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation() {
@@ -76,14 +76,14 @@ func (s *TimePredicateTestSuite) TestTimeP_Negation() {
 	tp := timeP(true, func(n int64) bool {
 		return n > d 
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTST(-(d+1))))
-	s.True(tp.Negate().IsSatisfiedBy(addTST(-(d-1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d+1))))
+	s.True(tp.Negate().IsSatisfiedBy(addTRT(-(d-1))))
 }
 
-// addTST => addToStartTime. Saves some typing. Note that v
+// addTRT => addToReferenceTime. Saves some typing. Note that v
 // is an int64 duration.
-func addTST(v int64) time.Time {
-	return params.StartTime.Add(time.Duration(v))
+func addTRT(v int64) time.Time {
+	return params.ReferenceTime.Add(time.Duration(v))
 }
 
 func TestTimePredicate(t *testing.T) {

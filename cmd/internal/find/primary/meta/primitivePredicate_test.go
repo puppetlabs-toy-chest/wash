@@ -31,8 +31,8 @@ func (s *PrimitivePredicateTestSuite) TestValidInput() {
 	s.RTC("-true", "", true)
 	s.RTC("-false", "", false)
 	s.RTC("200", "", float64(200))
-	s.RTC("+1h", "", addTST(-2*numeric.DurationOf('h')))
-	s.RTC("+{1h}", "", addTST(2*numeric.DurationOf('h')))
+	s.RTC("+1h", "", addTRT(-2*numeric.DurationOf('h')))
+	s.RTC("+{1h}", "", addTRT(2*numeric.DurationOf('h')))
 	s.RTC("foo", "", "foo")
 	s.RTC("+foo", "", "+foo")
 }

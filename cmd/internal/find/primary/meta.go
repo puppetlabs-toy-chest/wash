@@ -366,7 +366,7 @@ being compared. Then:
     of time values include stringified dates or unix seconds.
 
   * If Nu is specified, where Nu means N suffixed with a unit, then the difference "d"
-    between find's start time and v will be compared to N scaled as: 
+    between the reference time and v will be compared to N scaled as: 
         s        second
         m        minute (60 seconds)
         h        hour   (60 minutes)
@@ -378,7 +378,7 @@ being compared. Then:
 
   * If -Nu is specified, then the predicate returns "d" < Nu
 
-  * If {Nu} is specified, then "d" is the difference between v and find's start time.
+  * If {Nu} is specified, then "d" is the difference between v and the reference time.
     Brackets are useful to distinguish "future" queries from "past" queries.
 
 NOTE: If "d" < 0, then the predicate always returns false. "d" < 0 represents a time
@@ -424,6 +424,9 @@ NOTE: As the expiration_date example shows, the "{}" distinguish a "future"
 query from a "past" query. Future queries are a useful way of filtering out
 entries that are going to expire within the next N minutes/hours/days/weeks
 (e.g. security policies, tagged EC2 instances, user credentials, etc.)
+
+NOTE: If the "daystart" option is set, then "-{1d}" returns true if the time
+value is within the current day (i.e. today).
 
 STRING PREDICATE:
 Any input that doesn't begin with a "+", "-", "!", "(", or ")" is treated as

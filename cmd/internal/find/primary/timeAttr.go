@@ -35,8 +35,8 @@ func newTimeAttrPrimary(name string) *Primary {
 		name: name,
 		args: "[+|-]n[smhdw]",
 		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
-			if params.StartTime.IsZero() {
-				panic("Attempting to parse a time primary without setting params.StartTime")
+			if params.ReferenceTime.IsZero() {
+				panic("Attempting to parse a time primary without setting params.ReferenceTime")
 			}
 			if len(tokens) == 0 {
 				return nil, nil, fmt.Errorf("requires additional arguments")
@@ -55,7 +55,7 @@ func newTimeAttrPrimary(name string) *Primary {
 				if !ok {
 					return false
 				}
-				diff := int64(params.StartTime.Sub(t))
+				diff := int64(params.ReferenceTime.Sub(t))
 				if parserID == 0 {
 					// n was an integer, so round-up diff to the next 24-hour period
 					diff = int64(math.Ceil(float64(diff) / float64(numeric.DurationOf('d'))))
@@ -101,8 +101,7 @@ Examples:
   -{name} +1h      Returns true if the entry's {name} is more than one
                   hour ago
 
-NOTE: All comparisons are made with respect to the find command's
-start time.
+NOTE: All comparisons are made with respect to the reference time
 `
 	return strings.NewReplacer("{name}", name).Replace(descr)
 }

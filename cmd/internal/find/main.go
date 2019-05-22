@@ -19,7 +19,7 @@ import (
 
 // Main is `wash find`'s main function.
 func Main(cmd *cobra.Command, args []string) int {
-	params.StartTime = time.Now()
+	params.ReferenceTime = time.Now()
 
 	result, err := parser.Parse(args)
 	if result.Options.Help.Requested {
@@ -28,6 +28,20 @@ func Main(cmd *cobra.Command, args []string) int {
 	if err != nil {
 		cmdutil.ErrPrintf("find: %v\n", err)
 		return 1
+	}
+	if result.Options.Daystart {
+		// Set the ReferenceTime to the start of the current day
+		year, month, day := params.ReferenceTime.Date()
+		params.ReferenceTime = time.Date(
+			year,
+			month,
+			day,
+			0,
+			0,
+			0,
+			0,
+			params.ReferenceTime.Location(),
+		)
 	}
 
 	conn := client.ForUNIXSocket(config.Socket)

@@ -97,14 +97,14 @@ func (suite *Suite) ToTks(s string) []string {
 	return tokens
 }
 
-// SetupTest sets the StartTime
+// SetupTest sets the ReferenceTime
 func (suite *Suite) SetupTest() {
-	params.StartTime = time.Now()
+	params.ReferenceTime = time.Now()
 }
 
-// TeardownTest resets the StartTime
+// TeardownTest resets the ReferenceTime
 func (suite *Suite) TeardownTest() {
-	params.StartTime = time.Time{}
+	params.ReferenceTime = time.Time{}
 }
 
 

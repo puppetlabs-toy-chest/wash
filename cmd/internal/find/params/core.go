@@ -4,5 +4,6 @@ package params
 
 import "time"
 
-// StartTime is `wash find`'s start time.
-var StartTime time.Time
+// ReferenceTime is the reference time that's used for `wash find`'s
+// time predicates. Defaults to `wash find`'s start time.
+var ReferenceTime time.Time

@@ -32,6 +32,8 @@ func Usage() string {
 	u += "Use \"wash find --help <primary>\" for more information about a primary. To view\n"
 	u += "a detailed description of find's expression syntax, use \"wash find --help syntax\".\n"
 	u += "\n"
+	u += "NOTE: The default reference time for all time predicates is find's start time.\n"
+	u += "\n"
 	u += "NOTE: All entry attribute primaries return false if the given entry does not have\n"
 	u += "the specified attribute. For example, the -mtime primary will always return false\n"
 	u += "if the entry does not have an mtime attribute."
