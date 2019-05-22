@@ -58,7 +58,7 @@ N                   => \d+ (i.e. some number > 0)
 */
 //nolint
 var Meta = Parser.add(&Primary{
-    Description: "Returns true if the entry's meta attribute satisfies the expression",
+    Description: "Returns true if the entry's metadata satisfies the expression",
     DetailedDescription: metaDetailedDescription,
     name: "meta",
     args: "<expression>",
@@ -67,14 +67,28 @@ var Meta = Parser.add(&Primary{
 })
 
 const metaDetailedDescription = `
-The meta primary constructs a predicate on the entry's meta attribute.
-It is a specialized filter, so you should only use it if you need to
+The meta primary constructs a predicate on the entry's metadata. By
+default, this is the meta attribute. If you'd like to construct the
+predicate on the entry's full metadata, then set the "fullmeta" option.
+Be careful when you do this, because find will make O(N) API requests
+to retrieve this information (N = the number of visited entries).
+
+Meta is a specialized filter, so you should only use it if you need to
 filter your entries on a property that isn't captured by the common Wash
 attributes. For example, the meta primary can be used to filter EC2
 instances on a specific tag. It can be used to filter Docker containers
 with a specified label. In general, the meta primary can be used to filter
 on any property that's specified in the entry's meta attribute. See the
 EXAMPLES section for some interesting real-world examples.
+
+NOTE: If your plugin's API is not subscription based (like AWS) or if
+individual API requests are cheap, then feel free to always set the
+"fullmeta" option for more complete filtering. This is very useful when
+your plugin API's over a Unix socket.
+
+NOTE: If find fails to retrieve the entry's full metadata, then it will
+fallback to the meta attribute. This condition only applies when the
+"fullmeta" option is set.
 
 NOTE: Because it is a specialized filter, the meta primary defaults
 maxdepth to 1 if the -maxdepth flag is not provided. This is to avoid
