@@ -96,7 +96,7 @@ func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
 
 	// Unmarshal the external plugins, if any are specified
 	var externalPlugins []plugin.ExternalPluginSpec
-	if externalPluginsRaw := viper.Get("external_plugins"); externalPluginsRaw != nil {
+	if externalPluginsRaw := viper.Get("external-plugins"); externalPluginsRaw != nil {
 		newExternalPluginErr := func(reason error) error {
 			return fmt.Errorf("failed to unmarshal the external plugins: %v. Raw external plugin config: %v", reason, externalPluginsRaw)
 		}
