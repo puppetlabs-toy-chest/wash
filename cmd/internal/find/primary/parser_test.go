@@ -13,29 +13,29 @@ type ParserTestSuite struct {
 
 func (s *ParserTestSuite) TestRegisteredPrimaries() {
 	expectedList := []*Primary{
-		actionPrimary,
-		truePrimary,
-		falsePrimary,
-		metaPrimary,
-		namePrimary,
-		pathPrimary,
-		sizePrimary,
-		ctimePrimary,
-		mtimePrimary,
-		atimePrimary,
+		Action,
+		True,
+		False,
+		Meta,
+		Name,
+		Path,
+		Size,
+		Ctime,
+		Mtime,
+		Atime,
 	}
 	expectedMp := map[string]*Primary{
-		"-action": actionPrimary,
-		"-true": truePrimary,
-		"-false": falsePrimary,
-		"-meta": metaPrimary,
-		"-m": metaPrimary,
-		"-name": namePrimary,
-		"-path": pathPrimary,
-		"-size": sizePrimary,
-		"-ctime": ctimePrimary,
-		"-mtime": mtimePrimary,
-		"-atime": atimePrimary,
+		"-action": Action,
+		"-true": True,
+		"-false": False,
+		"-meta": Meta,
+		"-m": Meta,
+		"-name": Name,
+		"-path": Path,
+		"-size": Size,
+		"-ctime": Ctime,
+		"-mtime": Mtime,
+		"-atime": Atime,
 	}
 
 	s.ElementsMatch(expectedList, Parser.primaries)
@@ -54,18 +54,6 @@ func (s *ParserTestSuite) TestValidInput() {
 	e := types.Entry{}
 	e.CName = "a"
 	s.RTC("-name a", "", e)
-}
-
-func (s *ParserTestSuite) TestCallsOptionSetter() {
-	opts := types.NewOptions()
-	Parser.Options = &opts
-	defer func() {
-		Parser.Options = nil
-	}()
-	_, _, err := Parser.Parse([]string{"-meta", ".key", "-true"})
-	if s.NoError(err) {
-		s.Equal(int(1), opts.Maxdepth)
-	}
 }
 
 func TestPrimaryParser(t *testing.T) {

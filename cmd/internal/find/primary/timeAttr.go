@@ -106,11 +106,17 @@ NOTE: All comparisons are made with respect to the reference time
 	return strings.NewReplacer("{name}", name).Replace(descr)
 }
 
+// Ctime is the ctime primary
+//
 //nolint
-var ctimePrimary = newTimeAttrPrimary("ctime")
+var Ctime = newTimeAttrPrimary("ctime")
 
+// Mtime is the mtime primary
+//
 //nolint
-var mtimePrimary = newTimeAttrPrimary("mtime")
+var Mtime = newTimeAttrPrimary("mtime")
 
+// Atime is the atime primary
+//
 //nolint
-var atimePrimary = newTimeAttrPrimary("atime")
+var Atime = newTimeAttrPrimary("atime")

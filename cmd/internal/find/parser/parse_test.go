@@ -37,25 +37,6 @@ func (suite *ParseTestSuite) TestValidInput() {
 	}
 }
 
-func (suite *ParseTestSuite) TestPrimariesCanSetOptions() {
-	// Test when an option is not set
-	r, err := Parse([]string{"-meta", ".key", "-true"})
-	if suite.NoError(err) {
-		expectedOpts := types.NewOptions()
-		expectedOpts.Maxdepth = int(1)
-		suite.Equal(expectedOpts, r.Options)
-	}
-
-	// Test when an option is set
-	r, err = Parse([]string{"-maxdepth", "10", "-meta", ".key", "-true"})
-	if suite.NoError(err) {
-		expectedOpts := types.NewOptions()
-		expectedOpts.Maxdepth = int(10)
-		expectedOpts.MarkAsSet(types.MaxdepthFlag)
-		suite.Equal(expectedOpts, r.Options)
-	}
-}
-
 func TestParse(t *testing.T) {
 	suite.Run(t, new(ParseTestSuite))
 }

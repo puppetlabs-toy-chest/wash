@@ -8,9 +8,11 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
+// Action is the action primary
+//
 // actionPrimary => <action>
 //nolint
-var actionPrimary = Parser.add(&Primary{
+var Action = Parser.add(&Primary{
 	Description: "Returns true if the entry supports action",
 	name: "action",
 	args: "action",

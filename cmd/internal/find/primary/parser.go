@@ -15,6 +15,13 @@ func Get(name string) *Primary {
 	return Parser.primaryMap[tokenize(name)]
 }
 
+// IsSet returns true if the specified primary was set
+// Call this after `wash find` finishes parsing its
+// arguments
+func IsSet(p *Primary) bool {
+	return Parser.setPrimaries[p]
+}
+
 // Table returns a table containing all of `wash find`'s available primaries
 func Table() *cmdutil.Table {
 	rows := make([][]string, len(Parser.primaries))
@@ -40,13 +47,13 @@ func Table() *cmdutil.Table {
 // Parser parses `wash find` primaries.
 var Parser = &parser{
 	primaryMap: make(map[string]*Primary),
+	setPrimaries: make(map[*Primary]bool),
 }
 
 type parser struct {
-	// Options represent the passed-in `wash find` options
-	Options *types.Options
 	primaryMap map[string]*Primary
 	primaries []*Primary
+	setPrimaries map[*Primary]bool
 }
 
 // IsPrimary returns true if the token is a `wash find`
@@ -66,14 +73,12 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 		msg := fmt.Sprintf("%v: unknown primary", token)
 		return nil, nil, errz.NewMatchError(msg)
 	}
-	if primary.optionsSetter != nil && parser.Options != nil {
-		primary.optionsSetter(parser.Options)
-	}
 	tokens = tokens[1:]
 	p, tokens, err := primary.Parse(tokens)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%v: %v", token, err)
 	}
+	parser.setPrimaries[primary] = true
 	return p, tokens, nil
 }
 
@@ -98,7 +103,6 @@ type Primary struct {
 	shortName string
 	name string
 	tokens map[string]struct{}
-	optionsSetter func(*types.Options)
 	parseFunc types.EntryPredicateParser
 }
 

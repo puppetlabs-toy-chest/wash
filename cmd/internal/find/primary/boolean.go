@@ -19,10 +19,14 @@ func newBooleanPrimary(val bool) *Primary {
 	})
 }
 
+// True is the true primary
+//
 // truePrimary => -true
 //nolint
-var truePrimary = newBooleanPrimary(true)
+var True = newBooleanPrimary(true)
 
+// False is the false primary
+//
 // falsePrimary => -false
 //nolint
-var falsePrimary = newBooleanPrimary(false)
+var False = newBooleanPrimary(false)

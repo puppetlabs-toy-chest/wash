@@ -8,10 +8,12 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
+// Size is the size primary
+//
 // sizePrimary => -size (+|-)?(\d+ | numeric.SizeRegex)
 //
 //nolint
-var sizePrimary = Parser.add(&Primary{
+var Size = Parser.add(&Primary{
 	Description: "Returns true if the entry's size attribute satisfies the given size predicate",
 	DetailedDescription: sizeDetailedDescription,
 	name: "size",

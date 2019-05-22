@@ -80,22 +80,6 @@ func (s *MetaPrimaryTestSuite) TestMetaPrimaryValidInputNegation() {
 	s.RNTC(".cpuOptions ( .coreCount ( ( -1 -a +5 ) -o ! 4 ) ) .threadsPerCore 1 -primary", "-primary", s.e)
 }
 
-func (s *MetaPrimaryTestSuite) TestOptionsSetter() {
-	opts := types.NewOptions()
-
-	// Test that if maxdepth is not set, then the options setter
-	// sets it to 1.
-	metaPrimary.optionsSetter(&opts)
-	s.Equal(int(1), opts.Maxdepth)
-
-	// Test that if maxdepth is set, then the options setter
-	// leaves it alone.
-	opts.Maxdepth = 10
-	opts.MarkAsSet(types.MaxdepthFlag)
-	metaPrimary.optionsSetter(&opts)
-	s.Equal(int(10), opts.Maxdepth)
-}
-
 func TestMetaPrimary(t *testing.T) {
 	s := new(MetaPrimaryTestSuite)
 	rawMeta, err := ioutil.ReadFile("testdata/metadata.json")
@@ -107,7 +91,7 @@ func TestMetaPrimary(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Failed to unmarshal testdata/metadata.json: %v", err))
 	}
 	s.e.Attributes.SetMeta(m)
-	s.Parser = metaPrimary
+	s.Parser = Meta
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		return v.(types.Entry)
 	}

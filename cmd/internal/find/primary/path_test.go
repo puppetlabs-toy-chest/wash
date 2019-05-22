@@ -22,7 +22,7 @@ func (s *PathPrimaryTestSuite) TestValidInput() {
 
 func TestPathPrimary(t *testing.T) {
 	s := new(PathPrimaryTestSuite)
-	s.Parser = pathPrimary
+	s.Parser = Path
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		e := types.Entry{}
 		e.NormalizedPath = v.(string)

@@ -83,7 +83,7 @@ func (s *TimeAttrPrimaryTestSuite) TestValidInput() {
 
 func TestTimeAttrPrimary(t *testing.T) {
 	s := new(TimeAttrPrimaryTestSuite)
-	s.Parser = ctimePrimary
+	s.Parser = Ctime
 	s.ConstructEntry = func(v interface{}) types.Entry {
 		e := types.Entry{}
 		d := time.Duration(v.(int64))
