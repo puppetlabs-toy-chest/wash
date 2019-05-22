@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	log "github.com/sirupsen/logrus"
@@ -121,7 +122,12 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
-	srv := server.New(mountpath, serverOptsFromFlags())
+	serverOpts, err := serverOptsFor(cmd)
+	if err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return exitCode{1}
+	}
+	srv := server.New(mountpath, config.Socket, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}

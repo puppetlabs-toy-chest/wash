@@ -8,12 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/api"
-	"github.com/puppetlabs/wash/config"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/plugin/aws"
@@ -26,10 +23,10 @@ import (
 // Opts exposes additional configuration for server operation.
 type Opts struct {
 	CPUProfilePath      string
-	ExternalPluginsPath string
+	ExternalPlugins     []plugin.ExternalPluginSpec
 	LogFile             string
 	// LogLevel can be "warn", "info", "debug", or "trace".
-	LogLevel string
+	LogLevel            string
 }
 
 type controlChannels struct {
@@ -40,6 +37,7 @@ type controlChannels struct {
 // Server encapsulates a running wash server with both Socket and FUSE servers.
 type Server struct {
 	mountpoint string
+	socket     string
 	opts       Opts
 	logFH      *os.File
 	api        controlChannels
@@ -54,8 +52,8 @@ var levelMap = map[string]log.Level{
 }
 
 // New creates a new Server.
-func New(mountpoint string, opts Opts) *Server {
-	return &Server{mountpoint: mountpoint, opts: opts}
+func New(mountpoint string, socket string, opts Opts) *Server {
+	return &Server{mountpoint: mountpoint, socket: socket, opts: opts}
 }
 
 // Start starts the server. It returns once the server is ready.
@@ -66,7 +64,7 @@ func (s *Server) Start() error {
 		for level := range levelMap {
 			allLevels = append(allLevels, level)
 		}
-		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s, strings.Join(allLevels, ", "))
+		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s.opts.LogLevel, strings.Join(allLevels, ", "))
 	}
 
 	log.SetLevel(level)
@@ -82,8 +80,8 @@ func (s *Server) Start() error {
 
 	registry := plugin.NewRegistry()
 	loadInternalPlugins(registry)
-	if s.opts.ExternalPluginsPath != "" {
-		loadExternalPlugins(registry, s.opts.ExternalPluginsPath)
+	if len(s.opts.ExternalPlugins) > 0 {
+		loadExternalPlugins(registry, s.opts.ExternalPlugins)
 	}
 	if len(registry.Plugins()) == 0 {
 		return fmt.Errorf("No plugins loaded")
@@ -91,7 +89,7 @@ func (s *Server) Start() error {
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, s.mountpoint, config.Socket)
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, s.mountpoint, s.socket)
 	if err != nil {
 		return err
 	}
@@ -184,31 +182,8 @@ func loadInternalPlugins(registry *plugin.Registry) {
 	log.Debug("Finished loading internal plugins")
 }
 
-func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) {
-	logError := func(err error) {
-		log.Warnf("Failed to load external plugins: %v\n", err)
-	}
-
+func loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
 	log.Infof("Loading external plugins")
-
-	externalPluginsFH, err := os.Open(externalPluginsPath)
-	if err != nil {
-		logError(err)
-		return
-	}
-	defer func() {
-		if err := externalPluginsFH.Close(); err != nil {
-			log.Infof("Error closing %v: %+v", externalPluginsPath, err)
-		}
-	}()
-
-	d := yaml.NewDecoder(externalPluginsFH)
-	var externalPlugins []plugin.ExternalPluginSpec
-	if err := d.Decode(&externalPlugins); err != nil {
-		logError(err)
-		return
-	}
-
 	for _, p := range externalPlugins {
 		log.Infof("Loading %v", p.Script)
 		if err := registry.RegisterExternalPlugin(p); err != nil {
@@ -216,6 +191,5 @@ func loadExternalPlugins(registry *plugin.Registry, externalPluginsPath string) 
 			log.Warnf("%v failed to load: %+v", p.Script, err)
 		}
 	}
-
 	log.Infof("Finished loading external plugins")
 }

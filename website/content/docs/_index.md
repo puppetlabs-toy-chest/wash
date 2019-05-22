@@ -14,6 +14,7 @@ title= "Wash Documentation"
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
   * [wash tail](#wash-tail)
+* [Config] (#config)
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
   * [Docker](#docker)
@@ -72,11 +73,27 @@ to display running processes on all listed nodes. Errors on paths that don't imp
 
 Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
 
-Server API docs can be found [here](/wash/docs/api).
+Server API docs can be found [here](/wash/docs/api). The server config is described in the [`config`](#config) section.
 
 ### wash tail
 
 Output any new updates to files and/or resources (that support the stream action). Currently requires the '-f' option to run. Attempts to mimic the functionality of `tail -f` for remote logs.
+
+## Config
+
+The Wash config file is located at `~/.puppetlabs/wash/wash.yaml`, and can be used to configure the [`wash-server`](#wash-server). You can override this location via the `config-file` flag.
+
+Below are all the configurable options.
+
+* `logfile` - The location of the server's log file (default `stdout`)
+* `loglevel` - The server's loglevel (default `info`)
+* `cpuprofile` - The location that the server's CPU profile will be written to (optional)
+* `external-plugins` - The external plugins that will be loaded. See [➠External Plugins]
+* `socket` - The location of the server's socket file (default `<user_cache_dir>/wash/wash-api.sock`)
+
+All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable.
+
+NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_socket` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
 
 ## Core Plugins
 

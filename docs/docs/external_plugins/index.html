@@ -346,6 +346,11 @@
 # as the root user. For example, it assumes that something like
 # &#34;ssh root@&lt;vm&gt; ls&#34; works.
 #
+# Since Wash passes-in JSON objects to external plugin scripts,
+# this example also requires jq to handle the parsing. We will
+# eventually add multiple input formats, some of which are more
+# &#34;bash&#34; friendly.
+#
 # If you&#39;d like to try this plugin out, then add the following to
 # your plugins.yaml file:
 #
@@ -488,8 +493,9 @@ function print_children {
   # `test-d` and stat on each entry to obtain the following information:
   #   &lt;is_dir&gt; &lt;sizeAttr&gt; &lt;atime&gt; &lt;mtime&gt; &lt;ctime&gt; &lt;mode&gt; &lt;path&gt;
   #
-  # TODO: Handle TTY strangeness in the returned output. For now, it is
-  # enough to set it to false.
+  # NOTE: This example sets the TTY option to false. Setting it to true
+  # results in some strangeness in the returned output. If you have ideas
+  # on how to fix that strangeness, please feel free to submit a PR!
   stat_output=`vm_exec ${vm} &#34;find ${dir} -mindepth 1 -maxdepth 1 -exec bash -c &#39;test -d \\$0; echo -n \&#34;\\$? \&#34;&#39; {} \; -exec stat -c &#39;%s %X %Y %Z %f %n&#39; {} \;&#34; false`
   if [[ -z &#34;${stat_output}&#34; ]]; then
     echo &#34;[]&#34;
@@ -590,18 +596,27 @@ if [[ &#34;${path}&#34; == &#34;&#34; ]]; then
     exit 0
   ;;
   &#34;exec&#34;)
-    cmd=&#34;$3&#34;
-
+    opts=&#34;$4&#34;
+    cmd=&#34;$5&#34;
+    shift
+    shift
     shift
     shift
     shift
     args=&#34;$@&#34;
 
-    # exec&#39;ing &lt;cmd&gt; &lt;args&gt; on a VM is equivalent to exec&#39;ing it
-    # on the VM via. ssh (vm_exec)
+    # First we parse the provided Exec options. Wash guarantees that
+    # the passed-in options are valid JSON and that they are all present,
+    # so we don&#39;t need to do our own validation.
     #
-    # TODO: Handle stdin &#43; other exec options.
-    vm_exec &#34;${vm}&#34; &#34;${cmd} ${args}&#34; &#34;false&#34;
+    # NOTE: Only the &#34;tty&#34; option is relevant. We don&#39;t need to worry about
+    # &#34;elevate&#34; because we are already running our commands as root.
+    tty=`echo &#34;${opts}&#34; | jq .tty`
+
+    # Now we exec the command and exit with its exit code.
+    #
+    # NOTE: Our process&#39; Stdin is the content of the &#34;Stdin&#34; Exec option.
+    cat /dev/stdin | vm_exec &#34;${vm}&#34; &#34;${cmd} ${args}&#34; &#34;${tty}&#34;
     exit &#34;$?&#34;
   ;;
   &#34;metadata&#34;)

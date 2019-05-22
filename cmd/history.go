@@ -9,7 +9,7 @@ import (
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/config"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
