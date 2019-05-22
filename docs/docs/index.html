@@ -59,6 +59,7 @@
 <li><a href="#wash-server">wash server</a></li>
 <li><a href="#wash-tail">wash tail</a></li>
 </ul></li>
+<li><a href="#config">Config</a></li>
 <li><a href="#core-plugins">Core Plugins</a>
 
 <ul>
@@ -124,11 +125,29 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 
 <p>Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers). To stop it, make sure you&rsquo;re not using the filesystem at the specified mountpoint, then enter Ctrl-C.</p>
 
-<p>Server API docs can be found <a href="/wash/docs/api">here</a>.</p>
+<p>Server API docs can be found <a href="/wash/docs/api">here</a>. The server config is described in the <a href="#config"><code>config</code></a> section.</p>
 
 <h3 id="wash-tail">wash tail</h3>
 
 <p>Output any new updates to files and/or resources (that support the stream action). Currently requires the &lsquo;-f&rsquo; option to run. Attempts to mimic the functionality of <code>tail -f</code> for remote logs.</p>
+
+<h2 id="config">Config</h2>
+
+<p>The Wash config file is located at <code>~/.puppetlabs/wash/wash.yaml</code>, and can be used to configure the <a href="#wash-server"><code>wash-server</code></a>. You can override this location via the <code>config-file</code> flag.</p>
+
+<p>Below are all the configurable options.</p>
+
+<ul>
+<li><code>logfile</code> - The location of the server&rsquo;s log file (default <code>stdout</code>)</li>
+<li><code>loglevel</code> - The server&rsquo;s loglevel (default <code>info</code>)</li>
+<li><code>cpuprofile</code> - The location that the server&rsquo;s CPU profile will be written to (optional)</li>
+<li><code>external-plugins</code> - The external plugins that will be loaded. See <a href="/wash/docs/external_plugins">➠External Plugins</a></li>
+<li><code>socket</code> - The location of the server&rsquo;s socket file (default <code>&lt;user_cache_dir&gt;/wash/wash-api.sock</code>)</li>
+</ul>
+
+<p>All options except for <code>external-plugins</code> can be overridden by setting the <code>WASH_&lt;option&gt;</code> environment variable.</p>
+
+<p>NOTE: Do not override <code>socket</code> in a config file. Instead, override it via the <code>WASH_socket</code> environment variable. Otherwise, Wash&rsquo;s subcommands will not be able to interact with the server because they cannot access the socket.</p>
 
 <h2 id="core-plugins">Core Plugins</h2>
 

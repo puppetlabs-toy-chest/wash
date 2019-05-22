@@ -16,6 +16,11 @@
 # as the root user. For example, it assumes that something like
 # "ssh root@<vm> ls" works.
 #
+# Since Wash passes-in JSON objects to external plugin scripts,
+# this example also requires jq to handle the parsing. We will
+# eventually add multiple input formats, some of which are more
+# "bash" friendly.
+#
 # If you'd like to try this plugin out, then add the following to
 # your plugins.yaml file:
 #
@@ -158,8 +163,9 @@ function print_children {
   # `test-d` and stat on each entry to obtain the following information:
   #   <is_dir> <sizeAttr> <atime> <mtime> <ctime> <mode> <path>
   #
-  # TODO: Handle TTY strangeness in the returned output. For now, it is
-  # enough to set it to false.
+  # NOTE: This example sets the TTY option to false. Setting it to true
+  # results in some strangeness in the returned output. If you have ideas
+  # on how to fix that strangeness, please feel free to submit a PR!
   stat_output=`vm_exec ${vm} "find ${dir} -mindepth 1 -maxdepth 1 -exec bash -c 'test -d \\$0; echo -n \"\\$? \"' {} \; -exec stat -c '%s %X %Y %Z %f %n' {} \;" false`
   if [[ -z "${stat_output}" ]]; then
     echo "[]"
@@ -260,18 +266,27 @@ if [[ "${path}" == "" ]]; then
     exit 0
   ;;
   "exec")
-    cmd="$3"
-
+    opts="$4"
+    cmd="$5"
+    shift
+    shift
     shift
     shift
     shift
     args="$@"
 
-    # exec'ing <cmd> <args> on a VM is equivalent to exec'ing it
-    # on the VM via. ssh (vm_exec)
+    # First we parse the provided Exec options. Wash guarantees that
+    # the passed-in options are valid JSON and that they are all present,
+    # so we don't need to do our own validation.
     #
-    # TODO: Handle stdin + other exec options.
-    vm_exec "${vm}" "${cmd} ${args}" "false"
+    # NOTE: Only the "tty" option is relevant. We don't need to worry about
+    # "elevate" because we are already running our commands as root.
+    tty=`echo "${opts}" | jq .tty`
+
+    # Now we exec the command and exit with its exit code.
+    #
+    # NOTE: Our process' Stdin is the content of the "Stdin" Exec option.
+    cat /dev/stdin | vm_exec "${vm}" "${cmd} ${args}" "${tty}"
     exit "$?"
   ;;
   "metadata")
