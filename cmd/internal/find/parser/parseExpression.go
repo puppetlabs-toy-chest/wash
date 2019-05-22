@@ -126,6 +126,11 @@ find kubernetes -maxdepth -1 -daystart -m .status.startTime -{1d}
     Print out all the Kubernetes pods that started today. Note that the "maxdepth -1"
     option tells find to recurse (the meta primary turns this off by default).
 
+find docker/containers -daystart -fullmeta -m .state.startedAt -{1d}
+    Prints out all the Docker containers that were started today. Note that the
+    "fullmeta" option is necessary because the "meta" attribute for a Docker container
+    does not include the container's start time.
+
 find ec2/instances -m .state.name running -a -m .tags[?] .key termination_date -a .value +0h
 find ec2/instances -m .state.name running -m .tags[?] .key termination_date .value +0h
     Print out all the running EC2 instances whose termination_date tag expired.
