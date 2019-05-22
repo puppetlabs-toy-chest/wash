@@ -131,8 +131,8 @@ find docker/containers -daystart -fullmeta -m .state.startedAt -{1d}
     "fullmeta" option is necessary because the "meta" attribute for a Docker container
     does not include the container's start time.
 
-find ec2/instances -m .state.name running -a -m .tags[?] .key termination_date -a .value +0h
-find ec2/instances -m .state.name running -m .tags[?] .key termination_date .value +0h
+find ec2/instances -m .state.name running -a -m '.tags[?]' .key termination_date -a .value +0h
+find ec2/instances -m .state.name running -m '.tags[?]' .key termination_date .value +0h
     Print out all the running EC2 instances whose termination_date tag expired.
     Note that the ".key termination_date -a .value +0h" portion of the example
     is parsed as part of the meta primary's expression, not the top level

@@ -502,18 +502,18 @@ free to submit a PR!
 
 In these examples, let "m" be the value of the entry's 'meta' attribute.
 
--meta .tags[?] .key termination_date -a .value +0h
--m .tags[?] .key termination_date -a .value +0h
+-meta '.tags[?]' .key termination_date -a .value +0h
+-m '.tags[?]' .key termination_date -a .value +0h
     Returns true if m['tags'] has at least one object o s.t. o['key'] == termination_date
     and o['value'] has expired. In the real world, this example filters out all EC2
     instances whose termination_date tag expired.
 
--m .tags[?] .key termination_date -a .value -{1w}
+-m '.tags[?]' .key termination_date -a .value -{1w}
     Same as the previous example, except this returns true if o['value'] will expire within
     the current week. In the real world, this example filters out all EC2 instances whose
     termination_date tag will expire within the current week.
 
--m .tags[?] .key \( sales -o product \)
+-m '.tags[?]' .key \( sales -o product \)
     Returns true if m['tags'] has at least one object o s.t. o['key'] == sales OR product.
     In the real world, this example filters out all EC2 instances that have a "sales" or
     "product" tag.
@@ -529,7 +529,7 @@ In these examples, let "m" be the value of the entry's 'meta' attribute.
     NOTE: With regex/glob support, this example could be shortened to something like
     "-m .vpcid vpc-0eb.*"
 
--m .mounts[?] .type tmpfs
+-m '.mounts[?]' .type tmpfs
     Returns true if m['mounts'] has at least one object o s.t. o['type'] == tmpfs. In the
     real world, this example filters out all Docker containers that have tmpfs mounts.
 `
