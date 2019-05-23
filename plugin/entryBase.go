@@ -9,7 +9,7 @@ import (
 type defaultOpCode int8
 
 const (
-	// ListOp represents Group#List
+	// ListOp represents Parent#List
 	ListOp defaultOpCode = iota
 	// OpenOp represents Readable#Open
 	OpenOp

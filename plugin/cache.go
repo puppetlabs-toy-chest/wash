@@ -142,17 +142,17 @@ func (c DuplicateCNameErr) Error() string {
 	)
 }
 
-// CachedList caches a Group object's List method. It also sets the
+// CachedList caches a Parent's List method. It also sets the
 // children's IDs to <parent_id> + "/" + <child_cname>.
 //
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
-func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
-	cachedEntries, err := cachedDefaultOp(ctx, ListOp, g, func() (interface{}, error) {
+func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
+	cachedEntries, err := cachedDefaultOp(ctx, ListOp, p, func() (interface{}, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
 		// to calculate its attributes. Note that the child's ID is set in cachedOp.
-		entries, err := g.List(context.WithValue(ctx, parentID, g.id()))
+		entries, err := p.List(context.WithValue(ctx, parentID, p.id()))
 		if err != nil {
 			return nil, err
 		}
@@ -163,7 +163,7 @@ func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 
 			if duplicateEntry, ok := searchedEntries[cname]; ok {
 				return nil, DuplicateCNameErr{
-					ParentID:                        g.id(),
+					ParentID:                        p.id(),
 					FirstChildName:                  duplicateEntry.name(),
 					FirstChildSlashReplacementChar:  duplicateEntry.slashReplacementChar(),
 					SecondChildName:                 entry.name(),
@@ -175,7 +175,7 @@ func CachedList(ctx context.Context, g Group) (map[string]Entry, error) {
 
 			// Ensure ID is set on all entries so that we can use it for caching later in places
 			// where the context doesn't include the parent's ID.
-			id := strings.TrimRight(g.id(), "/") + "/" + cname
+			id := strings.TrimRight(p.id(), "/") + "/" + cname
 			entry.setID(id)
 		}
 

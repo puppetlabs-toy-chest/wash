@@ -19,7 +19,7 @@ type file struct {
 var _ fs.Node = (*file)(nil)
 var _ = fs.NodeOpener(&file{})
 
-func newFile(p plugin.Group, e plugin.Entry) *file {
+func newFile(p plugin.Parent, e plugin.Entry) *file {
 	return &file{newFuseNode("f", p, e)}
 }
 

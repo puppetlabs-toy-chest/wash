@@ -30,10 +30,10 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 	curEntry := root
 	visitedSegments := make([]string, 0, cap(segments))
 	for _, segment := range segments {
-		switch curGroup := curEntry.(type) {
-		case plugin.Group:
+		switch curParent := curEntry.(type) {
+		case plugin.Parent:
 			// Get the entries via. List()
-			entries, err := plugin.CachedList(ctx, curGroup)
+			entries, err := plugin.CachedList(ctx, curParent)
 			if err != nil {
 				if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 					return nil, duplicateCNameResponse(cnameErr)
@@ -47,7 +47,7 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 			if !ok {
 				reason := fmt.Sprintf("The %v entry does not exist", segment)
 				if len(visitedSegments) != 0 {
-					reason += fmt.Sprintf(" in the %v group", strings.Join(visitedSegments, "/"))
+					reason += fmt.Sprintf(" in the %v parent", strings.Join(visitedSegments, "/"))
 				}
 
 				return nil, entryNotFoundResponse(path, reason)
@@ -56,7 +56,7 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 			curEntry = entry
 			visitedSegments = append(visitedSegments, segment)
 		default:
-			reason := fmt.Sprintf("The entry %v is not a group", strings.Join(visitedSegments, "/"))
+			reason := fmt.Sprintf("The entry %v is not a parent", strings.Join(visitedSegments, "/"))
 			return nil, entryNotFoundResponse(path, reason)
 		}
 	}

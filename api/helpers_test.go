@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type mockGroup struct {
+type mockParent struct {
 	plugin.EntryBase
 	entries []plugin.Entry
 }
 
-func (g *mockGroup) List(context.Context) ([]plugin.Entry, error) {
+func (g *mockParent) List(context.Context) ([]plugin.Entry, error) {
 	return g.entries, nil
 }
 
@@ -38,8 +38,8 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		expectedEntry string
 		expectedErr   error
 	}
-	runTestCase := func(grp plugin.Group, c testcase) {
-		got, err := findEntry(context.Background(), grp, c.segments)
+	runTestCase := func(parent plugin.Parent, c testcase) {
+		got, err := findEntry(context.Background(), parent, c.segments)
 		if c.expectedEntry != "" && suite.NotNil(got) {
 			suite.Equal(c.expectedEntry, plugin.CName(got))
 		} else {
@@ -53,34 +53,34 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	}
 
 	foo := plugin.NewEntry("foo/bar")
-	group := &mockGroup{plugin.NewEntry("root"), []plugin.Entry{&foo}}
-	group.SetTestID("/root")
-	group.DisableDefaultCaching()
+	parent := &mockParent{plugin.NewEntry("root"), []plugin.Entry{&foo}}
+	parent.SetTestID("/root")
+	parent.DisableDefaultCaching()
 	for _, c := range []testcase{
 		{[]string{"not found"}, "", entryNotFoundResponse("not found", "The not found entry does not exist")},
 		{[]string{"foo#bar"}, "foo#bar", nil},
-		{[]string{"foo#bar", "bar"}, "", entryNotFoundResponse("foo#bar/bar", "The entry foo#bar is not a group")},
+		{[]string{"foo#bar", "bar"}, "", entryNotFoundResponse("foo#bar/bar", "The entry foo#bar is not a parent")},
 	} {
-		runTestCase(group, c)
+		runTestCase(parent, c)
 	}
 
 	baz := plugin.NewEntry("baz")
-	nestedGroup := &mockGroup{plugin.NewEntry("bar"), []plugin.Entry{&baz}}
-	nestedGroup.DisableDefaultCaching()
-	group.entries = append(group.entries, nestedGroup)
+	nestedParent := &mockParent{plugin.NewEntry("bar"), []plugin.Entry{&baz}}
+	nestedParent.DisableDefaultCaching()
+	parent.entries = append(parent.entries, nestedParent)
 	for _, c := range []testcase{
 		{[]string{"bar"}, "bar", nil},
-		{[]string{"bar", "foo"}, "", entryNotFoundResponse("bar/foo", "The foo entry does not exist in the bar group")},
+		{[]string{"bar", "foo"}, "", entryNotFoundResponse("bar/foo", "The foo entry does not exist in the bar parent")},
 		{[]string{"bar", "baz"}, "baz", nil},
 	} {
-		runTestCase(group, c)
+		runTestCase(parent, c)
 	}
 
 	// Finally, test the duplicate cname error response
 	duplicateFoo := plugin.NewEntry("foo#bar")
-	group.entries = append(group.entries, &duplicateFoo)
+	parent.entries = append(parent.entries, &duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
-		ParentID:                        plugin.ID(group),
+		ParentID:                        plugin.ID(parent),
 		FirstChildName:                  foo.Name(),
 		FirstChildSlashReplacementChar:  '#',
 		SecondChildName:                 duplicateFoo.Name(),
@@ -88,7 +88,7 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		CName:                           "foo#bar",
 	}
 	runTestCase(
-		group,
+		parent,
 		testcase{[]string{"foo#bar"}, "", duplicateCNameResponse(expectedErr)},
 	)
 }

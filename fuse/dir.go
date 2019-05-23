@@ -19,14 +19,14 @@ var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(p plugin.Group, e plugin.Group) *dir {
+func newDir(p plugin.Parent, e plugin.Parent) *dir {
 	return &dir{newFuseNode("d", p, e)}
 }
 
 func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction().IsSupportedOn(d.entry) {
-		return plugin.CachedList(ctx, d.entry.(plugin.Group))
+		return plugin.CachedList(ctx, d.entry.(plugin.Parent))
 	}
 
 	return map[string]plugin.Entry{}, fuse.ENOENT
@@ -50,13 +50,13 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 
 	if plugin.ListAction().IsSupportedOn(entry) {
-		childdir := newDir(d.entry.(plugin.Group), entry.(plugin.Group))
+		childdir := newDir(d.entry.(plugin.Parent), entry.(plugin.Parent))
 		activity.Record(ctx, "FUSE: Found directory %v", childdir)
 		return childdir, nil
 	}
 
 	activity.Record(ctx, "FUSE: Found file %v/%v", d, cname)
-	return newFile(d.entry.(plugin.Group), entry), nil
+	return newFile(d.entry.(plugin.Parent), entry), nil
 }
 
 // ReadDirAll lists all children of the directory.
