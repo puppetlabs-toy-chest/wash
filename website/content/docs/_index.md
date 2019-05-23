@@ -62,7 +62,7 @@ Lists the resources at the indicated path.
 
 ### wash meta
 
-Prints the metadata of a resource.
+Prints the entry's metadata. By default, meta prints the full metadata as returned by the metadata endpoint. Specify the `--attribute` flag to print the meta attribute instead.
 
 ### wash ps
 

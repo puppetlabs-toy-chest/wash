@@ -12,12 +12,14 @@ import (
 func metaCommand() *cobra.Command {
 	metaCmd := &cobra.Command{
 		Use:   "meta <path>",
-		Short: "Prints the metadata of a resource",
+		Short: "Prints the entry's metadata",
+		Long:  `Prints the entry's metadata. By default, meta prints the full metadata as returned by the
+metadata endpoint. Specify the --attribute flag to print the meta attribute instead.`,
 		Args:  cobra.ExactArgs(1),
 		RunE:  toRunE(metaMain),
 	}
 	metaCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
-	metaCmd.Flags().BoolP("attribute", "a", false, "Show the meta attribute instead of the full metadata")
+	metaCmd.Flags().BoolP("attribute", "a", false, "Print the meta attribute instead of the full metadata")
 	return metaCmd
 }
 
