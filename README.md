@@ -6,7 +6,7 @@
 
 • [COMMUNITY](#community-feedback) • [INSTALLATION](#installation) • [USAGE](#usage) • [ISSUES](#known-issues) • [ROADMAP](#roadmap) • [CONTRIBUTING](#contributing) •
 
-[![asciicast](https://asciinema.org/a/245046.svg)](https://asciinema.org/a/245046?cols=120&rows=30)
+[![asciicast](https://asciinema.org/a/248077.svg)](https://asciinema.org/a/248077?cols=120&rows=30)
 
 Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it's containers, VMs, network devices, IoT stuff, or anything in between...they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that's no fun at all!
 
