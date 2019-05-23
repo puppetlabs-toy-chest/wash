@@ -164,11 +164,16 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
-		if exerr, ok := err.(k8exec.ExitError); ok {
+		if err == nil {
+			execCmd.SetExitCode(0)
+		} else if exerr, ok := err.(k8exec.ExitError); ok {
 			execCmd.SetExitCode(exerr.ExitStatus())
 			err = nil
+		} else {
+			// Set the exit code error so that callers don't block
+			// when trying to retrieve the command's exit code
+			execCmd.SetExitCodeErr(err)
 		}
-
 		execCmd.CloseStreamsWithError(err)
 	}()
 
