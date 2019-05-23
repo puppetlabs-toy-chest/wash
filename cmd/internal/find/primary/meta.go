@@ -99,6 +99,23 @@ console output when it is filtering on an EC2 instance's tags.
 
 You can set maxdepth to -1 if you'd like find to always recurse.
 
+NOTE: You can use the meta command to construct meta primary queries.
+Here's how. First, find a representative entry that you'll be filtering.
+For example, if you are filtering EC2 instances, then your representative
+entry would be an EC2 instance. Next, invoke "meta <entry_path> -a" to
+see that entry's meta attribute. Check the output to see if it contains
+the properties you'd like to filter on. If yes, then construct the
+predicate. If no, then invoke "meta <entry_path>" to see the entry's
+full metadata, and check its output to see if it contains your properties.
+If the properties are there, and the O(N) API requests made by "fullmeta"
+aren't an issue, then construct the predicate and be sure to set the
+"fullmeta" option when invoking "wash find". Otherwise, contact the plugin
+author to see if they can add those properties to the entry's full metadata
+or, preferably, the meta attribute.
+
+NOTE: If the current meta primary predicates aren't enough to suit your
+needs, then please file an issue or feel free to add one yourself!
+
 USAGE:
 (-m|-meta) (-empty | KeySequence PredicateExpression)
 
@@ -502,18 +519,18 @@ free to submit a PR!
 
 In these examples, let "m" be the value of the entry's 'meta' attribute.
 
--meta .tags[?] .key termination_date -a .value +0h
--m .tags[?] .key termination_date -a .value +0h
+-meta '.tags[?]' .key termination_date -a .value +0h
+-m '.tags[?]' .key termination_date -a .value +0h
     Returns true if m['tags'] has at least one object o s.t. o['key'] == termination_date
     and o['value'] has expired. In the real world, this example filters out all EC2
     instances whose termination_date tag expired.
 
--m .tags[?] .key termination_date -a .value -{1w}
+-m '.tags[?]' .key termination_date -a .value -{1w}
     Same as the previous example, except this returns true if o['value'] will expire within
     the current week. In the real world, this example filters out all EC2 instances whose
     termination_date tag will expire within the current week.
 
--m .tags[?] .key \( sales -o product \)
+-m '.tags[?]' .key \( sales -o product \)
     Returns true if m['tags'] has at least one object o s.t. o['key'] == sales OR product.
     In the real world, this example filters out all EC2 instances that have a "sales" or
     "product" tag.
@@ -529,7 +546,7 @@ In these examples, let "m" be the value of the entry's 'meta' attribute.
     NOTE: With regex/glob support, this example could be shortened to something like
     "-m .vpcid vpc-0eb.*"
 
--m .mounts[?] .type tmpfs
+-m '.mounts[?]' .type tmpfs
     Returns true if m['mounts'] has at least one object o s.t. o['type'] == tmpfs. In the
     real world, this example filters out all Docker containers that have tmpfs mounts.
 `

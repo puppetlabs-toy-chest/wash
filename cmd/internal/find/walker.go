@@ -62,8 +62,10 @@ func (w *walker) visit(e types.Entry, depth uint) {
 		meta, err := w.conn.Metadata(e.Path)
 		if err != nil {
 			cmdutil.ErrPrintf("could not get full metadata of %v: %v\n", e.NormalizedPath, err)
+			// Fallback to the meta attribute
+		} else {
+			e.Metadata = meta
 		}
-		e.Metadata = meta
 	}
 	if w.p(e) {
 		fmt.Printf("%v\n", e.NormalizedPath)

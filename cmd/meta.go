@@ -12,17 +12,25 @@ import (
 func metaCommand() *cobra.Command {
 	metaCmd := &cobra.Command{
 		Use:   "meta <path>",
-		Short: "Prints the metadata of a resource",
+		Short: "Prints the entry's metadata",
+		Long:  `Prints the entry's metadata. By default, meta prints the full metadata as returned by the
+metadata endpoint. Specify the --attribute flag to instead print the meta attribute, a
+(possibly) reduced set of metadata that's returned when entries are enumerated.`,
 		Args:  cobra.ExactArgs(1),
 		RunE:  toRunE(metaMain),
 	}
 	metaCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
+	metaCmd.Flags().BoolP("attribute", "a", false, "Print the meta attribute instead of the full metadata")
 	return metaCmd
 }
 
 func metaMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 	output, err := cmd.Flags().GetString("output")
+	if err != nil {
+		panic(err.Error())
+	}
+	showMetaAttr, err := cmd.Flags().GetBool("attribute")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -35,10 +43,20 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := client.ForUNIXSocket(config.Socket)
 
-	metadata, err := conn.Metadata(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+	var metadata map[string]interface{}
+	if showMetaAttr {
+		e, err := conn.Info(path)
+		if err != nil {
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		metadata = e.Attributes.Meta()
+	} else {
+		metadata, err = conn.Metadata(path)
+		if err != nil {
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
 	}
 
 	prettyMetadata, err := marshaller.Marshal(metadata)
