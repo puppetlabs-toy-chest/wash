@@ -50,7 +50,7 @@ current system shell with shortcuts configured for wash subcommands.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	addServerArgs(rootCmd)
+	addServerArgs(rootCmd, "warn")
 
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(serverCommand())

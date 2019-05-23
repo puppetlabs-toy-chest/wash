@@ -32,7 +32,7 @@ To stop it, make sure you're not using the filesystem at <mountpoint>, then ente
 		PreRun: bindServerArgs,
 		RunE:   toRunE(serverMain),
 	}
-	addServerArgs(serverCmd)
+	addServerArgs(serverCmd, "info")
 
 	return serverCmd
 }
@@ -69,8 +69,8 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{0}
 }
 
-func addServerArgs(cmd *cobra.Command) {
-	cmd.Flags().String("loglevel", "info", "Set the logging level")
+func addServerArgs(cmd *cobra.Command, defaultLogLevel string) {
+	cmd.Flags().String("loglevel", defaultLogLevel, "Set the logging level")
 	cmd.Flags().String("logfile", "", "Set the log file's location. Defaults to stdout")
 	cmd.Flags().String("cpuprofile", "", "Write cpu profile to file")
 	cmd.Flags().String("config-file", config.DefaultFile(), "Set the config file's location")
@@ -111,9 +111,9 @@ func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
 
 	// Return the options
 	return server.Opts{
-		CPUProfilePath:      viper.GetString("cpuprofile"),
-		LogFile:             viper.GetString("logfile"),
-		LogLevel:            viper.GetString("loglevel"),
-		ExternalPlugins:     externalPlugins,
+		CPUProfilePath:  viper.GetString("cpuprofile"),
+		LogFile:         viper.GetString("logfile"),
+		LogLevel:        viper.GetString("loglevel"),
+		ExternalPlugins: externalPlugins,
 	}, nil
 }
