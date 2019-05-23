@@ -99,6 +99,23 @@ console output when it is filtering on an EC2 instance's tags.
 
 You can set maxdepth to -1 if you'd like find to always recurse.
 
+NOTE: You can use the meta command to construct meta primary queries.
+Here's how. First, find a representative entry that you'll be filtering.
+For example, if you are filtering EC2 instances, then your representative
+entry would be an EC2 instance. Next, invoke "meta <entry_path> -a" to
+see that entry's meta attribute. Check the output to see if it contains
+the properties you'd like to filter on. If yes, then construct the
+predicate. If no, then invoke "meta <entry_path>" to see the entry's
+full metadata, and check its output to see if it contains your properties.
+If the properties are there, and the O(N) API requests made by "fullmeta"
+aren't an issue, then construct the predicate and be sure to set the
+"fullmeta" option when invoking "wash find". Otherwise, contact the plugin
+author to see if they can add those properties to the entry's full metadata
+or, preferably, the meta attribute.
+
+NOTE: If the current meta primary predicates aren't enough to suit your
+needs, then please file an issue or feel free to add one yourself!
+
 USAGE:
 (-m|-meta) (-empty | KeySequence PredicateExpression)
 
