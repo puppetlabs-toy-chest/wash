@@ -55,12 +55,12 @@ var uid, gid = getIDs()
 
 type fuseNode struct {
 	ftype             string
-	parent            plugin.Group
+	parent            plugin.Parent
 	entry             plugin.Entry
 	entryCreationTime time.Time
 }
 
-func newFuseNode(ftype string, parent plugin.Group, entry plugin.Entry) *fuseNode {
+func newFuseNode(ftype string, parent plugin.Parent, entry plugin.Entry) *fuseNode {
 	return &fuseNode{
 		ftype:             ftype,
 		parent:            parent,

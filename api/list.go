@@ -44,8 +44,8 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ListAction())
 	}
 
-	group := entry.(plugin.Group)
-	entries, err := plugin.CachedList(ctx, group)
+	parent := entry.(plugin.Parent)
+	entries, err := plugin.CachedList(ctx, parent)
 	if err != nil {
 		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 			return duplicateCNameResponse(cnameErr)

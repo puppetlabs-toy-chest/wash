@@ -39,7 +39,7 @@ func ToJSONObject(v interface{}) JSONObject {
 /*
 EntryAttributes represents an entry's attributes. We use a struct
 instead of a map for efficient memory allocation/deallocation,
-which is needed to make Group#List fast.
+which is needed to make Parent#List fast.
 
 Each of the setters supports the builder pattern, which enables you
 to do something like

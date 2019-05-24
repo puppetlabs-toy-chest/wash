@@ -67,11 +67,11 @@ func (suite *fsTestSuite) createExec() *mockExecutor {
 	return exec
 }
 
-func (suite *fsTestSuite) find(grp plugin.Group, path string) plugin.Entry {
+func (suite *fsTestSuite) find(parent plugin.Parent, path string) plugin.Entry {
 	names := strings.Split(path, "/")
-	entry := plugin.Entry(grp)
+	entry := plugin.Entry(parent)
 	for _, name := range names {
-		entries, err := entry.(plugin.Group).List(context.Background())
+		entries, err := entry.(plugin.Parent).List(context.Background())
 		if !suite.NoError(err) {
 			suite.FailNow("Listing entries failed")
 		}
@@ -92,7 +92,7 @@ func (suite *fsTestSuite) TestFSList() {
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	entry := suite.find(fs, "var/log").(plugin.Group)
+	entry := suite.find(fs, "var/log").(plugin.Parent)
 	entries, err := entry.List(context.Background())
 	if !suite.NoError(err) {
 		suite.FailNow("Listing entries failed")
@@ -103,13 +103,13 @@ func (suite *fsTestSuite) TestFSList() {
 	suite.Equal("path1", plugin.Name(entries[1]))
 	suite.Equal("path2", plugin.Name(entries[2]))
 	for _, entry := range entries {
-		_, ok := entry.(plugin.Group)
+		_, ok := entry.(plugin.Parent)
 		if !suite.True(ok) {
 			suite.FailNow("Entry was not a Group")
 		}
 	}
 
-	entries1, err := entries[1].(plugin.Group).List(context.Background())
+	entries1, err := entries[1].(plugin.Parent).List(context.Background())
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries1))
 		suite.Equal("a file", plugin.Name(entries1[0]))
@@ -117,11 +117,11 @@ func (suite *fsTestSuite) TestFSList() {
 		suite.True(ok)
 	}
 
-	entries2, err := entries[2].(plugin.Group).List(context.Background())
+	entries2, err := entries[2].(plugin.Parent).List(context.Background())
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries2))
 		suite.Equal("dir", plugin.Name(entries2[0]))
-		_, ok := entries2[0].(plugin.Group)
+		_, ok := entries2[0].(plugin.Parent)
 		suite.True(ok)
 	}
 }

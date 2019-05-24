@@ -12,14 +12,13 @@ type, and initialize it via NewEntry. For example
 EntryBase gives the resource a name - which is how it will be displayed in the filesystem
 or referenced via the API - and tools for controlling how its data is cached.
 
-The Group interface identifies the resource as a container for other things. Implementing it
-enables displaying it as a directory in the filesystem. Anything that does not implement
-Group will be displayed as a file.
+Implementing the Parent interface displays that resource as a directory on the filesystem.
+Anything that does not implement Parent will be displayed as a file.
 
 The Readable interface gives a file its contents when read via the filesystem.
 
-All of the above, as well as other types - Resource, Execable, Pipe - provide
-additional functionality via the HTTP API.
+All of the above, as well as other types - Execable, Stream - provide additional functionality
+via the HTTP API.
 */
 package plugin
 
@@ -49,16 +48,16 @@ type Entry interface {
 	getTTLOf(op defaultOpCode) time.Duration
 }
 
-// Group is an entry that can list its contents, an array of entries.
-// It will be represented as a directory in the wash filesystem.
-type Group interface {
+// Parent is an entry with children. It will be represented as a directory in the Wash
+// filesystem.
+type Parent interface {
 	Entry
 	List(context.Context) ([]Entry, error)
 }
 
-// Root is the root object of a plugin.
+// Root represents the plugin root
 type Root interface {
-	Group
+	Parent
 	Init() error
 }
 

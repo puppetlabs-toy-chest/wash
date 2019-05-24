@@ -262,7 +262,7 @@ func (suite *CacheTestSuite) TestCachedListDefaultOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
 	mungedOpValue := toMap(mockChildren)
 	suite.testCachedDefaultOp(ListOp, "List", mockChildren, mungedOpValue, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedList(ctx, e.(Group))
+		return CachedList(ctx, e.(Parent))
 	})
 }
 

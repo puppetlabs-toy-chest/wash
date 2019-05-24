@@ -29,7 +29,7 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 	return false
 }
 
-var listAction = newAction("list", "Group")
+var listAction = newAction("list", "Parent")
 // ListAction represents the list action
 func ListAction() Action {
 	return listAction
@@ -81,7 +81,7 @@ func SupportedActionsOf(entry Entry) []string {
 		// We could use reflection to simplify this. In fact, a previous version
 		// of the code did do that. The reason we removed it was b/c type assertion's
 		// a lot faster, and the resulting code isn't that bad, if a little verbose.
-		if _, ok := entry.(Group); ok {
+		if _, ok := entry.(Parent); ok {
 			actions = append(actions, ListAction().Name)
 		}
 		if _, ok := entry.(Readable); ok {

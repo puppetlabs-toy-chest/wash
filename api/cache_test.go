@@ -84,14 +84,14 @@ func (suite *CacheHandlerTestSuite) TestRejectsGet() {
 
 func (suite *CacheHandlerTestSuite) TestClearCache() {
 	// Populate the cache with a mocked resource and plugin.Cached*
-	group := newMockedGroup()
-	group.SetTestID("/dir")
-	group.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
+	parent := newMockedParent()
+	parent.SetTestID("/dir")
+	parent.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
 
 	reqCtx := context.WithValue(context.Background(), mountpointKey, "/")
 
 	expectedChildren := make(map[string]plugin.Entry)
-	if children, err := plugin.CachedList(reqCtx, group); suite.Nil(err) {
+	if children, err := plugin.CachedList(reqCtx, parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
@@ -102,7 +102,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal("[]\n", w.Body.String())
 
-	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
+	if children, err := plugin.CachedList(context.Background(), parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
@@ -113,11 +113,11 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
 
-	if children, err := plugin.CachedList(context.Background(), group); suite.Nil(err) {
+	if children, err := plugin.CachedList(context.Background(), parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
-	group.AssertNumberOfCalls(suite.T(), "List", 2)
+	parent.AssertNumberOfCalls(suite.T(), "List", 2)
 }
 
 func (suite *CacheHandlerTestSuite) TestClearCacheErrors() {
@@ -145,20 +145,20 @@ func TestCacheHandler(t *testing.T) {
 	suite.Run(t, new(CacheHandlerTestSuite))
 }
 
-type mockedGroup struct {
+type mockedParent struct {
 	plugin.EntryBase
 	mock.Mock
 }
 
-func newMockedGroup() *mockedGroup {
-	g := &mockedGroup{
-		EntryBase: plugin.NewEntry("mockGroup"),
+func newMockedParent() *mockedParent {
+	p := &mockedParent{
+		EntryBase: plugin.NewEntry("mockParent"),
 	}
 
-	return g
+	return p
 }
 
-func (g *mockedGroup) List(ctx context.Context) ([]plugin.Entry, error) {
-	args := g.Called(ctx)
+func (p *mockedParent) List(ctx context.Context) ([]plugin.Entry, error) {
+	args := p.Called(ctx)
 	return args.Get(0).([]plugin.Entry), args.Error(1)
 }
