@@ -41,8 +41,8 @@ func rootCommand() *cobra.Command {
 		Use:    "wash",
 		PreRun: bindServerArgs,
 		RunE:   toRunE(rootMain),
-		Long: `When invoked without arguments, enters a Wash shell. This starts the Wash daemon, then enters your
-current system shell with shortcuts configured for wash subcommands.`,
+		Long: `When invoked without arguments, enters a Wash shell. Starts the Wash daemon,
+then starts your system shell with shortcuts configured for wash subcommands.`,
 		// Need to set these so that Cobra will not output the usage +
 		// error object when Execute() returns an error, which will always
 		// happen in our case because the exitCode object is technically

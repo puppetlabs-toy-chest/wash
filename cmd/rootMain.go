@@ -134,8 +134,9 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	fmt.Println(`Welcome to Wash!
-  Wash includes several built-in commands: wclear, wexec, find, list, meta, tail. Try 'help'.
-  Commands run with wash can be seen via 'whistory', and logs for those commands with 'whistory <id>'.`)
+  Wash includes several built-in commands: wexec, find, list, meta, tail.
+  See commands run with wash via 'whistory', and logs with 'whistory <id>'.
+Try 'help'`)
 
 	exit := runShell(cachedir, mountpath)
 

@@ -12,15 +12,15 @@ import (
 	"github.com/hpcloud/tail"
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/config"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func tailCommand() *cobra.Command {
 	tailCmd := &cobra.Command{
 		Use:   "tail -f [<file>...]",
-		Short: "Displays new output of files or resources that support the stream action",
+		Short: "Displays new output of files or resources with the stream action",
 		Long: `Output any new updates to files and/or resources (that support the stream action). Currently
 requires the '-f' option to run. Attempts to mimic the functionality of 'tail -f' for remote logs.`,
 		RunE: toRunE(tailMain),

@@ -13,14 +13,14 @@ import (
 
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/config"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 )
 
 func psCommand() *cobra.Command {
 	psCmd := &cobra.Command{
 		Use:   "ps [<node>...]",
-		Short: "Lists the processes running on the indicated compute instances.",
+		Short: "Lists the processes running on the indicated compute instances",
 		Long: `Captures /proc/*/{cmdline,stat,statm} on each node by executing 'cat' on them. Collects the output
 to display running processes on all listed nodes. Errors on paths that don't implement exec.`,
 		RunE: toRunE(psMain),
