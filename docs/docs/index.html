@@ -70,8 +70,9 @@
 <li><a href="#plugin-concepts">Plugin Concepts</a>
 
 <ul>
+<li><a href="#attributes-metadata">Attributes/Metadata</a></li>
 <li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
-<li><a href="/wash/docs/go_plugins">➠Go Plugins</a></li>
+<li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
 <li><a href="/wash/docs/api">➠Server API</a></li>
 </ul></li>
 </ul>
@@ -181,42 +182,58 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 
 <h2 id="plugin-concepts">Plugin Concepts</h2>
 
-<p>Wash&rsquo;s plugin system is designed around a set of primitives that resources can implement. A plugin requires a root that can list things it contains, and implements a tree structure under that where each node represents a resource or an arbitrary grouping. Wash will translate that tree structure into a file hierarchy.</p>
+<p>Everything is an entry in Wash. This includes resources like containers and volumes; organizational groups like the containers directory in the Docker plugin; read-only files like the metadata.json files for EC2 instances; and even non-infrastructure related things like Goodreads books, cooking recipes, breweries, Fandango theaters and movies, etc. (Yes, you can write a Wash plugin for Fandango. In fact, you can write a Wash plugin for anything that you can model as a filesystem.)</p>
 
-<p>Wash supports the following primitives:</p>
+<p>Plugins have their own file hierarchy that&rsquo;s described by a tree structure, where the entries are the nodes. Additionally, internal nodes (i.e. entries with children) are classified as &ldquo;parents.&rdquo; Parents represent the &ldquo;directories&rdquo; of the plugin&rsquo;s filesystem, while everything else is a &ldquo;file.&rdquo;</p>
+
+<p>Plugins are written in top-down fashion, starting with the root. All entries (and their paths) are referenced by their canonical name (<code>cname</code>). The <code>cname</code> consists of the entry&rsquo;s reported name with all <code>/</code>&lsquo;es replaced by <code>#</code>. You can override this with your own slash replacer.</p>
+
+<p>Wash entries can support the following actions:</p>
 
 <ul>
-<li><code>list</code> - lets you ask any resource what&rsquo;s contained inside of it, and what primitives it supports.
+<li><code>list</code> - lists an entry&rsquo;s children, including their supported actions
 
 <ul>
 <li><em>e.g. listing a Kubernetes pod returns its constituent containers</em></li>
 </ul></li>
-<li><code>read</code> - lets you read the contents of a given resource
+<li><code>read</code> - lets you read the entry&rsquo;s content
 
 <ul>
 <li><em>e.g. represent an EC2 instance&rsquo;s console output as a regular file you can open in a regular editor</em></li>
 </ul></li>
-<li><code>stream</code> - gives you streaming-read access to a resource
+<li><code>stream</code> - gives you streaming-read access to an entry
 
 <ul>
 <li><em>e.g. to let you follow a container&rsquo;s output as its running</em></li>
 </ul></li>
-<li><code>exec</code> - lets you execute a command against a resource
+<li><code>exec</code> - lets you execute a command against an entry
 
 <ul>
 <li><em>e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc.</em></li>
 </ul></li>
 </ul>
 
-<p>Primitives can be accessed programmatically via the Wash API, or on the CLI via <code>wash</code> subcommands and filesystem interactions.</p>
+<p>Actions can be invoked programmatically via the Wash API, or on the CLI via <code>wash</code> subcommands and filesystem interactions.</p>
 
 <p>For more on implementing plugins, see:</p>
 
 <ul>
 <li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
-<li><a href="/wash/docs/go_plugins">➠Go Plugins</a></li>
+<li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
 <li><a href="/wash/docs/api">➠Server API</a></li>
 </ul>
+
+<p>NOTE: We recommend that you read the <code>Attributes/Metadata</code> section before reading the plugin tutorials to take full advantage of Wash&rsquo;s capabilities, especially that of <code>wash find</code>&rsquo;s.</p>
+
+<h3 id="attributes-metadata">Attributes/Metadata</h3>
+
+<p>All entries have metadata, which is a JSON object containing a complete description of the entry. For example, a Docker container&rsquo;s metadata includes its labels, its state, its start time, the image it was built from, its mounted volumes, etc. <a href="#wash-find"><code>wash find</code></a> can filter on this metadata. In our example, you can use <code>find docker/containers -daystart -fullmeta -m .state .startedAt -{1d} -a .status running</code> to see a list of all running containers that started today (try it out!). Thus, metadata filtering is powerful. However, it also requires the user to query an entry&rsquo;s metadata to construct the filter. This can get annoying when a user has to filter on the same property shared by many different kinds of entries. For example, metadata filtering gets annoying when you are trying to filter on an EC2 instance&rsquo;s/Docker container&rsquo;s/Kubernetes pod&rsquo;s state due to the structural differences in their metadata (e.g. an EC2 instance&rsquo;s state is contained in the <code>.state.name</code> key, while a Kubernetes pod&rsquo;s state is contained in the <code>.status.phase</code> key). Metadata filtering is also slow. It requires O(N) API requests, where N is the number of visited entries.</p>
+
+<p>To make <code>wash find</code>&rsquo;s filtering less annoying and faster, entries can also have attributes. The attributes represent common metadata properties that people filter on. Currently, these are the traditional <code>ctime</code>, <code>mtime</code>, <code>atime</code>, <code>size</code>, and <code>mode</code> filesystem attributes, along with a special <code>meta</code> attribute representing a subset of the entry&rsquo;s metadata (useful for fast metadata filtering). The attributes are fetched in bulk when the entry&rsquo;s parent is listed. Typically, the bulk fetch is done through an API&rsquo;s <code>list</code> endpoint. This endpoint returns an array of JSON objects representing the entries. The <code>meta</code> attribute is set to this JSON object while the remaining attributes are parsed from the object&rsquo;s fields. For example, <code>list docker/containers</code> will fetch all of your containers by querying Docker&rsquo;s <code>/containers/json</code> endpoint. That endpoint&rsquo;s response is then used to create the container entry objects, where each container entry&rsquo;s <code>meta</code> attribute is set to a <code>/containers/json</code> object and the containers&rsquo; <code>ctime</code>/<code>mtime</code> attributes are parsed from it.</p>
+
+<p>NOTE: <em>All</em> attributes are optional, so set the ones that you think make sense. For example, if the <code>mode</code> or <code>size</code> attributes don&rsquo;t make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the <code>meta</code> attribute when you can to take advantage of metadata filtering.</p>
+
+<p>NOTE: We plan on adding more attributes depending on user feedback (e.g. like <code>state</code> and <code>labels</code>). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue (or PR!) so we can consider adding that property as an attribute (and as a corresponding <code>wash find</code> primary).</p>
 
 </article>
 

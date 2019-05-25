@@ -20,8 +20,9 @@ title= "Wash Documentation"
   * [Docker](#docker)
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
+  * [Attributes/Metadata](#attributes-metadata)
   * [➠External plugins]
-  * [➠Go Plugins]
+  * [➠Core Plugins]
   * [➠Server API]
 
 ## Wash Commands
@@ -121,27 +122,43 @@ NOTE: Do not override `socket` in a config file. Instead, override it via the `W
 
 ## Plugin Concepts
 
-Wash's plugin system is designed around a set of primitives that resources can implement. A plugin requires a root that can list things it contains, and implements a tree structure under that where each node represents a resource or an arbitrary grouping. Wash will translate that tree structure into a file hierarchy.
+Everything is an entry in Wash. This includes resources like containers and volumes; organizational groups like the containers directory in the Docker plugin; read-only files like the metadata.json files for EC2 instances; and even non-infrastructure related things like Goodreads books, cooking recipes, breweries, Fandango theaters and movies, etc. (Yes, you can write a Wash plugin for Fandango. In fact, you can write a Wash plugin for anything that you can model as a filesystem.)
 
-Wash supports the following primitives:
+Plugins have their own file hierarchy that's described by a tree structure, where the entries are the nodes. Additionally, internal nodes (i.e. entries with children) are classified as "parents." Parents represent the "directories" of the plugin's filesystem, while everything else is a "file."
 
-* `list` - lets you ask any resource what's contained inside of it, and what primitives it supports.
+Plugins are written in top-down fashion, starting with the root. All entries (and their paths) are referenced by their canonical name (`cname`). The `cname` consists of the entry's reported name with all `/`'es replaced by `#`. You can override this with your own slash replacer.
+
+Wash entries can support the following actions:
+
+* `list` - lists an entry's children, including their supported actions
   - _e.g. listing a Kubernetes pod returns its constituent containers_
-* `read` - lets you read the contents of a given resource
+* `read` - lets you read the entry's content
   - _e.g. represent an EC2 instance's console output as a regular file you can open in a regular editor_
-* `stream` - gives you streaming-read access to a resource
+* `stream` - gives you streaming-read access to an entry
   - _e.g. to let you follow a container's output as its running_
-* `exec` - lets you execute a command against a resource
+* `exec` - lets you execute a command against an entry
   - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
 
-Primitives can be accessed programmatically via the Wash API, or on the CLI via `wash` subcommands and filesystem interactions.
+Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` subcommands and filesystem interactions.
 
 For more on implementing plugins, see:
 
 * [➠External plugins]
-* [➠Go Plugins]
+* [➠Core Plugins]
 * [➠Server API]
 
 [➠External plugins]: /wash/docs/external_plugins
-[➠Go plugins]: /wash/docs/go_plugins
+[➠Core plugins]: /wash/docs/core_plugins
 [➠Server API]: /wash/docs/api
+
+NOTE: We recommend that you read the `Attributes/Metadata` section before reading the plugin tutorials to take full advantage of Wash's capabilities, especially that of `wash find`'s.
+
+### Attributes/Metadata
+
+All entries have metadata, which is a JSON object containing a complete description of the entry. For example, a Docker container's metadata includes its labels, its state, its start time, the image it was built from, its mounted volumes, etc. [`wash find`](#wash-find) can filter on this metadata. In our example, you can use `find docker/containers -daystart -fullmeta -m .state .startedAt -{1d} -a .status running` to see a list of all running containers that started today (try it out!). Thus, metadata filtering is powerful. However, it also requires the user to query an entry's metadata to construct the filter. This can get annoying when a user has to filter on the same property shared by many different kinds of entries. For example, metadata filtering gets annoying when you are trying to filter on an EC2 instance's/Docker container's/Kubernetes pod's state due to the structural differences in their metadata (e.g. an EC2 instance's state is contained in the `.state.name` key, while a Kubernetes pod's state is contained in the `.status.phase` key). Metadata filtering is also slow. It requires O(N) API requests, where N is the number of visited entries.
+
+To make `wash find`'s filtering less annoying and faster, entries can also have attributes. The attributes represent common metadata properties that people filter on. Currently, these are the traditional `ctime`, `mtime`, `atime`, `size`, and `mode` filesystem attributes, along with a special `meta` attribute representing a subset of the entry's metadata (useful for fast metadata filtering). The attributes are fetched in bulk when the entry's parent is listed. Typically, the bulk fetch is done through an API's `list` endpoint. This endpoint returns an array of JSON objects representing the entries. The `meta` attribute is set to this JSON object while the remaining attributes are parsed from the object's fields. For example, `list docker/containers` will fetch all of your containers by querying Docker's `/containers/json` endpoint. That endpoint's response is then used to create the container entry objects, where each container entry's `meta` attribute is set to a `/containers/json` object and the containers' `ctime`/`mtime` attributes are parsed from it.
+
+NOTE: _All_ attributes are optional, so set the ones that you think make sense. For example, if the `mode` or `size` attributes don't make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the `meta` attribute when you can to take advantage of metadata filtering.
+
+NOTE: We plan on adding more attributes depending on user feedback (e.g. like `state` and `labels`). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue (or PR!) so we can consider adding that property as an attribute (and as a corresponding `wash find` primary).

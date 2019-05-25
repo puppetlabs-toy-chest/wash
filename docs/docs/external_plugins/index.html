@@ -46,60 +46,52 @@
 <p>External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:</p>
 
 <ol>
-<li><p>Think about what the plugin would look like if it were modeled as a filesystem. Some useful questions to ask here are:</p>
+<li><p>Write the <a href="#plugin-script">plugin script</a>. This is the script that Wash will shell out to whenever it needs to invoke a method on a specific entry within your plugin.</p></li>
 
-<ul>
-<li>What are the things (entries) that I want this plugin to represent?</li>
-<li>What things are my directories? What things are my files?</li>
-<li>What Wash actions should I support on these things?</li>
-</ul></li>
-
-<li><p>Write the <a href="#plugin-script">plugin script</a>. This is the script that Wash will shell out to whenever it needs to invoke an action on a specific entry within your plugin.</p></li>
-
-<li><p>Add the plugin to the (configurable) <code>plugins.yaml</code> file by specifying a path to the plugin script. The name will be determined by invoking the script with the <code>init</code> action. An example <code>plugins.yaml</code> file is shown below:</p>
+<li><p>Add the plugin to your <code>wash.yaml</code> file under the <code>external-plugins</code> key, and specify the path to the plugin script. The plugin&rsquo;s name will be determined by invoking the script with the <code>init</code> method. An example <code>wash.yaml</code> config is shown below:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">- script: &#39;/Users/enis.inan/wash/external-plugins/external-aws.rb&#39;
-- script: &#39;/Users/enis.inan/wash/external-plugins/network.sh&#39;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">external-plugins:
+    - script: &#39;/Users/enis.inan/GitHub/wash/website/static/docs/external_plugins/examples/sshfs.sh&#39;</pre></td></tr></table>
 </div>
 </div></li>
 
-<li><p>Start the Wash server to see your plugin in action.</p></li>
+<li><p>Start the Wash shell to see your plugin in action.</p></li>
 </ol>
-
-<p><strong>NOTE:</strong> You can override the default <code>plugins.yaml</code> path via the <code>external-plugins</code> flag. See <code>wash help server</code> for more information.</p>
 
 <h2 id="plugin-script">Plugin Script</h2>
 
-<p>Wash shells out to the external plugin&rsquo;s script whenever it needs to invoke an action on one of its entries. The script must have the following usage:</p>
+<p>Wash shells out to the external plugin&rsquo;s script whenever it needs to invoke a method on one of its entries. The script must have the following usage:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
 </div>
 </div>
 <p>where</p>
 
 <ul>
-<li><code>&lt;action&gt;</code> is the Wash action that&rsquo;s being invoked</li>
+<li><code>&lt;method&gt;</code> is the Wash method that&rsquo;s being invoked</li>
 <li><code>&lt;path&gt;</code> is the entry&rsquo;s filesystem path relative to Wash&rsquo;s mountpoint</li>
 <li><code>&lt;state&gt;</code> consists of the minimum amount of information required to reconstruct the entry inside the plugin</li>
-<li><code>&lt;args...&gt;</code> are the arguments passed to the specific action.</li>
+<li><code>&lt;args...&gt;</code> are the method&rsquo;s arguments.</li>
 </ul>
 
 <p><code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> can be a bit confusing. To understand them, we recommend reading the <a href="#aside">Aside</a>, and to look at the provided <a href="#bash-example">Bash</a> + Ruby external plugin examples to see how they&rsquo;re used. <strong>TODO: Link a Ruby example</strong></p>
 
-<p>The remaining sections describe all possible values of <code>&lt;action&gt;</code> that can be passed-in, including each action&rsquo;s calling and error conventions, and the expected results.</p>
+<p>The remaining sections describe all the possible Wash methods that can be passed-in, including their calling and error conventions, and the expected results.</p>
+
+<p>NOTE: Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.</p>
 
 <h2 id="init">init</h2>
 
-<p>The <code>init</code> action is special. It is invoked as <code>&lt;plugin_script&gt; init</code>, and it is invoked only once, when the external plugin is loaded. When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. Here&rsquo;s an example:</p>
+<p>The <code>init</code> method is special. It is invoked as <code>&lt;plugin_script&gt; init</code>, and it is invoked only once, when the external plugin is loaded. When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. Here&rsquo;s an example:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
@@ -112,19 +104,20 @@
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
   &#34;name&#34;: &#34;aws&#34;,
-  &#34;supported_actions&#34;: [
+  &#34;methods&#34;: [
     &#34;list&#34;
   ]
 }</pre></td></tr></table>
 </div>
 </div>
-<p>This example shows the <em>minimum</em> amount of information required for Wash to construct the plugin root. In fact, the example shows the minimum amount of information required for Wash to construct <em>any</em> external plugin entry. This information consists of the entry&rsquo;s name and its supported actions.</p>
+<p>This example shows the <em>minimum</em> amount of information required for Wash to construct the plugin root. In fact, the example shows the minimum amount of information required for Wash to construct <em>any</em> external plugin entry. This information consists of the entry&rsquo;s name and its implemented methods.</p>
 
-<p>You can include additional keys in the printed JSON object. These keys are:</p>
+<p>You can include additional (optional) keys in the printed JSON object. These keys are:</p>
 
 <ul>
-<li><code>cache_ttls</code>. This specifies how many seconds each supported action&rsquo;s result should be cached (<code>ttl</code> is short for time to live).</li>
-<li><code>attributes</code>. This represents the entry&rsquo;s filesystem attributes, if any. These are the access time <code>atime</code>, last modified time <code>mtime</code>, creation time <code>ctime</code>, mode <code>mode</code>, and size <code>size</code>. The individual time attributes are specified in Unix seconds. Octal modes must be prefixed with the <code>0</code> delimiter (e.g. like <code>0777</code>). Hexadecimal modes must be prefixed with the <code>0x</code> delimiter (e.g. like <code>0xabcd</code>).</li>
+<li><code>cache_ttls</code>. This specifies how many seconds each method&rsquo;s result should be cached (<code>ttl</code> is short for time to live). Currently, Wash caches the result of <code>list</code>, <code>read</code>, and <code>metadata</code>.</li>
+<li><code>attributes</code>. This represents the entry&rsquo;s attributes (see the <a href="/wash/docs#attributes-metadata"><code>Attributes/Metadata</code></a> section). Time attributes are specified in Unix seconds. Octal modes must be prefixed with the <code>0</code> delimiter (e.g. like <code>0777</code>). Hexadecimal modes must be prefixed with the <code>0x</code> delimiter (e.g. like <code>0xabcd</code>).</li>
+<li><code>slash_replacer</code>. This overrides the default slash replacer <code>#</code>.</li>
 <li><code>state</code>. This corresponds to the <code>&lt;state&gt;</code> parameter in the plugin script&rsquo;s usage.</li>
 </ul>
 
@@ -148,34 +141,36 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
   &#34;name&#34;: &#34;some_entry&#34;,
-  &#34;supported_actions&#34;: [
+  &#34;methods&#34;: [
     &#34;list&#34;
   ],
   &#34;cache_ttls&#34;: {
     &#34;list&#34;: 30
   },
   &#34;attributes&#34;: {
-    &#34;atime&#34;: 1551942012,
     &#34;mtime&#34;: 1551942012,
-    &#34;ctime&#34;: 1551942012,
-    &#34;mode&#34;: 511,
-    &#34;size&#34;: 15600
+    &#34;meta&#34;: {
+      &#34;LastModifiedTime&#34;: 1551942012,
+      &#34;Owner&#34;: &#34;Wash&#34;,
+    }
   },
-  &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;AWS::Profile\&#34;}&#34;
+  &#34;slash_replacer&#34;: &#34;:&#34;,
+  &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::Directory\&#34;}&#34;
 }</pre></td></tr></table>
 </div>
 </div>
-<p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> action will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has some filesystem attributes that are defined (note that the mode is <code>0777</code>; <code>511</code> is its Base-10 representation). Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its supported actions. In this case, only <code>list</code> is supported, and <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>AWS::Profile</code>) in whatever language the plugin script was written in.</p>
+<p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> method will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has an <code>mtime</code> attribute, and that it also includes the <code>meta</code> attribute. We see from <code>slash_replacer</code> that any <code>/</code>&lsquo;es in the entry&rsquo;s returned name will be replaced by a <code>:</code> instead of a <code>#</code>. Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its methods. In this case, only <code>list</code> is implemented, and <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>SSHFS::Directory</code>) in whatever language the plugin script was written in.</p>
 
-<p>The <code>init</code> action adopts the standard error conventions described in the <a href="#errors">Errors</a> section.</p>
+<p><code>init</code> adopts the standard error conventions described in the <a href="#errors">Errors</a> section.</p>
 
 <h2 id="list">list</h2>
 
-<p>The <code>list</code> action is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the <code>init</code> section (hence, <code>list</code> outputs an array of entries). Below is an example of valid output from the <code>list</code> action.</p>
+<p><code>list</code> is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the <code>init</code> section (hence, <code>list</code> outputs an array of entries). Below is an example of valid <code>list</code> output:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
@@ -206,51 +201,63 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">[
-	{
-		&#34;name&#34;: &#34;LARGE_FILE.txt&#34;,
-		&#34;supported_actions&#34;: [
-			&#34;metadata&#34;,
-			&#34;read&#34;,
-			&#34;stream&#34;
-		],
-		&#34;attributes&#34;: {
-			&#34;Mtime&#34;: 1551459978,
-			&#34;Size&#34;: 100000000
-		},
-		&#34;state&#34;: &#34;{\&#34;name\&#34;:\&#34;LARGE_FILE.txt\&#34;,\&#34;profile\&#34;:\&#34;default\&#34;,\&#34;region\&#34;:\&#34;us-west-1\&#34;,\&#34;bucket\&#34;:\&#34;my-stupid-bucket-enis\&#34;,\&#34;attributes\&#34;:{\&#34;Mtime\&#34;:1551459978,\&#34;Size\&#34;:100000000},\&#34;klass\&#34;:\&#34;S3Object\&#34;}&#34;
-	},
-	{
-		&#34;name&#34;: &#34;my_json_file.json&#34;,
-		&#34;supported_actions&#34;: [
-			&#34;metadata&#34;,
-			&#34;read&#34;,
-			&#34;stream&#34;
-		],
-		&#34;attributes&#34;: {
-			&#34;Mtime&#34;: 1549572670,
-			&#34;Size&#34;: 9336
-		},
-		&#34;state&#34;: &#34;{\&#34;name\&#34;:\&#34;my_json_file.json\&#34;,\&#34;profile\&#34;:\&#34;default\&#34;,\&#34;region\&#34;:\&#34;us-west-1\&#34;,\&#34;bucket\&#34;:\&#34;my-stupid-bucket-enis\&#34;,\&#34;attributes\&#34;:{\&#34;Mtime\&#34;:1549572670,\&#34;Size\&#34;:9336},\&#34;klass\&#34;:\&#34;S3Object\&#34;}&#34;
-	}
+  {
+    &#34;name&#34;: &#34;fooVM&#34;,
+    &#34;methods&#34;: [
+      &#34;list&#34;,
+      &#34;exec&#34;,
+      &#34;metadata&#34;
+    ],
+    &#34;attributes&#34;: {
+      &#34;mtime&#34;: 1558062927,
+      &#34;meta&#34;: {
+        &#34;LastModifiedTime&#34;: 1558062927,
+        &#34;Owner&#34;: &#34;Alice&#34;
+      }
+    },
+    &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;
+  },
+  {
+    &#34;name&#34;: &#34;barVM&#34;,
+    &#34;methods&#34;: [
+      &#34;list&#34;,
+      &#34;exec&#34;,
+      &#34;metadata&#34;
+    ],
+    &#34;attributes&#34;: {
+      &#34;mtime&#34;: 1558062927,
+      &#34;meta&#34;: {
+        &#34;LastModifiedTime&#34;: 1558062927,
+        &#34;Owner&#34;: &#34;Alice&#34;
+      }
+    },
+    &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;
+  }
 ]</pre></td></tr></table>
 </div>
 </div>
-<p><strong>NOTE:</strong> Remember that the state displayed here is the same <code>&lt;state&gt;</code> parameter that will be passed in to other actions invoked on that entry. For example, if the <code>read</code> action is invoked on <code>LARGE_FILE.txt</code> via <code>&lt;plugin_script&gt; read &lt;parent_path&gt;/LARGE_FILE.txt &lt;state&gt;</code>, then the value of <code>LARGE_FILE.txt</code>&rsquo;s <code>state</code> key will be passed-in for <code>&lt;state&gt;</code>.</p>
+<p><strong>NOTE:</strong> Remember that the state displayed here is the same <code>&lt;state&gt;</code> parameter that will be passed in to other methods invoked on that entry. For example, if <code>read</code> is invoked on <code>fooVM</code> via <code>&lt;plugin_script&gt; read &lt;parent_path&gt;/fooVM &lt;state&gt;</code>, then the value of <code>fooVM</code>&rsquo;s <code>state</code> key will be passed-in for <code>&lt;state&gt;</code>.</p>
 
-<p>The <code>list</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+<p><code>list</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
 <h2 id="read">read</h2>
 
-<p>The <code>read</code> action is invoked as <code>&lt;plugin_script&gt; read &lt;path&gt; &lt;state&gt;</code>. When <code>read</code> is invoked, the script must output the entry&rsquo;s content.</p>
+<p><code>read</code> is invoked as <code>&lt;plugin_script&gt; read &lt;path&gt; &lt;state&gt;</code>. When <code>read</code> is invoked, the script must output the entry&rsquo;s content.</p>
 
-<p>The <code>read</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+<p><code>read</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
 <h2 id="metadata">metadata</h2>
 
-<p>The <code>metadata</code> action is invoked as <code>&lt;plugin_script&gt; metadata &lt;path&gt; &lt;state&gt;</code>. When <code>metadata</code> is invoked, the script must output a JSON object representing the entry&rsquo;s metadata. Below is an example of acceptable <code>metadata</code> output:</p>
+<p><code>metadata</code> is invoked as <code>&lt;plugin_script&gt; metadata &lt;path&gt; &lt;state&gt;</code>. When <code>metadata</code> is invoked, the script must output a JSON object representing the entry&rsquo;s metadata. Below is an example of acceptable <code>metadata</code> output:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
@@ -265,25 +272,29 @@
 }</pre></td></tr></table>
 </div>
 </div>
-<p>The <code>metadata</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+<p><code>metadata</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<p>NOTE: Only implement <code>metadata</code> if there is additional information about your entry that is not provided by the <code>meta</code> attribute.</p>
 
 <h2 id="stream">stream</h2>
 
-<p>The <code>stream</code> action is invoked as <code>&lt;plugin_script&gt; stream &lt;path&gt; &lt;state&gt;</code>. When <code>stream</code> is invoked, the first line of the script&rsquo;s output must contain the <code>200</code> header. This header tells Wash that the entry&rsquo;s data is about to the streamed. After it outputs the header, the script must then stream the entry&rsquo;s data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request. In the latter case, Wash will send the <code>SIGTERM</code> signal to the streaming process.</p>
+<p><code>stream</code> is invoked as <code>&lt;plugin_script&gt; stream &lt;path&gt; &lt;state&gt;</code>. When <code>stream</code> is invoked, the first line of the script&rsquo;s output must contain the <code>200</code> header. This header tells Wash that the entry&rsquo;s data is about to the streamed. After it outputs the header, the script must then stream the entry&rsquo;s data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request.</p>
 
-<p>The <code>stream</code> action adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+<p><code>stream</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
 <h2 id="exec">exec</h2>
 
-<p>The <code>exec</code> action is invoked as <code>&lt;plugin_script&gt; exec &lt;path&gt; &lt;state&gt; &lt;cmd&gt; &lt;args...&gt;</code>. If the <code>input</code> key is included as part of <code>opts</code> in a request to the <code>exec</code> endpoint, then its content is passed-in as stdin to the plugin script. When <code>exec</code> is invoked, the plugin script&rsquo;s stdout and stderr must be connected to <code>cmd</code>&rsquo;s stdout and stderr, and it must exit the <code>exec</code> invocation with <code>cmd</code>&rsquo;s exit code.</p>
+<p><code>exec</code> is invoked as <code>&lt;plugin_script&gt; exec &lt;path&gt; &lt;state&gt; &lt;opts&gt; &lt;cmd&gt; &lt;args...&gt;</code>. If the <code>input</code> key is included as part of <code>opts</code> in a request to the <code>exec</code> endpoint, then its content is passed-in as stdin to the plugin script. <code>&lt;opts&gt;</code> is the JSON serialization of the remaining options.</p>
 
-<p>Because the <code>exec</code> action effectively hijacks <code>&lt;plugin_script&gt; exec</code> with <code>&lt;cmd&gt; &lt;args...&gt;</code>, there is currently no way for external plugins to report any <code>exec</code> errors to Wash. Thus, if <code>&lt;plugin_script&gt; exec</code> fails to exec <code>&lt;cmd&gt; &lt;args...&gt;</code> (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of <code>&lt;cmd&gt; &lt;args...&gt;</code>&rsquo;s output when running <code>wash exec</code>.</p>
+<p>When <code>exec</code> is invoked, the plugin script&rsquo;s stdout and stderr must be connected to <code>cmd</code>&rsquo;s stdout and stderr, and it must exit the <code>exec</code> invocation with <code>cmd</code>&rsquo;s exit code.</p>
+
+<p>Because <code>exec</code> effectively hijacks <code>&lt;plugin_script&gt; exec</code> with <code>&lt;cmd&gt; &lt;args...&gt;</code>, there is currently no way for external plugins to report any <code>exec</code> errors to Wash. Thus, if <code>&lt;plugin_script&gt; exec</code> fails to exec <code>&lt;cmd&gt; &lt;args...&gt;</code> (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of <code>&lt;cmd&gt; &lt;args...&gt;</code>&rsquo;s output when running <code>wash exec</code>.</p>
 
 <h2 id="errors-a-name-errors-a">Errors <a name="errors"></a></h2>
 
-<p>All errors are printed to <code>stderr</code>. An action invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of <code>stderr</code> into an error object, then documents that error in the process&rsquo; activity and the server logs.</p>
+<p>All errors are printed to <code>stderr</code>. A method invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of <code>stderr</code> into an error object, then documents that error in the process&rsquo; activity and the server logs.</p>
 
-<p><strong>NOTE:</strong> Not all actions adopt this error handling convention (e.g. <code>exec</code>). The error handling for these &ldquo;snowflake&rdquo; actions is described in their respective sections.</p>
+<p><strong>NOTE:</strong> Not all method invocations adopt this error handling convention (e.g. <code>exec</code>). The error handling for these &ldquo;snowflake&rdquo; methods is described in their respective sections.</p>
 
 <h2 id="aside-optional-a-name-aside-a">Aside (optional)<a name="aside"></a></h2>
 
@@ -293,7 +304,7 @@
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
 </div>
 </div>
 <p>If we let <code>&lt;entry&gt; = &lt;path&gt; &lt;state&gt;</code>, then our usage becomes:</p>
@@ -302,23 +313,23 @@
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;action&gt; &lt;entry&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;entry&gt; &lt;args...&gt;</pre></td></tr></table>
 </div>
 </div>
-<p>If we ignore <code>&lt;plugin_script&gt;</code> then the above turns into <code>&lt;action&gt; &lt;entry&gt; &lt;args...&gt;</code>. When read out loud, this looks like the function call <code>&lt;action&gt;(&lt;entry&gt;, &lt;args...&gt;)</code>. If we imagine <code>&lt;entry&gt;</code> as an object in an OOP language, this is semantically equivalent to:</p>
+<p>If we ignore <code>&lt;plugin_script&gt;</code> then the above turns into <code>&lt;method&gt; &lt;entry&gt; &lt;args...&gt;</code>. When read out loud, this looks like the function call <code>&lt;method&gt;(&lt;entry&gt;, &lt;args...&gt;)</code>. If we imagine <code>&lt;entry&gt;</code> as an object in an OOP language, this is semantically equivalent to:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;entry&gt;.&lt;action&gt;(&lt;args...&gt;)</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;entry&gt;.&lt;method&gt;(&lt;args...&gt;)</pre></td></tr></table>
 </div>
 </div>
-<p>For example, if <code>&lt;entry&gt; = myS3Bucket</code>, <code>&lt;action&gt; = list</code>, and <code>&lt;args...&gt;</code> is empty, then we can read the above as <code>myS3Bucket.list()</code>. Thus, the plugin script&rsquo;s usage can be thought of as invoking an action (<code>&lt;action&gt;</code>) on the specified entry (<code>&lt;path&gt; &lt;state&gt;</code>) with the given arguments (<code>&lt;args...&gt;</code>).</p>
+<p>For example, if <code>&lt;entry&gt; = myS3Bucket</code>, <code>&lt;method&gt; = list</code>, and <code>&lt;args...&gt;</code> is empty, then we can read the above as <code>myS3Bucket.list()</code>. Thus, the plugin script&rsquo;s usage can be thought of as invoking a method (<code>&lt;method&gt;</code>) on the specified entry (<code>&lt;path&gt; &lt;state&gt;</code>) with the given arguments (<code>&lt;args...&gt;</code>).</p>
 
-<p>You might be wondering why we don&rsquo;t just lump <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together into <code>&lt;entry&gt;</code> so that the plugin script&rsquo;s usage becomes <code>&lt;plugin_script&gt; &lt;action&gt; &lt;entry&gt; &lt;args...&gt;</code>. There&rsquo;s several reasons. One, having the <code>&lt;path&gt;</code> is helpful for debugging purposes. You can directly see the acting entry in the logs, which frees you from having to figure that information out yourself. Two, it mirrors the API&rsquo;s structure of <code>/fs/&lt;action&gt;/&lt;path&gt;</code>. And three, sometimes the <code>&lt;path&gt;</code> is all you need to write your plugin script. While you could always print the <code>&lt;path&gt;</code> yourself and make that the <code>&lt;state&gt;</code> parameter for Wash to pass around, it can be annoying to have to constantly do that, especially when you&rsquo;re writing simple plugins. Thus, <code>&lt;path&gt;</code> is really more of a convenience. You should use <code>&lt;path&gt;</code> if that&rsquo;s what you need to write your plugin. Otherwise, if you&rsquo;re writing a more complicated plugin that needs to maintain some state (e.g. like the entry&rsquo;s class name and its constructor arguments), then use <code>&lt;state&gt;</code>. However, try to avoid using <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together in the same plugin script, as doing so can make it hard to reason about your code. Use either <code>&lt;path&gt;</code> or <code>&lt;state&gt;</code>, but not both.</p>
+<p>You might be wondering why we don&rsquo;t just lump <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together into <code>&lt;entry&gt;</code> so that the plugin script&rsquo;s usage becomes <code>&lt;plugin_script&gt; &lt;method&gt; &lt;entry&gt; &lt;args...&gt;</code>. There&rsquo;s several reasons. One, having the <code>&lt;path&gt;</code> is helpful for debugging purposes. You can directly see the acting entry in the logs, which frees you from having to figure that information out yourself. Two, it mirrors the API&rsquo;s structure of <code>/fs/&lt;method&gt;/&lt;path&gt;</code>. And three, sometimes the <code>&lt;path&gt;</code> is all you need to write your plugin script. While you could always print the <code>&lt;path&gt;</code> yourself and make that the <code>&lt;state&gt;</code> parameter for Wash to pass around, it can be annoying to have to constantly do that, especially when you&rsquo;re writing simple plugins. Thus, <code>&lt;path&gt;</code> is really more of a convenience. You should use <code>&lt;path&gt;</code> if that&rsquo;s what you need to write your plugin. Otherwise, if you&rsquo;re writing a more complicated plugin that needs to maintain some state (e.g. like the entry&rsquo;s class name and its constructor arguments), then use <code>&lt;state&gt;</code>. However, try to avoid using <code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> together in the same plugin script, as doing so can make it hard to reason about your code. Use either <code>&lt;path&gt;</code> or <code>&lt;state&gt;</code>, but not both.</p>
 
-<p><strong>NOTE:</strong> The <code>init</code> action is special. Its usage is <code>&lt;plugin_script&gt; init</code> &ndash; there is no <code>&lt;path&gt;</code> or <code>&lt;state</code>&gt; so there is no <code>&lt;entry&gt;</code>. Thus, the OOP call of <code>&lt;entry&gt;.&lt;action&gt;(&lt;args...&gt;)</code> doesn&rsquo;t make sense for <code>init</code>. So how do you reason about it? Why do we have an <code>init</code> action? Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry by repeatedly invoking the <code>list</code> action. The <code>init</code> action is how you describe that &lsquo;root&rsquo;.</p>
+<p><strong>NOTE:</strong> The <code>init</code> method is special. Its usage is <code>&lt;plugin_script&gt; init</code> &ndash; there is no <code>&lt;path&gt;</code> or <code>&lt;state</code>&gt; so there is no <code>&lt;entry&gt;</code>. Thus, the OOP call of <code>&lt;entry&gt;.&lt;method&gt;(&lt;args...&gt;)</code> doesn&rsquo;t make sense for <code>init</code>. So how do you reason about it? Why do we have an <code>init</code> method? Since every Wash plugin is modeled as a filesystem, it must have a root. Once we know the root, then it is easy to get to a specific entry by repeatedly invoking the <code>list</code> method. The <code>init</code> method is how you describe that &lsquo;root&rsquo;.</p>
 
 <h2 id="bash-example">Bash Example</h2>
 
