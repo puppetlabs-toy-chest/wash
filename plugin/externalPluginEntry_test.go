@@ -134,7 +134,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	decodedTTLs := decodedCacheTTLs{
 		List:     10,
-		Open:     15,
+		Read:     15,
 		Metadata: 20,
 	}
 
@@ -144,7 +144,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	entry.setCacheTTLs(decodedTTLs)
 
 	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(ListOp))
-	suite.Equal(decodedTTLs.Open*time.Second, entry.getTTLOf(OpenOp))
+	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(OpenOp))
 	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(MetadataOp))
 }
 

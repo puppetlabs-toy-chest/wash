@@ -16,7 +16,7 @@ import (
 
 type decodedCacheTTLs struct {
 	List     time.Duration `json:"list"`
-	Open     time.Duration `json:"open"`
+	Read     time.Duration `json:"read"`
 	Metadata time.Duration `json:"metadata"`
 }
 
@@ -67,8 +67,8 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 	if ttls.List != 0 {
 		e.SetTTLOf(ListOp, ttls.List*time.Second)
 	}
-	if ttls.Open != 0 {
-		e.SetTTLOf(OpenOp, ttls.Open*time.Second)
+	if ttls.Read != 0 {
+		e.SetTTLOf(OpenOp, ttls.Read*time.Second)
 	}
 	if ttls.Metadata != 0 {
 		e.SetTTLOf(MetadataOp, ttls.Metadata*time.Second)
