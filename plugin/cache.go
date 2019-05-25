@@ -92,8 +92,8 @@ type opFunc func() (interface{}, error)
 // CachedOp caches the given op's result for the duration specified by the
 // ttl. You should use it when you need more fine-grained caching than what
 // the existing CachedList, CachedOpen, and CachedMetadata methods provide.
-// For example, CachedOp could be useful to cache an API request whose response
-// lets you implement Attr() and Metadata() for the given entry.
+// For example, CachedOp could be useful to cache an API request whose
+// response lets you implement Open() and Metadata() for the given entry.
 //
 // CachedOp uses the supplied context to determine which activity to log to.
 func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration, op opFunc) (interface{}, error) {
