@@ -37,7 +37,7 @@ to do something like
 type EntryBase struct {
 	entryName          string
 	attr               EntryAttributes
-	slashReplacementCh rune
+	slashReplacerCh    rune
 	// washID represents the entry's wash ID. It is set in CachedList.
 	washID string
 	ttl    [3]time.Duration
@@ -51,7 +51,7 @@ func NewEntry(name string) EntryBase {
 
 	e := EntryBase{
 		entryName:          name,
-		slashReplacementCh: '#',
+		slashReplacerCh: '#',
 	}
 	for op := range e.ttl {
 		e.SetTTLOf(defaultOpCode(op), 15*time.Second)
@@ -79,8 +79,8 @@ func (e *EntryBase) attributes() EntryAttributes {
 	return e.attr
 }
 
-func (e *EntryBase) slashReplacementChar() rune {
-	return e.slashReplacementCh
+func (e *EntryBase) slashReplacer() rune {
+	return e.slashReplacerCh
 }
 
 func (e *EntryBase) id() string {
@@ -120,17 +120,16 @@ func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 }
 
 /*
-SetSlashReplacementChar overrides the default '/' replacement
-character of '#' to char. The '/' replacement character is used
-when determining the entry's cname. See plugin.CName for more
-details.
+SetSlashReplacer overrides the default '/' replacer '#' to char.
+The '/' replacer is used when determining the entry's cname. See
+plugin.CName for more details.
 */
-func (e *EntryBase) SetSlashReplacementChar(char rune) *EntryBase {
+func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 	if char == '/' {
-		panic("e.SetSlashReplacementChar called with '/'")
+		panic("e.SetSlashReplacer called with '/'")
 	}
 
-	e.slashReplacementCh = char
+	e.slashReplacerCh = char
 	return e
 }
 

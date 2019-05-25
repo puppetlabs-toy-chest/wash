@@ -66,16 +66,16 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 	suite.assertOpTTL(e, MetadataOp, "Metadata", -1)
 }
 
-func (suite *EntryBaseTestSuite) TestSetSlashReplacementChar() {
+func (suite *EntryBaseTestSuite) TestSetSlashReplacer() {
 	e := NewEntry("foo/bar")
 
 	suite.Panics(
-		func() { e.SetSlashReplacementChar('/') },
-		"e.SetSlashReplacementChar called with '/'",
+		func() { e.SetSlashReplacer('/') },
+		"e.SetSlashReplacer called with '/'",
 	)
 
-	e.SetSlashReplacementChar(':')
-	suite.Equal(e.slashReplacementChar(), ':')
+	e.SetSlashReplacer(':')
+	suite.Equal(e.slashReplacer(), ':')
 }
 
 func TestEntryBase(t *testing.T) {

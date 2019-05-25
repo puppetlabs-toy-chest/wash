@@ -177,9 +177,9 @@ func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"parent_id":                           e.ParentID,
 		"first_child_name":                    e.FirstChildName,
-		"first_child_slash_replacement_char":  e.FirstChildSlashReplacementChar,
+		"first_child_slash_replacer":          e.FirstChildSlashReplacer,
 		"second_child_name":                   e.SecondChildName,
-		"second_child_slash_replacement_char": e.SecondChildSlashReplacementChar,
+		"second_child_slash_replacer":         e.SecondChildSlashReplacer,
 		"cname":                               e.CName,
 	}
 

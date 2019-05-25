@@ -42,7 +42,7 @@ type Entry interface {
 	Metadata(ctx context.Context) (JSONObject, error)
 	name() string
 	attributes() EntryAttributes
-	slashReplacementChar() rune
+	slashReplacer() rune
 	id() string
 	setID(id string)
 	getTTLOf(op defaultOpCode) time.Duration

@@ -30,7 +30,7 @@ func (suite *HelpersTestSuite) TestCName() {
 	e := NewEntry("foo/bar/baz")
 	suite.Equal("foo#bar#baz", CName(&e))
 
-	e.SetSlashReplacementChar(':')
+	e.SetSlashReplacer(':')
 	suite.Equal("foo:bar:baz", CName(&e))
 }
 

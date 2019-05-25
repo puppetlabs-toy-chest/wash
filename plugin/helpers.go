@@ -38,8 +38,8 @@ NOTE: The '#' character was chosen because it is unlikely to appear in
 a meaningful entry's name. If, however, there's a good chance that an
 entry's name can contain the '#' character, and that two entries can
 have the same cname (e.g. 'foo/bar', 'foo#bar'), then you can use
-e.SetSlashReplacementChar(<char>) to change the default slash replacement
-character from a '#' to <char>.
+e.SetSlashReplacer(<char>) to change the default slash replacer from
+a '#' to <char>.
 */
 func CName(e Entry) string {
 	// We make the CName a separate function instead of embedding it
@@ -48,7 +48,7 @@ func CName(e Entry) string {
 	return strings.Replace(
 		e.name(),
 		"/",
-		string(e.slashReplacementChar()),
+		string(e.slashReplacer()),
 		-1,
 	)
 }

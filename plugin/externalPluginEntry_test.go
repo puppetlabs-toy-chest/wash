@@ -105,17 +105,17 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCach
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlashReplacementChar() {
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlashReplacer() {
 	decodedEntry := newMockDecodedEntry("name")
-	decodedEntry.SlashReplacementChar = "a string"
+	decodedEntry.SlashReplacer = "a string"
 	suite.Panics(
 		func() { _, _ = decodedEntry.toExternalPluginEntry() },
-		"e.SlashReplacementChar: received string a string instead of a character",
+		"e.SlashReplacer: received string a string instead of a character",
 	)
-	decodedEntry.SlashReplacementChar = ":"
+	decodedEntry.SlashReplacer = ":"
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		suite.Equal(':', entry.slashReplacementChar())
+		suite.Equal(':', entry.slashReplacer())
 	}
 }
 

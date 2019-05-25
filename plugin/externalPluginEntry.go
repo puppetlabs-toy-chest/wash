@@ -24,7 +24,7 @@ type decodedCacheTTLs struct {
 type decodedExternalPluginEntry struct {
 	Name                 string           `json:"name"`
 	Methods             []string          `json:"methods"`
-	SlashReplacementChar string           `json:"slash_replacement_char"`
+	SlashReplacer        string           `json:"slash_replacer"`
 	CacheTTLs            decodedCacheTTLs `json:"cache_ttls"`
 	Attributes           EntryAttributes  `json:"attributes"`
 	State                string           `json:"state"`
@@ -44,13 +44,13 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 	}
 	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
-	if e.SlashReplacementChar != "" {
-		if len([]rune(e.SlashReplacementChar)) > 1 {
-			msg := fmt.Sprintf("e.SlashReplacementChar: received string %v instead of a character", e.SlashReplacementChar)
+	if e.SlashReplacer != "" {
+		if len([]rune(e.SlashReplacer)) > 1 {
+			msg := fmt.Sprintf("e.SlashReplacer: received string %v instead of a character", e.SlashReplacer)
 			panic(msg)
 		}
 
-		entry.SetSlashReplacementChar([]rune(e.SlashReplacementChar)[0])
+		entry.SetSlashReplacer([]rune(e.SlashReplacer)[0])
 	}
 	return entry, nil
 }

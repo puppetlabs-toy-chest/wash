@@ -82,9 +82,9 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	expectedErr := plugin.DuplicateCNameErr{
 		ParentID:                        plugin.ID(parent),
 		FirstChildName:                  foo.Name(),
-		FirstChildSlashReplacementChar:  '#',
+		FirstChildSlashReplacer:         '#',
 		SecondChildName:                 duplicateFoo.Name(),
-		SecondChildSlashReplacementChar: '#',
+		SecondChildSlashReplacer:        '#',
 		CName:                           "foo#bar",
 	}
 	runTestCase(
