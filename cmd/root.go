@@ -50,6 +50,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.MaximumNArgs(1),
+		Version:       version,
 	}
 	addServerArgs(rootCmd, "warn")
 
