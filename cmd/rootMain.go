@@ -26,7 +26,7 @@ func writeAlias(path, subcommand string) error {
 	return err
 }
 
-func runShell(cachedir, mountpath string) exitCode {
+func runShell(cachedir, mountpath, execfile string) exitCode {
 	// Create a temporary run space with wash and aliases. Add it to the PATH.
 	runpath, err := ioutil.TempDir(cachedir, "run")
 	if err != nil {
@@ -81,7 +81,17 @@ func runShell(cachedir, mountpath string) exitCode {
 	}
 
 	comm := exec.Command(sh)
-	comm.Stdin = os.Stdin
+	if execfile != "" {
+		file, err := os.Open(execfile)
+		if err != nil {
+			cmdutil.ErrPrintf("Error reading file %v: %v\n", execfile, err)
+			return exitCode{1}
+		}
+		comm.Stdin = file
+		defer file.Close()
+	} else {
+		comm.Stdin = os.Stdin
+	}
 	comm.Stdout = os.Stdout
 	comm.Stderr = os.Stderr
 	comm.Dir = mountpath
@@ -134,17 +144,22 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	if isInteractive() {
+	var execfile string
+	if len(args) > 0 {
+		execfile = args[0]
+	}
+
+	if execfile == "" && isInteractive() {
 		fmt.Println(`Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'`)
 	}
 
-	exit := runShell(cachedir, mountpath)
+	exit := runShell(cachedir, mountpath, execfile)
 
 	srv.Stop()
-	if isInteractive() {
+	if execfile == "" && isInteractive() {
 		fmt.Println("Goodbye!")
 	}
 	return exit
