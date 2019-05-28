@@ -188,9 +188,9 @@ func (suite *CacheTestSuite) TestDuplicateCNameErr() {
 	err := DuplicateCNameErr{
 		ParentID:                        "/my_plugin/foo",
 		FirstChildName:                  "foo/bar/",
-		FirstChildSlashReplacementChar:  '#',
+		FirstChildSlashReplacer:         '#',
 		SecondChildName:                 "foo#bar/",
-		SecondChildSlashReplacementChar: '#',
+		SecondChildSlashReplacer:        '#',
 		CName:                           "foo#bar#",
 	}
 
@@ -284,9 +284,9 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 		expectedErr := DuplicateCNameErr{
 			ParentID:                        "/my_plugin/foo",
 			FirstChildName:                  "foo/bar/",
-			FirstChildSlashReplacementChar:  '#',
+			FirstChildSlashReplacer:         '#',
 			SecondChildName:                 "foo#bar/",
-			SecondChildSlashReplacementChar: '#',
+			SecondChildSlashReplacer:        '#',
 			CName:                           "foo#bar#",
 		}
 

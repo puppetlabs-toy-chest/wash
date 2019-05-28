@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Go Plugins | home</title>
+    <title>Core Plugins | home</title>
 
     <style>body{margin:40px auto;max-width:650px;line-height:1.6;font-size:18px;color:#444;padding:0 10px}h1,h2,h3{line-height:1.2}div.header h1{padding-top:0;padding-bottom:8px;margin-bottom:24px;font-size:18px;font-weight:400;border-bottom:1px solid}.header-menu{float:right}ul.pagination{list-style-type:none;text-align:center;padding:0}ul.pagination>li{padding:0 8px;display:inline-block}div.footer{border-top:1px solid;text-align:center}img{max-width:100%;max-height:100%;display:block;margin-left:auto;margin-right:auto}</style>
-    <link href="https://puppetlabs.github.io/wash/docs/go_plugins/index.xml" rel="alternate" type="application/rss+xml" title="home" />
+    <link href="https://puppetlabs.github.io/wash/docs/core_plugins/index.xml" rel="alternate" type="application/rss+xml" title="home" />
 
     <link rel="stylesheet" href="/wash/custom.css">
 <link href="https://fonts.googleapis.com/css?family=IBM+Plex+Mono:400,500" rel="stylesheet"> 
@@ -33,7 +33,7 @@
 
 
 <header>
-    <h1>Go Plugins</h1>
+    <h1>Core Plugins</h1>
     
 
 <div class="post-meta">
@@ -43,7 +43,7 @@
 <article>
     
 
-<h2 id="how-to-create-a-new-go-plugin">How to create a new Go plugin</h2>
+<h2 id="how-to-create-a-new-core-plugin">How to create a new core plugin</h2>
 
 <p>The <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> package defines a set of interfaces that a plugin can implement to enable specific behaviors.</p>
 
@@ -51,28 +51,26 @@
 
 <p>Create a new directory in <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> for the plugin.</p>
 
-<p>Create an object that implements the <code>Root</code> profile, as in it has:</p>
+<p>Create an object that implements the <code>Root</code> interface. This would typically be in a <code>root.go</code> file. See <a href="https://github.com/puppetlabs/wash/blob/master/plugin/docker/root.go">docker/root.go</a> for an example.</p>
 
-<ul>
-<li>a <code>Name</code> method to determine the name of the plugin when mounted</li>
-<li>an <code>Init</code> method that loads and validates credentials</li>
-<li>a <code>List</code> method that lists the first-level resources of the plugin</li>
-</ul>
+<p>NOTE: The <code>Init</code> method initializes the Root object&rsquo;s <code>EntryBase</code> configuration and any credentials.</p>
 
 <h3 id="extending-the-plugin">Extending the plugin</h3>
 
-<p>Add new types representing the types of resources the plugin can list.</p>
+<p>Each entry in the plugin&rsquo;s hierarchy should be a new type. This pattern&rsquo;s adopted by the existing core plugins (e.g. <a href="https://github.com/puppetlabs/wash/blob/master/plugin/aws/ec2Instance.go">ec2Instance</a> in AWS; <a href="https://github.com/puppetlabs/wash/blob/master/plugin/docker/container.go">container</a> in Docker). It is meant to make your plugin modular and easier to maintain.</p>
 
 <ul>
-<li>To make them appear as a directory, implement the <code>Group</code> interface.</li>
-<li>Resources with metadata should implement the <code>Resource</code> interface.</li>
-<li>To give files content, implement the <code>Readable</code> interface.</li>
-<li>Log-type files can implement the <code>Pipe</code> interface to expose a stream of new data.</li>
-<li>Files and directories that exist on a remote system or volume should implement the <code>File</code> interface. Additionally the <a href="https://github.com/puppetlabs/wash/tree/master/volume">volume</a> package provides helpers for representing these types.</li>
-<li>To support executing commands on a resource, implement the <code>Execable</code> interface.</li>
+<li>Entries with children (&ldquo;directories&rdquo;) should implement the <code>Parent</code> interface.</li>
+<li>Entries with content should implement <code>Readable</code>.</li>
+<li>Log-type entries should implement <code>Streamable</code> to expose a stream of new data.</li>
+<li>Entries that execute commands should implement the <code>Execable</code> interface.</li>
 </ul>
 
-<p>Tip: base new resources on the <code>EntryBase</code> struct to simplify creating them and enable caching.</p>
+<p>TIP: Use <a href="https://github.com/puppetlabs/wash/blob/master/activity/core.go">activity.Record</a> for all plugin-related logging.</p>
+
+<p>TIP: The <a href="https://github.com/puppetlabs/wash/tree/master/volume">volume</a> package contains useful helpers that can enumerate a given volume&rsquo;s directories and files.</p>
+
+<p>TIP: The <a href="https://github.com/puppetlabs/wash/blob/master/volume/fs.go">volume.FS</a> helper can be used to expose an <code>Execable</code> entry&rsquo;s filesystem. Currently only <code>/var/log</code> is mounted.</p>
 
 </article>
 
