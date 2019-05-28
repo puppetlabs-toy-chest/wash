@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/mattn/go-isatty"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
@@ -133,14 +134,24 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	fmt.Println(`Welcome to Wash!
+	if isInteractive() {
+		fmt.Println(`Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'`)
+	}
 
 	exit := runShell(cachedir, mountpath)
 
 	srv.Stop()
-	fmt.Println("Goodbye!")
+	if isInteractive() {
+		fmt.Println("Goodbye!")
+	}
 	return exit
+}
+
+// Returns true if both input and output are interactive.
+func isInteractive() bool {
+	return (isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd())) &&
+		(isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()))
 }
