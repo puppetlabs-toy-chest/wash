@@ -53,6 +53,8 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		Version:       version,
 	}
 	addServerArgs(rootCmd, "warn")
+	// rootCommandFlag is used in rootMain.go.
+	rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
 
 	rootCmd.AddCommand(versionCommand())
 	rootCmd.AddCommand(serverCommand())

@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -21,11 +22,11 @@ func tailCommand() *cobra.Command {
 	tailCmd := &cobra.Command{
 		Use:   "tail -f [<file>...]",
 		Short: "Displays new output of files or resources with the stream action",
-		Long: `Output any new updates to files and/or resources (that support the stream action). Currently
-requires the '-f' option to run. Attempts to mimic the functionality of 'tail -f' for remote logs.`,
+		Long: `Output any new updates to files and/or resources (that support the stream action). Mimics
+'tail -f' for remote logs, and calls '/usr/bin/tail' if '-f' is omitted.`,
 		RunE: toRunE(tailMain),
 	}
-	tailCmd.Flags().BoolP("follow", "f", false, "Follow new output (required)")
+	tailCmd.Flags().BoolP("follow", "f", false, "Follow new output")
 	return tailCmd
 }
 
@@ -120,8 +121,19 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	if !follow {
-		cmdutil.ErrPrintf("Please use -f, other operations are not yet supported\n")
-		return exitCode{1}
+		// Defer to `/usr/bin/tail`
+		comm := exec.Command("/usr/bin/tail", args...)
+		comm.Stdin = os.Stdin
+		comm.Stdout = os.Stdout
+		comm.Stderr = os.Stderr
+		if err := comm.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				return exitCode{exitErr.ExitCode()}
+			}
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		return exitCode{0}
 	}
 
 	// If no paths are declared, try to stream the current directory/resource

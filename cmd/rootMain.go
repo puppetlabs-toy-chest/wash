@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/mattn/go-isatty"
 	"github.com/puppetlabs/wash/cmd/internal/server"
@@ -13,6 +14,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+// rootCommandFlag is associated with the `-c` option of the root command, set in root.go.
+var rootCommandFlag string
 
 // Create an executable file at the given path that invokes the given wash subcommand.
 func writeAlias(path, subcommand string) error {
@@ -81,6 +85,8 @@ func runShell(rundir, mountpath, socketpath, execfile string) exitCode {
 		}
 		comm.Stdin = file
 		defer file.Close()
+	} else if rootCommandFlag != "" {
+		comm.Stdin = strings.NewReader(rootCommandFlag)
 	} else {
 		comm.Stdin = os.Stdin
 	}
@@ -117,6 +123,17 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
+	// Mountpath is not cleaned up correctly if removed as part of deleting rundir, so it's placed
+	// in a separate location. The server has reported that it's completely done by the time we
+	// delete rundir, so I'm not sure why it doesn't clean up correctly. Alternatively, adding a
+	// 10ms sleep after srv.Stop() seemed to let it successfully unmount (with OSXFUSE).
+	mountpath, err := ioutil.TempDir(cachedir, "mnt")
+	if err != nil {
+		cmdutil.ErrPrintf("Unable to create temporary mountpoint in %v: %v\n", cachedir, err)
+		return exitCode{1}
+	}
+	defer os.RemoveAll(mountpath)
+
 	// Create a temporary run space for aliases and server files.
 	rundir, err := ioutil.TempDir(cachedir, "run")
 	if err != nil {
@@ -132,7 +149,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	mountpath := filepath.Join(rundir, "mnt")
 	socketpath := filepath.Join(rundir, "api.sock")
 	srv := server.New(mountpath, socketpath, serverOpts)
 	if err := srv.Start(); err != nil {
@@ -145,7 +161,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		execfile = args[0]
 	}
 
-	if execfile == "" && isInteractive() {
+	if isInteractive(execfile) {
 		fmt.Println(`Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
@@ -155,14 +171,15 @@ Try 'help'`)
 	exit := runShell(rundir, mountpath, socketpath, execfile)
 
 	srv.Stop()
-	if execfile == "" && isInteractive() {
+	if isInteractive(execfile) {
 		fmt.Println("Goodbye!")
 	}
 	return exit
 }
 
 // Returns true if both input and output are interactive.
-func isInteractive() bool {
-	return (isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd())) &&
+func isInteractive(execfile string) bool {
+	return execfile == "" && rootCommandFlag == "" &&
+		(isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd())) &&
 		(isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()))
 }
