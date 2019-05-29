@@ -35,7 +35,7 @@ Most commands operate on Wash resources, which are addressed by their path in th
 
 The `wash` command can be invoked on its own to enter a Wash shell.
 
-Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash`.
+Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
 
 ### wash clear
 
