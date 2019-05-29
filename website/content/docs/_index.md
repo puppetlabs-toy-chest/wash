@@ -92,9 +92,9 @@ Below are all the configurable options.
 * `external-plugins` - The external plugins that will be loaded. See [➠External Plugins]
 * `socket` - The location of the server's socket file (default `<user_cache_dir>/wash/wash-api.sock`)
 
-All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable.
+All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
 
-NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_socket` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
+NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
 
 ## Core Plugins
 
