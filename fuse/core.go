@@ -164,17 +164,11 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- context.Co
 		return nil, nil, err
 	}
 
-	// Start the FUSE server
-	fuseServerStoppedCh := make(chan struct{})
+	// Start the FUSE server. We use the serverExitedCh to catch externally triggered unmounts.
+	// If we're explicitly asked to shutdown the server, we want to wait until both Unmount and
+	// Serve have exited before signaling completion.
+	serverExitedCh := make(chan struct{})
 	go func() {
-		defer close(fuseServerStoppedCh)
-		defer func() {
-			err := fuseConn.Close()
-			if err != nil {
-				log.Infof("FUSE: Error closing the connection: %v", err)
-			}
-		}()
-
 		serverConfig := &fs.Config{
 			WithContext: func(ctx context.Context, req fuse.Request) context.Context {
 				pid := int(req.Hdr().Pid)
@@ -192,21 +186,40 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- context.Co
 		if err := fuseConn.MountError; err != nil {
 			log.Warnf("FUSE: Mount process errored with: %v", err)
 		}
-		log.Infof("FUSE: Server was shut down")
+		log.Infof("FUSE: Serve complete")
+
+		// Signal that Serve exited so the clean-up goroutine can close the stopped channel
+		// if it hasn't already done so.
+		defer close(serverExitedCh)
 	}()
 
 	// Clean-up
 	stopCh := make(chan context.Context)
+	stoppedCh := make(chan struct{})
 	go func() {
-		<-stopCh
-		log.Infof("FUSE: Shutting down the server")
+		select {
+		case <-stopCh:
+			// Handle explicit shutdown
+			log.Infof("FUSE: Shutting down the server")
 
-		log.Infof("FUSE: Unmounting %v", mountpoint)
-		if err = fuse.Unmount(mountpoint); err != nil {
-			log.Warnf("FUSE: Shutdown failed: %v", err.Error())
-			log.Warnf("FUSE: Manual cleanup required: umount %v", mountpoint)
+			log.Infof("FUSE: Unmounting %v", mountpoint)
+			if err = fuse.Unmount(mountpoint); err != nil {
+				log.Warnf("FUSE: Shutdown failed: %v", err.Error())
+				log.Warnf("FUSE: Manual cleanup required: umount %v", mountpoint)
+			}
+			log.Infof("FUSE: Unmount complete")
+		case <-serverExitedCh:
+			// Server exited on its own, fallthrough.
 		}
+		// Check that Serve has exited successfully in case we initiated the Unmount.
+		<-serverExitedCh
+		err := fuseConn.Close()
+		if err != nil {
+			log.Infof("FUSE: Error closing the connection: %v", err)
+		}
+		log.Infof("FUSE: Server shutdown complete")
+		close(stoppedCh)
 	}()
 
-	return stopCh, fuseServerStoppedCh, nil
+	return stopCh, stoppedCh, nil
 }
