@@ -117,6 +117,17 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
+	// Mountpath is not cleaned up correctly if removed as part of deleting rundir, so it's placed
+	// in a separate location. The server has reported that it's completely done by the time we
+	// delete rundir, so I'm not sure why it doesn't clean up correctly. Alternatively, adding a
+	// 10ms sleep after srv.Stop() seemed to let it successfully unmount (with OSXFUSE).
+	mountpath, err := ioutil.TempDir(cachedir, "mnt")
+	if err != nil {
+		cmdutil.ErrPrintf("Unable to create temporary mountpoint in %v: %v\n", cachedir, err)
+		return exitCode{1}
+	}
+	defer os.RemoveAll(mountpath)
+
 	// Create a temporary run space for aliases and server files.
 	rundir, err := ioutil.TempDir(cachedir, "run")
 	if err != nil {
@@ -132,7 +143,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	mountpath := filepath.Join(rundir, "mnt")
 	socketpath := filepath.Join(rundir, "api.sock")
 	srv := server.New(mountpath, socketpath, serverOpts)
 	if err := srv.Start(); err != nil {
