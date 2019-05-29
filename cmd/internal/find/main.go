@@ -67,15 +67,13 @@ func Main(cmd *cobra.Command, args []string) int {
 	// Do the walk
 	conn := client.ForUNIXSocket(config.Socket)
 	walker := newWalker(result, conn)
+	exitCode := 0
 	for _, path := range result.Paths {
-		e, err := info(conn, path)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			continue
+		if !walker.Walk(path) {
+			exitCode = 1
 		}
-		walker.Walk(e)
 	}
-	return 0
+	return exitCode
 }
 
 func printHelp(helpOpt types.HelpOption) int {

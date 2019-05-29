@@ -86,10 +86,6 @@ individual API requests are cheap, then feel free to always set the
 "fullmeta" option for more complete filtering. This is very useful when
 your plugin API's over a Unix socket.
 
-NOTE: If find fails to retrieve the entry's full metadata, then it will
-fallback to the meta attribute. This condition only applies when the
-"fullmeta" option is set.
-
 NOTE: Because it is a specialized filter, the meta primary defaults
 maxdepth to 1 if the -maxdepth flag is not provided. This is to avoid
 unnecessary recursion (and API requests), since only entries in the same
