@@ -7,7 +7,7 @@ import (
 // Result represents the result of parsing `wash find`'s
 // arguments.
 type Result struct {
-	Path      string
+	Paths     []string
 	Options   types.Options
 	Predicate types.EntryPredicate
 }
@@ -19,7 +19,7 @@ Parse parses `wash find`'s arguments, returning the result.
 func Parse(args []string) (Result, error) {
 	var err error
 	r := Result{}
-	r.Path, args = parsePath(args)
+	r.Paths, args = parsePaths(args)
 	r.Options, args, err = parseOptions(args)
 	if err != nil {
 		return r, err

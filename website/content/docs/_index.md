@@ -47,7 +47,7 @@ For a Wash resource that implements the ability to execute a command, run the sp
 
 ### wash find
 
-Recursively descends the directory tree of the specified path, evaluating an `expression` composed of `primaries` and `operands` for each entry in the tree.
+Recursively descends the directory tree of the specified paths, evaluating an `expression` composed of `primaries` and `operands` for each entry in the tree.
 
 ### wash history
 

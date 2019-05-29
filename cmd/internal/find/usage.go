@@ -9,11 +9,11 @@ import (
 // Usage returns `wash find`'s usage string
 func Usage() string {
 	u := ""
-	u += "Recursively descends the directory tree of the specified path, evaluating an\n"
+	u += "Recursively descends the directory tree of the specified paths, evaluating an\n"
 	u += "'expression' composed of 'primaries' and 'operands' for each entry in the tree.\n"
 	u += "\n"
 	u += "Usage:\n"
-	u += "  wash find [path] [options] [expression]\n"
+	u += "  wash find [paths] [options] [expression]\n"
 	u += "\n"
 
 	t := types.OptionsTable()
