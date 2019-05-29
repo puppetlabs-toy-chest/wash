@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/mattn/go-isatty"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	log "github.com/sirupsen/logrus"
@@ -26,22 +25,15 @@ func writeAlias(path, subcommand string) error {
 	return err
 }
 
-func runShell(cachedir, mountpath, execfile string) exitCode {
-	// Create a temporary run space with wash and aliases. Add it to the PATH.
-	runpath, err := ioutil.TempDir(cachedir, "run")
-	if err != nil {
-		cmdutil.ErrPrintf("Error creating temporary run location in %v: %v\n", cachedir, err)
-		return exitCode{1}
-	}
-	defer os.RemoveAll(runpath)
-
+func runShell(rundir, mountpath, socketpath, execfile string) exitCode {
+	// Add rundir to the PATH and put aliases there.
 	washPath, err := os.Executable()
 	if err != nil {
 		cmdutil.ErrPrintf("Error finding wash executable: %v\n", err)
 		return exitCode{1}
 	}
 
-	newWashPath := filepath.Join(runpath, "wash")
+	newWashPath := filepath.Join(rundir, "wash")
 	if err := os.Symlink(washPath, newWashPath); err != nil {
 		cmdutil.ErrPrintf("Error linking wash executable to %v: %v\n", newWashPath, err)
 		return exitCode{1}
@@ -62,14 +54,14 @@ func runShell(cachedir, mountpath, execfile string) exitCode {
 		"tail":     "tail",
 	}
 	for name, subcommand := range aliases {
-		if err := writeAlias(filepath.Join(runpath, name), subcommand); err != nil {
+		if err := writeAlias(filepath.Join(rundir, name), subcommand); err != nil {
 			cmdutil.ErrPrintf("Error creating alias %v for subcommand %v: %v\n", name, subcommand, err)
 			return exitCode{1}
 		}
 	}
 
 	pathEnv := os.Getenv("PATH")
-	if err := os.Setenv("PATH", runpath+string(os.PathListSeparator)+pathEnv); err != nil {
+	if err := os.Setenv("PATH", rundir+string(os.PathListSeparator)+pathEnv); err != nil {
 		cmdutil.ErrPrintf("Error adding wash executables to PATH: %v\n", err)
 		return exitCode{1}
 	}
@@ -94,6 +86,7 @@ func runShell(cachedir, mountpath, execfile string) exitCode {
 	}
 	comm.Stdout = os.Stdout
 	comm.Stderr = os.Stderr
+	comm.Env = append(os.Environ(), "WASH_SOCKET="+socketpath)
 	comm.Dir = mountpath
 	if runErr := comm.Run(); runErr != nil {
 		if exitErr, ok := runErr.(*exec.ExitError); ok {
@@ -124,12 +117,13 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	mountpath, err := ioutil.TempDir(cachedir, "mnt")
+	// Create a temporary run space for aliases and server files.
+	rundir, err := ioutil.TempDir(cachedir, "run")
 	if err != nil {
-		cmdutil.ErrPrintf("Unable to create temporary mountpoint in %v: %v\n", cachedir, err)
+		cmdutil.ErrPrintf("Error creating temporary run location in %v: %v\n", cachedir, err)
 		return exitCode{1}
 	}
-	defer os.RemoveAll(mountpath)
+	defer os.RemoveAll(rundir)
 
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
@@ -138,7 +132,9 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	srv := server.New(mountpath, config.Socket, serverOpts)
+	mountpath := filepath.Join(rundir, "mnt")
+	socketpath := filepath.Join(rundir, "api.sock")
+	srv := server.New(mountpath, socketpath, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}
@@ -156,7 +152,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 Try 'help'`)
 	}
 
-	exit := runShell(cachedir, mountpath, execfile)
+	exit := runShell(rundir, mountpath, socketpath, execfile)
 
 	srv.Stop()
 	if execfile == "" && isInteractive() {

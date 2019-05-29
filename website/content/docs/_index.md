@@ -35,7 +35,7 @@ Most commands operate on Wash resources, which are addressed by their path in th
 
 The `wash` command can be invoked on its own to enter a Wash shell.
 
-Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash`.
+Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
 
 ### wash clear
 
@@ -92,9 +92,9 @@ Below are all the configurable options.
 * `external-plugins` - The external plugins that will be loaded. See [➠External Plugins]
 * `socket` - The location of the server's socket file (default `<user_cache_dir>/wash/wash-api.sock`)
 
-All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable.
+All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
 
-NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_socket` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
+NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
 
 ## Core Plugins
 
