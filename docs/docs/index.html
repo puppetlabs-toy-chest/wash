@@ -87,7 +87,7 @@
 
 <p>The <code>wash</code> command can be invoked on its own to enter a Wash shell.</p>
 
-<p>Invoking <code>wash</code> starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the <a href="#wash-server"><code>wash server</code></a> settings are also supported with <code>wash</code>.</p>
+<p>Invoking <code>wash</code> starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the <a href="#wash-server"><code>wash server</code></a> settings are also supported with <code>wash</code> except <code>socket</code>; <code>wash</code> ignores that setting and creates a temporary location for the socket.</p>
 
 <h3 id="wash-clear">wash clear</h3>
 
@@ -99,7 +99,7 @@
 
 <h3 id="wash-find">wash find</h3>
 
-<p>Recursively descends the directory tree of the specified path, evaluating an <code>expression</code> composed of <code>primaries</code> and <code>operands</code> for each entry in the tree.</p>
+<p>Recursively descends the directory tree of the specified paths, evaluating an <code>expression</code> composed of <code>primaries</code> and <code>operands</code> for each entry in the tree.</p>
 
 <h3 id="wash-history">wash history</h3>
 
@@ -146,9 +146,9 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <li><code>socket</code> - The location of the server&rsquo;s socket file (default <code>&lt;user_cache_dir&gt;/wash/wash-api.sock</code>)</li>
 </ul>
 
-<p>All options except for <code>external-plugins</code> can be overridden by setting the <code>WASH_&lt;option&gt;</code> environment variable.</p>
+<p>All options except for <code>external-plugins</code> can be overridden by setting the <code>WASH_&lt;option&gt;</code> environment variable with option converted to ALL CAPS.</p>
 
-<p>NOTE: Do not override <code>socket</code> in a config file. Instead, override it via the <code>WASH_socket</code> environment variable. Otherwise, Wash&rsquo;s subcommands will not be able to interact with the server because they cannot access the socket.</p>
+<p>NOTE: Do not override <code>socket</code> in a config file. Instead, override it via the <code>WASH_SOCKET</code> environment variable. Otherwise, Wash&rsquo;s subcommands will not be able to interact with the server because they cannot access the socket.</p>
 
 <h2 id="core-plugins">Core Plugins</h2>
 

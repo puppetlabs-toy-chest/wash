@@ -28,7 +28,7 @@ func (suite *ParseTestSuite) TestParseExpressionError() {
 func (suite *ParseTestSuite) TestValidInput() {
 	r, err := Parse([]string{"foo", "-depth", "-true"})
 	if suite.NoError(err) {
-		suite.Equal("foo", r.Path)
+		suite.Equal([]string{"foo"}, r.Paths)
 		expectedOpts := types.NewOptions()
 		expectedOpts.MarkAsSet(types.DepthFlag)
 		expectedOpts.Depth = true

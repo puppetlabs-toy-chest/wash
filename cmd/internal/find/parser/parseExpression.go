@@ -53,6 +53,11 @@ func OperandsTable() *cmdutil.Table {
 	)
 }
 
+func isPartOfExpression(arg string) bool {
+	parser := expression.NewParser(primary.Parser)
+	return arg == "--" || parser.IsOp(arg) || primary.Parser.IsPrimary(arg)
+}
+
 // ExpressionSyntaxDescription describes `wash find`'s expression syntax.
 const ExpressionSyntaxDescription = `
 An expression evaluates to a predicate that is applied on a specific set

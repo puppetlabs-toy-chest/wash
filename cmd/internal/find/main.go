@@ -22,6 +22,7 @@ import (
 func Main(cmd *cobra.Command, args []string) int {
 	params.ReferenceTime = time.Now()
 
+	// Parse the arguments
 	result, err := parser.Parse(args)
 	opts := &result.Options
 	if opts.Help.Requested {
@@ -63,15 +64,16 @@ func Main(cmd *cobra.Command, args []string) int {
 		opts.Maxdepth = 1
 	}
 
+	// Do the walk
 	conn := client.ForUNIXSocket(config.Socket)
-
-	e, err := info(conn, result.Path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return 1
+	walker := newWalker(result, conn)
+	exitCode := 0
+	for _, path := range result.Paths {
+		if !walker.Walk(path) {
+			exitCode = 1
+		}
 	}
-	newWalker(result, conn).Walk(e)
-	return 0
+	return exitCode
 }
 
 func printHelp(helpOpt types.HelpOption) int {

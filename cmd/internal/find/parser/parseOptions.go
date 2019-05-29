@@ -2,8 +2,6 @@ package parser
 
 import (
 	"flag"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/expression"
-	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 )
 
@@ -29,7 +27,7 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	// arguments.
 	var endIx int
 	for _, arg := range args {
-		if nonOptionArg(arg) {
+		if isPartOfExpression(arg) {
 			break
 		}
 		endIx++
@@ -90,9 +88,4 @@ func parseOptions(args []string) (types.Options, []string, error) {
 	}
 
 	return o, args, nil
-}
-
-func nonOptionArg(arg string) bool {
-	parser := expression.NewParser(primary.Parser)
-	return arg == "--" || parser.IsOp(arg) || primary.Parser.IsPrimary(arg)
 }
