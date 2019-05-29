@@ -38,7 +38,7 @@ func rootCommand() *cobra.Command {
 		// TODO: Set this to "" when we're ready to ship so that
 		// when we alias our custom commands, someone typing in
 		// e.g. `meta --help` will not see `wash meta` in the usage
-		Use:    "wash",
+		Use:    "wash [<script>]",
 		PreRun: bindServerArgs,
 		RunE:   toRunE(rootMain),
 		Long: `When invoked without arguments, enters a Wash shell. Starts the Wash daemon,
@@ -49,6 +49,8 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		// an error.
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Args:          cobra.MaximumNArgs(1),
+		Version:       version,
 	}
 	addServerArgs(rootCmd, "warn")
 
