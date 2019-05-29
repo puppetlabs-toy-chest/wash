@@ -161,4 +161,4 @@ To make `wash find`'s filtering less annoying and faster, entries can also have 
 
 NOTE: _All_ attributes are optional, so set the ones that you think make sense. For example, if the `mode` or `size` attributes don't make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the `meta` attribute when you can to take advantage of metadata filtering.
 
-NOTE: We plan on adding more attributes depending on user feedback (e.g. like `state` and `labels`). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue (or PR!) so we can consider adding that property as an attribute (and as a corresponding `wash find` primary).
+NOTE: We plan on adding more attributes depending on user feedback (e.g. like `state` and `labels`). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue so we can consider adding that property as an attribute (and as a corresponding `wash find` primary).

@@ -25,7 +25,7 @@ Wash shells out to the external plugin's script whenever it needs to invoke a me
 where
 
 * `<method>` is the Wash method that's being invoked
-* `<path>` is the entry's filesystem path relative to Wash's mountpoint
+* `<path>` is the entry's filesystem path rooted at Wash's mountpoint. For example, `/<plugin_root_name>` would be the passed-in path for the plugin root.
 * `<state>` consists of the minimum amount of information required to reconstruct the entry inside the plugin
 * `<args...>` are the method's arguments.
 
