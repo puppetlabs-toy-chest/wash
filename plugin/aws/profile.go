@@ -3,12 +3,10 @@ package aws
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/mattn/go-isatty"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -28,13 +26,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 
 	// profile-specific stdin prompt
 	tokenProvider := func() (string, error) {
-		if !isatty.IsTerminal(os.Stdin.Fd()) && !isatty.IsCygwinTerminal(os.Stdin.Fd()) {
-			return "", fmt.Errorf("Not an interactive session")
-		}
-		fmt.Fprintf(os.Stderr, "Assume Role MFA token code for %v: ", name)
-		var v string
-		_, err := fmt.Scanln(&v)
-		return v, err
+		return plugin.Prompt(fmt.Sprintf("Assume ROLE MFA token code for %v", name))
 	}
 
 	// Create the session. SharedConfigEnable tells AWS to load the profile
