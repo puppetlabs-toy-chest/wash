@@ -18,7 +18,7 @@ import (
 
 type WalkerTestSuite struct {
 	*cmdtest.Suite
-	walker *walker
+	walker *walkerImpl
 }
 
 func (s *WalkerTestSuite) SetupTest() {
@@ -31,7 +31,7 @@ func (s *WalkerTestSuite) SetupTest() {
 			},
 		},
 		s.Suite.Client,
-	)
+	).(*walkerImpl)
 }
 
 func (s *WalkerTestSuite) TearDownTest() {

@@ -9,23 +9,27 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-type walker struct {
+type walker interface {
+	// Returns true if the walk is successful (i.e. does not
+	// have any errors), false otherwise.
+	Walk(path string) bool
+}
+
+type walkerImpl struct {
 	p    types.EntryPredicate
 	opts types.Options
 	conn client.Client
 }
 
-func newWalker(r parser.Result, conn client.Client) *walker {
-	return &walker{
+func newWalker(r parser.Result, conn client.Client) walker {
+	return &walkerImpl{
 		p:    r.Predicate,
 		opts: r.Options,
 		conn: conn,
 	}
 }
 
-// Walk returns true if the walk is successful (i.e. does not
-// have any errors), false otherwise.
-func (w *walker) Walk(path string) bool {
+func (w *walkerImpl) Walk(path string) bool {
 	e, err := info(w.conn, path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
@@ -34,7 +38,7 @@ func (w *walker) Walk(path string) bool {
 	return w.walk(e, 0)
 }
 
-func (w *walker) walk(e types.Entry, depth uint) bool {
+func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 	// If the Depth option is set, then we visit e after visiting its children.
 	// Otherwise, we visit e first.
 	//
@@ -65,7 +69,7 @@ func (w *walker) walk(e types.Entry, depth uint) bool {
 	return successful
 }
 
-func (w *walker) visit(e types.Entry, depth uint) bool {
+func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 	if depth < w.opts.Mindepth {
 		return true
 	}
