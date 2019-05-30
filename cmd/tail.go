@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"github.com/hpcloud/tail"
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -141,7 +139,7 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 		args = []string{"."}
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	agg := make(chan line)
 
 	// Try streaming as a resource, then as a file if that failed for predictable reasons
@@ -168,13 +166,13 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 		if last != ln.source {
 			if last != "" {
 				// Leave a space before changing sources
-				fmt.Println()
+				cmdutil.Println()
 			}
 			last = ln.source
-			fmt.Println("===>", last, "<===")
+			cmdutil.Println("===>", last, "<===")
 		}
 
-		fmt.Println(ln.Text)
+		cmdutil.Println(ln.Text)
 	}
 
 	return exitCode{0}

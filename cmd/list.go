@@ -1,16 +1,13 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -71,7 +68,7 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		path = args[0]
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	e, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
@@ -87,6 +84,6 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		entries = append(entries, children...)
 	}
 
-	fmt.Print(formatListEntries(entries))
+	cmdutil.Print(formatListEntries(entries))
 	return exitCode{0}
 }

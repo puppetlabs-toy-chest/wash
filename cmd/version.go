@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 )
 
 // Version is set with `go build -ldflags="-X github.com/puppetlabs/wash/cmd.version=${VERSION}"`
@@ -20,6 +19,6 @@ func versionCommand() *cobra.Command {
 }
 
 func versionMain(cmd *cobra.Command, args []string) exitCode {
-	fmt.Println(version)
+	cmdutil.Println(version)
 	return exitCode{0}
 }

@@ -19,7 +19,7 @@ func Get(name string) *Primary {
 // Call this after `wash find` finishes parsing its
 // arguments
 func IsSet(p *Primary) bool {
-	return Parser.setPrimaries[p]
+	return Parser.SetPrimaries[p]
 }
 
 // Table returns a table containing all of `wash find`'s available primaries
@@ -47,13 +47,15 @@ func Table() *cmdutil.Table {
 // Parser parses `wash find` primaries.
 var Parser = &parser{
 	primaryMap: make(map[string]*Primary),
-	setPrimaries: make(map[*Primary]bool),
+	SetPrimaries: make(map[*Primary]bool),
 }
 
 type parser struct {
-	primaryMap map[string]*Primary
-	primaries []*Primary
-	setPrimaries map[*Primary]bool
+	// SetPrimaries is exported so that the tests can
+	// mock it
+	SetPrimaries map[*Primary]bool
+	primaryMap   map[string]*Primary
+	primaries    []*Primary
 }
 
 // IsPrimary returns true if the token is a `wash find`
@@ -78,7 +80,7 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	if err != nil {
 		return nil, nil, fmt.Errorf("%v: %v", token, err)
 	}
-	parser.setPrimaries[primary] = true
+	parser.SetPrimaries[primary] = true
 	return p, tokens, nil
 }
 

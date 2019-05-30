@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/puppetlabs/wash/api/client"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +30,7 @@ func clearMain(cmd *cobra.Command, args []string) exitCode {
 		panic(err.Error())
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	cleared, err := conn.Clear(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
@@ -43,10 +39,10 @@ func clearMain(cmd *cobra.Command, args []string) exitCode {
 
 	if verbose {
 		for _, p := range cleared {
-			fmt.Println("Cleared", p)
+			cmdutil.Println("Cleared", p)
 		}
 	} else {
-		fmt.Println("Cleared", path)
+		cmdutil.Println("Cleared", path)
 	}
 
 	return exitCode{0}

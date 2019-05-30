@@ -1,11 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +37,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 
 	var metadata map[string]interface{}
 	if showMetaAttr {
@@ -65,7 +61,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	fmt.Println(prettyMetadata)
+	cmdutil.Println(prettyMetadata)
 
 	return exitCode{0}
 }

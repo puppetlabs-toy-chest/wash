@@ -3,15 +3,50 @@ package cmdutil
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/fatih/color"
 )
 
+// Stdout represents Stdout
+var Stdout io.Writer = os.Stdout
+
+// Stderr represents Stderr
+var Stderr io.Writer = os.Stderr
+
+// ColoredStderr represents a color supporting writer for Stderr
+var ColoredStderr io.Writer = color.Error
+
 // ErrPrintf formats and prints the provided format string and args on stderr and
 // colors the output red.
 func ErrPrintf(msg string, a ...interface{}) {
-	_, err := fmt.Fprintf(color.Error, color.RedString(msg), a...)
+	_, err := fmt.Fprintf(ColoredStderr, color.RedString(msg), a...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Printf is a wrapper to fmt.Printf that prints to cmdutil.Stdout
+func Printf(msg string, a ...interface{}) {
+	_, err := fmt.Fprintf(Stdout, msg, a...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Println is a wrapper to fmt.Println that prints to cmdutil.Stdout
+func Println(a ...interface{}) {
+	_, err := fmt.Fprintln(Stdout, a...)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Print is a wrapper to fmt.Print that prints to cmdutil.Stdout
+func Print(a... interface{}) {
+	_, err := fmt.Fprint(Stdout, a...)
 	if err != nil {
 		panic(err)
 	}

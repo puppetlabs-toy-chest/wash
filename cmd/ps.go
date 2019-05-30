@@ -11,9 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 )
 
@@ -170,7 +168,7 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 		paths = []string{cwd}
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 
 	results := make(map[string][]psresult)
 	// Prepulate the map so it doesn't change size while all the goroutines are adding data.
@@ -204,6 +202,6 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 		stats = append(stats, results[path]...)
 	}
 
-	fmt.Print(formatStats(stats))
+	cmdutil.Print(formatStats(stats))
 	return exitCode{0}
 }

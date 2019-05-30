@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -165,7 +164,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	if plugin.IsInteractive() {
-		fmt.Println(`Welcome to Wash!
+		cmdutil.Println(`Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'`)
@@ -175,7 +174,7 @@ Try 'help'`)
 
 	srv.Stop()
 	if plugin.IsInteractive() {
-		fmt.Println("Goodbye!")
+		cmdutil.Println("Goodbye!")
 	}
 	return exit
 }

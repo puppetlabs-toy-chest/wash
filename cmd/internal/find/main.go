@@ -4,22 +4,18 @@ package find
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
-	"github.com/spf13/cobra"
 )
 
 // Main is `wash find`'s main function.
-func Main(cmd *cobra.Command, args []string) int {
+func Main(args []string) int {
 	params.ReferenceTime = time.Now()
 
 	// Parse the arguments
@@ -60,12 +56,12 @@ func Main(cmd *cobra.Command, args []string) int {
 		// who want to recurse down into subdirectories can just set maxdepth to -1. The recursion
 		// is useful when running `wash find` inside a directory whose entries and subdirectory entries
 		// all have the same `meta` schema (e.g. like in an S3 bucket).
-		fmt.Fprintln(os.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
+		fmt.Fprintln(cmdutil.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
 		opts.Maxdepth = 1
 	}
 
 	// Do the walk
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	walker := newWalker(result, conn)
 	exitCode := 0
 	for _, path := range result.Paths {
@@ -79,10 +75,10 @@ func Main(cmd *cobra.Command, args []string) int {
 func printHelp(helpOpt types.HelpOption) int {
 	printDescription := func(desc string) {
 		desc = strings.Trim(desc, "\n")
-		fmt.Println(desc)
+		cmdutil.Println(desc)
 	}
 	if !helpOpt.HasValue {
-		fmt.Print(Usage())
+		cmdutil.Print(Usage())
 	} else if helpOpt.Syntax {
 		printDescription(parser.ExpressionSyntaxDescription)
 	} else {

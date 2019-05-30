@@ -1,15 +1,12 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strconv"
 
 	"github.com/Benchkram/errz"
-	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +30,7 @@ func printJournalEntry(index string, follow bool) error {
 		return err
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	// Translate from 1-indexing for history entries
 	rdr, err := conn.ActivityJournal(idx-1, follow)
 	if err != nil {
@@ -48,7 +45,7 @@ func printJournalEntry(index string, follow bool) error {
 }
 
 func printHistory(follow bool) error {
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	history, err := conn.History(follow)
 	if err != nil {
 		return err
@@ -59,7 +56,7 @@ func printHistory(follow bool) error {
 	formatStr := "%" + strconv.Itoa(indexColumnLength) + "d  %s  %s\n"
 	i := 0
 	for item := range history {
-		fmt.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
+		cmdutil.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
 		i++
 	}
 	return nil
