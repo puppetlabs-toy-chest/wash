@@ -12,7 +12,6 @@ import (
 	"github.com/hpcloud/tail"
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -140,7 +139,7 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 		args = []string{"."}
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	agg := make(chan line)
 
 	// Try streaming as a resource, then as a file if that failed for predictable reasons

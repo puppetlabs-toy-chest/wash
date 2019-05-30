@@ -2,11 +2,8 @@ package cmd
 
 import (
 	"fmt"
-
-	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -79,7 +76,7 @@ func execMain(cmd *cobra.Command, args []string) exitCode {
 	command = args[1]
 	commandArgs = args[2:]
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 
 	ch, err := conn.Exec(path, command, commandArgs, apitypes.ExecOptions{})
 	if err != nil {

@@ -6,9 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Benchkram/errz"
-	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +30,7 @@ func printJournalEntry(index string, follow bool) error {
 		return err
 	}
 
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	// Translate from 1-indexing for history entries
 	rdr, err := conn.ActivityJournal(idx-1, follow)
 	if err != nil {
@@ -47,7 +45,7 @@ func printJournalEntry(index string, follow bool) error {
 }
 
 func printHistory(follow bool) error {
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	history, err := conn.History(follow)
 	if err != nil {
 		return err

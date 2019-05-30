@@ -7,13 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +62,7 @@ func Main(cmd *cobra.Command, args []string) int {
 	}
 
 	// Do the walk
-	conn := client.ForUNIXSocket(config.Socket)
+	conn := cmdutil.NewClient()
 	walker := newWalker(result, conn)
 	exitCode := 0
 	for _, path := range result.Paths {
