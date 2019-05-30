@@ -12,11 +12,10 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/spf13/cobra"
 )
 
 // Main is `wash find`'s main function.
-func Main(cmd *cobra.Command, args []string) int {
+func Main(args []string) int {
 	params.ReferenceTime = time.Now()
 
 	// Parse the arguments

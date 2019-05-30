@@ -30,5 +30,5 @@ func findCommand() *cobra.Command {
 }
 
 func findMain(cmd *cobra.Command, args []string) exitCode {
-	return exitCode{find.Main(cmd, args)}
+	return exitCode{find.Main(args)}
 }

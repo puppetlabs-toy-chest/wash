@@ -21,7 +21,8 @@ type walkerImpl struct {
 	conn client.Client
 }
 
-func newWalker(r parser.Result, conn client.Client) walker {
+// Make this a variable so that other tests can mock it
+var newWalker = func(r parser.Result, conn client.Client) walker {
 	return &walkerImpl{
 		p:    r.Predicate,
 		opts: r.Options,
