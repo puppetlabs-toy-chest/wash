@@ -69,7 +69,7 @@ func (w *walker) visit(e types.Entry, depth uint) bool {
 	if depth < w.opts.Mindepth {
 		return true
 	}
-	if primary.IsSet(primary.Meta) && w.opts.IsSet(types.FullmetaFlag) {
+	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
 		// Fetch the entry's full metadata
 		meta, err := w.conn.Metadata(e.Path)
 		if err != nil {
