@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -87,6 +86,6 @@ func listMain(cmd *cobra.Command, args []string) exitCode {
 		entries = append(entries, children...)
 	}
 
-	fmt.Print(formatListEntries(entries))
+	cmdutil.Print(formatListEntries(entries))
 	return exitCode{0}
 }

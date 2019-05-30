@@ -204,6 +204,6 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 		stats = append(stats, results[path]...)
 	}
 
-	fmt.Print(formatStats(stats))
+	cmdutil.Print(formatStats(stats))
 	return exitCode{0}
 }

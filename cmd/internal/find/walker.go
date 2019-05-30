@@ -1,8 +1,6 @@
 package find
 
 import (
-	"fmt"
-
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
@@ -81,7 +79,7 @@ func (w *walker) visit(e types.Entry, depth uint) bool {
 		e.Metadata = meta
 	}
 	if w.p(e) {
-		fmt.Printf("%v\n", e.NormalizedPath)
+		cmdutil.Printf("%v\n", e.NormalizedPath)
 	}
 	return true
 }

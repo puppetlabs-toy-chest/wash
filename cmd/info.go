@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/config"
@@ -49,7 +47,7 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	fmt.Println(marshalledEntry)
+	cmdutil.Println(marshalledEntry)
 
 	return exitCode{0}
 }

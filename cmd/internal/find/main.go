@@ -4,7 +4,6 @@ package find
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -60,7 +59,7 @@ func Main(cmd *cobra.Command, args []string) int {
 		// who want to recurse down into subdirectories can just set maxdepth to -1. The recursion
 		// is useful when running `wash find` inside a directory whose entries and subdirectory entries
 		// all have the same `meta` schema (e.g. like in an S3 bucket).
-		fmt.Fprintln(os.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
+		fmt.Fprintln(cmdutil.Stderr, "The meta primary is being used. Setting maxdepth to 1...")
 		opts.Maxdepth = 1
 	}
 
@@ -79,10 +78,10 @@ func Main(cmd *cobra.Command, args []string) int {
 func printHelp(helpOpt types.HelpOption) int {
 	printDescription := func(desc string) {
 		desc = strings.Trim(desc, "\n")
-		fmt.Println(desc)
+		cmdutil.Println(desc)
 	}
 	if !helpOpt.HasValue {
-		fmt.Print(Usage())
+		cmdutil.Print(Usage())
 	} else if helpOpt.Syntax {
 		printDescription(parser.ExpressionSyntaxDescription)
 	} else {

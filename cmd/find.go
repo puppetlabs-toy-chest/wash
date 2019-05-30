@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/find"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +16,7 @@ func findCommand() *cobra.Command {
 		RunE:               toRunE(findMain),
 	}
 	findCmd.SetUsageFunc(func(_ *cobra.Command) error {
-		fmt.Print(find.Usage())
+		cmdutil.Print(find.Usage())
 		return nil
 	})
 	findCmd.SetHelpTemplate(`{{.UsageString}}`)

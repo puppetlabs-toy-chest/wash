@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/puppetlabs/wash/api/client"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/config"
@@ -65,7 +63,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	fmt.Println(prettyMetadata)
+	cmdutil.Println(prettyMetadata)
 
 	return exitCode{0}
 }

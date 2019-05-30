@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -168,13 +167,13 @@ func tailMain(cmd *cobra.Command, args []string) exitCode {
 		if last != ln.source {
 			if last != "" {
 				// Leave a space before changing sources
-				fmt.Println()
+				cmdutil.Println()
 			}
 			last = ln.source
-			fmt.Println("===>", last, "<===")
+			cmdutil.Println("===>", last, "<===")
 		}
 
-		fmt.Println(ln.Text)
+		cmdutil.Println(ln.Text)
 	}
 
 	return exitCode{0}

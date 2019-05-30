@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/puppetlabs/wash/api/client"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -58,9 +57,9 @@ func printPackets(pkts <-chan apitypes.ExecPacket) (int, error) {
 		case apitypes.Exitcode:
 			exit = int(pkt.Data.(float64))
 		case apitypes.Stdout:
-			fmt.Print(pkt.Data)
+			cmdutil.Print(pkt.Data)
 		case apitypes.Stderr:
-			fmt.Fprint(os.Stderr, pkt.Data)
+			fmt.Fprint(cmdutil.Stderr, pkt.Data)
 		}
 	}
 

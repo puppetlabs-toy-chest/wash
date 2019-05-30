@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -59,7 +58,7 @@ func printHistory(follow bool) error {
 	formatStr := "%" + strconv.Itoa(indexColumnLength) + "d  %s  %s\n"
 	i := 0
 	for item := range history {
-		fmt.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
+		cmdutil.Printf(formatStr, i+1, item.Start.Format("2006-01-02 15:04"), item.Description)
 		i++
 	}
 	return nil
