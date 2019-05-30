@@ -26,7 +26,9 @@ type KeyType int
 // JournalKey is used to identify a Journal in a context.
 const JournalKey KeyType = iota
 
-var journalFileCache = datastore.NewMemCacheWithEvicted(closeJournal)
+// Enforce a limit on cache size to avoid running out of file descriptors. It'll be rare that we
+// have dozens of processes running simultaneously.
+var journalFileCache = datastore.NewMemCacheWithEvicted(closeJournal).Limit(50)
 var journalDir = func() string {
 	cdir, err := os.UserCacheDir()
 	if err != nil {
