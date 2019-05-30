@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mattn/go-isatty"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
+	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -142,6 +142,14 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	}
 	defer os.RemoveAll(rundir)
 
+	var execfile string
+	if len(args) > 0 {
+		execfile = args[0]
+	}
+
+	// Set plugin interactivity to false if execfile or rootCommandFlag were specified.
+	plugin.InitInteractive(execfile == "" && rootCommandFlag == "")
+
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
 	serverOpts, err := serverOptsFor(cmd)
@@ -156,12 +164,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	var execfile string
-	if len(args) > 0 {
-		execfile = args[0]
-	}
-
-	if isInteractive(execfile) {
+	if plugin.IsInteractive() {
 		fmt.Println(`Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
@@ -171,15 +174,8 @@ Try 'help'`)
 	exit := runShell(rundir, mountpath, socketpath, execfile)
 
 	srv.Stop()
-	if isInteractive(execfile) {
+	if plugin.IsInteractive() {
 		fmt.Println("Goodbye!")
 	}
 	return exit
-}
-
-// Returns true if both input and output are interactive.
-func isInteractive(execfile string) bool {
-	return execfile == "" && rootCommandFlag == "" &&
-		(isatty.IsTerminal(os.Stdin.Fd()) || isatty.IsCygwinTerminal(os.Stdin.Fd())) &&
-		(isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()))
 }
