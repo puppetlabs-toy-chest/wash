@@ -27,7 +27,7 @@ title= "Wash Documentation"
 
 ## Wash Commands
 
-Wash commands aim to be well-documented in the tool. Try `wash help` and `wash help <subcommand>` for specific options.
+Wash commands aim to be well-documented in the tool. Try `wash help` and `wash help <command>` for specific options.
 
 Most commands operate on Wash resources, which are addressed by their path in the filesystem.
 
@@ -35,11 +35,11 @@ Most commands operate on Wash resources, which are addressed by their path in th
 
 The `wash` command can be invoked on its own to enter a Wash shell.
 
-Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for Wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
+Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for Wash commands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
 
 ### wash clear
 
-Wash caches most operations. If the resource you're querying appears out-of-date, use this subcommand to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.
+Wash caches most operations. If the resource you're querying appears out-of-date, use this command to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.
 
 ### wash exec
 
@@ -94,7 +94,7 @@ Below are all the configurable options.
 
 All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
 
-NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
+NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's commands will not be able to interact with the server because they cannot access the socket.
 
 ## Core Plugins
 
@@ -139,7 +139,7 @@ Wash entries can support the following actions:
 * `exec` - lets you execute a command against an entry
   - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
 
-Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` subcommands and filesystem interactions.
+Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` commands and filesystem interactions.
 
 For more on implementing plugins, see:
 

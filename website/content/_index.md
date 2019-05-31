@@ -49,7 +49,7 @@ At this point, if you haven't already, you should fire up some resources that Wa
 
 For more of a guided tour that includes spinning up some resources Wash can talk to, check out our [`docker compose` example](https://github.com/puppetlabs/wash#wash-by-example).
 
-Once the server is up, you can use vanilla `ls`, `cd`, etc. to explore. You can then start experimenting with Wash subcommands, like `wash ls` and `wash tail`, to navigate that filesystem in a more Wash-optimized way. Wash provides wrappers for some of these; you can usually find the native POSIX variants in `/usr/bin` or `/bin`.
+Once the server is up, you can use vanilla `ls`, `cd`, etc. to explore. You can then start experimenting with Wash commands, like `wash ls` and `wash tail`, to navigate that filesystem in a more Wash-optimized way. Wash provides wrappers for some of these; you can usually find the native POSIX variants in `/usr/bin` or `/bin`.
 
 When you're done, `exit` the shell.
 
@@ -62,7 +62,7 @@ Wash does a lot already, with [more to come](https://github.com/puppetlabs/wash#
 * serves up an HTTP API for everything
 * caches information, for better performance
 
-We've implemented a number of handy Wash subcommands ([docs](/wash/docs#wash-commands)):
+We've implemented a number of handy Wash commands ([docs](/wash/docs#wash-commands)):
 
 * `wash ls` - a version of `ls` that uses our API to enhance directory listings with Wash-specific info
   - _e.g. show you what primitives are supported for each resource_
@@ -98,7 +98,7 @@ There are tons of ways to get involved with Wash, whether or not you're a progra
 
 - Are you an artist? Design some Wash-related artwork or a logo, and we'll see about putting it into the rotation for the site!
 
-- Are you an old skool command-line gearhead with, like, *opinions* about how things should work on a command line? We'd love your help figuring out how the shell experience for Wash should work. How can our unixy Wash subcommands behave better? Are there new subcommands we should build? What colors and formatting should we use for `wash ls`? If we implemented `wash fortune`, what quotes should be in there?!
+- Are you an old skool command-line gearhead with, like, *opinions* about how things should work on a command line? We'd love your help figuring out how the shell experience for Wash should work. How can our unixy Wash commands behave better? Are there new commands we should build? What colors and formatting should we use for `wash ls`? If we implemented `wash fortune`, what quotes should be in there?!
 
 - Did you script something cool that usees Wash under the hood? Please let us know, and how we can help!
 
