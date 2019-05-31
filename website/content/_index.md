@@ -57,7 +57,7 @@ When you're done, `exit` the shell.
 
 `wash` does a lot already, with [more to come](https://github.com/puppetlabs/wash#roadmap):
 
-* presents a FUSE filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways
+* presents a filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways
 * preserves history of all executed commands, facilitating debugging
 * serves up an HTTP API for everything
 * caches information, for better performance

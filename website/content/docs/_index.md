@@ -72,7 +72,7 @@ to display running processes on all listed nodes. Errors on paths that don't imp
 
 ### wash server
 
-Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
+Initializes all of the plugins, then sets up the Wash daemon (its API and [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
 
 Server API docs can be found [here](/wash/docs/api). The server config is described in the [`config`](#config) section.
 
