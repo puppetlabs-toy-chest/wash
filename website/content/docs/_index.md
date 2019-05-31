@@ -35,7 +35,7 @@ Most commands operate on Wash resources, which are addressed by their path in th
 
 The `wash` command can be invoked on its own to enter a Wash shell.
 
-Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
+Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for Wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
 
 ### wash clear
 
@@ -103,7 +103,7 @@ NOTE: Do not override `socket` in a config file. Instead, override it via the `W
 - EC2 and S3
 - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK.
 - IAM roles are supported when configured as described here. Note that currently region will also need to be specified with the profile.
-- if using MFA, wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your user cache directory so they can be re-used across server restarts. wash may have to re-prompt for a new MFA token in response to navigating the wash environment to authorize a new session.
+- if using MFA, Wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your user cache directory so they can be re-used across server restarts. Wash may have to re-prompt for a new MFA token in response to navigating the Wash environment to authorize a new session.
 - supports streaming, and remote command execution via ssh
 - supports full metadata for S3 content
 
