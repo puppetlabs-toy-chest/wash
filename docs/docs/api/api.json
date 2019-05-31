@@ -287,7 +287,7 @@
     },
     "/history": {
       "get": {
-        "description": "Get a list of commands that have been run via 'wash' and when they were run.",
+        "description": "Get a list of commands that have been run via Wash and when they were run.",
         "produces": [
           "application/json"
         ],
@@ -325,7 +325,7 @@
     },
     "/history/{id}": {
       "get": {
-        "description": "Get the logs related to a particular command run via 'wash', requested by\nindex within its activity history.",
+        "description": "Get the logs related to a particular command run via Wash, requested by\nindex within its activity history.",
         "produces": [
           "application/json",
           "application/octet-stream"
@@ -366,7 +366,7 @@
   "definitions": {
     "Activity": {
       "type": "object",
-      "title": "Activity describes an activity from wash's `activity.History`.",
+      "title": "Activity describes an activity from Wash's `activity.History`.",
       "properties": {
         "description": {
           "type": "string",

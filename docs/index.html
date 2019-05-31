@@ -36,7 +36,7 @@
     <div class="logosmall">the wide area shell</div>
     
 
-<p><code>wash</code> helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love.</p>
+<p>Wash helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love.</p>
 
 <div id="horizontalmenu">
     • <a href="#introduction">introduction</a>
@@ -50,7 +50,7 @@
 
 <h2 id="introduction">Introduction</h2>
 
-<p><code>wash</code> aims to:</p>
+<p>Wash aims to:</p>
 
 <ul>
 <li>make navigating stuff like servers, containers, or APIs as easy as navigating a local filesystem</li>
@@ -63,14 +63,14 @@
 
 <p>Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it&rsquo;s containers, VMs, network devices, IoT stuff, or anything in between&hellip;they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that&rsquo;s no fun at all!</p>
 
-<p><a href="https://en.wikipedia.org/wiki/Unix_philosophy#Origin">UNIX&rsquo;s philosophy</a> and abstractions have worked for decades. They&rsquo;re pretty good, and more importantly, they&rsquo;re <em>familiar</em> to millions of people. <code>wash</code> intends to apply those same philosophies and abstractions to modern, distributed infrastructure.</p>
+<p><a href="https://en.wikipedia.org/wiki/Unix_philosophy#Origin">UNIX&rsquo;s philosophy</a> and abstractions have worked for decades. They&rsquo;re pretty good, and more importantly, they&rsquo;re <em>familiar</em> to millions of people. Wash intends to apply those same philosophies and abstractions to modern, distributed infrastructure.</p>
 
 <h2 id="getting-started">Getting started</h2>
 
-<p><code>wash</code> is distributed as a single binary, and the only prerequisite is <a href="https://github.com/libfuse/libfuse"><code>libfuse</code></a>. Thus, getting going is pretty simple:</p>
+<p>Wash is distributed as a single binary, and the only prerequisite is <a href="https://github.com/libfuse/libfuse"><code>libfuse</code></a>. Thus, getting going is pretty simple:</p>
 
 <ol>
-<li><a href="https://github.com/puppetlabs/wash/releases">Download</a> the <code>wash</code> binary for your platform
+<li><a href="https://github.com/puppetlabs/wash/releases">Download</a> the Wash binary for your platform
 
 <ul>
 <li>or install with <code>brew install puppetlabs/puppet/wash</code></li>
@@ -82,36 +82,36 @@
 <li>E.g. on CentOS: <code>yum install fuse fuse-libs</code></li>
 <li>E.g. on Ubuntu: <code>apt-get install fuse</code></li>
 </ul></li>
-<li>Start <code>wash</code>
+<li>Start Wash
 
 <ul>
 <li><code>./wash</code></li>
 </ul></li>
 </ol>
 
-<p>At this point, if you haven&rsquo;t already, you should fire up some resources that <code>wash</code> can actually introspect. Otherwise, as Han Solo would say, &ldquo;this is going to be a real short trip&rdquo;. So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc.</p>
+<p>At this point, if you haven&rsquo;t already, you should fire up some resources that Wash can actually introspect. Otherwise, as Han Solo would say, &ldquo;this is going to be a real short trip&rdquo;. So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc.</p>
 
-<p>For more of a guided tour that includes spinning up some resources <code>wash</code> can talk to, check out our <a href="https://github.com/puppetlabs/wash#wash-by-example"><code>docker compose</code> example</a>.</p>
+<p>For more of a guided tour that includes spinning up some resources Wash can talk to, check out our <a href="https://github.com/puppetlabs/wash#wash-by-example"><code>docker compose</code> example</a>.</p>
 
-<p>Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore. You can then start experimenting with <code>wash</code> subcommands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more <code>wash</code>-optimized way. <code>wash</code> provides wrappers for some of these; you can usually find the native POSIX variants in <code>/usr/bin</code> or <code>/bin</code>.</p>
+<p>Once the server is up, you can use vanilla <code>ls</code>, <code>cd</code>, etc. to explore. You can then start experimenting with Wash commands, like <code>wash ls</code> and <code>wash tail</code>, to navigate that filesystem in a more Wash-optimized way. Wash provides wrappers for some of these; you can usually find the native POSIX variants in <code>/usr/bin</code> or <code>/bin</code>.</p>
 
 <p>When you&rsquo;re done, <code>exit</code> the shell.</p>
 
 <h2 id="current-features">Current features</h2>
 
-<p><code>wash</code> does a lot already, with <a href="https://github.com/puppetlabs/wash#roadmap">more to come</a>:</p>
+<p>Wash does a lot already, with <a href="https://github.com/puppetlabs/wash#roadmap">more to come</a>:</p>
 
 <ul>
-<li>presents a FUSE filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways</li>
+<li>presents a filesystem hierarchy for all of your resources, letting you navigate them in normal, filesystem-y ways</li>
 <li>preserves history of all executed commands, facilitating debugging</li>
 <li>serves up an HTTP API for everything</li>
 <li>caches information, for better performance</li>
 </ul>
 
-<p>We&rsquo;ve implemented a number of handy <code>wash</code> subcommands (<a href="/wash/docs#wash-commands">docs</a>):</p>
+<p>We&rsquo;ve implemented a number of handy Wash commands (<a href="/wash/docs#wash-commands">docs</a>):</p>
 
 <ul>
-<li><code>wash ls</code> - a version of <code>ls</code> that uses our API to enhance directory listings with <code>wash</code>-specific info
+<li><code>wash ls</code> - a version of <code>ls</code> that uses our API to enhance directory listings with Wash-specific info
 
 <ul>
 <li><em>e.g. show you what primitives are supported for each resource</em></li>
@@ -121,8 +121,8 @@
 <li><code>wash find</code> - find resources using powerful selection predicates</li>
 <li><code>wash tail -f</code> - follow updates to resources that support the <code>stream</code> primitive as well as normal files</li>
 <li><code>wash ps</code> - lists running processes on indicated compute instances that support the <code>exec</code> primitive</li>
-<li><code>wash history</code> - lists all activity through <code>wash</code>; <code>wash history &lt;id&gt;</code> can be used to view logs for a specific activity</li>
-<li><code>wash clear</code> - clears cached data for a subhierarchy rooted at the supplied path so <code>wash</code> will re-request it</li>
+<li><code>wash history</code> - lists all activity through Wash; <code>wash history &lt;id&gt;</code> can be used to view logs for a specific activity</li>
+<li><code>wash clear</code> - clears cached data for a subhierarchy rooted at the supplied path so Wash will re-request it</li>
 </ul>
 
 <p><a href="/wash/docs#core-plugins">Core plugins</a> (and we&rsquo;re <a href="https://github.com/puppetlabs/wash#roadmap">adding more all the time</a>, see our <a href="/wash/docs#plugin-concepts">docs</a> for how to help):</p>
@@ -136,8 +136,8 @@
 <p><a href="/wash/docs/external_plugins">External plugins</a>:</p>
 
 <ul>
-<li><code>wash</code> allows for easy creation of out-of-process plugins using any language you want, from <code>bash</code> to <code>go</code> or anything in-between!</li>
-<li><code>wash</code> handles the plugin lifecycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic</li>
+<li>Wash allows for easy creation of out-of-process plugins using any language you want, from <code>bash</code> to <code>go</code> or anything in-between!</li>
+<li>Wash handles the plugin lifecycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic</li>
 <li>users interact with external plugins the exact same way as core plugins; they are first-class citizens</li>
 </ul>
 
@@ -145,22 +145,22 @@
 
 <h2 id="contributing">Contributing</h2>
 
-<p>There are tons of ways to get involved with <code>wash</code>, whether or not you&rsquo;re a programmer!</p>
+<p>There are tons of ways to get involved with Wash, whether or not you&rsquo;re a programmer!</p>
 
 <ul>
 <li><p>Come and hang out with us on <a href="https://puppetcommunity.slack.com/app_redirect?channel=wash">Slack</a>! Feel free to ask questions, answer questions from other folks, or just lurk. Come and talk to us about things about modern infra you find <a href="https://landscape.cncf.io/">complex or infuriating</a>, or what your <a href="https://www.youtube.com/watch?v=u1Ds9CeG-VY">favorite hacking movie scenes</a> are, or the <a href="https://fonts.google.com/specimen/Inconsolata">best monospaced font</a>.</p></li>
 
-<li><p>Have something cool that you&rsquo;d like connect up to <code>wash</code>? We&rsquo;d love to hear your ideas, and help you figure out how to do it! We don&rsquo;t care if you want <code>wash</code> to talk to a network device, a smart lightbulb, your bluetooth-enabled espresso scale, or just more types of resources from cloud providers.</p></li>
+<li><p>Have something cool that you&rsquo;d like connect up to Wash? We&rsquo;d love to hear your ideas, and help you figure out how to do it! We don&rsquo;t care if you want Wash to talk to a network device, a smart lightbulb, your bluetooth-enabled espresso scale, or just more types of resources from cloud providers.</p></li>
 
-<li><p>Are you an artist? Design some <code>wash</code>-related artwork or a logo, and we&rsquo;ll see about putting it into the rotation for the site!</p></li>
+<li><p>Are you an artist? Design some Wash-related artwork or a logo, and we&rsquo;ll see about putting it into the rotation for the site!</p></li>
 
-<li><p>Are you an old skool command-line gearhead with, like, <em>opinions</em> about how things should work on a command line? We&rsquo;d love your help figuring out how the shell experience for <code>wash</code> should work. How can our unixy <code>wash</code> subcommands behave better? Are there new subcommands we should build? What colors and formatting should we use for <code>wash ls</code>? If we implemented <code>wash fortune</code>, what quotes should be in there?!</p></li>
+<li><p>Are you an old skool command-line gearhead with, like, <em>opinions</em> about how things should work on a command line? We&rsquo;d love your help figuring out how the shell experience for Wash should work. How can our unixy Wash commands behave better? Are there new commands we should build? What colors and formatting should we use for <code>wash ls</code>? If we implemented <code>wash fortune</code>, what quotes should be in there?!</p></li>
 
-<li><p>Did you script something cool that usees <code>wash</code> under the hood? Please let us know, and how we can help!</p></li>
+<li><p>Did you script something cool that usees Wash under the hood? Please let us know, and how we can help!</p></li>
 
 <li><p>Can you sling HTML, or Markdown? This site is built using Hugo, and the source is in our <a href="https://github.com/puppetlabs/wash/tree/master/website">github repo</a>. We&rsquo;d love help documenting stuff!</p></li>
 
-<li><p>Did you give a talk or presentation on <code>wash</code>? Give us the link, so we can help promote it!</p></li>
+<li><p>Did you give a talk or presentation on Wash? Give us the link, so we can help promote it!</p></li>
 </ul>
 
 <p>Come check us out on <a href="https://github.com/puppetlabs/wash">github</a>, and in particular check out the <a href="https://github.com/puppetlabs/wash/blob/master/CONTRIBUTING.md">contribution guidelines</a> and the <a href="https://github.com/puppetlabs/wash/blob/master/CODE_OF_CONDUCT.md">code of conduct</a>.</p>

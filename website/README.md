@@ -1,4 +1,4 @@
-This is the source code for the `wash` website. It's built using hugo.
+This is the source code for Wash's website. It's built using hugo.
 
 To regenerate the site from this directory:
 

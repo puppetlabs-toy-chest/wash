@@ -27,7 +27,7 @@ title= "Wash Documentation"
 
 ## Wash Commands
 
-Wash commands aim to be well-documented in the tool. Try `wash help` and `wash help <subcommand>` for specific options.
+Wash commands aim to be well-documented in the tool. Try `wash help` and `wash help <command>` for specific options.
 
 Most commands operate on Wash resources, which are addressed by their path in the filesystem.
 
@@ -35,11 +35,11 @@ Most commands operate on Wash resources, which are addressed by their path in th
 
 The `wash` command can be invoked on its own to enter a Wash shell.
 
-Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for wash subcommands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
+Invoking `wash` starts the daemon as part of the process, then enters your current system shell with shortcuts configured for Wash commands. All the [`wash server`](#wash-server) settings are also supported with `wash` except `socket`; `wash` ignores that setting and creates a temporary location for the socket.
 
 ### wash clear
 
-Wash caches most operations. If the resource you're querying appears out-of-date, use this subcommand to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.
+Wash caches most operations. If the resource you're querying appears out-of-date, use this command to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.
 
 ### wash exec
 
@@ -72,7 +72,7 @@ to display running processes on all listed nodes. Errors on paths that don't imp
 
 ### wash server
 
-Initializes all of the plugins, then sets up the Wash daemon (its API and FUSE servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
+Initializes all of the plugins, then sets up the Wash daemon (its API and [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
 
 Server API docs can be found [here](/wash/docs/api). The server config is described in the [`config`](#config) section.
 
@@ -94,7 +94,7 @@ Below are all the configurable options.
 
 All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
 
-NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's subcommands will not be able to interact with the server because they cannot access the socket.
+NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's commands will not be able to interact with the server because they cannot access the socket.
 
 ## Core Plugins
 
@@ -103,7 +103,7 @@ NOTE: Do not override `socket` in a config file. Instead, override it via the `W
 - EC2 and S3
 - uses `AWS_SHARED_CREDENTIALS_FILE` environment variable or `$HOME/.aws/credentials` and `AWS_CONFIG_FILE` environment variable or `$HOME/.aws/config` to find profiles and configure the SDK.
 - IAM roles are supported when configured as described here. Note that currently region will also need to be specified with the profile.
-- if using MFA, wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your user cache directory so they can be re-used across server restarts. wash may have to re-prompt for a new MFA token in response to navigating the wash environment to authorize a new session.
+- if using MFA, Wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under `wash/aws-credentials` in your user cache directory so they can be re-used across server restarts. Wash may have to re-prompt for a new MFA token in response to navigating the Wash environment to authorize a new session.
 - supports streaming, and remote command execution via ssh
 - supports full metadata for S3 content
 
@@ -139,7 +139,7 @@ Wash entries can support the following actions:
 * `exec` - lets you execute a command against an entry
   - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
 
-Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` subcommands and filesystem interactions.
+Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` commands and filesystem interactions.
 
 For more on implementing plugins, see:
 
@@ -155,9 +155,9 @@ NOTE: We recommend that you read the `Attributes/Metadata` section before readin
 
 ### Attributes/Metadata
 
-All entries have metadata, which is a JSON object containing a complete description of the entry. For example, a Docker container's metadata includes its labels, its state, its start time, the image it was built from, its mounted volumes, etc. [`wash find`](#wash-find) can filter on this metadata. In our example, you can use `find docker/containers -daystart -fullmeta -m .state .startedAt -{1d} -a .status running` to see a list of all running containers that started today (try it out!). Thus, metadata filtering is powerful. However, it also requires the user to query an entry's metadata to construct the filter. This can get annoying when a user has to filter on the same property shared by many different kinds of entries. For example, metadata filtering gets annoying when you are trying to filter on an EC2 instance's/Docker container's/Kubernetes pod's state due to the structural differences in their metadata (e.g. an EC2 instance's state is contained in the `.state.name` key, while a Kubernetes pod's state is contained in the `.status.phase` key). Metadata filtering is also slow. It requires O(N) API requests, where N is the number of visited entries.
+All entries have metadata, which is a JSON object containing a complete description of the entry. For example, a Docker container's metadata includes its labels, its state, its start time, the image it was built from, its mounted volumes, etc. [`wash find`](#wash-find) can filter on this metadata. In our example, you can use `find docker/containers -daystart -fullmeta -m .state .startedAt -{1d} -a .status running` to see a list of all running containers that started today (try it out!). Thus, metadata filtering is powerful. However, it also requires the user to query an entry's metadata to construct the filter. Creating a filter on the same property that's shared by many different kinds of entries is repetitive, error-prone, and an obvious candidate for usability improvement. For example, metadata filtering gets annoying when you are trying to filter on an EC2 instance's/Docker container's/Kubernetes pod's state due to the structural differences in their metadata (e.g. an EC2 instance's state is contained in the `.state.name` key, while a Kubernetes pod's state is contained in the `.status.phase` key). Metadata filtering is also slow. It requires O(N) API requests, where N is the number of visited entries.
 
-To make `wash find`'s filtering less annoying and faster, entries can also have attributes. The attributes represent common metadata properties that people filter on. Currently, these are the traditional `ctime`, `mtime`, `atime`, `size`, and `mode` filesystem attributes, along with a special `meta` attribute representing a subset of the entry's metadata (useful for fast metadata filtering). The attributes are fetched in bulk when the entry's parent is listed. Typically, the bulk fetch is done through an API's `list` endpoint. This endpoint returns an array of JSON objects representing the entries. The `meta` attribute is set to this JSON object while the remaining attributes are parsed from the object's fields. For example, `list docker/containers` will fetch all of your containers by querying Docker's `/containers/json` endpoint. That endpoint's response is then used to create the container entry objects, where each container entry's `meta` attribute is set to a `/containers/json` object and the containers' `ctime`/`mtime` attributes are parsed from it.
+To make `wash find`'s filtering less tedious and better performing, entries can also have attributes. The attributes represent common metadata properties that people filter on. Currently, these are the traditional `ctime`, `mtime`, `atime`, `size`, and `mode` filesystem attributes, along with a special `meta` attribute representing a subset of the entry's metadata (useful for fast metadata filtering). The attributes are fetched in bulk when the entry's parent is listed. Typically, the bulk fetch is done through an API's `list` endpoint. This endpoint returns an array of JSON objects representing the entries. The `meta` attribute is set to this JSON object while the remaining attributes are parsed from the object's fields. For example, `list docker/containers` will fetch all of your containers by querying Docker's `/containers/json` endpoint. That endpoint's response is then used to create the container entry objects, where each container entry's `meta` attribute is set to a `/containers/json` object and the containers' `ctime`/`mtime` attributes are parsed from it.
 
 NOTE: _All_ attributes are optional, so set the ones that you think make sense. For example, if the `mode` or `size` attributes don't make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the `meta` attribute when you can to take advantage of metadata filtering.
 
