@@ -2,6 +2,7 @@
 package datastore
 
 import (
+	"math"
 	"regexp"
 	"sync"
 	"time"
@@ -23,9 +24,15 @@ type Cache interface {
 // MemCache is an in-memory cache. It supports concurrent get/set, as well as the ability
 // to get-or-update cached data in a single transaction to avoid redundant update activity.
 type MemCache struct {
+	// Use a write lock when deleting entries to avoid concurrent map read/write on the underlying
+	// map used by go-cache. This happened sometimes when evicting an entry at the same time that
+	// it's being used again. The scenario became more common when we started evicting cache items
+	// when it reaches a limit because lots of new ones are being created over a short period.
+	mux         sync.RWMutex
 	instance    *cache.Cache
 	locks       sync.Map
 	hasEviction bool
+	limit       int
 }
 
 // NewMemCache creates a new MemCache object
@@ -39,15 +46,6 @@ func NewMemCache() *MemCache {
 	}
 }
 
-// NewMemCacheWithEvicted creates a new MemCache object that calls the provided eviction function
-// on each object as it's evicted to facilitate cleanup.
-func NewMemCacheWithEvicted(f func(string, interface{})) *MemCache {
-	cache := NewMemCache()
-	cache.instance.OnEvicted(f)
-	cache.hasEviction = true
-	return cache
-}
-
 // LockForKey retrieve the lock used for a specific category/key pair.
 func (cache *MemCache) lockForKey(category, key string) *locksutil.LockEntry {
 	// If a lockset is present for the category, use it. Otherwise create one and add it.
@@ -58,11 +56,29 @@ func (cache *MemCache) lockForKey(category, key string) *locksutil.LockEntry {
 	return locksutil.LockForKey(obj.([]*locksutil.LockEntry), key)
 }
 
+// WithEvicted adds an eviction function that's called on each object as it's evicted to facilitate
+// cleanup.
+func (cache *MemCache) WithEvicted(f func(string, interface{})) *MemCache {
+	cache.instance.OnEvicted(f)
+	cache.hasEviction = true
+	return cache
+}
+
+// Limit configures a limit to how many entries to keep in the cache. Adding a new one
+// evicts the entry closest to expiration.
+func (cache *MemCache) Limit(n int) *MemCache {
+	cache.limit = n
+	return cache
+}
+
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
 // If resetTTLOnHit is true, will reset the cache expiration for the entry.
 func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
+	cache.mux.RLock()
+	defer cache.mux.RUnlock()
+
 	l := cache.lockForKey(category, key)
 	l.Lock()
 	defer l.Unlock()
@@ -85,6 +101,16 @@ func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, rese
 
 	// Cache misses should be rarer, so print them as debug messages.
 	log.Debugf("Cache miss on %v", key)
+
+	if cache.limit > 0 && cache.instance.ItemCount() >= cache.limit {
+		// Retain write lock when deleting items to avoid concurrent map read/write.
+		cache.mux.RUnlock()
+		cache.mux.Lock()
+		cache.deleteClosestToExpiration()
+		cache.mux.Unlock()
+		cache.mux.RLock()
+	}
+
 	value, err := generateValue()
 	// Cache error responses as well. These are often authentication or availability failures
 	// and we don't want to continually query the API on failures.
@@ -97,9 +123,29 @@ func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, rese
 	return value, nil
 }
 
+func (cache *MemCache) deleteClosestToExpiration() {
+	var candidate string
+	now := time.Now().UnixNano()
+	lowest := int64(math.MaxInt64)
+	for k, it := range cache.instance.Items() {
+		remaining := it.Expiration - now
+		if remaining < lowest {
+			lowest = remaining
+			candidate = k
+		}
+	}
+	if candidate == "" {
+		panic("should have found a candidate")
+	}
+	cache.instance.Delete(candidate)
+}
+
 // Flush deletes all items from the cache. Also resets cache capacity.
-// This operation is significantly slower when cache was created with NewMemCacheWithEvicted.
+// This operation is significantly slower when cache was configured WithEvicted.
 func (cache *MemCache) Flush() {
+	cache.mux.Lock()
+	defer cache.mux.Unlock()
+
 	if cache.hasEviction {
 		// Flush doesn't trigger the eviction callback. If we've registered one, ensure it's
 		// triggered for all keys being removed. First delete all valid entries, then delete
@@ -115,6 +161,9 @@ func (cache *MemCache) Flush() {
 
 // Delete removes entries from the cache that match the provided regexp.
 func (cache *MemCache) Delete(matcher *regexp.Regexp) []string {
+	cache.mux.Lock()
+	defer cache.mux.Unlock()
+
 	log.Debugf("Deleting matches for %v", matcher)
 	items := cache.instance.Items()
 	deleted := make([]string, 0, len(items))
