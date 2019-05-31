@@ -46,15 +46,6 @@ func NewMemCache() *MemCache {
 	}
 }
 
-// NewMemCacheWithEvicted creates a new MemCache object that calls the provided eviction function
-// on each object as it's evicted to facilitate cleanup.
-func NewMemCacheWithEvicted(f func(string, interface{})) *MemCache {
-	cache := NewMemCache()
-	cache.instance.OnEvicted(f)
-	cache.hasEviction = true
-	return cache
-}
-
 // LockForKey retrieve the lock used for a specific category/key pair.
 func (cache *MemCache) lockForKey(category, key string) *locksutil.LockEntry {
 	// If a lockset is present for the category, use it. Otherwise create one and add it.
@@ -63,6 +54,14 @@ func (cache *MemCache) lockForKey(category, key string) *locksutil.LockEntry {
 		obj, _ = cache.locks.LoadOrStore(category, locksutil.CreateLocks())
 	}
 	return locksutil.LockForKey(obj.([]*locksutil.LockEntry), key)
+}
+
+// WithEvicted adds an eviction function that's called on each object as it's evicted to facilitate
+// cleanup.
+func (cache *MemCache) WithEvicted(f func(string, interface{})) *MemCache {
+	cache.instance.OnEvicted(f)
+	cache.hasEviction = true
+	return cache
 }
 
 // Limit configures a limit to how many entries to keep in the cache. Adding a new one
@@ -142,7 +141,7 @@ func (cache *MemCache) deleteClosestToExpiration() {
 }
 
 // Flush deletes all items from the cache. Also resets cache capacity.
-// This operation is significantly slower when cache was created with NewMemCacheWithEvicted.
+// This operation is significantly slower when cache was configured WithEvicted.
 func (cache *MemCache) Flush() {
 	cache.mux.Lock()
 	defer cache.mux.Unlock()

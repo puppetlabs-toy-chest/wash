@@ -28,7 +28,7 @@ const JournalKey KeyType = iota
 
 // Enforce a limit on cache size to avoid running out of file descriptors. It'll be rare that we
 // have dozens of processes running simultaneously.
-var journalFileCache = datastore.NewMemCacheWithEvicted(closeJournal).Limit(50)
+var journalFileCache = datastore.NewMemCache().WithEvicted(closeJournal).Limit(50)
 var journalDir = func() string {
 	cdir, err := os.UserCacheDir()
 	if err != nil {

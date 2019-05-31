@@ -20,7 +20,7 @@ import (
 
 // Cache SSH connections for better performance. Re-using SSH connections can significantly speed
 // up repeated SSH operations.
-var connectionCache = datastore.NewMemCacheWithEvicted(closeConnection)
+var connectionCache = datastore.NewMemCache().WithEvicted(closeConnection)
 var expires = 15 * time.Second
 
 func closeConnection(id string, obj interface{}) {

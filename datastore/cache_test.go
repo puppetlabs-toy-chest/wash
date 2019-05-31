@@ -136,7 +136,7 @@ func (suite *MemCacheEvictedTestSuite) evict(s string, i interface{}) {
 }
 
 func (suite *MemCacheEvictedTestSuite) SetupTest() {
-	suite.mem = NewMemCacheWithEvicted(suite.evict)
+	suite.mem = NewMemCache().WithEvicted(suite.evict)
 	suite.evictor = mock.Mock{}
 }
 
