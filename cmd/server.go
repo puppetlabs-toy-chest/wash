@@ -13,6 +13,9 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/aws"
+	"github.com/puppetlabs/wash/plugin/docker"
+	"github.com/puppetlabs/wash/plugin/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,6 +24,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 )
+
+var internalPlugins = map[string]plugin.Root{
+	"aws":        &aws.Root{},
+	"docker":     &docker.Root{},
+	"kubernetes": &kubernetes.Root{},
+}
 
 func serverCommand() *cobra.Command {
 	serverCmd := &cobra.Command{
@@ -60,7 +69,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	srv := server.New(mountpoint, config.Socket, serverOpts)
+	srv := server.New(mountpoint, config.Socket, internalPlugins, serverOpts)
 	if err := srv.Start(); err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -109,11 +118,17 @@ func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
 		}
 	}
 
+	config := make(map[string]map[string]interface{})
+	for name := range internalPlugins {
+		config[name] = viper.GetStringMap(name)
+	}
+
 	// Return the options
 	return server.Opts{
 		CPUProfilePath:  viper.GetString("cpuprofile"),
 		LogFile:         viper.GetString("logfile"),
 		LogLevel:        viper.GetString("loglevel"),
+		PluginConfig:    config,
 		ExternalPlugins: externalPlugins,
 	}, nil
 }

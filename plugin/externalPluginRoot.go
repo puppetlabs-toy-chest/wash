@@ -21,10 +21,10 @@ func newExternalPluginRoot(script string) *externalPluginRoot {
 }
 
 // Init initializes the external plugin root
-func (r *externalPluginRoot) Init() error {
+func (r *externalPluginRoot) Init(map[string]interface{}) error {
 	// Give external plugins about five-seconds to finish their
 	// initialization
-	ctx, cancelFunc := context.WithTimeout(context.Background(), 5 * time.Second)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
 	stdout, err := r.script.InvokeAndWait(ctx, "init", nil)
 	if err != nil {

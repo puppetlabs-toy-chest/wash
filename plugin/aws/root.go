@@ -60,7 +60,7 @@ func exists(path string) error {
 }
 
 // Init for root
-func (r *Root) Init() error {
+func (r *Root) Init(map[string]interface{}) error {
 	r.EntryBase = plugin.NewEntryBase()
 	r.SetName("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)

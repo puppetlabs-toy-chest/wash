@@ -20,7 +20,7 @@ type Root struct {
 }
 
 // Init for root
-func (r *Root) Init() error {
+func (r *Root) Init(map[string]interface{}) error {
 	dockerCli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return err

@@ -31,25 +31,25 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	// Test that if InvokeAndWait errors, then Init returns its error
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
-	err := root.Init()
+	err := root.Init(map[string]interface{}{})
 	suite.EqualError(mockErr, err.Error())
 
 	// Test that Init returns an error if stdout does not have the right
 	// output format
 	mockInvokeAndWait([]byte("bad format"), nil)
-	err = root.Init()
+	err = root.Init(map[string]interface{}{})
 	suite.Regexp(regexp.MustCompile("stdout"), err)
 
 	// Test that Init returns an error if the root does not implement
 	// "list"
 	mockInvokeAndWait([]byte("{\"name\":\"root\",\"methods\":[]}"), nil)
-	err = root.Init()
+	err = root.Init(map[string]interface{}{})
 	suite.Regexp("implement.*list", err)
 
 	// Test that Init properly decodes the root from stdout
 	stdout := "{\"name\":\"foo\",\"methods\":[\"list\"]}"
 	mockInvokeAndWait([]byte(stdout), nil)
-	err = root.Init()
+	err = root.Init(map[string]interface{}{})
 	if suite.NoError(err) {
 		expectedRoot := &externalPluginRoot{
 			externalPluginEntry: &externalPluginEntry{

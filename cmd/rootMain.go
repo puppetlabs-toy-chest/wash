@@ -157,7 +157,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	socketpath := filepath.Join(rundir, "api.sock")
-	srv := server.New(mountpath, socketpath, serverOpts)
+	srv := server.New(mountpath, socketpath, internalPlugins, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}

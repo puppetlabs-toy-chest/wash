@@ -37,8 +37,8 @@ var pluginNameRegex = regexp.MustCompile("^[0-9a-zA-Z_-]+$")
 
 // RegisterPlugin initializes the given plugin and adds it to the registry if
 // initialization was successful.
-func (r *Registry) RegisterPlugin(root Root) error {
-	if err := root.Init(); err != nil {
+func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) error {
+	if err := root.Init(config); err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func (r *Registry) RegisterExternalPlugin(spec ExternalPluginSpec) error {
 	}
 
 	root := newExternalPluginRoot(spec.Script)
-	return r.RegisterPlugin(root)
+	return r.RegisterPlugin(root, map[string]interface{}{})
 }
 
 // ChildSchemas returns the child schemas of the plugin registry
