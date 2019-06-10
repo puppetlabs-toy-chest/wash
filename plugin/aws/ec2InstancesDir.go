@@ -21,14 +21,23 @@ type ec2InstancesDir struct {
 	client  *ec2Client.EC2
 }
 
-func newEC2InstancesDir(session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
+func ec2InstancesDirTemplate() *ec2InstancesDir {
 	ec2InstancesDir := &ec2InstancesDir{
-		EntryBase: plugin.NewEntry("instances"),
-		session:   session,
-		client:    client,
+		EntryBase: plugin.NewEntry(),
 	}
-
+	ec2InstancesDir.SetName("instances").IsSingleton()
 	return ec2InstancesDir
+}
+
+func newEC2InstancesDir(session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
+	ec2InstancesDir := ec2InstancesDirTemplate()
+	ec2InstancesDir.session = session
+	ec2InstancesDir.client = client
+	return ec2InstancesDir
+}
+
+func (is *ec2InstancesDir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(ec2InstanceTemplate())
 }
 
 func (is *ec2InstancesDir) List(ctx context.Context) ([]plugin.Entry, error) {

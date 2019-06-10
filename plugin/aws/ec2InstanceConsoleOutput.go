@@ -19,16 +19,25 @@ type ec2InstanceConsoleOutput struct {
 	latest bool
 }
 
-func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest bool) (*ec2InstanceConsoleOutput, error) {
+func ec2InstanceConsoleOutputTemplate() *ec2InstanceConsoleOutput {
 	cl := &ec2InstanceConsoleOutput{
-		inst:   inst,
-		latest: latest,
+		EntryBase: plugin.NewEntry(),
 	}
+	cl.SetShortType("console.out")
+	return cl
+}
+
+func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest bool) (*ec2InstanceConsoleOutput, error) {
+	cl := ec2InstanceConsoleOutputTemplate()
+	cl.inst = inst
+	cl.latest = latest
 
 	if cl.latest {
-		cl.EntryBase = plugin.NewEntry("console-latest.out")
+		cl.EntryBase = plugin.NewEntry()
+		cl.SetName("console-latest.out")
 	} else {
-		cl.EntryBase = plugin.NewEntry("console.out")
+		cl.EntryBase = plugin.NewEntry()
+		cl.SetName("console.out")
 	}
 	cl.DisableDefaultCaching()
 

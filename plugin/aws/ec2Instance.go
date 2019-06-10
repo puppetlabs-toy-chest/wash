@@ -37,6 +37,14 @@ const (
 	EC2InstanceStopped           = 80
 )
 
+func ec2InstanceTemplate() *ec2Instance {
+	ec2Instance := &ec2Instance{
+		EntryBase: plugin.NewEntry(),
+	}
+	ec2Instance.SetShortType("instance")
+	return ec2Instance
+}
+
 func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *session.Session, client *ec2Client.EC2) *ec2Instance {
 	id := awsSDK.StringValue(inst.InstanceId)
 	name := id
@@ -50,12 +58,11 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 			break
 		}
 	}
-	ec2Instance := &ec2Instance{
-		EntryBase: plugin.NewEntry(name),
-		id:        id,
-		session:   session,
-		client:    client,
-	}
+	ec2Instance := ec2InstanceTemplate()
+	ec2Instance.id = id
+	ec2Instance.session = session
+	ec2Instance.client = client
+	ec2Instance.SetName(name)
 	ec2Instance.
 		SetTTLOf(plugin.ListOp, 30*time.Second).
 		DisableCachingFor(plugin.MetadataOp).
@@ -97,6 +104,10 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 		SetMeta(meta)
 
 	return attr
+}
+
+func (inst *ec2Instance) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(ec2InstanceConsoleOutputTemplate(), ec2InstanceMetadataJSONTemplate(), volume.FSTemplate())
 }
 
 func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
