@@ -15,13 +15,20 @@ type file struct {
 	path string
 }
 
+func fileTemplate() *file {
+	vf := &file{
+		EntryBase: plugin.NewEntry(),
+	}
+	vf.SetShortType("file")
+	return vf
+}
+
 // newFile creates a VolumeFile.
 func newFile(name string, attr plugin.EntryAttributes, impl Interface, path string) *file {
-	vf := &file{
-		EntryBase: plugin.NewEntry(name),
-		impl:      impl,
-		path:      path,
-	}
+	vf := fileTemplate()
+	vf.impl = impl
+	vf.path = path
+	vf.SetName(name)
 	vf.SetAttributes(attr)
 	vf.SetTTLOf(plugin.OpenOp, 60*time.Second)
 

@@ -34,7 +34,8 @@ func TestVolumeDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())
-	entry := mockDirEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
+	entry := mockDirEntry{EntryBase: plugin.NewEntry(), dmap: dmap}
+	entry.SetName("mine")
 	entry.SetTestID("/mine")
 
 	assert.NotNil(t, dmap[""]["path"])
