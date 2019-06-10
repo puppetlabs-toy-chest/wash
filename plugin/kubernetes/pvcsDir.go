@@ -8,13 +8,32 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 )
 
-type pvcs struct {
+type pvcsDir struct {
 	plugin.EntryBase
 	client *k8s.Clientset
 	ns     string
 }
 
-func (pv *pvcs) List(ctx context.Context) ([]plugin.Entry, error) {
+func pvcsDirTemplate() *pvcsDir {
+	pv := &pvcsDir{
+		EntryBase: plugin.NewEntry(),
+	}
+	pv.SetName("persistentvolumeclaims").IsSingleton()
+	return pv
+}
+
+func newPVCSDir(ns *namespace) *pvcsDir {
+	pv := pvcsDirTemplate()
+	pv.client = ns.client
+	pv.ns = ns.Name()
+	return pv
+}
+
+func (pv *pvcsDir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(pvcTemplate())
+}
+
+func (pv *pvcsDir) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: identify whether we have permission to run pods for this namespace early, so
 	// we can return quickly on expensive commands.
 	pvcI := pv.client.CoreV1().PersistentVolumeClaims(pv.ns)
