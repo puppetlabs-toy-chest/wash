@@ -39,18 +39,17 @@ type EntryBase struct {
 	attr               EntryAttributes
 	slashReplacerCh    rune
 	// washID represents the entry's wash ID. It is set in CachedList.
-	washID string
-	ttl    [3]time.Duration
+	washID             string
+	ttl                [3]time.Duration
+	_shortType         string
+	singleton          bool
 }
 
 // NewEntry creates a new entry
-func NewEntry(name string) EntryBase {
-	if name == "" {
-		panic("plugin.NewEntry: received an empty name")
-	}
-
+//
+// TODO: Update docs with the changes to NewEntry
+func NewEntry() EntryBase {
 	e := EntryBase{
-		entryName:          name,
 		slashReplacerCh: '#',
 	}
 	for op := range e.ttl {
@@ -95,14 +94,35 @@ func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 	return e.ttl[op]
 }
 
+func (e *EntryBase) shortType() string {
+	return e._shortType
+}
+
+func (e *EntryBase) isSingleton() bool {
+	return e.singleton
+}
+
+func (e *EntryBase) markSingleton() {
+	e.IsSingleton()
+}
+
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
 // AND TESTING
 
 // Name returns the entry's name as it was passed into
-// plugin.NewEntry. You should use e.Name() when making
-// the appropriate API calls within your plugin.
+// e.SetName. You should use e.Name() when making the
+// appropriate API calls within your plugin.
 func (e *EntryBase) Name() string {
 	return e.name()
+}
+
+// SetName sets the entry's name.
+func (e *EntryBase) SetName(name string) *EntryBase {
+	if name == "" {
+		panic("e.SetName: received an empty name")
+	}
+	e.entryName = name
+	return e
 }
 
 // Attributes returns a pointer to the entry's attributes. Use it
@@ -130,6 +150,44 @@ func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 	}
 
 	e.slashReplacerCh = char
+	return e
+}
+
+/*
+SetShortType sets the entry's short type, which is a shortened version
+of the class/struct name. It is useful when documenting your plugin's
+hierarchy.
+
+NOTE: If your entry's a singleton, then Wash will default to using the
+entry's cname as its short type
+
+TODO: Give an example of why this is important once the stree command's
+implemented.
+*/
+func (e *EntryBase) SetShortType(shortType string) *EntryBase {
+	if len(shortType) == 0 {
+		panic("e.SetShortType called with an empty shortType")
+	}
+	e._shortType = shortType
+	return e
+}
+
+/*
+IsSingleton indicates that the given entry's a singleton, meaning there
+will only ever be one instance of the entry. It is useful when documenting
+your plugin's hierarchy.
+
+NOTE: If the entry's short type was not set, then IsSingleton sets it to
+the entry's cname.
+
+TODO: Give an example of why this is important once the stree command's
+implemented.
+*/
+func (e *EntryBase) IsSingleton() *EntryBase {
+	e.singleton = true
+	if len(e._shortType) == 0 {
+		e.SetShortType(CName(e))
+	}
 	return e
 }
 

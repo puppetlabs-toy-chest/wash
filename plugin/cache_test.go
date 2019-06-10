@@ -122,14 +122,20 @@ type cacheTestsMockEntry struct {
 }
 
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
-	return &cacheTestsMockEntry{
-		EntryBase: NewEntry(name),
+	e := &cacheTestsMockEntry{
+		EntryBase: NewEntry(),
 	}
+	e.SetName(name)
+	return e
 }
 
 func (e *cacheTestsMockEntry) List(ctx context.Context) ([]Entry, error) {
 	args := e.Called(ctx)
 	return args.Get(0).([]Entry), args.Error(1)
+}
+
+func (e *cacheTestsMockEntry) ChildSchemas() []EntrySchema {
+	return nil
 }
 
 func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {

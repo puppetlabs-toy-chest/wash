@@ -42,6 +42,9 @@ e.SetSlashReplacer(<char>) to change the default slash replacer from
 a '#' to <char>.
 */
 func CName(e Entry) string {
+	if len(e.name()) == 0 {
+		panic("plugin.CName: e.name() is empty")
+	}
 	// We make the CName a separate function instead of embedding it
 	// in the Entry interface because doing so prevents plugin authors
 	// from overriding it.
