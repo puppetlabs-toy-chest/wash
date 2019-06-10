@@ -80,7 +80,7 @@ func (s *Server) Start() error {
 	registry := plugin.NewRegistry()
 	s.loadInternalPlugins(registry)
 	if len(s.opts.ExternalPlugins) > 0 {
-		loadExternalPlugins(registry, s.opts.ExternalPlugins)
+		s.loadExternalPlugins(registry, s.opts.ExternalPlugins)
 	}
 	if len(registry.Plugins()) == 0 {
 		return fmt.Errorf("No plugins loaded")
@@ -181,11 +181,11 @@ func (s *Server) loadInternalPlugins(registry *plugin.Registry) {
 	log.Debug("Finished loading internal plugins")
 }
 
-func loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
+func (s *Server) loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
 	log.Infof("Loading external plugins")
 	for _, p := range externalPlugins {
 		log.Infof("Loading %v", p.Script)
-		if err := registry.RegisterExternalPlugin(p); err != nil {
+		if err := registry.RegisterExternalPlugin(p, s.opts.PluginConfig[p.Name()]); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
 			log.Warnf("%v failed to load: %+v", p.Script, err)
 		}

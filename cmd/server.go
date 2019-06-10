@@ -122,6 +122,10 @@ func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
 	for name := range internalPlugins {
 		config[name] = viper.GetStringMap(name)
 	}
+	for _, spec := range externalPlugins {
+		name := spec.Name()
+		config[name] = viper.GetStringMap(name)
+	}
 
 	// Return the options
 	return server.Opts{

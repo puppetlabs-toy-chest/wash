@@ -48,7 +48,7 @@
 <ol>
 <li><p>Write the <a href="#plugin-script">plugin script</a>. This is the script that Wash will shell out to whenever it needs to invoke a method on a specific entry within your plugin.</p></li>
 
-<li><p>Add the plugin to your <code>wash.yaml</code> file under the <code>external-plugins</code> key, and specify the path to the plugin script. The plugin&rsquo;s name will be determined by invoking the script with the <code>init</code> method. An example <code>wash.yaml</code> config is shown below:</p>
+<li><p>Add the plugin to your <code>wash.yaml</code> file under the <code>external-plugins</code> key, and specify the path to the plugin script. <em>The plugin&rsquo;s name is the basename of the script without the extension.</em> An example <code>wash.yaml</code> config adding the <code>sshfs</code> plugin is shown below:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
@@ -56,7 +56,7 @@
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">external-plugins:
-    - script: &#39;/Users/enis.inan/GitHub/wash/website/static/docs/external_plugins/examples/sshfs.sh&#39;</pre></td></tr></table>
+    - script: &#39;/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh&#39;</pre></td></tr></table>
 </div>
 </div></li>
 
@@ -91,7 +91,7 @@
 
 <h2 id="init">init</h2>
 
-<p>The <code>init</code> method is special. It is invoked as <code>&lt;plugin_script&gt; init</code>, and it is invoked only once, when the external plugin is loaded. When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. Here&rsquo;s an example:</p>
+<p>The <code>init</code> method is special. It is invoked as <code>&lt;plugin_script&gt; init &lt;config&gt;</code>, and it is invoked only once, when the external plugin is loaded. <code>&lt;config&gt;</code> is JSON containing any config supplied to Wash under the plugin&rsquo;s key. Given a Wash config file (<code>wash.yaml</code>)</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
@@ -102,19 +102,29 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
-  &#34;name&#34;: &#34;aws&#34;,
-  &#34;methods&#34;: [
-    &#34;list&#34;
-  ]
-}</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">external-plugins:
+  - script: &#39;/path/to/myplugin.rb&#39;
+myplugin:
+  profiles:
+    - profile_a
+    - profile_b</pre></td></tr></table>
 </div>
 </div>
-<p>This example shows the <em>minimum</em> amount of information required for Wash to construct the plugin root. In fact, the example shows the minimum amount of information required for Wash to construct <em>any</em> external plugin entry. This information consists of the entry&rsquo;s name and its implemented methods.</p>
+<p>the <code>init</code> method for a plugin named <code>myplugin</code> will be invoked with</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; init &#39;{&#34;profiles&#34;:[&#34;profile_a&#34;,&#34;profile_b&#34;]}&#39;</pre></td></tr></table>
+</div>
+</div>
+<p>When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. The <em>minimum</em> amount of information required for Wash to construct the plugin root is an empty object, <code>{}</code>.</p>
 
 <p>You can include additional (optional) keys in the printed JSON object. These keys are:</p>
 
 <ul>
+<li><code>methods</code>. This is an array specifying the list of methods, enumerated below, that can be called directly on the plugin entry. The plugin root must always include and implement the <code>list</code> method.</li>
 <li><code>cache_ttls</code>. This specifies how many seconds each method&rsquo;s result should be cached (<code>ttl</code> is short for time to live). Currently, Wash caches the result of <code>list</code>, <code>read</code>, and <code>metadata</code>.</li>
 <li><code>attributes</code>. This represents the entry&rsquo;s attributes (see the <a href="/wash/docs#attributes-metadata"><code>Attributes/Metadata</code></a> section). Time attributes are specified in Unix seconds. Octal modes must be prefixed with the <code>0</code> delimiter (e.g. like <code>0777</code>). Hexadecimal modes must be prefixed with the <code>0x</code> delimiter (e.g. like <code>0xabcd</code>).</li>
 <li><code>slash_replacer</code>. This overrides the default slash replacer <code>#</code>.</li>
@@ -139,16 +149,10 @@
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
-</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
-  &#34;name&#34;: &#34;some_entry&#34;,
-  &#34;methods&#34;: [
-    &#34;list&#34;
-  ],
+  &#34;methods&#34;: [&#34;list&#34;]
   &#34;cache_ttls&#34;: {
     &#34;list&#34;: 30
   },
@@ -164,13 +168,34 @@
 }</pre></td></tr></table>
 </div>
 </div>
-<p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> method will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has an <code>mtime</code> attribute, and that it also includes the <code>meta</code> attribute. We see from <code>slash_replacer</code> that any <code>/</code>&lsquo;es in the entry&rsquo;s returned name will be replaced by a <code>:</code> instead of a <code>#</code>. Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its methods. In this case, only <code>list</code> is implemented, and <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>SSHFS::Directory</code>) in whatever language the plugin script was written in.</p>
+<p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> method will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has an <code>mtime</code> attribute, and that it also includes the <code>meta</code> attribute. We see from <code>slash_replacer</code> that any <code>/</code>&lsquo;es in the entry&rsquo;s returned name will be replaced by a <code>:</code> instead of a <code>#</code>. Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its methods. In this case, <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>SSHFS::Directory</code>) in whatever language the plugin script was written in.</p>
 
 <p><code>init</code> adopts the standard error conventions described in the <a href="#errors">Errors</a> section.</p>
 
 <h2 id="list">list</h2>
 
-<p><code>list</code> is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the <code>init</code> section (hence, <code>list</code> outputs an array of entries). Below is an example of valid <code>list</code> output:</p>
+<p><code>list</code> is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. The <em>minimum</em> information required is each entry&rsquo;s name and its implemented methods</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
+  &#34;name&#34;: &#34;mydirectory&#34;,
+  &#34;methods&#34;: [
+    &#34;list&#34;
+  ]
+}</pre></td></tr></table>
+</div>
+</div>
+<p>Each entry may additionally return any keys described in <a href="#init">init</a>.</p>
+
+<p>Below is an example of valid <code>list</code> output:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1

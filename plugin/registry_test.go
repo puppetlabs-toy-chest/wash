@@ -120,32 +120,40 @@ func (suite *RegistryTestSuite) TestRegisterExternalPlugin() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/external.sh"}
 
-	suite.NoError(reg.RegisterExternalPlugin(spec))
-	suite.Contains(reg.Plugins(), "test")
+	suite.NoError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}))
+	suite.Contains(reg.Plugins(), "external")
+}
+
+func (suite *RegistryTestSuite) TestRegisterExternalPluginWithConfig() {
+	reg := NewRegistry()
+	spec := ExternalPluginSpec{Script: "testdata/external.sh"}
+
+	suite.NoError(reg.RegisterExternalPlugin(spec, map[string]interface{}{"key": "value"}))
+	suite.Contains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNoExec() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/noexec"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "script testdata/noexec is not executable")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "script testdata/noexec is not executable")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNoExist() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/noexist"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "stat testdata/noexist: no such file or directory")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "stat testdata/noexist: no such file or directory")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNotFile() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/notfile"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "script testdata/notfile is not a file")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "script testdata/notfile is not a file")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func TestRegistry(t *testing.T) {
