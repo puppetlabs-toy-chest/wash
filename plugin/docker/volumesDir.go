@@ -9,13 +9,31 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-type volumes struct {
+type volumesDir struct {
 	plugin.EntryBase
 	client *client.Client
 }
 
+func volumesDirTemplate() *volumesDir {
+	volumesDir := &volumesDir{
+		EntryBase: plugin.NewEntry(),
+	}
+	volumesDir.SetName("volumes").IsSingleton()
+	return volumesDir
+}
+
+func newVolumesDir(client *client.Client) *volumesDir {
+	volumesDir := volumesDirTemplate()
+	volumesDir.client = client
+	return volumesDir
+}
+
+func (vs *volumesDir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(volumeTemplate())
+}
+
 // List
-func (vs *volumes) List(ctx context.Context) ([]plugin.Entry, error) {
+func (vs *volumesDir) List(ctx context.Context) ([]plugin.Entry, error) {
 	volumes, err := vs.client.VolumeList(ctx, filters.Args{})
 	if err != nil {
 		return nil, err
