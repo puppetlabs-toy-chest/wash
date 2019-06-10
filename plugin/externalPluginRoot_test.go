@@ -49,9 +49,9 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	if suite.NoError(err) {
 		expectedRoot := &externalPluginRoot{
 			externalPluginEntry: &externalPluginEntry{
-				EntryBase:        NewEntryBase(),
-				methods:          []string{"list"},
-				script:           root.script,
+				EntryBase: NewEntryBase(),
+				methods:   []string{"list"},
+				script:    root.script,
 			},
 		}
 		expectedRoot.SetName("foo")

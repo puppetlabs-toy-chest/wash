@@ -156,12 +156,24 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 
 <ul>
 <li>EC2 and S3</li>
-<li>uses <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK.</li>
 <li>IAM roles are supported when configured as described here. Note that currently region will also need to be specified with the profile.</li>
 <li>if using MFA, Wash will prompt for it on standard input. Credentials are valid for 1 hour. They are cached under <code>wash/aws-credentials</code> in your user cache directory so they can be re-used across server restarts. Wash may have to re-prompt for a new MFA token in response to navigating the Wash environment to authorize a new session.</li>
 <li>supports streaming, and remote command execution via ssh</li>
 <li>supports full metadata for S3 content</li>
 </ul>
+
+<p>The AWS plugin reads the <code>AWS_SHARED_CREDENTIALS_FILE</code> environment variable or <code>$HOME/.aws/credentials</code> and <code>AWS_CONFIG_FILE</code> environment variable or <code>$HOME/.aws/config</code> to find profiles and configure the SDK. The profiles it lists can be limited by adding</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">aws:
+  profiles: [profile_1, profile_2]</pre></td></tr></table>
+</div>
+</div>
+<p>to Wash&rsquo;s <a href="#config">config file</a>.</p>
 
 <h3 id="docker">Docker</h3>
 
