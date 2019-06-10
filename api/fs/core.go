@@ -21,10 +21,11 @@ func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
 	// but it's platform-specific. We should eventually use it for
 	// a more complete implementation of apifs.
 	n := &fsnode{
-		EntryBase: plugin.NewEntry(finfo.Name()),
+		EntryBase: plugin.NewEntry(),
 		path:      path,
 	}
 	n.
+		SetName(finfo.Name()).
 		DisableDefaultCaching().
 		Attributes().
 		SetMtime(finfo.ModTime()).
