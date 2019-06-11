@@ -14,7 +14,7 @@ type pvcsDir struct {
 	ns     string
 }
 
-func pvcsDirTemplate() *pvcsDir {
+func pvcsDirBase() *pvcsDir {
 	pv := &pvcsDir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -23,14 +23,14 @@ func pvcsDirTemplate() *pvcsDir {
 }
 
 func newPVCSDir(ns *namespace) *pvcsDir {
-	pv := pvcsDirTemplate()
+	pv := pvcsDirBase()
 	pv.client = ns.client
 	pv.ns = ns.Name()
 	return pv
 }
 
 func (pv *pvcsDir) ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(pvcTemplate())
+	return plugin.ChildSchemas(pvcBase())
 }
 
 func (pv *pvcsDir) List(ctx context.Context) ([]plugin.Entry, error) {

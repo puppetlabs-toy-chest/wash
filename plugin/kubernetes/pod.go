@@ -25,20 +25,19 @@ type pod struct {
 	ns     string
 }
 
-func podTemplate() *pod {
+func podBase() *pod {
 	pd := &pod{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	pd.SetShortType("pod")
+	pd.SetLabel("pod").DisableDefaultCaching()
 	return pd
 }
 
 func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
-	pd := podTemplate()
+	pd := podBase()
 	pd.client = client
 	pd.config = config
 	pd.ns = ns
-	pd.DisableDefaultCaching()
 
 	pdInfo := podInfoResult{
 		pd:         p,

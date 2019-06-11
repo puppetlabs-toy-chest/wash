@@ -16,16 +16,16 @@ type namespace struct {
 	resources     []plugin.Entry
 }
 
-func namespaceTemplate() *namespace {
+func namespaceBase() *namespace {
 	ns := &namespace{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	ns.SetShortType("namespace")
+	ns.SetLabel("namespace")
 	return ns
 }
 
 func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *rest.Config) *namespace {
-	ns := namespaceTemplate()
+	ns := namespaceBase()
 	ns.client = c
 	ns.config = cfg
 	ns.SetName(name)
@@ -39,7 +39,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 }
 
 func (n *namespace) ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(podsDirTemplate(), pvcsDirTemplate())
+	return plugin.ChildSchemas(podsDirBase(), pvcsDirBase())
 }
 
 func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
