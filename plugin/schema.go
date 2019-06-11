@@ -48,8 +48,8 @@ func schema(e Entry, includeChildren bool) EntrySchema {
 
 	s := EntrySchema{
 		Type:      strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
-		ShortType: e.shortType(),
-		Singleton: e.isSingleton(),
+		ShortType: e.entryBase().shortType,
+		Singleton: e.entryBase().isSingleton,
 		Actions:   SupportedActionsOf(e),
 		entry:     e,
 	}

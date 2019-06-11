@@ -46,11 +46,7 @@ type Entry interface {
 	id() string
 	setID(id string)
 	getTTLOf(op defaultOpCode) time.Duration
-	shortType() string
-	isSingleton() bool
-	// This is used by the plugin registry to mark plugin roots as singleton
-	// objects. This way, plugin authors don't have to do this themselves.
-	markSingleton()
+	entryBase() *EntryBase
 }
 
 // Parent is an entry with children. It will be represented as a directory in the Wash

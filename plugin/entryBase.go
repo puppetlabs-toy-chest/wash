@@ -41,8 +41,8 @@ type EntryBase struct {
 	// washID represents the entry's wash ID. It is set in CachedList.
 	washID             string
 	ttl                [3]time.Duration
-	_shortType         string
-	singleton          bool
+	shortType          string
+	isSingleton        bool
 }
 
 // NewEntryBase creates a new EntryBase object
@@ -92,16 +92,8 @@ func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 	return e.ttl[op]
 }
 
-func (e *EntryBase) shortType() string {
-	return e._shortType
-}
-
-func (e *EntryBase) isSingleton() bool {
-	return e.singleton
-}
-
-func (e *EntryBase) markSingleton() {
-	e.IsSingleton()
+func (e *EntryBase) entryBase() *EntryBase {
+	return e
 }
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
@@ -166,7 +158,7 @@ func (e *EntryBase) SetShortType(shortType string) *EntryBase {
 	if len(shortType) == 0 {
 		panic("e.SetShortType called with an empty shortType")
 	}
-	e._shortType = shortType
+	e.shortType = shortType
 	return e
 }
 
@@ -182,8 +174,8 @@ TODO: Give an example of why this is important once the stree command's
 implemented.
 */
 func (e *EntryBase) IsSingleton() *EntryBase {
-	e.singleton = true
-	if len(e._shortType) == 0 {
+	e.isSingleton = true
+	if len(e.shortType) == 0 {
 		e.SetShortType(CName(e))
 	}
 	return e

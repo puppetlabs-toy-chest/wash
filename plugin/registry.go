@@ -52,7 +52,7 @@ func (r *Registry) RegisterPlugin(root Root) error {
 		panic(msg)
 	}
 
-	root.markSingleton()
+	root.entryBase().IsSingleton()
 	r.plugins[root.name()] = root
 	r.pluginRoots = append(r.pluginRoots, root)
 	return nil
