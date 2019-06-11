@@ -7,6 +7,7 @@ import (
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	log "github.com/sirupsen/logrus"
 )
 
 // ==== FUSE Directory Interface ====
@@ -34,7 +35,9 @@ func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 
 // Lookup searches a directory for children.
 func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.LookupResponse) (fs.Node, error) {
-	activity.Record(ctx, "FUSE: Find %v in %v", req.Name, d)
+	// Find is only occasionally useful and happens a lot. Log it to debug like other activity, but
+	// leave it out of activity because it introduces history entries for miscellaneous shell commands.
+	log.Debugf("FUSE: Find %v in %v", req.Name, d)
 
 	entries, err := d.children(ctx)
 	if err != nil {
@@ -45,17 +48,17 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	cname := req.Name
 	entry, ok := entries[cname]
 	if !ok {
-		activity.Record(ctx, "FUSE: %v not found in %v", req.Name, d)
+		log.Debugf("FUSE: %v not found in %v", req.Name, d)
 		return nil, fuse.ENOENT
 	}
 
 	if plugin.ListAction().IsSupportedOn(entry) {
 		childdir := newDir(d.entry.(plugin.Parent), entry.(plugin.Parent))
-		activity.Record(ctx, "FUSE: Found directory %v", childdir)
+		log.Debugf("FUSE: Found directory %v", childdir)
 		return childdir, nil
 	}
 
-	activity.Record(ctx, "FUSE: Found file %v/%v", d, cname)
+	log.Debugf("FUSE: Found file %v/%v", d, cname)
 	return newFile(d.entry.(plugin.Parent), entry), nil
 }
 
