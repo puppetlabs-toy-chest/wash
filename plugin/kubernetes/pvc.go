@@ -28,14 +28,21 @@ const mountpoint = "/mnt"
 
 var errPodTerminated = errors.New("Pod terminated unexpectedly")
 
-func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, p *corev1.PersistentVolumeClaim) *pvc {
+func pvcBase() *pvc {
 	vol := &pvc{
-		EntryBase: plugin.NewEntry(p.Name),
-		pvci:      pi,
-		podi:      pd,
+		EntryBase: plugin.NewEntryBase(),
 	}
+	vol.SetLabel("persistentvolumeclaim")
+	return vol
+}
+
+func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, p *corev1.PersistentVolumeClaim) *pvc {
+	vol := pvcBase()
+	vol.pvci = pi
+	vol.podi = pd
 
 	vol.
+		SetName(p.Name).
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetMtime(p.CreationTimestamp.Time).
@@ -43,6 +50,10 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 		SetMeta(p)
 
 	return vol
+}
+
+func (v *pvc) ChildSchemas() []plugin.EntrySchema {
+	return volume.ChildSchemas()
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {

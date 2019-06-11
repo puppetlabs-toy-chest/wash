@@ -25,14 +25,19 @@ type pod struct {
 	ns     string
 }
 
-func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
+func podBase() *pod {
 	pd := &pod{
-		EntryBase: plugin.NewEntry(p.Name),
-		client:    client,
-		config:    config,
-		ns:        ns,
+		EntryBase: plugin.NewEntryBase(),
 	}
-	pd.DisableDefaultCaching()
+	pd.SetLabel("pod").DisableDefaultCaching()
+	return pd
+}
+
+func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
+	pd := podBase()
+	pd.client = client
+	pd.config = config
+	pd.ns = ns
 
 	pdInfo := podInfoResult{
 		pd:         p,
@@ -41,6 +46,7 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 
 	meta := pdInfo.toMeta()
 	pd.
+		SetName(p.Name).
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).

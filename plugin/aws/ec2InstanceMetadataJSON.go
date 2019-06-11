@@ -15,12 +15,20 @@ type ec2InstanceMetadataJSON struct {
 	inst *ec2Instance
 }
 
-func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2InstanceMetadataJSON, error) {
+func ec2InstanceMetadataJSONBase() *ec2InstanceMetadataJSON {
 	im := &ec2InstanceMetadataJSON{
-		EntryBase: plugin.NewEntry("metadata.json"),
-		inst:      inst,
+		EntryBase: plugin.NewEntryBase(),
 	}
-	im.DisableDefaultCaching()
+	im.
+		SetName("metadata.json").
+		IsSingleton().
+		DisableDefaultCaching()
+	return im
+}
+
+func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2InstanceMetadataJSON, error) {
+	im := ec2InstanceMetadataJSONBase()
+	im.inst = inst
 
 	content, err := im.Open(ctx)
 	if err != nil {

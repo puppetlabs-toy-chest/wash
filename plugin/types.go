@@ -3,12 +3,12 @@ Package plugin defines a set of interfaces that plugins must implement to enable
 functonality.
 
 All resources must implement the Entry interface. To do so they should include the EntryBase
-type, and initialize it via NewEntry. For example
+type, and initialize it via NewEntryBase. For example
 	type myResource struct {
 		plugin.EntryBase
 	}
 	...
-	rsc := myResource{plugin.NewEntry("a resource")}
+	rsc := myResource{plugin.NewEntryBase("a resource")}
 EntryBase gives the resource a name - which is how it will be displayed in the filesystem
 or referenced via the API - and tools for controlling how its data is cached.
 
@@ -33,7 +33,7 @@ import (
 // Entry is the interface for things that are representable by Wash's filesystem. This includes
 // plugin roots; resources like containers and volumes; placeholders (e.g. the containers directory
 // in the Docker plugin); read-only files like the metadata.json files for containers and EC2
-// instances; and more. It is a sealed interface, meaning you must use plugin.NewEntry when
+// instances; and more. It is a sealed interface, meaning you must use plugin.NewEntryBase when
 // creating your plugin objects.
 //
 // Metadata returns a complete description of the entry. See the EntryBase documentation for more
@@ -46,12 +46,14 @@ type Entry interface {
 	id() string
 	setID(id string)
 	getTTLOf(op defaultOpCode) time.Duration
+	entryBase() *EntryBase
 }
 
 // Parent is an entry with children. It will be represented as a directory in the Wash
 // filesystem.
 type Parent interface {
 	Entry
+	ChildSchemas() []EntrySchema
 	List(context.Context) ([]Entry, error)
 }
 

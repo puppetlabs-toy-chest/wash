@@ -24,20 +24,17 @@ func (suite *EntryBaseTestSuite) assertOpTTL(e EntryBase, op defaultOpCode, opNa
 	)
 }
 
-func (suite *EntryBaseTestSuite) TestNewEntry() {
-	suite.Panics(
-		func() { NewEntry("") },
-		"plugin.NewEntry: received an empty name",
-	)
-
+func (suite *EntryBaseTestSuite) TestNewEntryBase() {
 	initialAttr := EntryAttributes{}
 	initialAttr.SetCtime(time.Now())
-	e := NewEntry("foo")
+	e := NewEntryBase()
 
 	e.SetAttributes(initialAttr)
 	suite.Equal(initialAttr, e.attr)
 
+	e.SetName("foo")
 	suite.Equal("foo", e.Name())
+	
 	suite.assertOpTTL(e, ListOp, "List", 15*time.Second)
 	suite.assertOpTTL(e, OpenOp, "Open", 15*time.Second)
 	suite.assertOpTTL(e, MetadataOp, "Metadata", 15*time.Second)
@@ -57,7 +54,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 }
 
 func (suite *EntryBaseTestSuite) TestMetadata() {
-	e := NewEntry("foo")
+	e := NewEntryBase()
 
 	meta, err := e.Metadata(context.Background())
 	if suite.NoError(err) {
@@ -67,7 +64,7 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 }
 
 func (suite *EntryBaseTestSuite) TestSetSlashReplacer() {
-	e := NewEntry("foo/bar")
+	e := NewEntryBase()
 
 	suite.Panics(
 		func() { e.SetSlashReplacer('/') },

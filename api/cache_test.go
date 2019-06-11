@@ -152,13 +152,17 @@ type mockedParent struct {
 
 func newMockedParent() *mockedParent {
 	p := &mockedParent{
-		EntryBase: plugin.NewEntry("mockParent"),
+		EntryBase: plugin.NewEntryBase(),
 	}
-
+	p.SetName("mockParent")
 	return p
 }
 
 func (p *mockedParent) List(ctx context.Context) ([]plugin.Entry, error) {
 	args := p.Called(ctx)
 	return args.Get(0).([]plugin.Entry), args.Error(1)
+}
+
+func (p *mockedParent) ChildSchemas() []plugin.EntrySchema {
+	return nil
 }

@@ -9,14 +9,34 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type pods struct {
+type podsDir struct {
 	plugin.EntryBase
 	client *k8s.Clientset
 	config *rest.Config
 	ns     string
 }
 
-func (ps *pods) List(ctx context.Context) ([]plugin.Entry, error) {
+func podsDirBase() *podsDir {
+	pds := &podsDir{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	pds.SetName("pods").IsSingleton()
+	return pds
+}
+
+func newPodsDir(ns *namespace) *podsDir {
+	pds := podsDirBase()
+	pds.client = ns.client
+	pds.config = ns.config
+	pds.ns = ns.Name()
+	return pds
+}
+
+func (ps *podsDir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(podBase())
+}
+
+func (ps *podsDir) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: identify whether we have permission to get logs for this namespace early, so
 	// we can return quickly for Attributes.
 	podList, err := ps.client.CoreV1().Pods(ps.ns).List(metav1.ListOptions{})

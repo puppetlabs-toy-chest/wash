@@ -36,7 +36,7 @@ func createContext(raw clientcmdapi.Config, name string, access clientcmd.Config
 	if err != nil {
 		return nil, err
 	}
-	return &k8context{plugin.NewEntry(name), clientset, cfg, defaultns}, nil
+	return newK8Context(name, clientset, cfg, defaultns), nil
 }
 
 // Init for root
@@ -48,7 +48,8 @@ func (r *Root) Init() error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntry("kubernetes")
+	r.EntryBase = plugin.NewEntryBase()
+	r.SetName("kubernetes")
 	r.DisableDefaultCaching()
 
 	contexts := make([]plugin.Entry, 0)
@@ -63,6 +64,11 @@ func (r *Root) Init() error {
 	r.contexts = contexts
 
 	return nil
+}
+
+// ChildSchemas returns the root's child schemas
+func (r *Root) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(k8ContextBase())
 }
 
 // List returns available contexts.

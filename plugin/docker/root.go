@@ -26,14 +26,20 @@ func (r *Root) Init() error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntry("docker")
+	r.EntryBase = plugin.NewEntryBase()
+	r.SetName("docker")
 	r.DisableDefaultCaching()
 	r.resources = []plugin.Entry{
-		&containers{EntryBase: plugin.NewEntry("containers"), client: dockerCli},
-		&volumes{EntryBase: plugin.NewEntry("volumes"), client: dockerCli},
+		newContainersDir(dockerCli),
+		newVolumesDir(dockerCli),
 	}
 
 	return nil
+}
+
+// ChildSchemas returns the root's child schema
+func (r *Root) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(containersDirBase(), volumesDirBase())
 }
 
 // List lists the types of resources the Docker plugin exposes.

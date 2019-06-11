@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -19,6 +21,41 @@ type container struct {
 	client *client.Client
 }
 
+func containerBase() *container {
+	cont := &container{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	cont.SetLabel("container")
+	return cont
+}
+
+func newContainer(inst types.Container, client *client.Client) *container {
+	cont := containerBase()
+	cont.id = inst.ID
+	cont.client = client
+
+	name := inst.ID
+	if len(inst.Names) > 0 {
+		// The docker API prefixes all names with '/', so remove that.
+		// We don't append ID because names must currently be unique in the docker runtime.
+		// It's also not clear why 'Names' is an array; `/containers/{id}/json` returns a single
+		// Name field while '/containers/json' uses a Names array for each instance. In practice
+		// it appears to always be a single name, so take the first as the canonical name.
+		name = strings.TrimPrefix(inst.Names[0], "/")
+	}
+	cont.SetName(name)
+
+	startTime := time.Unix(inst.Created, 0)
+	cont.
+		Attributes().
+		SetCtime(startTime).
+		SetMtime(startTime).
+		SetAtime(startTime).
+		SetMeta(inst)
+
+	return cont
+}
+
 func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	// Use raw to also get the container size.
 	_, raw, err := c.client.ContainerInspectWithRaw(ctx, c.id, true)
@@ -29,19 +66,25 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	return plugin.ToJSONObject(raw), nil
 }
 
+func (c *container) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(
+		containerLogFileBase(),
+		containerMetadataBase(),
+		vol.FSBase(),
+	)
+}
+
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: May be worth creating a helper that makes it easy to create
 	// read-only files. Lots of shared code between these two.
-	cm := &containerMetadata{plugin.NewEntry("metadata.json"), c}
-	cm.DisableDefaultCaching()
+	cm := newContainerMetadata(c)
 	content, err := cm.Open(ctx)
 	if err != nil {
 		return nil, err
 	}
 	cm.Attributes().SetSize(uint64(content.Size()))
 
-	clf := &containerLogFile{plugin.NewEntry("log"), c.id, c.client}
-	clf.DisableCachingFor(plugin.MetadataOp)
+	clf := newContainerLogFile(c)
 	content, err = clf.Open(ctx)
 	if err != nil {
 		return nil, err

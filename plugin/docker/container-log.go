@@ -18,6 +18,21 @@ type containerLogFile struct {
 	client        *client.Client
 }
 
+func containerLogFileBase() *containerLogFile {
+	clf := &containerLogFile{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	clf.SetName("log").IsSingleton()
+	return clf
+}
+
+func newContainerLogFile(container *container) *containerLogFile {
+	clf := containerLogFileBase()
+	clf.containerName = container.id
+	clf.client = container.client
+	return clf
+}
+
 func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	meta, err := clf.client.ContainerInspect(ctx, clf.containerName)
 	if err == nil {

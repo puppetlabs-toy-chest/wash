@@ -18,12 +18,23 @@ type s3Dir struct {
 	client  *s3Client.S3
 }
 
-func newS3Dir(session *session.Session) *s3Dir {
-	return &s3Dir{
-		EntryBase: plugin.NewEntry("s3"),
-		session:   session,
-		client:    s3Client.New(session),
+func s3DirBase() *s3Dir {
+	s3Dir := &s3Dir{
+		EntryBase: plugin.NewEntryBase(),
 	}
+	s3Dir.SetName("s3").IsSingleton()
+	return s3Dir
+}
+
+func newS3Dir(session *session.Session) *s3Dir {
+	s3Dir := s3DirBase()
+	s3Dir.session = session
+	s3Dir.client = s3Client.New(session)
+	return s3Dir
+}
+
+func (s *s3Dir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(s3BucketBase())
 }
 
 // List lists the buckets.

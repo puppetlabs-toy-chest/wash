@@ -36,6 +36,11 @@ type Dir = map[string]plugin.EntryAttributes
 // A DirMap is a map of directory names to a map of their directory contents.
 type DirMap = map[string]Dir
 
+// ChildSchemas returns a volume's child schema
+func ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(dirBase(), fileBase())
+}
+
 // List constructs an array of entries for the given path from a DirMap.
 // The root path is an empty string. Requests are cached against the supplied Interface
 // using the VolumeListCB op.

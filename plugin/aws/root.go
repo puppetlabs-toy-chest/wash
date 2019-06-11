@@ -61,12 +61,18 @@ func exists(path string) error {
 
 // Init for root
 func (r *Root) Init() error {
-	r.EntryBase = plugin.NewEntry("aws")
+	r.EntryBase = plugin.NewEntryBase()
+	r.SetName("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
 
 	// Force authorizing profiles on startup
 	_, err := r.List(context.Background())
 	return err
+}
+
+// ChildSchemas returns the root's child schema
+func (r *Root) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(profileBase())
 }
 
 // List the available AWS profiles

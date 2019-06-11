@@ -13,8 +13,8 @@ type Entry struct {
 	Metadata       plugin.JSONObject
 }
 
-// NewEntry constructs a new `wash find` entry
-func NewEntry(e apitypes.Entry, normalizedPath string) Entry {
+// NewEntryBase constructs a new `wash find` entry
+func NewEntryBase(e apitypes.Entry, normalizedPath string) Entry {
 	return Entry{
 		Entry: e,
 		NormalizedPath: normalizedPath,

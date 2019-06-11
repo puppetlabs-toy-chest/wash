@@ -18,9 +18,17 @@ type profile struct {
 	resourcesDir []plugin.Entry
 }
 
+func profileBase() *profile {
+	profile := &profile{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	profile.SetLabel("profile").DisableDefaultCaching()
+	return profile
+}
+
 func newProfile(ctx context.Context, name string) (*profile, error) {
-	profile := profile{EntryBase: plugin.NewEntry(name)}
-	profile.DisableDefaultCaching()
+	profile := profileBase()
+	profile.SetName(name)
 
 	activity.Record(ctx, "Creating a new AWS session for the %v profile", name)
 
@@ -57,7 +65,11 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	profile.session = sess
 	profile.resourcesDir = []plugin.Entry{newResourcesDir(sess)}
 
-	return &profile, nil
+	return profile, nil
+}
+
+func (p *profile) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(resourcesDirBase())
 }
 
 // List lists the resources directory

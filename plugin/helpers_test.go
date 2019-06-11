@@ -22,12 +22,14 @@ func (suite *HelpersTestSuite) TearDownSuite() {
 }
 
 func (suite *HelpersTestSuite) TestName() {
-	e := NewEntry("foo")
+	e := NewEntryBase()
+	e.SetName("foo")
 	suite.Equal(Name(&e), "foo")
 }
 
 func (suite *HelpersTestSuite) TestCName() {
-	e := NewEntry("foo/bar/baz")
+	e := NewEntryBase()
+	e.SetName("foo/bar/baz")
 	suite.Equal("foo#bar#baz", CName(&e))
 
 	e.SetSlashReplacer(':')
@@ -35,7 +37,8 @@ func (suite *HelpersTestSuite) TestCName() {
 }
 
 func (suite *HelpersTestSuite) TestID() {
-	e := NewEntry("foo/bar")
+	e := NewEntryBase()
+	e.SetName("foo/bar")
 
 	suite.Panics(
 		func() { ID(&e) },
@@ -52,8 +55,9 @@ type helpersTestsMockEntry struct {
 
 func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 	e := &helpersTestsMockEntry{
-		EntryBase: NewEntry("mockEntry"),
+		EntryBase: NewEntryBase(),
 	}
+	e.SetName("mockEntry")
 	e.SetTestID("id")
 	e.DisableDefaultCaching()
 

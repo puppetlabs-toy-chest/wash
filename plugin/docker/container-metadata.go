@@ -13,6 +13,23 @@ type containerMetadata struct {
 	container *container
 }
 
+func containerMetadataBase() *containerMetadata {
+	cm := &containerMetadata{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	cm.
+		SetName("metadata.json").
+		IsSingleton().
+		DisableDefaultCaching()
+	return cm
+}
+
+func newContainerMetadata(container *container) *containerMetadata {
+	cm := containerMetadataBase()
+	cm.container = container
+	return cm
+}
+
 func (cm *containerMetadata) Open(ctx context.Context) (plugin.SizedReader, error) {
 	metadata, err := plugin.CachedMetadata(ctx, cm.container)
 	if err != nil {

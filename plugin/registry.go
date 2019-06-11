@@ -10,16 +10,17 @@ import (
 // Registry represents the plugin registry. It is also Wash's root.
 type Registry struct {
 	EntryBase
-	plugins     map[string]Root
-	pluginRoots []Entry
+	plugins           map[string]Root
+	pluginRoots       []Entry
 }
 
 // NewRegistry creates a new plugin registry object
 func NewRegistry() *Registry {
 	r := &Registry{
-		EntryBase: NewEntry("/"),
+		EntryBase: NewEntryBase(),
 		plugins:   make(map[string]Root),
 	}
+	r.SetName("/")
 	r.setID("/")
 	r.DisableDefaultCaching()
 
@@ -51,6 +52,7 @@ func (r *Registry) RegisterPlugin(root Root) error {
 		panic(msg)
 	}
 
+	root.entryBase().IsSingleton()
 	r.plugins[root.name()] = root
 	r.pluginRoots = append(r.pluginRoots, root)
 	return nil
@@ -75,6 +77,11 @@ func (r *Registry) RegisterExternalPlugin(spec ExternalPluginSpec) error {
 
 	root := newExternalPluginRoot(spec.Script)
 	return r.RegisterPlugin(root)
+}
+
+// ChildSchemas returns the child schemas of the plugin registry
+func (r *Registry) ChildSchemas() []EntrySchema {
+	return ChildSchemas(r.pluginRoots...)
 }
 
 // List all of Wash's loaded plugins

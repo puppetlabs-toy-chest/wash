@@ -16,13 +16,30 @@ type FS struct {
 	executor plugin.Execable
 }
 
+// FSBase returns a base FS entry
+func FSBase() *FS {
+	fs := &FS{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	fs.
+		SetLabel("fs").
+		// Caching handled in List.
+		DisableCachingFor(plugin.ListOp)
+	return fs
+}
+
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
 func NewFS(name string, executor plugin.Execable) *FS {
-	fs := &FS{EntryBase: plugin.NewEntry(name), executor: executor}
-	// Caching handled in List.
-	fs.DisableCachingFor(plugin.ListOp)
+	fs := FSBase()
+	fs.executor = executor
+	fs.SetName(name)
 	return fs
+}
+
+// ChildSchemas returns the FS entry's child schema
+func (d *FS) ChildSchemas() []plugin.EntrySchema {
+	return ChildSchemas()
 }
 
 // List will attempt to list the filesystem of an Execable resource (the executor). It will list

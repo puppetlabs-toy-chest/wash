@@ -26,7 +26,7 @@ func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(matches))
 	for i, match := range matches {
-		entry, err := NewEntry(ctx, match)
+		entry, err := NewEntryBase(ctx, match)
 		if err != nil {
 			return nil, err
 		}

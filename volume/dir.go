@@ -14,19 +14,30 @@ type dir struct {
 	path string
 }
 
+func dirBase() *dir {
+	vd := &dir{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	vd.SetLabel("dir")
+	return vd
+}
+
 // newDir creates a dir populated from dirs.
 func newDir(name string, attr plugin.EntryAttributes, impl Interface, path string) *dir {
-	vd := &dir{
-		EntryBase: plugin.NewEntry(name),
-		impl:      impl,
-		path:      path,
-	}
+	vd := dirBase()
+	vd.impl = impl
+	vd.path = path
+	vd.SetName(name)
 	vd.SetAttributes(attr)
 	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
 	// Caching handled in List based on 'impl'.
 	vd.DisableCachingFor(plugin.ListOp)
 
 	return vd
+}
+
+func (v *dir) ChildSchemas() []plugin.EntrySchema {
+	return ChildSchemas()
 }
 
 // List lists the children of the directory.

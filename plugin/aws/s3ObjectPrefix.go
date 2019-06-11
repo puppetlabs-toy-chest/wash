@@ -19,13 +19,25 @@ type s3ObjectPrefix struct {
 	client *s3Client.S3
 }
 
-func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
-	return &s3ObjectPrefix{
-		EntryBase: plugin.NewEntry(name),
-		bucket:    bucket,
-		prefix:    prefix,
-		client:    client,
+func s3ObjectPrefixBase() *s3ObjectPrefix {
+	objPrefix := &s3ObjectPrefix{
+		EntryBase: plugin.NewEntryBase(),
 	}
+	objPrefix.SetLabel("prefix")
+	return objPrefix
+}
+
+func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Client.S3) *s3ObjectPrefix {
+	objPrefix := s3ObjectPrefixBase()
+	objPrefix.bucket = bucket
+	objPrefix.prefix = prefix
+	objPrefix.client = client
+	objPrefix.SetName(name)
+	return objPrefix
+}
+
+func (d *s3ObjectPrefix) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(s3ObjectPrefixBase(), s3ObjectBase())
 }
 
 // List lists all S3 objects and S3 object prefixes that are
