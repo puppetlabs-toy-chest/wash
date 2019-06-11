@@ -59,7 +59,7 @@ func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
 }
 
 func (suite *fsTestSuite) createExec() *mockExecutor {
-	exec := &mockExecutor{EntryBase: plugin.NewEntry()}
+	exec := &mockExecutor{EntryBase: plugin.NewEntryBase()}
 	exec.SetName("instance")
 	// Used when recording activity.
 	exec.SetTestID("/instance")

@@ -18,7 +18,7 @@ type namespace struct {
 
 func namespaceTemplate() *namespace {
 	ns := &namespace{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	ns.SetShortType("namespace")
 	return ns

@@ -27,7 +27,7 @@ type pod struct {
 
 func podTemplate() *pod {
 	pd := &pod{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	pd.SetShortType("pod")
 	return pd

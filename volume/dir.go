@@ -16,7 +16,7 @@ type dir struct {
 
 func dirTemplate() *dir {
 	vd := &dir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	vd.SetShortType("dir")
 	return vd

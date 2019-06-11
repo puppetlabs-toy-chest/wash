@@ -19,7 +19,7 @@ type FS struct {
 // FSTemplate returns an FS entry's template
 func FSTemplate() *FS {
 	fs := &FS{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	fs.SetShortType("fs")
 	return fs

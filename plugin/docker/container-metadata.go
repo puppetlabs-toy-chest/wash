@@ -15,7 +15,7 @@ type containerMetadata struct {
 
 func containerMetadataTemplate() *containerMetadata {
 	cm := &containerMetadata{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	cm.SetName("metadata.json").IsSingleton()
 	return cm

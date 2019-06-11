@@ -26,7 +26,7 @@ func (r *Root) Init() error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntry()
+	r.EntryBase = plugin.NewEntryBase()
 	r.SetName("docker")
 	r.DisableDefaultCaching()
 	r.resources = []plugin.Entry{

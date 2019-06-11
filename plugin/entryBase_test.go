@@ -24,10 +24,10 @@ func (suite *EntryBaseTestSuite) assertOpTTL(e EntryBase, op defaultOpCode, opNa
 	)
 }
 
-func (suite *EntryBaseTestSuite) TestNewEntry() {
+func (suite *EntryBaseTestSuite) TestNewEntryBase() {
 	initialAttr := EntryAttributes{}
 	initialAttr.SetCtime(time.Now())
-	e := NewEntry()
+	e := NewEntryBase()
 
 	e.SetAttributes(initialAttr)
 	suite.Equal(initialAttr, e.attr)
@@ -54,7 +54,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 }
 
 func (suite *EntryBaseTestSuite) TestMetadata() {
-	e := NewEntry()
+	e := NewEntryBase()
 
 	meta, err := e.Metadata(context.Background())
 	if suite.NoError(err) {
@@ -64,7 +64,7 @@ func (suite *EntryBaseTestSuite) TestMetadata() {
 }
 
 func (suite *EntryBaseTestSuite) TestSetSlashReplacer() {
-	e := NewEntry()
+	e := NewEntryBase()
 
 	suite.Panics(
 		func() { e.SetSlashReplacer('/') },

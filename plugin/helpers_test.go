@@ -22,13 +22,13 @@ func (suite *HelpersTestSuite) TearDownSuite() {
 }
 
 func (suite *HelpersTestSuite) TestName() {
-	e := NewEntry()
+	e := NewEntryBase()
 	e.SetName("foo")
 	suite.Equal(Name(&e), "foo")
 }
 
 func (suite *HelpersTestSuite) TestCName() {
-	e := NewEntry()
+	e := NewEntryBase()
 	e.SetName("foo/bar/baz")
 	suite.Equal("foo#bar#baz", CName(&e))
 
@@ -37,7 +37,7 @@ func (suite *HelpersTestSuite) TestCName() {
 }
 
 func (suite *HelpersTestSuite) TestID() {
-	e := NewEntry()
+	e := NewEntryBase()
 	e.SetName("foo/bar")
 
 	suite.Panics(
@@ -55,7 +55,7 @@ type helpersTestsMockEntry struct {
 
 func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 	e := &helpersTestsMockEntry{
-		EntryBase: NewEntry(),
+		EntryBase: NewEntryBase(),
 	}
 	e.SetName("mockEntry")
 	e.SetTestID("id")

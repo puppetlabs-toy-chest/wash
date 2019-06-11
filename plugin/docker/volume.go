@@ -28,7 +28,7 @@ const mountpoint = "/mnt"
 
 func volumeTemplate() *volume {
 	vol := &volume{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	vol.SetShortType("volume")
 	return vol

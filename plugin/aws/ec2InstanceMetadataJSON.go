@@ -17,7 +17,7 @@ type ec2InstanceMetadataJSON struct {
 
 func ec2InstanceMetadataJSONTemplate() *ec2InstanceMetadataJSON {
 	im := &ec2InstanceMetadataJSON{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	im.SetName("metadata.json").IsSingleton()
 	return im

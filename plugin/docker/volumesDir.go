@@ -16,7 +16,7 @@ type volumesDir struct {
 
 func volumesDirTemplate() *volumesDir {
 	volumesDir := &volumesDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	volumesDir.SetName("volumes").IsSingleton()
 	return volumesDir

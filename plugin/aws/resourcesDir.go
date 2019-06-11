@@ -16,7 +16,7 @@ type resourcesDir struct {
 
 func resourcesDirTemplate() *resourcesDir {
 	resourcesDir := &resourcesDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	resourcesDir.SetName("resources").IsSingleton()
 	return resourcesDir

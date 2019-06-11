@@ -21,12 +21,12 @@ var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
 /*
 EntryBase implements Entry, making it easy to create new entries.
-You should use plugin.NewEntry to create new EntryBase objects.
+You should use plugin.NewEntryBaseBase to create new EntryBase objects.
 
 Each of the setters supports the builder pattern, which enables you
 to do something like
 
-	e := plugin.NewEntry("foo")
+	e := plugin.NewEntryBaseBase()
 	e.
 		DisableCachingFor(plugin.ListOp).
 		Attributes().
@@ -45,10 +45,8 @@ type EntryBase struct {
 	singleton          bool
 }
 
-// NewEntry creates a new entry
-//
-// TODO: Update docs with the changes to NewEntry
-func NewEntry() EntryBase {
+// NewEntryBase creates a new EntryBase object
+func NewEntryBase() EntryBase {
 	e := EntryBase{
 		slashReplacerCh: '#',
 	}

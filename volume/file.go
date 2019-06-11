@@ -17,7 +17,7 @@ type file struct {
 
 func fileTemplate() *file {
 	vf := &file{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	vf.SetShortType("file")
 	return vf

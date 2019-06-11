@@ -153,7 +153,7 @@ type s3Bucket struct {
 
 func s3BucketTemplate() *s3Bucket {
 	bucket := &s3Bucket{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	bucket.SetShortType("bucket")
 	return bucket

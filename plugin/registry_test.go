@@ -57,7 +57,7 @@ func (suite *RegistryTestSuite) TestPluginNameRegex() {
 
 func (suite *RegistryTestSuite) TestRegisterPlugin() {
 	reg := NewRegistry()
-	m := &mockRoot{EntryBase: NewEntry()}
+	m := &mockRoot{EntryBase: NewEntryBase()}
 	m.SetName("mine")
 	m.On("Init").Return(nil)
 
@@ -68,7 +68,7 @@ func (suite *RegistryTestSuite) TestRegisterPlugin() {
 
 func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 	reg := NewRegistry()
-	m := &mockRoot{EntryBase: NewEntry()}
+	m := &mockRoot{EntryBase: NewEntryBase()}
 	m.SetName("mine")
 	m.On("Init").Return(errors.New("failed"))
 
@@ -80,7 +80,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
 	panicFunc := func() {
 		reg := NewRegistry()
-		m := &mockRoot{EntryBase: NewEntry()}
+		m := &mockRoot{EntryBase: NewEntryBase()}
 		m.SetName("b@dname")
 		_ = reg.RegisterPlugin(m)
 	}
@@ -94,7 +94,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
 func (suite *RegistryTestSuite) TestRegisterPluginRegisteredPlugin() {
 	panicFunc := func() {
 		reg := NewRegistry()
-		m1 := &mockRoot{EntryBase: NewEntry()}
+		m1 := &mockRoot{EntryBase: NewEntryBase()}
 		m1.SetName("mine")
 		_ = reg.RegisterPlugin(m1)
 		_ = reg.RegisterPlugin(m1)

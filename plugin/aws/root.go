@@ -61,7 +61,7 @@ func exists(path string) error {
 
 // Init for root
 func (r *Root) Init() error {
-	r.EntryBase = plugin.NewEntry()
+	r.EntryBase = plugin.NewEntryBase()
 	r.SetName("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
 

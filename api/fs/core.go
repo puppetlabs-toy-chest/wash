@@ -21,7 +21,7 @@ func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
 	// but it's platform-specific. We should eventually use it for
 	// a more complete implementation of apifs.
 	n := &fsnode{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 		path:      path,
 	}
 	n.
@@ -35,9 +35,9 @@ func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
 	return n
 }
 
-// NewEntry constructs a new Wash entry from the given FS
+// NewEntryBase constructs a new Wash entry from the given FS
 // path
-func NewEntry(ctx context.Context, path string) (plugin.Entry, error) {
+func NewEntryBase(ctx context.Context, path string) (plugin.Entry, error) {
 	finfo, err := os.Stat(path)
 	if err != nil {
 		return nil, err

@@ -21,7 +21,7 @@ type ec2InstanceConsoleOutput struct {
 
 func ec2InstanceConsoleOutputTemplate() *ec2InstanceConsoleOutput {
 	cl := &ec2InstanceConsoleOutput{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	cl.SetShortType("console.out")
 	return cl
@@ -33,10 +33,10 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 	cl.latest = latest
 
 	if cl.latest {
-		cl.EntryBase = plugin.NewEntry()
+		cl.EntryBase = plugin.NewEntryBase()
 		cl.SetName("console-latest.out")
 	} else {
-		cl.EntryBase = plugin.NewEntry()
+		cl.EntryBase = plugin.NewEntryBase()
 		cl.SetName("console.out")
 	}
 	cl.DisableDefaultCaching()

@@ -23,7 +23,7 @@ type container struct {
 
 func containerTemplate() *container {
 	cont := &container{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	cont.SetShortType("container")
 	return cont

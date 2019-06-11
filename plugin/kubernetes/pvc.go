@@ -30,7 +30,7 @@ var errPodTerminated = errors.New("Pod terminated unexpectedly")
 
 func pvcTemplate() *pvc {
 	vol := &pvc{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	vol.SetShortType("persistentvolumeclaim")
 	return vol

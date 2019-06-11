@@ -39,7 +39,7 @@ const (
 
 func ec2InstanceTemplate() *ec2Instance {
 	ec2Instance := &ec2Instance{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	ec2Instance.SetShortType("instance")
 	return ec2Instance

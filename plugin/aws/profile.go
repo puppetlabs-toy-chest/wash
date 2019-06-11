@@ -20,7 +20,7 @@ type profile struct {
 
 func profileTemplate() *profile {
 	profile := &profile{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	profile.SetShortType("profile")
 	return profile

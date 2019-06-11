@@ -19,7 +19,7 @@ type ec2Dir struct {
 
 func ec2DirTemplate() *ec2Dir {
 	ec2Dir := &ec2Dir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	ec2Dir.SetName("ec2").IsSingleton()
 	return ec2Dir

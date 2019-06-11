@@ -19,7 +19,7 @@ type k8context struct {
 
 func k8ContextTemplate() *k8context {
 	context := &k8context{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	context.SetShortType("context")
 	return context

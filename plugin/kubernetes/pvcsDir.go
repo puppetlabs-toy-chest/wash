@@ -16,7 +16,7 @@ type pvcsDir struct {
 
 func pvcsDirTemplate() *pvcsDir {
 	pv := &pvcsDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	pv.SetName("persistentvolumeclaims").IsSingleton()
 	return pv

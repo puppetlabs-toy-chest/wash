@@ -20,7 +20,7 @@ type s3Dir struct {
 
 func s3DirTemplate() *s3Dir {
 	s3Dir := &s3Dir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	s3Dir.SetName("s3").IsSingleton()
 	return s3Dir

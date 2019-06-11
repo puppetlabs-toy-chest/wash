@@ -124,7 +124,7 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, *errorResponse)
 		// but it does mean that we'll need to re-evaluate this code once
 		// we get to the point where supporting remote Wash servers is
 		// desirable.
-		e, err := apifs.NewEntry(ctx, path)
+		e, err := apifs.NewEntryBase(ctx, path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil, "", entryNotFoundResponse(path, err.Error())

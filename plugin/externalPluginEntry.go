@@ -38,7 +38,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
 	entry := &externalPluginEntry{
-		EntryBase:        NewEntry(),
+		EntryBase:        NewEntryBase(),
 		methods:          e.Methods,
 		state:            e.State,
 	}

@@ -123,7 +123,7 @@ type cacheTestsMockEntry struct {
 
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
 	e := &cacheTestsMockEntry{
-		EntryBase: NewEntry(),
+		EntryBase: NewEntryBase(),
 	}
 	e.SetName(name)
 	return e

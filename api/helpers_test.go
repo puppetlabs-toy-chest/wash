@@ -56,9 +56,9 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		}
 	}
 
-	foo := plugin.NewEntry()
+	foo := plugin.NewEntryBase()
 	foo.SetName("foo/bar")
-	parent := &mockParent{plugin.NewEntry(), []plugin.Entry{&foo}}
+	parent := &mockParent{plugin.NewEntryBase(), []plugin.Entry{&foo}}
 	parent.SetName("root")
 	parent.SetTestID("/root")
 	parent.DisableDefaultCaching()
@@ -70,9 +70,9 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		runTestCase(parent, c)
 	}
 
-	baz := plugin.NewEntry()
+	baz := plugin.NewEntryBase()
 	baz.SetName("baz")
-	nestedParent := &mockParent{plugin.NewEntry(), []plugin.Entry{&baz}}
+	nestedParent := &mockParent{plugin.NewEntryBase(), []plugin.Entry{&baz}}
 	nestedParent.SetName("bar")
 	nestedParent.DisableDefaultCaching()
 	parent.entries = append(parent.entries, nestedParent)
@@ -85,7 +85,7 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	}
 
 	// Finally, test the duplicate cname error response
-	duplicateFoo := plugin.NewEntry()
+	duplicateFoo := plugin.NewEntryBase()
 	duplicateFoo.SetName("foo#bar")
 	parent.entries = append(parent.entries, &duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
@@ -130,7 +130,7 @@ func getRequest(ctx context.Context, path string) *http.Request {
 
 func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	reg := plugin.NewRegistry()
-	plug := &mockRoot{EntryBase: plugin.NewEntry()}
+	plug := &mockRoot{EntryBase: plugin.NewEntryBase()}
 	plug.SetName("mine")
 	plug.SetTestID("/mine")
 	suite.NoError(reg.RegisterPlugin(plug))
@@ -165,7 +165,7 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	_, _, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/yours"))
 	suite.Error(err)
 
-	file := plugin.NewEntry()
+	file := plugin.NewEntryBase()
 	file.SetName("a file")
 	file.SetTestID("/mine/a file")
 	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)

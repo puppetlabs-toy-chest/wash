@@ -18,7 +18,7 @@ type podsDir struct {
 
 func podsDirTemplate() *podsDir {
 	pds := &podsDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	pds.SetName("pods").IsSingleton()
 	return pds

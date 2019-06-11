@@ -20,7 +20,7 @@ type containerLogFile struct {
 
 func containerLogFileTemplate() *containerLogFile {
 	clf := &containerLogFile{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	clf.SetName("log").IsSingleton()
 	return clf

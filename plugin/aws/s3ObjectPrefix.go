@@ -21,7 +21,7 @@ type s3ObjectPrefix struct {
 
 func s3ObjectPrefixTemplate() *s3ObjectPrefix {
 	objPrefix := &s3ObjectPrefix{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	objPrefix.SetShortType("prefix")
 	return objPrefix

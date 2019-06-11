@@ -24,7 +24,7 @@ type s3Object struct {
 
 func s3ObjectTemplate() *s3Object {
 	s3Obj := &s3Object{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	s3Obj.SetShortType("object")
 	return s3Obj

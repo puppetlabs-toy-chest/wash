@@ -152,7 +152,7 @@ type mockedParent struct {
 
 func newMockedParent() *mockedParent {
 	p := &mockedParent{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	p.SetName("mockParent")
 	return p

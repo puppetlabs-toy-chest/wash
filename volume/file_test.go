@@ -42,7 +42,7 @@ func TestVolumeFile(t *testing.T) {
 	initialAttr := plugin.EntryAttributes{}
 	initialAttr.SetCtime(now)
 
-	impl := &mockFileEntry{EntryBase: plugin.NewEntry(), content: "hello"}
+	impl := &mockFileEntry{EntryBase: plugin.NewEntryBase(), content: "hello"}
 	impl.SetName("parent")
 	vf := newFile("mine", initialAttr, impl, "my path")
 
@@ -72,7 +72,7 @@ func TestVolumeFile(t *testing.T) {
 }
 
 func TestVolumeFileErr(t *testing.T) {
-	impl := &mockFileEntry{EntryBase: plugin.NewEntry(), err: errors.New("fail")}
+	impl := &mockFileEntry{EntryBase: plugin.NewEntryBase(), err: errors.New("fail")}
 	impl.SetName("parent")
 	vf := newFile("mine", plugin.EntryAttributes{}, impl, "my path")
 

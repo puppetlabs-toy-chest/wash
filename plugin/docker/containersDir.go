@@ -16,7 +16,7 @@ type containersDir struct {
 
 func containersDirTemplate() *containersDir {
 	containersDir := &containersDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	containersDir.SetName("containers").IsSingleton()
 	return containersDir

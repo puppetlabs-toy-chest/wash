@@ -23,7 +23,7 @@ type ec2InstancesDir struct {
 
 func ec2InstancesDirTemplate() *ec2InstancesDir {
 	ec2InstancesDir := &ec2InstancesDir{
-		EntryBase: plugin.NewEntry(),
+		EntryBase: plugin.NewEntryBase(),
 	}
 	ec2InstancesDir.SetName("instances").IsSingleton()
 	return ec2InstancesDir
