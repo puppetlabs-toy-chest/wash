@@ -23,8 +23,8 @@ type mockRoot struct {
 	mock.Mock
 }
 
-func (m *mockRoot) Init() error {
-	args := m.Called()
+func (m *mockRoot) Init(cfg map[string]interface{}) error {
+	args := m.Called(cfg)
 	return args.Error(0)
 }
 
@@ -59,9 +59,22 @@ func (suite *RegistryTestSuite) TestRegisterPlugin() {
 	reg := NewRegistry()
 	m := &mockRoot{EntryBase: NewEntryBase()}
 	m.SetName("mine")
-	m.On("Init").Return(nil)
+	cfg := map[string]interface{}{}
+	m.On("Init", cfg).Return(nil)
 
-	suite.NoError(reg.RegisterPlugin(m))
+	suite.NoError(reg.RegisterPlugin(m, cfg))
+	m.AssertExpectations(suite.T())
+	suite.Contains(reg.Plugins(), "mine")
+}
+
+func (suite *RegistryTestSuite) TestRegisterPluginWithConfig() {
+	reg := NewRegistry()
+	m := &mockRoot{EntryBase: NewEntryBase()}
+	m.SetName("mine")
+	cfg := map[string]interface{}{"key": "value"}
+	m.On("Init", cfg).Return(nil)
+
+	suite.NoError(reg.RegisterPlugin(m, cfg))
 	m.AssertExpectations(suite.T())
 	suite.Contains(reg.Plugins(), "mine")
 }
@@ -70,9 +83,9 @@ func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 	reg := NewRegistry()
 	m := &mockRoot{EntryBase: NewEntryBase()}
 	m.SetName("mine")
-	m.On("Init").Return(errors.New("failed"))
+	m.On("Init", map[string]interface{}(nil)).Return(errors.New("failed"))
 
-	suite.EqualError(reg.RegisterPlugin(m), "failed")
+	suite.EqualError(reg.RegisterPlugin(m, nil), "failed")
 	m.AssertExpectations(suite.T())
 	suite.NotContains(reg.Plugins(), "mine")
 }
@@ -82,7 +95,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
 		reg := NewRegistry()
 		m := &mockRoot{EntryBase: NewEntryBase()}
 		m.SetName("b@dname")
-		_ = reg.RegisterPlugin(m)
+		_ = reg.RegisterPlugin(m, map[string]interface{}{})
 	}
 
 	suite.Panics(
@@ -96,8 +109,8 @@ func (suite *RegistryTestSuite) TestRegisterPluginRegisteredPlugin() {
 		reg := NewRegistry()
 		m1 := &mockRoot{EntryBase: NewEntryBase()}
 		m1.SetName("mine")
-		_ = reg.RegisterPlugin(m1)
-		_ = reg.RegisterPlugin(m1)
+		_ = reg.RegisterPlugin(m1, map[string]interface{}{})
+		_ = reg.RegisterPlugin(m1, map[string]interface{}{})
 	}
 
 	suite.Panics(panicFunc, "r.RegisterPlugin: the mine plugin's already been registered")
@@ -107,32 +120,40 @@ func (suite *RegistryTestSuite) TestRegisterExternalPlugin() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/external.sh"}
 
-	suite.NoError(reg.RegisterExternalPlugin(spec))
-	suite.Contains(reg.Plugins(), "test")
+	suite.NoError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}))
+	suite.Contains(reg.Plugins(), "external")
+}
+
+func (suite *RegistryTestSuite) TestRegisterExternalPluginWithConfig() {
+	reg := NewRegistry()
+	spec := ExternalPluginSpec{Script: "testdata/external.sh"}
+
+	suite.NoError(reg.RegisterExternalPlugin(spec, map[string]interface{}{"key": "value"}))
+	suite.Contains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNoExec() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/noexec"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "script testdata/noexec is not executable")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "script testdata/noexec is not executable")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNoExist() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/noexist"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "stat testdata/noexist: no such file or directory")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "stat testdata/noexist: no such file or directory")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func (suite *RegistryTestSuite) TestRegisterExternalPluginNotFile() {
 	reg := NewRegistry()
 	spec := ExternalPluginSpec{Script: "testdata/notfile"}
 
-	suite.EqualError(reg.RegisterExternalPlugin(spec), "script testdata/notfile is not a file")
-	suite.NotContains(reg.Plugins(), "test")
+	suite.EqualError(reg.RegisterExternalPlugin(spec, map[string]interface{}{}), "script testdata/notfile is not a file")
+	suite.NotContains(reg.Plugins(), "external")
 }
 
 func TestRegistry(t *testing.T) {

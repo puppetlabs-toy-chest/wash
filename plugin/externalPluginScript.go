@@ -60,7 +60,7 @@ func (s externalPluginScriptImpl) NewInvocation(
 	args ...string,
 ) *internal.Command {
 	if method == "init" {
-		return internal.NewCommand(ctx, s.Path(), "init")
+		return internal.NewCommand(ctx, s.Path(), append([]string{"init"}, args...)...)
 	}
 	if entry == nil {
 		msg := fmt.Sprintf("s.NewInvocation called with method '%v' and entry == nil", method)
@@ -68,7 +68,7 @@ func (s externalPluginScriptImpl) NewInvocation(
 	}
 	return internal.NewCommand(
 		ctx,
-		s.Path(), 
+		s.Path(),
 		append([]string{method, entry.id(), entry.state}, args...)...,
 	)
 }

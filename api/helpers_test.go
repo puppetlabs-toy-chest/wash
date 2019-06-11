@@ -89,12 +89,12 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	duplicateFoo.SetName("foo#bar")
 	parent.entries = append(parent.entries, &duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
-		ParentID:                        plugin.ID(parent),
-		FirstChildName:                  foo.Name(),
-		FirstChildSlashReplacer:         '#',
-		SecondChildName:                 duplicateFoo.Name(),
-		SecondChildSlashReplacer:        '#',
-		CName:                           "foo#bar",
+		ParentID:                 plugin.ID(parent),
+		FirstChildName:           foo.Name(),
+		FirstChildSlashReplacer:  '#',
+		SecondChildName:          duplicateFoo.Name(),
+		SecondChildSlashReplacer: '#',
+		CName:                    "foo#bar",
 	}
 	runTestCase(
 		parent,
@@ -107,7 +107,7 @@ type mockRoot struct {
 	mock.Mock
 }
 
-func (m *mockRoot) Init() error {
+func (m *mockRoot) Init(map[string]interface{}) error {
 	return nil
 }
 
@@ -133,7 +133,7 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	plug := &mockRoot{EntryBase: plugin.NewEntryBase()}
 	plug.SetName("mine")
 	plug.SetTestID("/mine")
-	suite.NoError(reg.RegisterPlugin(plug))
+	suite.NoError(reg.RegisterPlugin(plug, map[string]interface{}{}))
 	ctx := context.WithValue(context.Background(), pluginRegistryKey, reg)
 
 	mountpoint := "/mountpoint"

@@ -13,20 +13,18 @@ import (
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/puppetlabs/wash/plugin/aws"
-	"github.com/puppetlabs/wash/plugin/docker"
-	"github.com/puppetlabs/wash/plugin/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // Opts exposes additional configuration for server operation.
 type Opts struct {
-	CPUProfilePath      string
-	ExternalPlugins     []plugin.ExternalPluginSpec
-	LogFile             string
+	CPUProfilePath  string
+	ExternalPlugins []plugin.ExternalPluginSpec
+	LogFile         string
 	// LogLevel can be "warn", "info", "debug", or "trace".
-	LogLevel            string
+	LogLevel     string
+	PluginConfig map[string]map[string]interface{}
 }
 
 type controlChannels struct {
@@ -42,6 +40,7 @@ type Server struct {
 	logFH      *os.File
 	api        controlChannels
 	fuse       controlChannels
+	plugins    map[string]plugin.Root
 }
 
 var levelMap = map[string]log.Level{
@@ -51,9 +50,9 @@ var levelMap = map[string]log.Level{
 	"trace": log.TraceLevel,
 }
 
-// New creates a new Server.
-func New(mountpoint string, socket string, opts Opts) *Server {
-	return &Server{mountpoint: mountpoint, socket: socket, opts: opts}
+// New creates a new Server. Accepts a list of core plugins to load.
+func New(mountpoint string, socket string, plugins map[string]plugin.Root, opts Opts) *Server {
+	return &Server{mountpoint: mountpoint, socket: socket, plugins: plugins, opts: opts}
 }
 
 // Start starts the server. It returns once the server is ready.
@@ -79,9 +78,9 @@ func (s *Server) Start() error {
 	}
 
 	registry := plugin.NewRegistry()
-	loadInternalPlugins(registry)
+	s.loadInternalPlugins(registry)
 	if len(s.opts.ExternalPlugins) > 0 {
-		loadExternalPlugins(registry, s.opts.ExternalPlugins)
+		s.loadExternalPlugins(registry, s.opts.ExternalPlugins)
 	}
 	if len(registry.Plugins()) == 0 {
 		return fmt.Errorf("No plugins loaded")
@@ -166,27 +165,27 @@ func (s *Server) Stop() {
 	s.shutdown()
 }
 
-func loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
+func (s *Server) loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
 	log.Infof("Loading %v", name)
-	if err := registry.RegisterPlugin(root); err != nil {
+	if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
 		// %+v is a convention used by some errors to print additional context such as a stack trace
 		log.Warnf("%v failed to load: %+v", name, err)
 	}
 }
 
-func loadInternalPlugins(registry *plugin.Registry) {
+func (s *Server) loadInternalPlugins(registry *plugin.Registry) {
 	log.Debug("Loading internal plugins")
-	loadPlugin(registry, "aws", &aws.Root{})
-	loadPlugin(registry, "docker", &docker.Root{})
-	loadPlugin(registry, "kubernetes", &kubernetes.Root{})
+	for name, root := range s.plugins {
+		s.loadPlugin(registry, name, root)
+	}
 	log.Debug("Finished loading internal plugins")
 }
 
-func loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
+func (s *Server) loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
 	log.Infof("Loading external plugins")
 	for _, p := range externalPlugins {
 		log.Infof("Loading %v", p.Script)
-		if err := registry.RegisterExternalPlugin(p); err != nil {
+		if err := registry.RegisterExternalPlugin(p, s.opts.PluginConfig[p.Name()]); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
 			log.Warnf("%v failed to load: %+v", p.Script, err)
 		}

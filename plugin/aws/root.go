@@ -20,6 +20,7 @@ import (
 // Root of the AWS plugin
 type Root struct {
 	plugin.EntryBase
+	profs []string
 }
 
 func awsCredentialsFile() (string, error) {
@@ -60,10 +61,25 @@ func exists(path string) error {
 }
 
 // Init for root
-func (r *Root) Init() error {
+func (r *Root) Init(cfg map[string]interface{}) error {
 	r.EntryBase = plugin.NewEntryBase()
 	r.SetName("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
+
+	if profsI, ok := cfg["profiles"]; ok {
+		profs, ok := profsI.([]interface{})
+		if !ok {
+			return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profs)
+		}
+		r.profs = make([]string, len(profs))
+		for i, elem := range profs {
+			prof, ok := elem.(string)
+			if !ok {
+				return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profs)
+			}
+			r.profs[i] = prof
+		}
+	}
 
 	// Force authorizing profiles on startup
 	_, err := r.List(context.Background())
@@ -118,9 +134,18 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		names[strings.TrimPrefix(section.Name(), "profile ")] = struct{}{}
 	}
 
+	profs := make(map[string]struct{})
+	for _, p := range r.profs {
+		profs[p] = struct{}{}
+	}
+
 	var profiles []plugin.Entry
 	for name := range names {
 		if name == "DEFAULT" {
+			continue
+		}
+
+		if _, ok := profs[name]; len(profs) > 0 && !ok {
 			continue
 		}
 

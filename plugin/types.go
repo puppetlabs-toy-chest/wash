@@ -57,10 +57,11 @@ type Parent interface {
 	List(context.Context) ([]Entry, error)
 }
 
-// Root represents the plugin root
+// Root represents the plugin root. The Init function is passed a config map representing
+// plugin-specific configuration.
 type Root interface {
 	Parent
-	Init() error
+	Init(map[string]interface{}) error
 }
 
 // ExecOptions is a struct we can add new features to that must be serializable to JSON.

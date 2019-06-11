@@ -40,7 +40,7 @@ func createContext(raw clientcmdapi.Config, name string, access clientcmd.Config
 }
 
 // Init for root
-func (r *Root) Init() error {
+func (r *Root) Init(map[string]interface{}) error {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
 	raw, err := config.RawConfig()

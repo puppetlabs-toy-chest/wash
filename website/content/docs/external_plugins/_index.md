@@ -6,12 +6,13 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
 
 1. Write the [plugin script](#plugin-script). This is the script that Wash will shell out to whenever it needs to invoke a method on a specific entry within your plugin.
 
-1. Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the path to the plugin script. The plugin's name will be determined by invoking the script with the `init` method. An example `wash.yaml` config is shown below:
+1. Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the path to the plugin script. *The plugin's name is the basename of the script without the extension.* An example `wash.yaml` config adding the `sshfs` plugin is shown below:
 
     ```
     external-plugins:
-        - script: '/Users/enis.inan/GitHub/wash/website/static/docs/external_plugins/examples/sshfs.sh'
+        - script: '/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh'
     ```
+
 1. Start the Wash shell to see your plugin in action.
 
 ## Plugin Script
@@ -36,21 +37,28 @@ The remaining sections describe all the possible Wash methods that can be passed
 NOTE: Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.
 
 ## init
-The `init` method is special. It is invoked as `<plugin_script> init`, and it is invoked only once, when the external plugin is loaded. When `init` is invoked, the script must output a JSON object representing the plugin root. Here's an example:
+The `init` method is special. It is invoked as `<plugin_script> init <config>`, and it is invoked only once, when the external plugin is loaded. `<config>` is JSON containing any config supplied to Wash under the plugin's key. Given a Wash config file (`wash.yaml`)
 
 ```
-{
-  "name": "aws",
-  "methods": [
-    "list"
-  ]
-}
+external-plugins:
+  - script: '/path/to/myplugin.rb'
+myplugin:
+  profiles:
+    - profile_a
+    - profile_b
 ```
 
-This example shows the *minimum* amount of information required for Wash to construct the plugin root. In fact, the example shows the minimum amount of information required for Wash to construct *any* external plugin entry. This information consists of the entry's name and its implemented methods.
+the `init` method for a plugin named `myplugin` will be invoked with
+
+```
+<plugin_script> init '{"profiles":["profile_a","profile_b"]}'
+```
+
+When `init` is invoked, the script must output a JSON object representing the plugin root. The *minimum* amount of information required for Wash to construct the plugin root is an empty object, `{}`.
 
 You can include additional (optional) keys in the printed JSON object. These keys are:
 
+* `methods`. This is an array specifying the list of methods, enumerated below, that can be called directly on the plugin entry. The plugin root must always include and implement the `list` method.
 * `cache_ttls`. This specifies how many seconds each method's result should be cached (`ttl` is short for time to live). Currently, Wash caches the result of `list`, `read`, and `metadata`.
 * `attributes`. This represents the entry's attributes (see the [`Attributes/Metadata`](/wash/docs#attributes-metadata) section). Time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
 * `slash_replacer`. This overrides the default slash replacer `#`.
@@ -60,10 +68,7 @@ Below is an example JSON object showcasing all possible keys at once.
 
 ```
 {
-  "name": "some_entry",
-  "methods": [
-    "list"
-  ],
+  "methods": ["list"]
   "cache_ttls": {
     "list": 30
   },
@@ -79,12 +84,25 @@ Below is an example JSON object showcasing all possible keys at once.
 }
 ```
 
-We see from `cache_ttls` that the result of `some_entry`'s `list` method will be cached for 30 seconds. We see from `attributes` that `some_entry` has an `mtime` attribute, and that it also includes the `meta` attribute. We see from `slash_replacer` that any `/`'es in the entry's returned name will be replaced by a `:` instead of a `#`. Finally, we see from `state` that `some_entry` has some state that Wash will pass-back in via the `<state>` parameter whenever it invokes one of its methods. In this case, only `list` is implemented, and `<state>` is a stringified JSON object containing the entry's class (`SSHFS::Directory`) in whatever language the plugin script was written in.
+We see from `cache_ttls` that the result of `some_entry`'s `list` method will be cached for 30 seconds. We see from `attributes` that `some_entry` has an `mtime` attribute, and that it also includes the `meta` attribute. We see from `slash_replacer` that any `/`'es in the entry's returned name will be replaced by a `:` instead of a `#`. Finally, we see from `state` that `some_entry` has some state that Wash will pass-back in via the `<state>` parameter whenever it invokes one of its methods. In this case, `<state>` is a stringified JSON object containing the entry's class (`SSHFS::Directory`) in whatever language the plugin script was written in.
 
 `init` adopts the standard error conventions described in the [Errors](#errors) section.
 
 ## list
-`list` is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. Each JSON object has the same schema as the JSON object described in the `init` section (hence, `list` outputs an array of entries). Below is an example of valid `list` output:
+`list` is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. The *minimum* information required is each entry's name and its implemented methods
+
+```
+{
+  "name": "mydirectory",
+  "methods": [
+    "list"
+  ]
+}
+```
+
+Each entry may additionally return any keys described in [init](#init).
+
+Below is an example of valid `list` output:
 
 ```
 [
