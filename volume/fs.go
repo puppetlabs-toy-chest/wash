@@ -16,23 +16,24 @@ type FS struct {
 	executor plugin.Execable
 }
 
-// FSTemplate returns an FS entry's template
-func FSTemplate() *FS {
+// FSBase returns a base FS entry
+func FSBase() *FS {
 	fs := &FS{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	fs.SetShortType("fs")
+	fs.
+		SetLabel("fs").
+		// Caching handled in List.
+		DisableCachingFor(plugin.ListOp)
 	return fs
 }
 
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
 func NewFS(name string, executor plugin.Execable) *FS {
-	fs := FSTemplate()
+	fs := FSBase()
 	fs.executor = executor
 	fs.SetName(name)
-	// Caching handled in List.
-	fs.DisableCachingFor(plugin.ListOp)
 	return fs
 }
 

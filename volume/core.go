@@ -38,7 +38,7 @@ type DirMap = map[string]Dir
 
 // ChildSchemas returns a volume's child schema
 func ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(dirTemplate(), fileTemplate())
+	return plugin.ChildSchemas(dirBase(), fileBase())
 }
 
 // List constructs an array of entries for the given path from a DirMap.

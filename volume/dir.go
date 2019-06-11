@@ -14,17 +14,17 @@ type dir struct {
 	path string
 }
 
-func dirTemplate() *dir {
+func dirBase() *dir {
 	vd := &dir{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	vd.SetShortType("dir")
+	vd.SetLabel("dir")
 	return vd
 }
 
 // newDir creates a dir populated from dirs.
 func newDir(name string, attr plugin.EntryAttributes, impl Interface, path string) *dir {
-	vd := dirTemplate()
+	vd := dirBase()
 	vd.impl = impl
 	vd.path = path
 	vd.SetName(name)

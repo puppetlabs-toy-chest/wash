@@ -15,17 +15,17 @@ type file struct {
 	path string
 }
 
-func fileTemplate() *file {
+func fileBase() *file {
 	vf := &file{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	vf.SetShortType("file")
+	vf.SetLabel("file")
 	return vf
 }
 
 // newFile creates a VolumeFile.
 func newFile(name string, attr plugin.EntryAttributes, impl Interface, path string) *file {
-	vf := fileTemplate()
+	vf := fileBase()
 	vf.impl = impl
 	vf.path = path
 	vf.SetName(name)
