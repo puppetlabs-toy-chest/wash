@@ -112,7 +112,10 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 }
 
 func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
-	activity.Record(ctx, "FUSE: Attr %v", f)
+	// Attr is not a particularly interesting call and happens a lot. Log it to debug like other
+	// activity, but leave it out of activity because it introduces history entries for lots of
+	// miscellaneous shell activity.
+	log.Debugf("FUSE: Attr %v", f)
 
 	var attr plugin.EntryAttributes
 	if f.parent == nil {
@@ -142,7 +145,7 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	}
 
 	f.applyAttr(a, &attr)
-	activity.Record(ctx, "FUSE: Attr finished %v", f)
+	log.Debugf("FUSE: Attr finished %v", f)
 	return nil
 }
 
