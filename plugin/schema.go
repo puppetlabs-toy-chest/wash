@@ -8,18 +8,24 @@ import (
 // EntrySchema represents an entry's schema.
 type EntrySchema struct {
 	Type      string        `json:"type"`
-	ShortType string        `json:"short_type"`
+	Label     string        `json:"label"`
 	Singleton bool          `json:"singleton"`
 	Actions   []string      `json:"actions"`
 	Children  []EntrySchema `json:"children"`
 	entry     Entry
 }
 
-// ChildSchemas is a helper that's used to implement Parent#ChildSchemas
-func ChildSchemas(childTemplates ...Entry) []EntrySchema {
+// ChildSchemas is a helper that's used to implement Parent#ChildSchemas.
+//
+// NOTE: "Entry" should be "EntryBase". The reason it isn't is because
+// "EntryBase" doesn't implement Parent, so there is no way for Wash to
+// get a Parent child's child schemas. We could move ChildSchemas over to
+// EntryBase, but doing so removes the existing compile-time check on whether
+// a Parent provided their child schemas.
+func ChildSchemas(childBases ...Entry) []EntrySchema {
 	var schemas []EntrySchema
-	for _, template := range childTemplates {
-		schemas = append(schemas, schema(template, false))
+	for _, childBase := range childBases {
+		schemas = append(schemas, schema(childBase, false))
 	}
 	return schemas
 }
@@ -48,7 +54,7 @@ func schema(e Entry, includeChildren bool) EntrySchema {
 
 	s := EntrySchema{
 		Type:      strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
-		ShortType: e.entryBase().shortType,
+		Label:     e.entryBase().label,
 		Singleton: e.entryBase().isSingleton,
 		Actions:   SupportedActionsOf(e),
 		entry:     e,

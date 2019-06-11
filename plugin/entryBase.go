@@ -41,7 +41,7 @@ type EntryBase struct {
 	// washID represents the entry's wash ID. It is set in CachedList.
 	washID             string
 	ttl                [3]time.Duration
-	shortType          string
+	label              string
 	isSingleton        bool
 }
 
@@ -144,21 +144,21 @@ func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 }
 
 /*
-SetShortType sets the entry's short type, which is a shortened version
-of the class/struct name. It is useful when documenting your plugin's
-hierarchy.
+SetLabel sets the entry's label, which is a shortened version
+of the class/struct name. It is useful when documenting your
+plugin's hierarchy.
 
 NOTE: If your entry's a singleton, then Wash will default to using the
-entry's cname as its short type
+entry's cname as its label.
 
 TODO: Give an example of why this is important once the stree command's
 implemented.
 */
-func (e *EntryBase) SetShortType(shortType string) *EntryBase {
-	if len(shortType) == 0 {
-		panic("e.SetShortType called with an empty shortType")
+func (e *EntryBase) SetLabel(label string) *EntryBase {
+	if len(label) == 0 {
+		panic("e.SetLabel called with an empty label")
 	}
-	e.shortType = shortType
+	e.label = label
 	return e
 }
 
@@ -175,8 +175,8 @@ implemented.
 */
 func (e *EntryBase) IsSingleton() *EntryBase {
 	e.isSingleton = true
-	if len(e.shortType) == 0 {
-		e.SetShortType(CName(e))
+	if len(e.label) == 0 {
+		e.SetLabel(CName(e))
 	}
 	return e
 }
