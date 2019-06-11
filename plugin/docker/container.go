@@ -21,16 +21,16 @@ type container struct {
 	client *client.Client
 }
 
-func containerTemplate() *container {
+func containerBase() *container {
 	cont := &container{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	cont.SetShortType("container")
+	cont.SetLabel("container")
 	return cont
 }
 
 func newContainer(inst types.Container, client *client.Client) *container {
-	cont := containerTemplate()
+	cont := containerBase()
 	cont.id = inst.ID
 	cont.client = client
 
@@ -67,7 +67,11 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 }
 
 func (c *container) ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(containerLogFileTemplate(), containerMetadataTemplate(), vol.FSTemplate())
+	return plugin.ChildSchemas(
+		containerLogFileBase(),
+		containerMetadataBase(),
+		vol.FSBase(),
+	)
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {

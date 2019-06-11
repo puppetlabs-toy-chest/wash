@@ -26,11 +26,11 @@ type volume struct {
 
 const mountpoint = "/mnt"
 
-func volumeTemplate() *volume {
+func volumeBase() *volume {
 	vol := &volume{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	vol.SetShortType("volume")
+	vol.SetLabel("volume")
 	return vol
 }
 
@@ -40,7 +40,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		return nil, err
 	}
 
-	vol := volumeTemplate()
+	vol := volumeBase()
 	vol.client = c
 	vol.
 		SetName(v.Name).

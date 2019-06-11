@@ -13,18 +13,20 @@ type containerMetadata struct {
 	container *container
 }
 
-func containerMetadataTemplate() *containerMetadata {
+func containerMetadataBase() *containerMetadata {
 	cm := &containerMetadata{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	cm.SetName("metadata.json").IsSingleton()
+	cm.
+		SetName("metadata.json").
+		IsSingleton().
+		DisableDefaultCaching()
 	return cm
 }
 
 func newContainerMetadata(container *container) *containerMetadata {
-	cm := containerMetadataTemplate()
+	cm := containerMetadataBase()
 	cm.container = container
-	cm.DisableDefaultCaching()
 	return cm
 }
 
