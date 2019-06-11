@@ -72,7 +72,7 @@ func (r *Root) Init() error {
 
 // ChildSchemas returns the root's child schema
 func (r *Root) ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(profileTemplate())
+	return plugin.ChildSchemas(profileBase())
 }
 
 // List the available AWS profiles

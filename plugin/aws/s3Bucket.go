@@ -151,16 +151,16 @@ type s3Bucket struct {
 	session *session.Session
 }
 
-func s3BucketTemplate() *s3Bucket {
+func s3BucketBase() *s3Bucket {
 	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	bucket.SetShortType("bucket")
+	bucket.SetLabel("bucket")
 	return bucket
 }
 
 func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Bucket {
-	bucket := s3BucketTemplate()
+	bucket := s3BucketBase()
 	bucket.ctime = ctime
 	bucket.client = s3Client.New(session)
 	bucket.session = session
@@ -175,7 +175,7 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 }
 
 func (b *s3Bucket) ChildSchemas() []plugin.EntrySchema {
-	return s3ObjectPrefixTemplate().ChildSchemas()
+	return s3ObjectPrefixBase().ChildSchemas()
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
