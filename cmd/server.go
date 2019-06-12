@@ -107,10 +107,22 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		return nil, server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
 	}
 
-	// Copy internalPlugins so we don't mutate it.
+	// Load internal plugins that are not specifically excluded.
+	enabledPlugins := viper.GetStringSlice("plugins")
 	plugins := make(map[string]plugin.Root)
-	for name, plug := range internalPlugins {
-		plugins[name] = plug
+	if len(enabledPlugins) > 0 {
+		for _, name := range enabledPlugins {
+			if plug, ok := internalPlugins[name]; ok {
+				plugins[name] = plug
+			} else {
+				log.Warnf("Requested unknown plugin %s", name)
+			}
+		}
+	} else {
+		// Copy internalPlugins so we don't mutate it.
+		for name, plug := range internalPlugins {
+			plugins[name] = plug
+		}
 	}
 
 	// Ensure external plugins are valid scripts and convert them to plugin.Root types.

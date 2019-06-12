@@ -90,6 +90,7 @@ Below are all the configurable options.
 * `loglevel` - The server's loglevel (default `info`)
 * `cpuprofile` - The location that the server's CPU profile will be written to (optional)
 * `external-plugins` - The external plugins that will be loaded. See [➠External Plugins]
+* `plugins` - A list of core plugins to enable. If omitted or empty, it will load all available plugins.
 * `socket` - The location of the server's socket file (default `<user_cache_dir>/wash/wash-api.sock`)
 
 All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
