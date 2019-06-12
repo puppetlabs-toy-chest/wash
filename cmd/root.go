@@ -67,6 +67,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	rootCmd.AddCommand(tailCommand())
 	rootCmd.AddCommand(historyCommand())
 	rootCmd.AddCommand(infoCommand())
+	rootCmd.AddCommand(streeCommand())
 
 	return rootCmd
 }
