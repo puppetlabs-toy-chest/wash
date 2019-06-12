@@ -60,3 +60,9 @@ func (c *MockClient) Clear(path string) ([]string, error) {
 	args := c.Called(path)
 	return args.Get(0).([]string), args.Error(1)
 }
+
+// Schema mocks Client#Schema
+func (c *MockClient) Schema(path string) (apitypes.EntrySchema, error) {
+	args := c.Called(path)
+	return args.Get(0).(apitypes.EntrySchema), args.Error(1)
+}

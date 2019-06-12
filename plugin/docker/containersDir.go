@@ -29,7 +29,7 @@ func newContainersDir(client *client.Client) *containersDir {
 }
 
 func (cs *containersDir) ChildSchemas() []plugin.EntrySchema {
-	return plugin.ChildSchemas(containersDirBase())
+	return plugin.ChildSchemas(containerBase())
 }
 
 // List

@@ -17,12 +17,13 @@ type FS struct {
 }
 
 // FSBase returns a base FS entry
-func FSBase() *FS {
+func FSBase(name string) *FS {
 	fs := &FS{
 		EntryBase: plugin.NewEntryBase(),
 	}
 	fs.
-		SetLabel("fs").
+		SetName(name).
+		IsSingleton().
 		// Caching handled in List.
 		DisableCachingFor(plugin.ListOp)
 	return fs
@@ -31,9 +32,8 @@ func FSBase() *FS {
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
 func NewFS(name string, executor plugin.Execable) *FS {
-	fs := FSBase()
+	fs := FSBase(name)
 	fs.executor = executor
-	fs.SetName(name)
 	return fs
 }
 

@@ -111,7 +111,7 @@ func (inst *ec2Instance) ChildSchemas() []plugin.EntrySchema {
 	return plugin.ChildSchemas(
 		ec2InstanceConsoleOutputBase(),
 		ec2InstanceMetadataJSONBase(),
-		volume.FSBase(),
+		volume.FSBase("fs"),
 	)
 }
 

@@ -55,6 +55,7 @@ func runShell(rundir, mountpath, socketpath, execfile string) exitCode {
 		"list":     "list",
 		"meta":     "meta",
 		"tail":     "tail",
+		"stree":    "stree",
 	}
 	for name, subcommand := range aliases {
 		if err := writeAlias(filepath.Join(rundir, name), subcommand); err != nil {

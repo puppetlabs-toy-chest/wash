@@ -70,7 +70,7 @@ func (c *container) ChildSchemas() []plugin.EntrySchema {
 	return plugin.ChildSchemas(
 		containerLogFileBase(),
 		containerMetadataBase(),
-		vol.FSBase(),
+		vol.FSBase("fs"),
 	)
 }
 
