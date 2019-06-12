@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -58,6 +59,10 @@ func schema(e Entry, includeChildren bool) EntrySchema {
 		Singleton: e.entryBase().isSingleton,
 		Actions:   SupportedActionsOf(e),
 		entry:     e,
+	}
+	if len(s.Label) == 0 {
+		msg := fmt.Sprintf("Schema for type %v has an empty label. Use EntryBase#SetLabel to set the label.", s.Type)
+		panic(msg)
 	}
 	if includeChildren {
 		s.fillChildren(make(map[string]bool))

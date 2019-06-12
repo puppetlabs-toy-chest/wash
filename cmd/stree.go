@@ -43,9 +43,6 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 
 func fill(stree treeprint.Tree, schema apitypes.EntrySchema) treeprint.Tree {
 	value := schema.Label
-	if len(value) == 0 {
-		value = schema.Type
-	}
 	if !schema.Singleton {
 		value = fmt.Sprintf("[%v]", value)
 	}

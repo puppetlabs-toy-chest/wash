@@ -12,8 +12,8 @@ import (
 // Registry represents the plugin registry. It is also Wash's root.
 type Registry struct {
 	EntryBase
-	plugins           map[string]Root
-	pluginRoots       []Entry
+	plugins     map[string]Root
+	pluginRoots []Entry
 }
 
 // NewRegistry creates a new plugin registry object
@@ -23,6 +23,7 @@ func NewRegistry() *Registry {
 		plugins:   make(map[string]Root),
 	}
 	r.SetName("/")
+	r.SetLabel("mountpoint")
 	r.setID("/")
 	r.DisableDefaultCaching()
 
