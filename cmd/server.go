@@ -21,8 +21,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"gopkg.in/yaml.v2"
 )
 
 var internalPlugins = map[string]plugin.Root{
@@ -105,17 +103,8 @@ func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
 
 	// Unmarshal the external plugins, if any are specified
 	var externalPlugins []plugin.ExternalPluginSpec
-	if externalPluginsRaw := viper.Get("external-plugins"); externalPluginsRaw != nil {
-		newExternalPluginErr := func(reason error) error {
-			return fmt.Errorf("failed to unmarshal the external plugins: %v. Raw external plugin config: %v", reason, externalPluginsRaw)
-		}
-		externalPluginsYAML, err := yaml.Marshal(externalPluginsRaw)
-		if err != nil {
-			return server.Opts{}, newExternalPluginErr(err)
-		}
-		if err := yaml.Unmarshal(externalPluginsYAML, &externalPlugins); err != nil {
-			return server.Opts{}, newExternalPluginErr(err)
-		}
+	if err := viper.UnmarshalKey("external-plugins", &externalPlugins); err != nil {
+		return server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
 	}
 
 	config := make(map[string]map[string]interface{})
