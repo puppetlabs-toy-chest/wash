@@ -3,10 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
-	"strings"
 )
 
 // Registry represents the plugin registry. It is also Wash's root.
@@ -59,33 +56,6 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 	r.plugins[root.name()] = root
 	r.pluginRoots = append(r.pluginRoots, root)
 	return nil
-}
-
-// ExternalPluginSpec represents an external plugin's specification.
-type ExternalPluginSpec struct {
-	Script string
-}
-
-// Name returns the plugin name, which is the basename of the script with extension removed.
-func (s ExternalPluginSpec) Name() string {
-	basename := filepath.Base(s.Script)
-	return strings.TrimSuffix(basename, filepath.Ext(basename))
-}
-
-// RegisterExternalPlugin initializes an external plugin from its spec and
-// passes it to RegisterPlugin.
-func (r *Registry) RegisterExternalPlugin(spec ExternalPluginSpec, cfg map[string]interface{}) error {
-	fi, err := os.Stat(spec.Script)
-	if err != nil {
-		return err
-	} else if !fi.Mode().IsRegular() {
-		return fmt.Errorf("script %v is not a file", spec.Script)
-	} else if fi.Mode().Perm()&0100 == 0 {
-		return fmt.Errorf("script %v is not executable", spec.Script)
-	}
-
-	root := newExternalPluginRoot(spec.Name(), spec.Script)
-	return r.RegisterPlugin(root, cfg)
 }
 
 // ChildSchemas returns the child schemas of the plugin registry

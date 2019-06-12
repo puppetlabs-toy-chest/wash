@@ -19,9 +19,8 @@ import (
 
 // Opts exposes additional configuration for server operation.
 type Opts struct {
-	CPUProfilePath  string
-	ExternalPlugins []plugin.ExternalPluginSpec
-	LogFile         string
+	CPUProfilePath string
+	LogFile        string
 	// LogLevel can be "warn", "info", "debug", or "trace".
 	LogLevel     string
 	PluginConfig map[string]map[string]interface{}
@@ -78,10 +77,7 @@ func (s *Server) Start() error {
 	}
 
 	registry := plugin.NewRegistry()
-	s.loadInternalPlugins(registry)
-	if len(s.opts.ExternalPlugins) > 0 {
-		s.loadExternalPlugins(registry, s.opts.ExternalPlugins)
-	}
+	s.loadPlugins(registry)
 	if len(registry.Plugins()) == 0 {
 		return fmt.Errorf("No plugins loaded")
 	}
@@ -165,30 +161,14 @@ func (s *Server) Stop() {
 	s.shutdown()
 }
 
-func (s *Server) loadPlugin(registry *plugin.Registry, name string, root plugin.Root) {
-	log.Infof("Loading %v", name)
-	if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
-		// %+v is a convention used by some errors to print additional context such as a stack trace
-		log.Warnf("%v failed to load: %+v", name, err)
-	}
-}
-
-func (s *Server) loadInternalPlugins(registry *plugin.Registry) {
-	log.Debug("Loading internal plugins")
+func (s *Server) loadPlugins(registry *plugin.Registry) {
+	log.Debug("Loading plugins")
 	for name, root := range s.plugins {
-		s.loadPlugin(registry, name, root)
-	}
-	log.Debug("Finished loading internal plugins")
-}
-
-func (s *Server) loadExternalPlugins(registry *plugin.Registry, externalPlugins []plugin.ExternalPluginSpec) {
-	log.Infof("Loading external plugins")
-	for _, p := range externalPlugins {
-		log.Infof("Loading %v", p.Script)
-		if err := registry.RegisterExternalPlugin(p, s.opts.PluginConfig[p.Name()]); err != nil {
+		log.Infof("Loading %v", name)
+		if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
-			log.Warnf("%v failed to load: %+v", p.Script, err)
+			log.Warnf("%v failed to load: %+v", name, err)
 		}
 	}
-	log.Infof("Finished loading external plugins")
+	log.Debug("Finished loading plugins")
 }
