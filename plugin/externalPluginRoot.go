@@ -12,17 +12,6 @@ type externalPluginRoot struct {
 	*externalPluginEntry
 }
 
-// newExternalPluginRoot returns a new external plugin root given
-// the plugin script
-func newExternalPluginRoot(name, script string) *externalPluginRoot {
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntryBase(),
-		script:    externalPluginScriptImpl{path: script},
-	}}
-	root.SetName(name)
-	return root
-}
-
 // Init initializes the external plugin root
 func (r *externalPluginRoot) Init(cfg map[string]interface{}) error {
 	cfgJSON, err := json.Marshal(cfg)

@@ -62,12 +62,12 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	serverOpts, err := serverOptsFor(cmd)
+	plugins, serverOpts, err := serverOptsFor(cmd)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	srv := server.New(mountpoint, config.Socket, internalPlugins, serverOpts)
+	srv := server.New(mountpoint, config.Socket, plugins, serverOpts)
 	if err := srv.Start(); err != nil {
 		log.Warn(err)
 		return exitCode{1}
@@ -90,38 +90,54 @@ func bindServerArgs(cmd *cobra.Command, args []string) {
 	errz.Fatal(viper.BindPFlag("cpuprofile", cmd.Flags().Lookup("cpuprofile")))
 }
 
-// serverOptsFor returns server.Opts for the given command.
-func serverOptsFor(cmd *cobra.Command) (server.Opts, error) {
+// serverOptsFor returns map of plugins and server.Opts for the given command.
+func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, error) {
 	// Read the config
 	configFile, err := cmd.Flags().GetString("config-file")
 	if err != nil {
 		panic(err.Error())
 	}
 	if err := config.ReadFrom(configFile); err != nil {
-		return server.Opts{}, err
+		return nil, server.Opts{}, err
 	}
 
 	// Unmarshal the external plugins, if any are specified
 	var externalPlugins []plugin.ExternalPluginSpec
 	if err := viper.UnmarshalKey("external-plugins", &externalPlugins); err != nil {
-		return server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
+		return nil, server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
+	}
+
+	// Copy internalPlugins so we don't mutate it.
+	plugins := make(map[string]plugin.Root)
+	for name, plug := range internalPlugins {
+		plugins[name] = plug
+	}
+
+	// Ensure external plugins are valid scripts and convert them to plugin.Root types.
+	for _, spec := range externalPlugins {
+		intPlugin, err := spec.Load()
+		if err != nil {
+			log.Warnf("%v failed to load: %+v", spec.Script, err)
+			continue
+		}
+
+		name := plugin.Name(intPlugin)
+		if _, ok := plugins[name]; ok {
+			log.Warnf("Overriding plugin %s with external plugin %s", name, spec.Script)
+		}
+		plugins[name] = intPlugin
 	}
 
 	config := make(map[string]map[string]interface{})
-	for name := range internalPlugins {
-		config[name] = viper.GetStringMap(name)
-	}
-	for _, spec := range externalPlugins {
-		name := spec.Name()
+	for name := range plugins {
 		config[name] = viper.GetStringMap(name)
 	}
 
 	// Return the options
-	return server.Opts{
-		CPUProfilePath:  viper.GetString("cpuprofile"),
-		LogFile:         viper.GetString("logfile"),
-		LogLevel:        viper.GetString("loglevel"),
-		PluginConfig:    config,
-		ExternalPlugins: externalPlugins,
+	return plugins, server.Opts{
+		CPUProfilePath: viper.GetString("cpuprofile"),
+		LogFile:        viper.GetString("logfile"),
+		LogLevel:       viper.GetString("loglevel"),
+		PluginConfig:   config,
 	}, nil
 }
