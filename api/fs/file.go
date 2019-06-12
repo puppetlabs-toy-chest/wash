@@ -13,10 +13,18 @@ type file struct {
 	*fsnode
 }
 
-func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
-	return &file{
-		newFSNode(ctx, finfo, path),
+func fileBase() *file {
+	f := &file{
+		fsnode: fsnodeBase(),
 	}
+	f.SetLabel("file")
+	return f
+}
+
+func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
+	f := fileBase()
+	f.build(finfo, path)
+	return f
 }
 
 func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {

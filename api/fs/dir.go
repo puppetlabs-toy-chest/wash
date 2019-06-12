@@ -12,10 +12,22 @@ type dir struct {
 	*fsnode
 }
 
-func newDir(ctx context.Context, finfo os.FileInfo, path string) *dir {
-	return &dir{
-		newFSNode(ctx, finfo, path),
+func dirBase() *dir {
+	d := &dir{
+		fsnode: fsnodeBase(),
 	}
+	d.SetLabel("dir")
+	return d
+}
+
+func newDir(ctx context.Context, finfo os.FileInfo, path string) *dir {
+	d := dirBase()
+	d.build(finfo, path)
+	return d
+}
+
+func (d *dir) ChildSchemas() []plugin.EntrySchema {
+	return plugin.ChildSchemas(dirBase(), fileBase())
 }
 
 func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -26,7 +38,7 @@ func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(matches))
 	for i, match := range matches {
-		entry, err := NewEntryBase(ctx, match)
+		entry, err := NewEntry(ctx, match)
 		if err != nil {
 			return nil, err
 		}

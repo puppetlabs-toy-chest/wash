@@ -16,28 +16,28 @@ type fsnode struct {
 	path string
 }
 
-func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
-	// TODO: finfo.Sys() contains more detailed file attributes,
-	// but it's platform-specific. We should eventually use it for
-	// a more complete implementation of apifs.
-	n := &fsnode{
-		EntryBase: plugin.NewEntryBase(),
-		path:      path,
-	}
+func (n *fsnode) build(finfo os.FileInfo, path string) {
+	n.path = path
 	n.
 		SetName(finfo.Name()).
-		DisableDefaultCaching().
 		Attributes().
 		SetMtime(finfo.ModTime()).
 		SetMode(finfo.Mode()).
 		SetSize(uint64(finfo.Size())).
 		SetMeta(plugin.ToJSONObject(newFileInfo(finfo)))
+}
+
+func fsnodeBase() *fsnode {
+	n := &fsnode{
+		EntryBase: plugin.NewEntryBase(),
+	}
+	n.DisableDefaultCaching()
 	return n
 }
 
-// NewEntryBase constructs a new Wash entry from the given FS
+// NewEntry constructs a new Wash entry from the given FS
 // path
-func NewEntryBase(ctx context.Context, path string) (plugin.Entry, error) {
+func NewEntry(ctx context.Context, path string) (plugin.Entry, error) {
 	finfo, err := os.Stat(path)
 	if err != nil {
 		return nil, err
