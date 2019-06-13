@@ -36,7 +36,7 @@ func (m *mockRoot) List(ctx context.Context) ([]Entry, error) {
 func (m *mockRoot) ChildSchemas() []EntrySchema {
 	return []EntrySchema{
 		EntrySchema{
-			Type: "entry",
+			TypeID: "entry",
 		},
 	}
 }

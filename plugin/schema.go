@@ -8,7 +8,7 @@ import (
 
 // EntrySchema represents an entry's schema.
 type EntrySchema struct {
-	Type      string        `json:"type"`
+	TypeID    string        `json:"type_id"`
 	Label     string        `json:"label"`
 	Singleton bool          `json:"singleton"`
 	Actions   []string      `json:"actions"`
@@ -45,23 +45,23 @@ func schema(e Entry, includeChildren bool) EntrySchema {
 	switch e.(type) {
 	case *externalPluginRoot:
 		return EntrySchema{
-			Type: "external-plugin-root",
+			TypeID: "external-plugin-root",
 		}
 	case *externalPluginEntry:
 		return EntrySchema{
-			Type: "external-plugin-entry",
+			TypeID: "external-plugin-entry",
 		}
 	}
 
 	s := EntrySchema{
-		Type:      strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
+		TypeID:    strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
 		Label:     e.entryBase().label,
 		Singleton: e.entryBase().isSingleton,
 		Actions:   SupportedActionsOf(e),
 		entry:     e,
 	}
 	if len(s.Label) == 0 {
-		msg := fmt.Sprintf("Schema for type %v has an empty label. Use EntryBase#SetLabel to set the label.", s.Type)
+		msg := fmt.Sprintf("Schema for type %v has an empty label. Use EntryBase#SetLabel to set the label.", s.TypeID)
 		panic(msg)
 	}
 	if includeChildren {
@@ -74,13 +74,13 @@ func (s *EntrySchema) fillChildren(visited map[string]bool) {
 	if !ListAction().IsSupportedOn(s.entry) {
 		return
 	}
-	if visited[s.Type] {
+	if visited[s.TypeID] {
 		// This means that s' children can have s' type, which is
 		// true if s is e.g. a volume directory.
 		return
 	}
 	s.Children = s.entry.(Parent).ChildSchemas()
-	visited[s.Type] = true
+	visited[s.TypeID] = true
 	for i, child := range s.Children {
 		child.fillChildren(visited)
 		// Need to re-assign because child is not a pointer,
@@ -89,5 +89,5 @@ func (s *EntrySchema) fillChildren(visited map[string]bool) {
 	}
 	// Delete "s" from visited so that siblings or ancestors that
 	// also use "s" won't be affected.
-	delete(visited, s.Type)
+	delete(visited, s.TypeID)
 }

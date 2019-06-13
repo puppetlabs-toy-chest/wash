@@ -119,7 +119,7 @@ func (m *mockRoot) List(ctx context.Context) ([]plugin.Entry, error) {
 func (m *mockRoot) ChildSchemas() []plugin.EntrySchema {
 	return []plugin.EntrySchema{
 		plugin.EntrySchema{
-			Type: "mockEntry",
+			TypeID: "mockEntry",
 		},
 	}
 }
