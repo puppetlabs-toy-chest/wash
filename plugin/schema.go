@@ -31,6 +31,12 @@ func ChildSchemas(childBases ...Entry) []EntrySchema {
 	return schemas
 }
 
+// TypeID returns the entry's type ID
+func TypeID(e Entry) string {
+	// TODO: Handle external plugin type IDs.
+	return strings.TrimPrefix(reflect.TypeOf(e).String(), "*")
+}
+
 // Schema returns the entry's schema. Plugin authors should use plugin.ChildSchemas
 // when implementing Parent#ChildSchemas. Using Schema to do this can cause infinite
 // recursion if e's children have the same type as e, which can happen if e's e.g.
@@ -54,7 +60,7 @@ func schema(e Entry, includeChildren bool) EntrySchema {
 	}
 
 	s := EntrySchema{
-		TypeID:    strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
+		TypeID:    TypeID(e),
 		Label:     e.entryBase().label,
 		Singleton: e.entryBase().isSingleton,
 		Actions:   SupportedActionsOf(e),

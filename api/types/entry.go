@@ -6,6 +6,7 @@ import "github.com/puppetlabs/wash/plugin"
 //
 // swagger:response
 type Entry struct {
+	TypeID     string                 `json:"type_id"`
 	Path       string                 `json:"path"`
 	Actions    []string               `json:"actions"`
 	Name       string                 `json:"name"`
