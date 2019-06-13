@@ -33,7 +33,7 @@ func (suite *ParseTestSuite) TestValidInput() {
 		expectedOpts.MarkAsSet(types.DepthFlag)
 		expectedOpts.Depth = true
 		suite.Equal(expectedOpts, r.Options)
-		suite.Equal(true, r.Predicate(types.Entry{}))
+		suite.Equal(true, r.Predicate.P(types.Entry{}))
 	}
 }
 

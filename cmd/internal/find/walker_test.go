@@ -6,14 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-	"github.com/stretchr/testify/mock"
-	"github.com/puppetlabs/wash/api/types"
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/cmd/internal/cmdtest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 )
 
 type WalkerTestSuite struct {
@@ -26,9 +26,9 @@ func (s *WalkerTestSuite) SetupTest() {
 	s.walker = newWalker(
 		parser.Result{
 			Options: types.NewOptions(),
-			Predicate: func(e types.Entry) bool {
+			Predicate: types.ToEntryP(func(e types.Entry) bool {
 				return true
-			},
+			}),
 		},
 		s.Suite.Client,
 	).(*walkerImpl)
@@ -40,7 +40,7 @@ func (s *WalkerTestSuite) TearDownTest() {
 	primary.Parser.SetPrimaries = make(map[*primary.Primary]bool)
 }
 
-func (s *WalkerTestSuite) TestWalk_InfoErrors()() {
+func (s *WalkerTestSuite) TestWalk_InfoErrors() {
 	err := fmt.Errorf("failed to get the info")
 	s.Client.On("Info", ".").Return(apitypes.Entry{}, err)
 	s.False(s.walker.Walk("."))
@@ -108,7 +108,7 @@ func (s *WalkerTestSuite) TestWalk_ListErrors() {
 		".",
 		"./foo",
 	)
-	s.Regexp("children.*./foo.*" + err.Error(), s.Stderr())
+	s.Regexp("children.*./foo.*"+err.Error(), s.Stderr())
 }
 
 func (s *WalkerTestSuite) TestWalk_VisitErrors() {
@@ -121,7 +121,7 @@ func (s *WalkerTestSuite) TestWalk_VisitErrors() {
 
 	s.False(s.walker.Walk("."))
 	s.assertPrintedTree()
-	
+
 	// Also test the behavior when depth is set since visit is called
 	// on a different code-path
 	s.walker.opts.Depth = true
@@ -166,9 +166,9 @@ func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_FetchesFullMetada
 	primary.Parser.SetPrimaries[primary.Meta] = true
 
 	fullMeta := plugin.JSONObject{"foo": "bar"}
-	s.walker.p = func(entry types.Entry) bool {
+	s.walker.p = types.ToEntryP(func(entry types.Entry) bool {
 		return s.Equal(fullMeta, entry.Metadata)
-	}
+	})
 
 	e := newMockEntryForVisit()
 	s.Client.On("Metadata", e.Path).Return(fullMeta, nil).Once()
@@ -187,9 +187,9 @@ func (s *WalkerTestSuite) TestVisit_PrintsSatisfyingEntry() {
 }
 
 func (s *WalkerTestSuite) TestVisit_DoesNotPrintUnsatisfyingEntry() {
-	s.walker.p = func(e types.Entry) bool {
+	s.walker.p = types.ToEntryP(func(e types.Entry) bool {
 		return false
-	}
+	})
 	e := newMockEntryForVisit()
 	s.True(s.walker.visit(e, 0))
 	s.assertNotPrintedEntry(e)
@@ -198,7 +198,7 @@ func (s *WalkerTestSuite) TestVisit_DoesNotPrintUnsatisfyingEntry() {
 func (s *WalkerTestSuite) setupMocksForWalk() {
 	toEntry := func(path string, isParent bool) apitypes.Entry {
 		e := apitypes.Entry{
-			Path: s.toAbsPath(path),
+			Path:  s.toAbsPath(path),
 			CName: filepath.Base(path),
 		}
 		if isParent {
@@ -273,4 +273,3 @@ func TestWalker(t *testing.T) {
 	s.Suite = new(cmdtest.Suite)
 	suite.Run(t, s)
 }
-

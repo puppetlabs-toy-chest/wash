@@ -30,11 +30,11 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 // timeAttrPrimary => -<name> (+|-)?(\d+ | (numeric.DurationRegex)+)
 func newTimeAttrPrimary(name string) *Primary {
 	return Parser.add(&Primary{
-		Description: fmt.Sprintf("Returns true if the entry's %v attribute satisfies the given time predicate", name),
+		Description:         fmt.Sprintf("Returns true if the entry's %v attribute satisfies the given time predicate", name),
 		DetailedDescription: timeAttrDetailedDescription(name),
-		name: name,
-		args: "[+|-]n[smhdw]",
-		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
+		name:                name,
+		args:                "[+|-]n[smhdw]",
+		parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
 			if params.ReferenceTime.IsZero() {
 				panic("Attempting to parse a time primary without setting params.ReferenceTime")
 			}
@@ -50,7 +50,7 @@ func newTimeAttrPrimary(name string) *Primary {
 				return nil, nil, fmt.Errorf("%v: illegal time value", tokens[0])
 			}
 
-			p := func(e types.Entry) bool {
+			p := types.ToEntryP(func(e types.Entry) bool {
 				t, ok := getTimeAttrValue(name, e)
 				if !ok {
 					return false
@@ -61,7 +61,7 @@ func newTimeAttrPrimary(name string) *Primary {
 					diff = int64(math.Ceil(float64(diff) / float64(numeric.DurationOf('d'))))
 				}
 				return numericP(diff)
-			}
+			})
 			return p, tokens[1:], nil
 		},
 	})

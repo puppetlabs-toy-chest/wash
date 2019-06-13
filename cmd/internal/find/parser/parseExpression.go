@@ -3,24 +3,24 @@ package parser
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/expression"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 )
 
 /*
 See the comments of expression.Parser#Parse for the grammar. Substitute
 Predicate with Primary.
 */
-func parseExpression(tokens []string) (types.EntryPredicate, error) {
+func parseExpression(tokens []string) (*types.EntryPredicate, error) {
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
 		// true.
-		return func(e types.Entry) bool {
+		return types.ToEntryP(func(e types.Entry) bool {
 			return true
-		}, nil
+		}), nil
 	}
 	parser := expression.NewParser(primary.Parser)
 	p, tks, err := parser.Parse(tokens)
@@ -35,21 +35,21 @@ func parseExpression(tokens []string) (types.EntryPredicate, error) {
 		msg := fmt.Sprintf("parser.parseExpression(): returned a non-empty set of tokens: %v", tks)
 		panic(msg)
 	}
-	return p.(types.EntryPredicate), nil
+	return p.(*types.EntryPredicate), nil
 }
 
 // OperandsTable returns a table containing all of `wash find`'s available
 // operands
 func OperandsTable() *cmdutil.Table {
 	return cmdutil.NewTable(
-		[]string{"Operands:",    ""},
-		[]string{"  ( e )",      "Parentheses operator. Evaluates to true if e evaluates to true"},
-		[]string{"  !, -not e",  "Logical NOT operator. Evaluates to true if e evaluates to false"},
+		[]string{"Operands:", ""},
+		[]string{"  ( e )", "Parentheses operator. Evaluates to true if e evaluates to true"},
+		[]string{"  !, -not e", "Logical NOT operator. Evaluates to true if e evaluates to false"},
 		[]string{"  e1 -and e2", "Logical AND operator. Evalutes to true if both e1 and e2 are true"},
-		[]string{"  e1 -a e2",   ""},
-		[]string{"  e1 e2",      ""},
-		[]string{"  e1 -or e2",  "Logical OR operator. Evalutes to true if either e1 or e2 are true"},
-		[]string{"  e1 -o e2",   ""},
+		[]string{"  e1 -a e2", ""},
+		[]string{"  e1 e2", ""},
+		[]string{"  e1 -or e2", "Logical OR operator. Evalutes to true if either e1 or e2 are true"},
+		[]string{"  e1 -o e2", ""},
 	)
 }
 

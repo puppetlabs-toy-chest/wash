@@ -16,7 +16,7 @@ type walker interface {
 }
 
 type walkerImpl struct {
-	p    types.EntryPredicate
+	p    *types.EntryPredicate
 	opts types.Options
 	conn client.Client
 }
@@ -83,7 +83,7 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 		}
 		e.Metadata = meta
 	}
-	if w.p(e) {
+	if w.p.P(e) {
 		cmdutil.Printf("%v\n", e.NormalizedPath)
 	}
 	return true
