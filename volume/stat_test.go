@@ -78,14 +78,14 @@ func TestStatParseAll(t *testing.T) {
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 8, len(dmap))
 	for _, dir := range []string{"", "/path", "/path/has", "/path/has/got", "/path/has/got/some", "/path1", "/path2", "/path2/dir"} {
-		assert.NotNil(t, dmap[dir])
+		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"/path/has/got/some/legs", "/path1/a file"} {
-		assert.Nil(t, dmap[file])
+		assert.NotContains(t, dmap, file)
 	}
 
-	for _, node := range []string{"/path", "/path1", "/path2"} {
-		assert.NotNil(t, dmap[""][node])
+	for _, node := range []string{"path", "path1", "path2"} {
+		assert.Contains(t, dmap[""], node)
 	}
 
 	expectedAttr := plugin.EntryAttributes{}
@@ -122,14 +122,14 @@ func TestStatParseAllRoot(t *testing.T) {
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 9, len(dmap))
 	for _, dir := range []string{"", "mnt", "mnt/path", "mnt/path/has", "mnt/path/has/got", "mnt/path/has/got/some", "mnt/path1", "mnt/path2", "mnt/path2/dir"} {
-		assert.NotNil(t, dmap[dir])
+		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"mnt/path/has/got/some/legs", "mnt/path1/a file"} {
-		assert.Nil(t, dmap[file])
+		assert.NotContains(t, dmap, file)
 	}
 
-	for _, node := range []string{"mnt/path", "mnt/path1", "mnt/path2"} {
-		assert.NotNil(t, dmap[""][node])
+	for _, node := range []string{"path", "path1", "path2"} {
+		assert.Contains(t, dmap["mnt"], node)
 	}
 
 	expectedAttr := plugin.EntryAttributes{}
