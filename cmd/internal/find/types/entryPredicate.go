@@ -70,3 +70,15 @@ type EntryPredicateParser func(tokens []string) (*EntryPredicate, []string, erro
 func (parser EntryPredicateParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	return parser(tokens)
 }
+
+// ToSchemaPParser converts parser to a schema predicate parser. This is mostly
+// used by the tests
+func (parser EntryPredicateParser) ToSchemaPParser() EntrySchemaPredicateParser {
+	return func(tokens []string) (EntrySchemaPredicate, []string, error) {
+		entryP, tokens, err := parser(tokens)
+		if err != nil {
+			return nil, tokens, err
+		}
+		return entryP.SchemaP, tokens, nil
+	}
+}

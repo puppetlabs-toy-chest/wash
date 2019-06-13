@@ -40,3 +40,11 @@ func (p1 EntrySchemaPredicate) IsSatisfiedBy(v interface{}) bool {
 	}
 	return p1(s)
 }
+
+// EntrySchemaPredicateParser parses EntrySchema predicates
+type EntrySchemaPredicateParser func(tokens []string) (EntrySchemaPredicate, []string, error)
+
+// Parse parses an EntrySchemaPredicate from the given input.
+func (parser EntrySchemaPredicateParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
+	return parser(tokens)
+}

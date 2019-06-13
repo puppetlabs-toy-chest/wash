@@ -16,10 +16,16 @@ func (s *ActionPrimaryTestSuite) TestErrors() {
 	s.RETC("foo", "foo is an invalid action. Valid actions are.*list")
 }
 
-func (s *ActionPrimaryTestSuite) TestValidInput() {
+func (s *ActionPrimaryTestSuite) TestValidInput_EntryP() {
 	s.RTC("list", "", []string{"list"}, []string{"exec"})
 	// Test multiple supported actions
 	s.RTC("list", "", []string{"read", "stream", "list"}, []string{"read", "stream"})
+}
+
+func (s *ActionPrimaryTestSuite) TestValidInput_SchemaP() {
+	// Same test cases as EntryP
+	s.RSTC("list", "", []string{"list"}, []string{"exec"})
+	s.RSTC("list", "", []string{"read", "stream", "list"}, []string{"read", "stream"})
 }
 
 func TestActionPrimary(t *testing.T) {
@@ -29,6 +35,11 @@ func TestActionPrimary(t *testing.T) {
 		e := types.Entry{}
 		e.Actions = v.([]string)
 		return e
+	}
+	s.ConstructEntrySchema = func(v interface{}) types.EntrySchema {
+		s := types.EntrySchema{}
+		s.Actions = v.([]string)
+		return s
 	}
 	suite.Run(t, s)
 }

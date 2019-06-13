@@ -9,7 +9,8 @@ import (
 
 type primaryTestSuite struct {
 	parsertest.Suite
-	ConstructEntry func(v interface{}) types.Entry
+	ConstructEntry       func(v interface{}) types.Entry
+	ConstructEntrySchema func(v interface{}) types.EntrySchema
 }
 
 func (s *primaryTestSuite) RETC(input string, errRegex string) {
@@ -20,6 +21,19 @@ func (s *primaryTestSuite) RTC(input string, remInput string, trueValue interfac
 	s.Suite.RTC(input, remInput, s.ConstructEntry(trueValue))
 	if len(falseValue) > 0 {
 		s.Suite.RNTC(input, remInput, s.ConstructEntry(falseValue[0]))
+	}
+}
+
+// RSTC => RunSchemaPTestCase
+func (s *primaryTestSuite) RSTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+	oldParser := s.Parser.(*Primary)
+	defer func() {
+		s.Parser = oldParser
+	}()
+	s.Parser = types.EntryPredicateParser(oldParser.parseFunc).ToSchemaPParser()
+	s.Suite.RTC(input, remInput, s.ConstructEntrySchema(trueValue))
+	if len(falseValue) > 0 {
+		s.Suite.RNTC(input, remInput, s.ConstructEntrySchema(falseValue[0]))
 	}
 }
 
