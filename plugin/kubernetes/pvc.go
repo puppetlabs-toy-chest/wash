@@ -136,9 +136,12 @@ func (v *pvc) waitForPod(ctx context.Context, pid string) error {
 	}
 }
 
-func (v *pvc) VolumeList(ctx context.Context) (volume.DirMap, error) {
+func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
+	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
+	maxdepth := 10
+
 	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := v.createPod(volume.StatCmd(mountpoint))
+	pid, err := v.createPod(volume.StatCmd(mountpoint+path, maxdepth))
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +172,7 @@ func (v *pvc) VolumeList(ctx context.Context) (volume.DirMap, error) {
 		return nil, errors.New(string(bytes))
 	}
 
-	return volume.StatParseAll(output, mountpoint)
+	return volume.StatParseAll(output, mountpoint, path, maxdepth)
 }
 
 func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {

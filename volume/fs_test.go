@@ -14,6 +14,7 @@ import (
 )
 
 // Represents the output of StatCmd(/var/log)
+const varLogDepth = 7
 const varLogFixture = `
 96 1550611510 1550611448 1550611448 41ed /var/log/path
 96 1550611510 1550611448 1550611448 41ed /var/log/path/has
@@ -32,12 +33,13 @@ type fsTestSuite struct {
 	cancelFunc context.CancelFunc
 }
 
-func (suite *fsTestSuite) SetupSuite() {
+func (suite *fsTestSuite) SetupTest() {
+	// Use a different cache each test because we may re-use some but not all of the same structure.
 	plugin.SetTestCache(datastore.NewMemCache())
 	suite.ctx, suite.cancelFunc = context.WithCancel(context.Background())
 }
 
-func (suite *fsTestSuite) TearDownSuite() {
+func (suite *fsTestSuite) TearDownTest() {
 	plugin.UnsetTestCache()
 	// Cancelling the context ensures that the tests don't leave any
 	// dangling goroutines waiting on a context cancellation. These
@@ -59,13 +61,13 @@ func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
 	return cmd
 }
 
-func (suite *fsTestSuite) createExec() *mockExecutor {
+func (suite *fsTestSuite) createExec(fixt string, depth int) *mockExecutor {
 	exec := &mockExecutor{EntryBase: plugin.NewEntryBase()}
 	exec.SetName("instance")
 	// Used when recording activity.
 	exec.SetTestID("/instance")
-	cmd := StatCmd("/var/log")
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(varLogFixture), nil)
+	cmd := StatCmd("/", depth)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(fixt), nil)
 	return exec
 }
 
@@ -73,12 +75,12 @@ func (suite *fsTestSuite) find(parent plugin.Parent, path string) plugin.Entry {
 	names := strings.Split(path, "/")
 	entry := plugin.Entry(parent)
 	for _, name := range names {
-		entries, err := entry.(plugin.Parent).List(context.Background())
+		entries, err := plugin.CachedList(suite.ctx, entry.(plugin.Parent))
 		if !suite.NoError(err) {
 			suite.FailNow("Listing entries failed")
 		}
-		for _, match := range entries {
-			if plugin.Name(match) == name {
+		for nm, match := range entries {
+			if nm == name {
 				entry = match
 				break
 			}
@@ -89,8 +91,8 @@ func (suite *fsTestSuite) find(parent plugin.Parent, path string) plugin.Entry {
 }
 
 func (suite *fsTestSuite) TestFSList() {
-	exec := suite.createExec()
-	fs := NewFS("fs", exec)
+	exec := suite.createExec(varLogFixture, varLogDepth)
+	fs := NewFS("fs", exec, varLogDepth)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
@@ -131,9 +133,49 @@ func (suite *fsTestSuite) TestFSList() {
 	}
 }
 
+func (suite *fsTestSuite) TestFSListTwice() {
+	firstFixture := `
+96 1550611510 1550611448 1550611448 41ed /var
+96 1550611510 1550611448 1550611448 41ed /var/log
+96 1550611510 1550611448 1550611448 41ed /var/log/path
+`
+	secondFixture := `
+96 1550611510 1550611448 1550611448 41ed /var/log/path/has
+96 1550611510 1550611448 1550611448 41ed /var/log/path/has/got
+96 1550611510 1550611458 1550611458 41ed /var/log/path/has/got/some
+`
+	depth := 3
+	exec := suite.createExec(firstFixture, depth)
+	cmd := StatCmd("/var/log/path", depth)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(secondFixture), nil)
+
+	fs := NewFS("fs", exec, depth)
+	// ID would normally be set when listing FS within the parent instance.
+	fs.SetTestID("/instance/fs")
+
+	entry := suite.find(fs, "var/log").(plugin.Parent)
+	entries, err := plugin.CachedList(suite.ctx, entry)
+	if !suite.NoError(err) {
+		suite.FailNow("Listing entries failed")
+	}
+	suite.Equal(1, len(entries))
+	suite.Contains(entries, "path")
+
+	entries1, err := plugin.CachedList(suite.ctx, entries["path"].(plugin.Parent))
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries1))
+		suite.Contains(entries1, "has")
+		entries2, err := plugin.CachedList(suite.ctx, entries1["has"].(plugin.Parent))
+		if suite.NoError(err) {
+			suite.Equal(1, len(entries2))
+			suite.Contains(entries2, "got")
+		}
+	}
+}
+
 func (suite *fsTestSuite) TestFSRead() {
-	exec := suite.createExec()
-	fs := NewFS("fs", exec)
+	exec := suite.createExec(varLogFixture, varLogDepth)
+	fs := NewFS("fs", exec, varLogDepth)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 

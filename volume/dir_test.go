@@ -17,7 +17,7 @@ type mockDirEntry struct {
 	dmap DirMap
 }
 
-func (m *mockDirEntry) VolumeList(context.Context) (DirMap, error) {
+func (m *mockDirEntry) VolumeList(context.Context, string) (DirMap, error) {
 	return m.dmap, nil
 }
 
@@ -30,7 +30,7 @@ func (m *mockDirEntry) VolumeStream(context.Context, string) (io.ReadCloser, err
 }
 
 func TestVolumeDir(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint)
+	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())

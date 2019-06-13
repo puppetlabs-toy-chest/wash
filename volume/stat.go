@@ -14,8 +14,12 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// StatCmd returns the command required to stat all the files in a directory.
-func StatCmd(path string) []string {
+// StatCmd returns the command required to stat all the files in a directory up to maxdepth.
+func StatCmd(path string, maxdepth int) []string {
+	// List uses "" to mean root. Translate for executing on the target.
+	if path == "" {
+		path = "/"
+	}
 	// size, atime, mtime, ctime, mode, name
 	// %s - Total size, in bytes
 	// %X - Time of last access as seconds since Epoch
@@ -23,7 +27,8 @@ func StatCmd(path string) []string {
 	// %Z - Time of last status change as seconds since Epoch
 	// %f - Raw mode in hex
 	// %n - File name
-	return []string{"find", path, "-mindepth", "1", "-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
+	return []string{"find", path, "-mindepth", "1", "-maxdepth", strconv.Itoa(maxdepth),
+		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
 }
 
 // Keep as its own specialized function as it will be faster than munge.ToTime.
@@ -104,8 +109,11 @@ func makedirs(dirmap DirMap, newpath string) Dir {
 
 // StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
 // file paths, and maps each directory to a map of files in that directory and their attr
-// (attributes).
-func StatParseAll(output io.Reader, base string) (DirMap, error) {
+// (attributes). The 'maxdepth' used to produce the output is required to identify directories
+// where we do not know their contents. 'start' denotes where the search started from, and is the
+// basis for calculating maxdepth.
+func StatParseAll(output io.Reader, base string, start string, maxdepth int) (DirMap, error) {
+	maxdepth += numPathSegments(strings.TrimPrefix(start, base))
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
@@ -120,8 +128,16 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 
 			relative := strings.TrimPrefix(fullpath, base)
 			// Create an entry for each directory.
-			if attr.Mode().IsDir() {
-				dirmap[relative] = make(Dir)
+			numSegments := numPathSegments(relative)
+			if numSegments > maxdepth {
+				panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
+			} else if attr.Mode().IsDir() {
+				// Mark directories at maxdepth as unexplored with a nil Dir.
+				if numSegments == maxdepth {
+					dirmap[relative] = Dir(nil)
+				} else {
+					dirmap[relative] = make(Dir)
+				}
 			}
 
 			// Add each entry to its parent's listing.
@@ -136,4 +152,12 @@ func StatParseAll(output io.Reader, base string) (DirMap, error) {
 		return nil, err
 	}
 	return dirmap, nil
+}
+
+func numPathSegments(path string) int {
+	path = strings.TrimPrefix(path, "/")
+	if path == "" {
+		return 0
+	}
+	return len(strings.Split(path, string(os.PathSeparator)))
 }
