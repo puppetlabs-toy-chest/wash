@@ -1,8 +1,8 @@
 package types
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -13,12 +13,12 @@ type Entry struct {
 	Metadata       plugin.JSONObject
 }
 
-// NewEntryBase constructs a new `wash find` entry
-func NewEntryBase(e apitypes.Entry, normalizedPath string) Entry {
+// NewEntry constructs a new `wash find` entry
+func NewEntry(e apitypes.Entry, normalizedPath string) Entry {
 	return Entry{
-		Entry: e,
+		Entry:          e,
 		NormalizedPath: normalizedPath,
-		Metadata: e.Attributes.Meta(),
+		Metadata:       e.Attributes.Meta(),
 	}
 }
 
