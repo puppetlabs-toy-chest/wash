@@ -15,7 +15,7 @@ func newBooleanPrimary(val bool) *Primary {
 			p := types.ToEntryP(func(e types.Entry) bool {
 				return val
 			})
-			p.SchemaP = func(s types.EntrySchema) bool {
+			p.SchemaP = func(s *types.EntrySchema) bool {
 				return val
 			}
 			return p, tokens, nil

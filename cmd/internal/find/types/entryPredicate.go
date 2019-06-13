@@ -16,7 +16,7 @@ type EntryPredicate struct {
 func ToEntryP(p func(e Entry) bool) *EntryPredicate {
 	return &EntryPredicate{
 		P: p,
-		SchemaP: func(s EntrySchema) bool {
+		SchemaP: func(s *EntrySchema) bool {
 			return true
 		},
 	}
