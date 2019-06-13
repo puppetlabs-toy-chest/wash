@@ -40,7 +40,7 @@ func newEC2Dir(session *session.Session) *ec2Dir {
 	return ec2Dir
 }
 
-func (e *ec2Dir) ChildSchemas() []plugin.EntrySchema {
+func (e *ec2Dir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(ec2InstancesDirBase())
 }
 

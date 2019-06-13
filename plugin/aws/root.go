@@ -87,7 +87,7 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 }
 
 // ChildSchemas returns the root's child schema
-func (r *Root) ChildSchemas() []plugin.EntrySchema {
+func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(profileBase())
 }
 

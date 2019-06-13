@@ -28,7 +28,7 @@ func newVolumesDir(client *client.Client) *volumesDir {
 	return volumesDir
 }
 
-func (vs *volumesDir) ChildSchemas() []plugin.EntrySchema {
+func (vs *volumesDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(volumeBase())
 }
 

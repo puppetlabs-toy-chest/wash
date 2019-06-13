@@ -40,7 +40,7 @@ func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
 }
 
 // ChildSchemas returns the FS entry's child schema
-func (d *FS) ChildSchemas() []plugin.EntrySchema {
+func (d *FS) ChildSchemas() []*plugin.EntrySchema {
 	return ChildSchemas()
 }
 

@@ -41,7 +41,7 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{0}
 }
 
-func fill(stree treeprint.Tree, schema apitypes.EntrySchema) treeprint.Tree {
+func fill(stree treeprint.Tree, schema *apitypes.EntrySchema) treeprint.Tree {
 	value := schema.Label
 	if !schema.Singleton {
 		value = fmt.Sprintf("[%v]", value)

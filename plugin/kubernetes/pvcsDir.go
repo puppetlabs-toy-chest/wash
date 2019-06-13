@@ -29,7 +29,7 @@ func newPVCSDir(ns *namespace) *pvcsDir {
 	return pv
 }
 
-func (pv *pvcsDir) ChildSchemas() []plugin.EntrySchema {
+func (pv *pvcsDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(pvcBase())
 }
 

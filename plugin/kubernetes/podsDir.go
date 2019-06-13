@@ -32,7 +32,7 @@ func newPodsDir(ns *namespace) *podsDir {
 	return pds
 }
 
-func (ps *podsDir) ChildSchemas() []plugin.EntrySchema {
+func (ps *podsDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(podBase())
 }
 

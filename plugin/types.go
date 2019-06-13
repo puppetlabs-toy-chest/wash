@@ -53,7 +53,7 @@ type Entry interface {
 // filesystem.
 type Parent interface {
 	Entry
-	ChildSchemas() []EntrySchema
+	ChildSchemas() []*EntrySchema
 	List(context.Context) ([]Entry, error)
 }
 

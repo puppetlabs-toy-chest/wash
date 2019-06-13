@@ -174,7 +174,7 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 	return bucket
 }
 
-func (b *s3Bucket) ChildSchemas() []plugin.EntrySchema {
+func (b *s3Bucket) ChildSchemas() []*plugin.EntrySchema {
 	return s3ObjectPrefixBase().ChildSchemas()
 }
 

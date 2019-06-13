@@ -26,7 +26,7 @@ func newDir(ctx context.Context, finfo os.FileInfo, path string) *dir {
 	return d
 }
 
-func (d *dir) ChildSchemas() []plugin.EntrySchema {
+func (d *dir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(dirBase(), fileBase())
 }
 

@@ -59,7 +59,7 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 }
 
 // ChildSchemas returns the child schemas of the plugin registry
-func (r *Registry) ChildSchemas() []EntrySchema {
+func (r *Registry) ChildSchemas() []*EntrySchema {
 	return ChildSchemas(r.pluginRoots...)
 }
 

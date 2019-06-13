@@ -10,7 +10,7 @@ import (
 type primaryTestSuite struct {
 	parsertest.Suite
 	ConstructEntry       func(v interface{}) types.Entry
-	ConstructEntrySchema func(v interface{}) types.EntrySchema
+	ConstructEntrySchema func(v interface{}) *types.EntrySchema
 }
 
 func (s *primaryTestSuite) RETC(input string, errRegex string) {

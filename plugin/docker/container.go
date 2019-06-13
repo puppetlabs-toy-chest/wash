@@ -66,7 +66,7 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	return plugin.ToJSONObject(raw), nil
 }
 
-func (c *container) ChildSchemas() []plugin.EntrySchema {
+func (c *container) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(
 		containerLogFileBase(),
 		containerMetadataBase(),

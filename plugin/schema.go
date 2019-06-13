@@ -8,11 +8,11 @@ import (
 
 // EntrySchema represents an entry's schema.
 type EntrySchema struct {
-	TypeID    string        `json:"type_id"`
-	Label     string        `json:"label"`
-	Singleton bool          `json:"singleton"`
-	Actions   []string      `json:"actions"`
-	Children  []EntrySchema `json:"children"`
+	TypeID    string         `json:"type_id"`
+	Label     string         `json:"label"`
+	Singleton bool           `json:"singleton"`
+	Actions   []string       `json:"actions"`
+	Children  []*EntrySchema `json:"children"`
 	entry     Entry
 }
 
@@ -23,8 +23,8 @@ type EntrySchema struct {
 // get a Parent child's child schemas. We could move ChildSchemas over to
 // EntryBase, but doing so removes the existing compile-time check on whether
 // a Parent provided their child schemas.
-func ChildSchemas(childBases ...Entry) []EntrySchema {
-	var schemas []EntrySchema
+func ChildSchemas(childBases ...Entry) []*EntrySchema {
+	var schemas []*EntrySchema
 	for _, childBase := range childBases {
 		schemas = append(schemas, schema(childBase, false))
 	}
@@ -41,25 +41,25 @@ func TypeID(e Entry) string {
 // when implementing Parent#ChildSchemas. Using Schema to do this can cause infinite
 // recursion if e's children have the same type as e, which can happen if e's e.g.
 // a volume directory.
-func Schema(e Entry) EntrySchema {
+func Schema(e Entry) *EntrySchema {
 	return schema(e, true)
 }
 
 // Common helper for Schema and ChildSchema
-func schema(e Entry, includeChildren bool) EntrySchema {
+func schema(e Entry, includeChildren bool) *EntrySchema {
 	// TODO: Handle external plugin schemas
 	switch e.(type) {
 	case *externalPluginRoot:
-		return EntrySchema{
+		return &EntrySchema{
 			TypeID: "external-plugin-root",
 		}
 	case *externalPluginEntry:
-		return EntrySchema{
+		return &EntrySchema{
 			TypeID: "external-plugin-entry",
 		}
 	}
 
-	s := EntrySchema{
+	s := &EntrySchema{
 		TypeID:    TypeID(e),
 		Label:     e.entryBase().label,
 		Singleton: e.entryBase().isSingleton,
@@ -87,11 +87,8 @@ func (s *EntrySchema) fillChildren(visited map[string]bool) {
 	}
 	s.Children = s.entry.(Parent).ChildSchemas()
 	visited[s.TypeID] = true
-	for i, child := range s.Children {
+	for _, child := range s.Children {
 		child.fillChildren(visited)
-		// Need to re-assign because child is not a pointer,
-		// so s.Children[i] won't be updated.
-		s.Children[i] = child
 	}
 	// Delete "s" from visited so that siblings or ancestors that
 	// also use "s" won't be affected.

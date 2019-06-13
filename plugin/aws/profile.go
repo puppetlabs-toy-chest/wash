@@ -68,7 +68,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 	return profile, nil
 }
 
-func (p *profile) ChildSchemas() []plugin.EntrySchema {
+func (p *profile) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(resourcesDirBase())
 }
 

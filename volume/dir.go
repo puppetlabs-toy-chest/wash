@@ -38,7 +38,7 @@ func newDir(name string, attr plugin.EntryAttributes, impl Interface, key plugin
 	return vd
 }
 
-func (v *dir) ChildSchemas() []plugin.EntrySchema {
+func (v *dir) ChildSchemas() []*plugin.EntrySchema {
 	return ChildSchemas()
 }
 
