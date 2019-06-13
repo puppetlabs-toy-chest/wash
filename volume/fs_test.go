@@ -3,6 +3,7 @@ package volume
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -99,6 +100,9 @@ func (suite *fsTestSuite) TestFSList() {
 		suite.FailNow("Listing entries failed")
 	}
 	suite.Equal(3, len(entries))
+
+	// Ensure entries are sorted
+	sort.Slice(entries, func(i, j int) bool { return plugin.Name(entries[i]) < plugin.Name(entries[j]) })
 
 	suite.Equal("path", plugin.Name(entries[0]))
 	suite.Equal("path1", plugin.Name(entries[1]))

@@ -9,7 +9,6 @@ package volume
 import (
 	"context"
 	"io"
-	"sort"
 	"time"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -61,7 +60,5 @@ func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, err
 			entries = append(entries, newFile(name, attr, impl, path+"/"+name))
 		}
 	}
-	// Sort entries so they have a deterministic order.
-	sort.Slice(entries, func(i, j int) bool { return plugin.Name(entries[i]) < plugin.Name(entries[j]) })
 	return entries, nil
 }
