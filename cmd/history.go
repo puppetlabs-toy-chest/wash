@@ -1,11 +1,14 @@
 package cmd
 
 import (
-	"io"
-	"os"
+	"bufio"
+	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/Benchkram/errz"
+	"github.com/kr/logfmt"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +27,10 @@ func historyCommand() *cobra.Command {
 	return historyCmd
 }
 
+type logFmtLine struct {
+	Time, Level, Msg string
+}
+
 func printJournalEntry(index string, follow bool) error {
 	idx, err := strconv.Atoi(index)
 	if err != nil {
@@ -40,8 +47,35 @@ func printJournalEntry(index string, follow bool) error {
 		errz.Log(rdr.Close())
 	}()
 
-	_, err = io.Copy(os.Stdout, rdr)
-	return err
+	// Output format:
+	// Jun 13 15:44:04.299 Exec [find / -mindepth 1 -maxdepth 5 -exec stat -c %s %X %Y %Z %f %n {} +] on blissful_gould
+	// Jun 13 15:44:04.433 stdout: 4096 1559079604 1557434981 1559079604 41ed /lib
+	//                     2597536 1552660099 1552660099 1559079604 81ed /lib/libcrypto.so.1.1
+	scanner := bufio.NewScanner(rdr)
+	var line logFmtLine
+	for scanner.Scan() {
+		if err := logfmt.Unmarshal(scanner.Bytes(), &line); err != nil {
+			cmdutil.ErrPrintf("Error parsing %v: %v\n", line, err)
+			continue
+		}
+
+		lines := strings.Split(line.Msg, "\n")
+		// TODO: add option to print the original longer time format.
+		t, err := time.Parse(time.RFC3339Nano, line.Time)
+		if err != nil {
+			panic(fmt.Sprintf("Unexpected time format %s", line.Time))
+		}
+		timeStr := t.Format(time.StampMilli)
+		fmt.Println(timeStr, lines[0])
+		if len(lines) > 1 {
+			prefix := strings.Repeat(" ", len(timeStr))
+			for _, l := range lines[1:] {
+				fmt.Println(prefix, l)
+			}
+		}
+	}
+
+	return nil
 }
 
 func printHistory(follow bool) error {
