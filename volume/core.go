@@ -9,7 +9,6 @@ package volume
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -45,31 +44,9 @@ func ChildSchemas() []plugin.EntrySchema {
 }
 
 // List constructs an array of entries for the given path from a DirMap.
-// The root path is an empty string. If a directory that hasn't been explored yet is listed it
-// will conduct further exploration. Requests are cached against the supplied Interface using the
-// VolumeListCB op. The supplied impl and path must have a 1-to-1 association.
-func List(ctx context.Context, impl Interface, path string) ([]plugin.Entry, error) {
-	result, err := plugin.CachedOp(ctx, "VolumeListCB", impl, 30*time.Second, func() (interface{}, error) {
-		return impl.VolumeList(ctx, path)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	root := result.(DirMap)[path]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			subpath := path + "/" + name
-			newEntry := newDir(name, attr, impl, subpath)
-			if d, ok := result.(DirMap)[subpath]; !ok || d == nil {
-				entries = append(entries, &unDir{newEntry})
-			} else {
-				entries = append(entries, newEntry)
-			}
-		} else {
-			entries = append(entries, newFile(name, attr, impl, path+"/"+name))
-		}
-	}
-	return entries, nil
+// If a directory that hasn't been explored yet is listed it will conduct further exploration.
+// Requests are cached against the supplied Interface using the VolumeListCB op.
+func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
+	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
+	return newDir("placeholder", plugin.EntryAttributes{}, impl, impl, "").List(ctx)
 }

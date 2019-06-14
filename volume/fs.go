@@ -46,7 +46,7 @@ func (d *FS) ChildSchemas() []plugin.EntrySchema {
 
 // List creates a hierarchy of the filesystem of an Execable resource (the executor).
 func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
-	return List(ctx, d, "")
+	return List(ctx, d)
 }
 
 var errNonZero = fmt.Errorf("Exec exited non-zero")

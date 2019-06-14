@@ -58,7 +58,7 @@ func (v *volume) ChildSchemas() []plugin.EntrySchema {
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
-	return vol.List(ctx, v, "")
+	return vol.List(ctx, v)
 }
 
 // Create a container that mounts a volume to a default mountpoint and runs a command.

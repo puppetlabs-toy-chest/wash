@@ -57,7 +57,7 @@ func (v *pvc) ChildSchemas() []plugin.EntrySchema {
 }
 
 func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
-	return volume.List(ctx, v, "")
+	return volume.List(ctx, v)
 }
 
 // Create a container that mounts a pvc to a default mountpoint and runs a command.
