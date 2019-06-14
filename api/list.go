@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
@@ -60,6 +61,8 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		apiEntry.Path = path + "/" + apiEntry.CName
 		result = append(result, apiEntry)
 	}
+	// Sort entries so they have a deterministic order.
+	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
 	activity.Record(ctx, "API: List %v %+v", path, result)
 
 	jsonEncoder := json.NewEncoder(w)

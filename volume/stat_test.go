@@ -16,6 +16,7 @@ import (
 // Generated with
 // `docker run --rm -it -v=/test/fixture:/mnt busybox find /mnt/ -mindepth 1 -exec stat -c '%s %X %Y %Z %f %n' {} \;`
 const mountpoint = "mnt"
+const mountDepth = 5
 const fixture = `
 96 1550611510 1550611448 1550611448 41ed mnt/path
 96 1550611510 1550611448 1550611448 41ed mnt/path/has
@@ -27,6 +28,20 @@ const fixture = `
 96 1550611510 1550611441 1550611441 41ed mnt/path2
 64 1550611510 1550611441 1550611441 41ed mnt/path2/dir
 `
+
+func TestStatCmd(t *testing.T) {
+	cmd := StatCmd("", 1)
+	assert.Equal(t, []string{"find", "/", "-mindepth", "1", "-maxdepth", "1",
+		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+
+	cmd = StatCmd("/", 1)
+	assert.Equal(t, []string{"find", "/", "-mindepth", "1", "-maxdepth", "1",
+		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+
+	cmd = StatCmd("/var/log", 5)
+	assert.Equal(t, []string{"find", "/var/log", "-mindepth", "1", "-maxdepth", "5",
+		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+}
 
 func TestStatParse(t *testing.T) {
 	actualAttr, path, err := StatParse("96 1550611510 1550611448 1550611448 41ed mnt/path")
@@ -73,19 +88,19 @@ func TestStatParse(t *testing.T) {
 }
 
 func TestStatParseAll(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint)
+	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 8, len(dmap))
 	for _, dir := range []string{"", "/path", "/path/has", "/path/has/got", "/path/has/got/some", "/path1", "/path2", "/path2/dir"} {
-		assert.NotNil(t, dmap[dir])
+		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"/path/has/got/some/legs", "/path1/a file"} {
-		assert.Nil(t, dmap[file])
+		assert.NotContains(t, dmap, file)
 	}
 
-	for _, node := range []string{"/path", "/path1", "/path2"} {
-		assert.NotNil(t, dmap[""][node])
+	for _, node := range []string{"path", "path1", "path2"} {
+		assert.Contains(t, dmap[""], node)
 	}
 
 	expectedAttr := plugin.EntryAttributes{}
@@ -116,20 +131,58 @@ func TestStatParseAll(t *testing.T) {
 	assert.Equal(t, expectedAttr, dmap["/path"]["has"])
 }
 
+func TestStatParseAllUnfinished(t *testing.T) {
+	const shortFixture = `
+	96 1550611510 1550611448 1550611448 41ed mnt/path
+	96 1550611510 1550611448 1550611448 41ed mnt/path/has
+	`
+	dmap, err := StatParseAll(strings.NewReader(shortFixture), mountpoint, mountpoint, 2)
+	assert.Nil(t, err)
+	assert.NotNil(t, dmap)
+	assert.Equal(t, 3, len(dmap))
+	assert.Contains(t, dmap, "")
+	assert.Contains(t, dmap[""], "path")
+	assert.Contains(t, dmap, "/path")
+	assert.Contains(t, dmap["/path"], "has")
+	// Depth two paths will be nil to signify we don't know their children.
+	assert.Contains(t, dmap, "/path/has")
+	assert.Nil(t, dmap["/path/has"])
+}
+
+func TestStatParseAllDeep(t *testing.T) {
+	const shortFixture = `
+	96 1550611510 1550611448 1550611448 41ed mnt/path
+	96 1550611510 1550611448 1550611448 41ed mnt/path/has
+	`
+	dmap, err := StatParseAll(strings.NewReader(shortFixture), "", mountpoint, 2)
+	assert.Nil(t, err)
+	assert.NotNil(t, dmap)
+	assert.Equal(t, 4, len(dmap))
+	assert.Contains(t, dmap, "")
+	assert.Contains(t, dmap[""], "mnt")
+	assert.Contains(t, dmap, "mnt")
+	assert.Contains(t, dmap["mnt"], "path")
+	assert.Contains(t, dmap, "mnt/path")
+	assert.Contains(t, dmap["mnt/path"], "has")
+	// Depth two paths will be nil to signify we don't know their children.
+	assert.Contains(t, dmap, "mnt/path/has")
+	assert.Nil(t, dmap["mnt/path/has"])
+}
+
 func TestStatParseAllRoot(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), "")
+	dmap, err := StatParseAll(strings.NewReader(fixture), "", "", mountDepth+1)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 9, len(dmap))
 	for _, dir := range []string{"", "mnt", "mnt/path", "mnt/path/has", "mnt/path/has/got", "mnt/path/has/got/some", "mnt/path1", "mnt/path2", "mnt/path2/dir"} {
-		assert.NotNil(t, dmap[dir])
+		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"mnt/path/has/got/some/legs", "mnt/path1/a file"} {
-		assert.Nil(t, dmap[file])
+		assert.NotContains(t, dmap, file)
 	}
 
-	for _, node := range []string{"mnt/path", "mnt/path1", "mnt/path2"} {
-		assert.NotNil(t, dmap[""][node])
+	for _, node := range []string{"path", "path1", "path2"} {
+		assert.Contains(t, dmap["mnt"], node)
 	}
 
 	expectedAttr := plugin.EntryAttributes{}
@@ -162,4 +215,11 @@ func TestStatParseAllRoot(t *testing.T) {
 	expectedAttr = plugin.EntryAttributes{}
 	expectedAttr.SetMode(0550 | os.ModeDir)
 	assert.Equal(t, expectedAttr, dmap[""]["mnt"])
+}
+
+func TestNumPathSegments(t *testing.T) {
+	assert.Equal(t, 0, numPathSegments(""))
+	assert.Equal(t, 0, numPathSegments("/"))
+	assert.Equal(t, 1, numPathSegments("/foo"))
+	assert.Equal(t, 2, numPathSegments("/foo/bar"))
 }

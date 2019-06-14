@@ -14,6 +14,7 @@ import (
 type FS struct {
 	plugin.EntryBase
 	executor plugin.Execable
+	maxdepth int
 }
 
 // FSBase returns a base FS entry
@@ -31,9 +32,10 @@ func FSBase(name string) *FS {
 
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
-func NewFS(name string, executor plugin.Execable) *FS {
+func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
 	fs := FSBase(name)
 	fs.executor = executor
+	fs.maxdepth = maxdepth
 	return fs
 }
 
@@ -42,10 +44,9 @@ func (d *FS) ChildSchemas() []plugin.EntrySchema {
 	return ChildSchemas()
 }
 
-// List will attempt to list the filesystem of an Execable resource (the executor). It will list
-// a directory tree based on supplied configuration (defaulting to `/var/log` if not specified).
+// List creates a hierarchy of the filesystem of an Execable resource (the executor).
 func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
-	return List(ctx, d, "")
+	return List(ctx, d)
 }
 
 var errNonZero = fmt.Errorf("Exec exited non-zero")
@@ -84,8 +85,8 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 }
 
 // VolumeList satisfies the Interface required by List to enumerate files.
-func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
-	cmdline := StatCmd("/var/log")
+func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
+	cmdline := StatCmd(path, d.maxdepth)
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 	buf, err := exec(ctx, d.executor, cmdline)
 	if err == errNonZero {
@@ -96,7 +97,8 @@ func (d *FS) VolumeList(ctx context.Context) (DirMap, error) {
 		return nil, err
 	}
 	activity.Record(ctx, "VolumeList complete")
-	return StatParseAll(buf, "")
+	// Always returns results normalized to the base.
+	return StatParseAll(buf, "", path, d.maxdepth)
 }
 
 // VolumeOpen satisfies the Interface required by List to read file contents.

@@ -91,8 +91,9 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	clf.Attributes().SetSize(uint64(content.Size()))
 
-	// Include a view of the remote filesystem using volume.FS
-	return []plugin.Entry{cm, clf, vol.NewFS("fs", c)}, nil
+	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
+	// VMs can have lots of files and Exec is fast.
+	return []plugin.Entry{cm, clf, vol.NewFS("fs", c, 3)}, nil
 }
 
 func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {

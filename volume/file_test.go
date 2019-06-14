@@ -19,7 +19,7 @@ type mockFileEntry struct {
 	err     error
 }
 
-func (m *mockFileEntry) VolumeList(context.Context) (DirMap, error) {
+func (m *mockFileEntry) VolumeList(context.Context, string) (DirMap, error) {
 	return nil, nil
 }
 

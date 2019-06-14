@@ -146,8 +146,9 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 		entries = append(entries, latestConsoleOutput)
 	}
 
-	// Include a view of the remote filesystem using volume.FS
-	entries = append(entries, volume.NewFS("fs", inst))
+	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
+	// VMs can have lots of files and SSH is fast.
+	entries = append(entries, volume.NewFS("fs", inst, 3))
 
 	return entries, nil
 }
