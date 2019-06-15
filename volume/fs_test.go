@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
@@ -173,6 +174,40 @@ func (suite *fsTestSuite) TestFSListTwice() {
 	}
 }
 
+func (suite *fsTestSuite) TestFSListExpiredCache() {
+	shortFixture := `
+96 1550611510 1550611448 1550611448 41ed /var
+96 1550611510 1550611448 1550611448 41ed /var/log
+96 1550611510 1550611448 1550611448 41ed /var/log/path
+`
+	depth := 3
+	exec := &mockExecutor{EntryBase: plugin.NewEntryBase()}
+	exec.SetName("instance")
+	exec.SetTestID("/instance")
+	cmd := StatCmd("/", depth)
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(mockExecCmd{shortFixture}, nil)
+
+	fs := NewFS("fs", exec, depth)
+	// ID would normally be set when listing FS within the parent instance.
+	fs.SetTestID("/instance/fs")
+
+	entry := suite.find(fs, "var/log").(plugin.Parent)
+	entries, err := plugin.CachedList(suite.ctx, entry)
+	if !suite.NoError(err) {
+		suite.FailNow("Listing entries failed")
+	}
+	suite.Equal(1, len(entries))
+	suite.Contains(entries, "path")
+
+	_, err = plugin.ClearCacheFor("/instance/fs")
+	suite.NoError(err)
+	entries, err = plugin.CachedList(suite.ctx, entry)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries))
+	}
+	suite.Implements((*plugin.Parent)(nil), suite.find(fs, "var/log"))
+}
+
 func (suite *fsTestSuite) TestFSRead() {
 	exec := suite.createExec(varLogFixture, varLogDepth)
 	fs := NewFS("fs", exec, varLogDepth)
@@ -206,4 +241,24 @@ type mockExecutor struct {
 func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
 	return arger.Get(0).(plugin.ExecCommand), arger.Error(1)
+}
+
+// Mock ExecCommand that can be used repeatedly when mocking a repeated call.
+type mockExecCmd struct {
+	data string
+}
+
+func (cmd mockExecCmd) OutputCh() <-chan plugin.ExecOutputChunk {
+	ch := make(chan plugin.ExecOutputChunk, 1)
+	ch <- plugin.ExecOutputChunk{
+		StreamID:  plugin.Stdout,
+		Timestamp: time.Now(),
+		Data:      cmd.data,
+	}
+	close(ch)
+	return ch
+}
+
+func (cmd mockExecCmd) ExitCode() (int, error) {
+	return 0, nil
 }

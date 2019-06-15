@@ -98,7 +98,7 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	}
 	activity.Record(ctx, "VolumeList complete")
 	// Always returns results normalized to the base.
-	return StatParseAll(buf, "", path, d.maxdepth)
+	return StatParseAll(buf, RootPath, path, d.maxdepth)
 }
 
 // VolumeOpen satisfies the Interface required by List to read file contents.

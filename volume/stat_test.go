@@ -92,7 +92,7 @@ func TestStatParseAll(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 8, len(dmap))
-	for _, dir := range []string{"", "/path", "/path/has", "/path/has/got", "/path/has/got/some", "/path1", "/path2", "/path2/dir"} {
+	for _, dir := range []string{RootPath, "/path", "/path/has", "/path/has/got", "/path/has/got/some", "/path1", "/path2", "/path2/dir"} {
 		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"/path/has/got/some/legs", "/path1/a file"} {
@@ -100,7 +100,7 @@ func TestStatParseAll(t *testing.T) {
 	}
 
 	for _, node := range []string{"path", "path1", "path2"} {
-		assert.Contains(t, dmap[""], node)
+		assert.Contains(t, dmap[RootPath], node)
 	}
 
 	expectedAttr := plugin.EntryAttributes{}
@@ -140,8 +140,8 @@ func TestStatParseAllUnfinished(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 3, len(dmap))
-	assert.Contains(t, dmap, "")
-	assert.Contains(t, dmap[""], "path")
+	assert.Contains(t, dmap, RootPath)
+	assert.Contains(t, dmap[RootPath], "path")
 	assert.Contains(t, dmap, "/path")
 	assert.Contains(t, dmap["/path"], "has")
 	// Depth two paths will be nil to signify we don't know their children.
@@ -154,12 +154,12 @@ func TestStatParseAllDeep(t *testing.T) {
 	96 1550611510 1550611448 1550611448 41ed mnt/path
 	96 1550611510 1550611448 1550611448 41ed mnt/path/has
 	`
-	dmap, err := StatParseAll(strings.NewReader(shortFixture), "", mountpoint, 2)
+	dmap, err := StatParseAll(strings.NewReader(shortFixture), RootPath, mountpoint, 2)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 4, len(dmap))
-	assert.Contains(t, dmap, "")
-	assert.Contains(t, dmap[""], "mnt")
+	assert.Contains(t, dmap, RootPath)
+	assert.Contains(t, dmap[RootPath], "mnt")
 	assert.Contains(t, dmap, "mnt")
 	assert.Contains(t, dmap["mnt"], "path")
 	assert.Contains(t, dmap, "mnt/path")
@@ -170,11 +170,11 @@ func TestStatParseAllDeep(t *testing.T) {
 }
 
 func TestStatParseAllRoot(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), "", "", mountDepth+1)
+	dmap, err := StatParseAll(strings.NewReader(fixture), RootPath, RootPath, mountDepth+1)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 9, len(dmap))
-	for _, dir := range []string{"", "mnt", "mnt/path", "mnt/path/has", "mnt/path/has/got", "mnt/path/has/got/some", "mnt/path1", "mnt/path2", "mnt/path2/dir"} {
+	for _, dir := range []string{RootPath, "mnt", "mnt/path", "mnt/path/has", "mnt/path/has/got", "mnt/path/has/got/some", "mnt/path1", "mnt/path2", "mnt/path2/dir"} {
 		assert.Contains(t, dmap, dir)
 	}
 	for _, file := range []string{"mnt/path/has/got/some/legs", "mnt/path1/a file"} {
@@ -214,7 +214,7 @@ func TestStatParseAllRoot(t *testing.T) {
 
 	expectedAttr = plugin.EntryAttributes{}
 	expectedAttr.SetMode(0550 | os.ModeDir)
-	assert.Equal(t, expectedAttr, dmap[""]["mnt"])
+	assert.Equal(t, expectedAttr, dmap[RootPath]["mnt"])
 }
 
 func TestNumPathSegments(t *testing.T) {
