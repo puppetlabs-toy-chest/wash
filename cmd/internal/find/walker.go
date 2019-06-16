@@ -36,14 +36,21 @@ func (w *walkerImpl) Walk(path string) bool {
 		cmdutil.ErrPrintf("%v\n", err)
 		return false
 	}
+	s, err := w.conn.Schema(path)
+	if err != nil {
+		cmdutil.ErrPrintf("%v\n", err)
+		return false
+	}
+	if s != nil {
+		schema := types.Prune(types.NewEntrySchema(s), w.p.SchemaP)
+		e.SetSchema(schema)
+	}
 	return w.walk(e, 0)
 }
 
 func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 	// If the Depth option is set, then we visit e after visiting its children.
 	// Otherwise, we visit e first.
-	//
-	// TODO: Write unit tests for the walker by mocking out the client.
 	successful := true
 	check := func(result bool) {
 		// Use "&&" to short-circuit if successful is false
@@ -54,12 +61,22 @@ func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 	}
 	childDepth := depth + 1
 	if int(childDepth) <= w.opts.Maxdepth && e.Supports(plugin.ListAction()) {
+		if e.SchemaKnown {
+			if e.Schema == nil || len(e.Schema.Children) == 0 {
+				// We've reached the end of our traversal
+				return successful
+			}
+		}
 		children, err := list(w.conn, e)
 		if err != nil {
 			cmdutil.ErrPrintf("could not get children of %v: %v\n", e.NormalizedPath, err)
 			successful = false
 		} else {
 			for _, child := range children {
+				if e.SchemaKnown {
+					// Note that e.Schema != nil here
+					child.SetSchema(e.Schema.Children[child.TypeID])
+				}
 				check(w.walk(child, childDepth))
 			}
 		}
@@ -73,6 +90,13 @@ func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 	if depth < w.opts.Mindepth {
 		return true
+	}
+	if e.SchemaKnown {
+		if e.Schema == nil || !w.p.SchemaP(e.Schema) {
+			// This is possible if e's a sibling/ancestor to a satisfying
+			// node
+			return true
+		}
 	}
 	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
 		// Fetch the entry's full metadata

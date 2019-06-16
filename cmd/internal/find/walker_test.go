@@ -47,8 +47,16 @@ func (s *WalkerTestSuite) TestWalk_InfoErrors() {
 	s.Regexp(err.Error(), s.Stderr())
 }
 
+func (s *WalkerTestSuite) TestWalk_SchemaErrors() {
+	s.Client.On("Info", ".").Return(apitypes.Entry{}, nil)
+	err := fmt.Errorf("failed to get the schema")
+	s.Client.On("Schema", ".").Return((*apitypes.EntrySchema)(nil), err)
+	s.False(s.walker.Walk("."))
+	s.Regexp(err.Error(), s.Stderr())
+}
+
 func (s *WalkerTestSuite) TestWalk_HappyCase() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.True(s.walker.Walk("."))
 	s.assertPrintedTree(
 		".",
@@ -60,8 +68,60 @@ func (s *WalkerTestSuite) TestWalk_HappyCase() {
 	)
 }
 
+func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
+	// Set-up the mocks
+	fileSchema := func(typeID string) *apitypes.EntrySchema {
+		return &apitypes.EntrySchema{
+			TypeID: typeID,
+		}
+	}
+	dirSchema := func(typeID string, children ...*apitypes.EntrySchema) *apitypes.EntrySchema {
+		return &apitypes.EntrySchema{
+			TypeID: typeID,
+			Children: children,
+		}
+	}
+	schema := dirSchema(
+		".",
+		dirSchema("foo", fileSchema("file")),
+		dirSchema("bar", fileSchema("no_file")),
+		dirSchema("baz", fileSchema("file")),
+	)
+	s.setupMocksForWalk(schema, map[string][]apitypes.Entry{
+		".": []apitypes.Entry{
+			s.toEntry("./foo", true, "foo"),
+			s.toEntry("./bar", true, "bar"),
+			s.toEntry("./baz", true, "baz"),
+		},
+		"./foo": []apitypes.Entry{
+			s.toEntry("./foo/1", true, "file"),
+		},
+		"./bar": []apitypes.Entry{
+			s.toEntry("./bar/1", false, "no_file"),
+			s.toEntry("./bar/2", false, "no_file"),
+		},
+		"./baz": []apitypes.Entry{
+			s.toEntry("./baz/1", false, "file"),
+			s.toEntry("./baz/2", false, "file"),
+		},
+	})
+
+	s.walker.p.SchemaP = func(s *types.EntrySchema) bool {
+		// Print only "foo" or "file"s. Ignore everything else.
+		return s.TypeID == "foo" || s.TypeID == "file"
+	}
+
+	s.True(s.walker.Walk("."))
+	s.assertPrintedTree(
+		"./foo",
+		"./foo/1",
+		"./baz/1",
+		"./baz/2",
+	)
+}
+
 func (s *WalkerTestSuite) TestWalk_MaxdepthSet() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.walker.opts.Maxdepth = 2
 	s.walker.opts.MarkAsSet(types.MaxdepthFlag)
 	s.True(s.walker.Walk("."))
@@ -74,7 +134,7 @@ func (s *WalkerTestSuite) TestWalk_MaxdepthSet() {
 }
 
 func (s *WalkerTestSuite) TestWalk_MaxdepthAndMindepthSet() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.walker.opts.Mindepth = 1
 	s.walker.opts.Maxdepth = 2
 	s.True(s.walker.Walk("."))
@@ -86,7 +146,7 @@ func (s *WalkerTestSuite) TestWalk_MaxdepthAndMindepthSet() {
 }
 
 func (s *WalkerTestSuite) TestWalk_DepthSet() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.walker.opts.Depth = true
 	s.True(s.walker.Walk("."))
 	s.assertPrintedTree(
@@ -100,7 +160,7 @@ func (s *WalkerTestSuite) TestWalk_DepthSet() {
 }
 
 func (s *WalkerTestSuite) TestWalk_ListErrors() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	err := fmt.Errorf("failed to list")
 	s.mockList("./foo", true, nil, err)
 	s.False(s.walker.Walk("."))
@@ -112,7 +172,7 @@ func (s *WalkerTestSuite) TestWalk_ListErrors() {
 }
 
 func (s *WalkerTestSuite) TestWalk_VisitErrors() {
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.walker.opts.Fullmeta = true
 	primary.Parser.SetPrimaries[primary.Meta] = true
 
@@ -125,7 +185,7 @@ func (s *WalkerTestSuite) TestWalk_VisitErrors() {
 	// Also test the behavior when depth is set since visit is called
 	// on a different code-path
 	s.walker.opts.Depth = true
-	s.setupMocksForWalk()
+	s.setupDefaultMocksForWalk()
 	s.False(s.walker.Walk("."))
 	s.assertPrintedTree()
 }
@@ -134,6 +194,23 @@ func (s *WalkerTestSuite) TestVisit_MindepthSet() {
 	s.walker.opts.Mindepth = 1
 	e := newMockEntryForVisit()
 	s.True(s.walker.visit(e, 0))
+	s.assertNotPrintedEntry(e)
+}
+
+func (s *WalkerTestSuite) TestVisit_NilSchema_DoesNotVisit() {
+	e := newMockEntryForVisit()
+	e.SetSchema(nil)
+	s.walker.visit(e, 0)
+	s.assertNotPrintedEntry(e)
+}
+
+func (s *WalkerTestSuite) TestVisit_UnsatisfyingSchema_DoesNotVisit() {
+	e := newMockEntryForVisit()
+	e.SetSchema(&types.EntrySchema{})
+	s.walker.p.SchemaP = func(_ *types.EntrySchema) bool {
+		return false
+	}
+	s.walker.visit(e, 0)
 	s.assertNotPrintedEntry(e)
 }
 
@@ -180,6 +257,16 @@ func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_FetchesFullMetada
 	s.assertPrintedEntry(e)
 }
 
+func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_UnsatisfyingSchema_DoesNotFetchFullMetadata() {
+	// This test is a sanity check since O(N) metadata requests can be expensive
+	s.walker.opts.Fullmeta = true
+	primary.Parser.SetPrimaries[primary.Meta] = true
+	e := newMockEntryForVisit()
+	e.SetSchema(nil)
+	s.walker.visit(e, 0)
+	s.Client.AssertNotCalled(s.T(), "Metadata")
+}
+
 func (s *WalkerTestSuite) TestVisit_PrintsSatisfyingEntry() {
 	e := newMockEntryForVisit()
 	s.True(s.walker.visit(e, 0))
@@ -195,33 +282,25 @@ func (s *WalkerTestSuite) TestVisit_DoesNotPrintUnsatisfyingEntry() {
 	s.assertNotPrintedEntry(e)
 }
 
-func (s *WalkerTestSuite) setupMocksForWalk() {
-	toEntry := func(path string, isParent bool) apitypes.Entry {
-		e := apitypes.Entry{
-			Path:  s.toAbsPath(path),
-			CName: filepath.Base(path),
-		}
-		if isParent {
-			e.Actions = []string{"list"}
-		}
-		return e
-	}
-
-	// Mock-out "Info" for the root
-	s.Client.On("Info", ".").Return(toEntry(".", true), nil).Once()
-
-	// Mock out "List" for each entry in the tree
-	tree := map[string][]apitypes.Entry{
-		".": []apitypes.Entry{toEntry("./foo", true)},
+func (s *WalkerTestSuite) setupDefaultMocksForWalk() {
+	s.setupMocksForWalk(nil, map[string][]apitypes.Entry{
+		".": []apitypes.Entry{s.toEntry("./foo", true, "")},
 		"./foo": []apitypes.Entry{
-			toEntry("./foo/bar", true),
-			toEntry("./foo/baz", false),
+			s.toEntry("./foo/bar", true, ""),
+			s.toEntry("./foo/baz", false, ""),
 		},
 		"./foo/bar": []apitypes.Entry{
-			toEntry("./foo/bar/1", false),
-			toEntry("./foo/bar/2", false),
+			s.toEntry("./foo/bar/1", false, ""),
+			s.toEntry("./foo/bar/2", false, ""),
 		},
-	}
+	})
+}
+
+func (s *WalkerTestSuite) setupMocksForWalk(schema *apitypes.EntrySchema, tree map[string][]apitypes.Entry) {
+	// Mock-out "Info" + "Schema" for the root
+	s.Client.On("Info", ".").Return(s.toEntry(".", true, "."), nil).Once()
+	s.Client.On("Schema", ".").Return(schema, nil).Once()
+	// Mock out "List" for each entry in the tree
 	for dir, children := range tree {
 		s.mockList(dir, false, children, nil)
 	}
@@ -243,6 +322,18 @@ func (s *WalkerTestSuite) toAbsPath(path string) string {
 		return "/"
 	}
 	return strings.TrimPrefix(path, ".")
+}
+
+func (s *WalkerTestSuite) toEntry(path string, isParent bool, typeID string) apitypes.Entry {
+	e := apitypes.Entry{
+		Path:  s.toAbsPath(path),
+		CName: filepath.Base(path),
+		TypeID: typeID,
+	}
+	if isParent {
+		e.Actions = []string{"list"}
+	}
+	return e
 }
 
 func (s *WalkerTestSuite) assertPrintedEntry(e types.Entry) {
