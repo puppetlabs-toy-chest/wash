@@ -50,13 +50,9 @@ func schema(e Entry, includeChildren bool) *EntrySchema {
 	// TODO: Handle external plugin schemas
 	switch e.(type) {
 	case *externalPluginRoot:
-		return &EntrySchema{
-			TypeID: "external-plugin-root",
-		}
+		return nil
 	case *externalPluginEntry:
-		return &EntrySchema{
-			TypeID: "external-plugin-entry",
-		}
+		return nil
 	}
 
 	s := &EntrySchema{
@@ -85,9 +81,13 @@ func (s *EntrySchema) fillChildren(visited map[string]bool) {
 		// true if s is e.g. a volume directory.
 		return
 	}
-	s.Children = s.entry.(Parent).ChildSchemas()
+	children := s.entry.(Parent).ChildSchemas()
 	visited[s.TypeID] = true
-	for _, child := range s.Children {
+	for _, child := range children {
+		if child == nil {
+			continue
+		}
+		s.Children = append(s.Children, child)
 		child.fillChildren(visited)
 	}
 	// Delete "s" from visited so that siblings or ancestors that

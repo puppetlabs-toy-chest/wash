@@ -27,12 +27,20 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 		paths = []string{"."}
 	}
 	conn := cmdutil.NewClient()
+	schemas := make(map[string]*apitypes.EntrySchema)
 	for _, path := range paths {
 		schema, err := conn.Schema(path)
 		if err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}
 		}
+		if schema == nil {
+			cmdutil.ErrPrintf("%v: schema unknown\n", path)
+			continue
+		}
+		schemas[path] = schema
+	}
+	for path, schema := range schemas {
 		stree := treeprint.New()
 		fill(stree, schema)
 		stree.SetValue(path)
