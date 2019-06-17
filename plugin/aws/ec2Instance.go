@@ -217,7 +217,13 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		return nil, fmt.Errorf("No public interface found for %v", inst)
 	}
 
+	var identityfile string
+	if name, ok := meta["KeyName"]; ok {
+		identityfile = ("~/.ssh/" + name.(string) + ".pem")
+	} else {
+		return nil, fmt.Errorf("No key name found for %v", inst)
+	}
 	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
 	// overridden in ~/.ssh/config.
-	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, User: "ec2-user"}, append([]string{cmd}, args...), opts)
+	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: "ec2-user", IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
 }
