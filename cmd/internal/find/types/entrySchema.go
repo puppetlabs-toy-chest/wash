@@ -8,6 +8,7 @@ import (
 
 // EntrySchema is a wrapper to apitypes.EntrySchema
 type EntrySchema struct {
+	// "nil" means an unknown schema
 	*apitypes.EntrySchema
 	// Use a map for faster lookup
 	Children map[string]*EntrySchema

@@ -35,6 +35,7 @@ type Client interface {
 	History(bool) (chan apitypes.Activity, error)
 	ActivityJournal(index int, follow bool) (io.ReadCloser, error)
 	Clear(path string) ([]string, error)
+	// A "nil" schema means that the schema's unknown.
 	Schema(path string) (*apitypes.EntrySchema, error)
 }
 
