@@ -7,14 +7,19 @@ import (
 	"github.com/spf13/cobra"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
 )
 
 func listCommand() *cobra.Command {
+	aliases := []string{}
+	if !config.Embedded {
+		aliases = []string{"ls"}
+	}
 	listCmd := &cobra.Command{
 		Use:     "list [<file>]",
-		Aliases: []string{"ls"},
+		Aliases: aliases,
 		Short:   "Lists the resources at the indicated path",
 		Args:    cobra.MaximumNArgs(1),
 		RunE:    toRunE(listMain),

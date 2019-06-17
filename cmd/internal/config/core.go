@@ -15,12 +15,14 @@ import (
 
 // Contains all the keys for Wash's shared config
 const (
-	SocketKey = "socket"
+	SocketKey   = "socket"
+	EmbeddedKey = "embedded"
 )
 
 // Socket is the path to the Wash server's UNIX
 // socket
 var Socket string
+var Embedded bool
 
 // Init initializes the config package. It loads Wash's defaults and
 // sets up viper
@@ -48,6 +50,7 @@ func Init() error {
 
 	// Load the shared config
 	Socket = viper.GetString(SocketKey)
+	Embedded = viper.GetBool(EmbeddedKey)
 
 	return nil
 }

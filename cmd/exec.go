@@ -2,15 +2,21 @@ package cmd
 
 import (
 	"fmt"
+
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func execCommand() *cobra.Command {
+	use, aliases := "exec", []string{"wexec"}
+	if config.Embedded {
+		use, aliases = "wexec", []string{}
+	}
 	execCmd := &cobra.Command{
-		Use:     "exec <path> <command> [<arg>...]",
-		Aliases: []string{"wexec"},
+		Use:     use + " <path> <command> [<arg>...]",
+		Aliases: aliases,
 		Short:   "Executes the given command on the indicated target",
 		Long: `For a Wash resource (specified by <path>) that implements the ability to execute a command, run the
 specified command and arguments. The results will be forwarded from the target on stdout, stderr,
