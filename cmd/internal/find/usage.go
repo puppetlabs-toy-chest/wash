@@ -1,6 +1,7 @@
 package find
 
 import (
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
@@ -8,12 +9,16 @@ import (
 
 // Usage returns `wash find`'s usage string
 func Usage() string {
+	use := "wash find"
+	if config.Embedded {
+		use = "find"
+	}
 	u := ""
 	u += "Recursively descends the directory tree of the specified paths, evaluating an\n"
 	u += "'expression' composed of 'primaries' and 'operands' for each entry in the tree.\n"
 	u += "\n"
 	u += "Usage:\n"
-	u += "  wash find [paths] [options] [expression]\n"
+	u += "  "+use+" [paths] [options] [expression]\n"
 	u += "\n"
 
 	t := types.OptionsTable()
