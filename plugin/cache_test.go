@@ -134,7 +134,7 @@ func (e *cacheTestsMockEntry) List(ctx context.Context) ([]Entry, error) {
 	return args.Get(0).([]Entry), args.Error(1)
 }
 
-func (e *cacheTestsMockEntry) ChildSchemas() []EntrySchema {
+func (e *cacheTestsMockEntry) ChildSchemas() []*EntrySchema {
 	return nil
 }
 

@@ -36,7 +36,7 @@ func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Clie
 	return objPrefix
 }
 
-func (d *s3ObjectPrefix) ChildSchemas() []plugin.EntrySchema {
+func (d *s3ObjectPrefix) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(s3ObjectPrefixBase(), s3ObjectBase())
 }
 

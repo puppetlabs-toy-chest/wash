@@ -163,6 +163,6 @@ func (p *mockedParent) List(ctx context.Context) ([]plugin.Entry, error) {
 	return args.Get(0).([]plugin.Entry), args.Error(1)
 }
 
-func (p *mockedParent) ChildSchemas() []plugin.EntrySchema {
+func (p *mockedParent) ChildSchemas() []*plugin.EntrySchema {
 	return nil
 }

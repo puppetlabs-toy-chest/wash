@@ -36,7 +36,7 @@ func newEC2InstancesDir(session *session.Session, client *ec2Client.EC2) *ec2Ins
 	return ec2InstancesDir
 }
 
-func (is *ec2InstancesDir) ChildSchemas() []plugin.EntrySchema {
+func (is *ec2InstancesDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(ec2InstanceBase())
 }
 

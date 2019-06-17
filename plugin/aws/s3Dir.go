@@ -33,7 +33,7 @@ func newS3Dir(session *session.Session) *s3Dir {
 	return s3Dir
 }
 
-func (s *s3Dir) ChildSchemas() []plugin.EntrySchema {
+func (s *s3Dir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(s3BucketBase())
 }
 

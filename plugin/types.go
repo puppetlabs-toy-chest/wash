@@ -53,7 +53,12 @@ type Entry interface {
 // filesystem.
 type Parent interface {
 	Entry
-	ChildSchemas() []EntrySchema
+	// TODO: "nil" schemas mean that the schema's unknown. This condition's necessary for
+	// the plugin registry b/c external plugins may not have a schema. However, core plugins
+	// should never return a "nil" schema -- their schema's always known. Since this specification
+	// affects core plugin authors, it should be cleaned up once the metadata schema + external
+	// plugin schema work is finished.
+	ChildSchemas() []*EntrySchema
 	List(context.Context) ([]Entry, error)
 }
 

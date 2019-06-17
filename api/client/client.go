@@ -35,7 +35,8 @@ type Client interface {
 	History(bool) (chan apitypes.Activity, error)
 	ActivityJournal(index int, follow bool) (io.ReadCloser, error)
 	Clear(path string) ([]string, error)
-	Schema(path string) (apitypes.EntrySchema, error)
+	// A "nil" schema means that the schema's unknown.
+	Schema(path string) (*apitypes.EntrySchema, error)
 }
 
 // A domainSocketClient is a wash API client.
@@ -268,8 +269,8 @@ func (c *domainSocketClient) Clear(path string) ([]string, error) {
 }
 
 // Schema returns the entry's schema
-func (c *domainSocketClient) Schema(path string) (apitypes.EntrySchema, error) {
-	var schema apitypes.EntrySchema
+func (c *domainSocketClient) Schema(path string) (*apitypes.EntrySchema, error) {
+	var schema *apitypes.EntrySchema
 	if err := c.getRequest("/fs/schema", url.Values{"path": []string{path}}, &schema); err != nil {
 		return schema, err
 	}

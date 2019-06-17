@@ -37,7 +37,7 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 	return resourcesDir
 }
 
-func (r *resourcesDir) ChildSchemas() []plugin.EntrySchema {
+func (r *resourcesDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(s3DirBase(), ec2DirBase())
 }
 

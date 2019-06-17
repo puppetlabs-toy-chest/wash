@@ -38,7 +38,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 	return ns
 }
 
-func (n *namespace) ChildSchemas() []plugin.EntrySchema {
+func (n *namespace) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(podsDirBase(), pvcsDirBase())
 }
 

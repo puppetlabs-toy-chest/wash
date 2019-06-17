@@ -39,7 +39,7 @@ type Dir = map[string]plugin.EntryAttributes
 type DirMap = map[string]Dir
 
 // ChildSchemas returns a volume's child schema
-func ChildSchemas() []plugin.EntrySchema {
+func ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(dirBase(), fileBase())
 }
 

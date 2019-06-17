@@ -20,7 +20,7 @@ func (g *mockParent) List(context.Context) ([]plugin.Entry, error) {
 	return g.entries, nil
 }
 
-func (g *mockParent) ChildSchemas() []plugin.EntrySchema {
+func (g *mockParent) ChildSchemas() []*plugin.EntrySchema {
 	return nil
 }
 
@@ -116,10 +116,10 @@ func (m *mockRoot) List(ctx context.Context) ([]plugin.Entry, error) {
 	return args.Get(0).([]plugin.Entry), args.Error(1)
 }
 
-func (m *mockRoot) ChildSchemas() []plugin.EntrySchema {
-	return []plugin.EntrySchema{
-		plugin.EntrySchema{
-			Type: "mockEntry",
+func (m *mockRoot) ChildSchemas() []*plugin.EntrySchema {
+	return []*plugin.EntrySchema{
+		&plugin.EntrySchema{
+			TypeID: "mockEntry",
 		},
 	}
 }

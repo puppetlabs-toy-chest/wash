@@ -22,12 +22,12 @@ type decodedCacheTTLs struct {
 
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
-	Name                 string           `json:"name"`
-	Methods             []string          `json:"methods"`
-	SlashReplacer        string           `json:"slash_replacer"`
-	CacheTTLs            decodedCacheTTLs `json:"cache_ttls"`
-	Attributes           EntryAttributes  `json:"attributes"`
-	State                string           `json:"state"`
+	Name          string           `json:"name"`
+	Methods       []string         `json:"methods"`
+	SlashReplacer string           `json:"slash_replacer"`
+	CacheTTLs     decodedCacheTTLs `json:"cache_ttls"`
+	Attributes    EntryAttributes  `json:"attributes"`
+	State         string           `json:"state"`
 }
 
 func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
@@ -38,9 +38,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
 	entry := &externalPluginEntry{
-		EntryBase:        NewEntryBase(),
-		methods:          e.Methods,
-		state:            e.State,
+		EntryBase: NewEntryBase(),
+		methods:   e.Methods,
+		state:     e.State,
 	}
 	entry.SetName(e.Name)
 	entry.SetAttributes(e.Attributes)
@@ -59,9 +59,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 // externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
-	script           externalPluginScript
-	methods         []string
-	state            string
+	script  externalPluginScript
+	methods []string
+	state   string
 }
 
 func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
@@ -87,9 +87,9 @@ func (e *externalPluginEntry) implements(method string) bool {
 	return false
 }
 
-func (e *externalPluginEntry) ChildSchemas() []EntrySchema {
+func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
 	// ChildSchema's meant for core plugins.
-	return []EntrySchema{}
+	return []*EntrySchema{}
 }
 
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
@@ -270,7 +270,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 }
 
 type stdoutStreamer struct {
-	cmd    *internal.Command 
+	cmd    *internal.Command
 	stdout io.ReadCloser
 }
 

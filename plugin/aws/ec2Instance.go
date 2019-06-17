@@ -107,7 +107,7 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 	return attr
 }
 
-func (inst *ec2Instance) ChildSchemas() []plugin.EntrySchema {
+func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(
 		ec2InstanceConsoleOutputBase(),
 		ec2InstanceMetadataJSONBase(),

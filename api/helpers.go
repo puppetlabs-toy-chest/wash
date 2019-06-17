@@ -17,6 +17,7 @@ import (
 
 func toAPIEntry(e plugin.Entry) apitypes.Entry {
 	return apitypes.Entry{
+		TypeID:     plugin.TypeID(e),
 		Name:       plugin.Name(e),
 		CName:      plugin.CName(e),
 		Actions:    plugin.SupportedActionsOf(e),

@@ -145,7 +145,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
-	s.Parser = types.EntryPredicateParser(func(tokens []string) (types.EntryPredicate, []string, error) {
+	s.Parser = types.EntryPredicateParser(func(tokens []string) (*types.EntryPredicate, []string, error) {
 		p, err := parseExpression(tokens)
 		return p, []string{}, err
 	})

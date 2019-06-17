@@ -14,11 +14,11 @@ import (
 //
 //nolint
 var Size = Parser.add(&Primary{
-	Description: "Returns true if the entry's size attribute satisfies the given size predicate",
+	Description:         "Returns true if the entry's size attribute satisfies the given size predicate",
 	DetailedDescription: sizeDetailedDescription,
-	name: "size",
-	args: "[+|-]n[ckMGTP]",
-	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
+	name:                "size",
+	args:                "[+|-]n[ckMGTP]",
+	parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
 		}
@@ -31,7 +31,7 @@ var Size = Parser.add(&Primary{
 			return nil, nil, fmt.Errorf("%v: illegal size value", tokens[0])
 		}
 
-		p := func(e types.Entry) bool {
+		p := types.ToEntryP(func(e types.Entry) bool {
 			if !e.Attributes.HasSize() {
 				return false
 			}
@@ -41,7 +41,7 @@ var Size = Parser.add(&Primary{
 				size = int64(math.Ceil(float64(size) / 512.0))
 			}
 			return numericP(size)
-		}
+		})
 		return p, tokens[1:], nil
 	},
 })

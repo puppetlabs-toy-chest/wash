@@ -1,0 +1,27 @@
+{
+    "type_id": "A",
+    "children": [
+        {
+            "type_id": "B",
+            "children": [
+                {
+                    "type_id": "D"
+                },
+                {
+                    "type_id": "E"
+                }
+            ]
+        },
+        {
+            "type_id": "C",
+            "children": [
+                {
+                    "type_id": "F"
+                },
+                {
+                    "type_id": "G"
+                }
+            ]
+        }
+    ]
+}

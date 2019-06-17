@@ -52,7 +52,7 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 	return vol
 }
 
-func (v *pvc) ChildSchemas() []plugin.EntrySchema {
+func (v *pvc) ChildSchemas() []*plugin.EntrySchema {
 	return volume.ChildSchemas()
 }
 

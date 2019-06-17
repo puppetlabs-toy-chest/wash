@@ -28,7 +28,7 @@ func newContainersDir(client *client.Client) *containersDir {
 	return containersDir
 }
 
-func (cs *containersDir) ChildSchemas() []plugin.EntrySchema {
+func (cs *containersDir) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(containerBase())
 }
 

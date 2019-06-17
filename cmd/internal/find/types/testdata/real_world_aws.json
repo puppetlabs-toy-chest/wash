@@ -1,0 +1,187 @@
+{
+    "type_id": "aws.Root",
+    "label": "aws",
+    "singleton": true,
+    "actions": [
+        "list"
+    ],
+    "children": [
+        {
+            "type_id": "aws.profile",
+            "label": "profile",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "children": [
+                {
+                    "type_id": "aws.resourcesDir",
+                    "label": "resources",
+                    "singleton": true,
+                    "actions": [
+                        "list"
+                    ],
+                    "children": [
+                        {
+                            "type_id": "aws.s3Dir",
+                            "label": "s3",
+                            "singleton": true,
+                            "actions": [
+                                "list"
+                            ],
+                            "children": [
+                                {
+                                    "type_id": "aws.s3Bucket",
+                                    "label": "bucket",
+                                    "singleton": false,
+                                    "actions": [
+                                        "list"
+                                    ],
+                                    "children": [
+                                        {
+                                            "type_id": "aws.s3ObjectPrefix",
+                                            "label": "prefix",
+                                            "singleton": false,
+                                            "actions": [
+                                                "list"
+                                            ],
+                                            "children": [
+                                                {
+                                                    "type_id": "aws.s3ObjectPrefix",
+                                                    "label": "prefix",
+                                                    "singleton": false,
+                                                    "actions": [
+                                                        "list"
+                                                    ],
+                                                    "children": null
+                                                },
+                                                {
+                                                    "type_id": "aws.s3Object",
+                                                    "label": "object",
+                                                    "singleton": false,
+                                                    "actions": [
+                                                        "read",
+                                                        "stream"
+                                                    ],
+                                                    "children": null
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type_id": "aws.s3Object",
+                                            "label": "object",
+                                            "singleton": false,
+                                            "actions": [
+                                                "read",
+                                                "stream"
+                                            ],
+                                            "children": null
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type_id": "aws.ec2Dir",
+                            "label": "ec2",
+                            "singleton": true,
+                            "actions": [
+                                "list"
+                            ],
+                            "children": [
+                                {
+                                    "type_id": "aws.ec2InstancesDir",
+                                    "label": "instances",
+                                    "singleton": true,
+                                    "actions": [
+                                        "list"
+                                    ],
+                                    "children": [
+                                        {
+                                            "type_id": "aws.ec2Instance",
+                                            "label": "instance",
+                                            "singleton": false,
+                                            "actions": [
+                                                "list",
+                                                "exec"
+                                            ],
+                                            "children": [
+                                                {
+                                                    "type_id": "aws.ec2InstanceConsoleOutput",
+                                                    "label": "console.out",
+                                                    "singleton": false,
+                                                    "actions": [
+                                                        "read"
+                                                    ],
+                                                    "children": null
+                                                },
+                                                {
+                                                    "type_id": "aws.ec2InstanceMetadataJSON",
+                                                    "label": "metadata.json",
+                                                    "singleton": true,
+                                                    "actions": [
+                                                        "read"
+                                                    ],
+                                                    "children": null
+                                                },
+                                                {
+                                                    "type_id": "volume.FS",
+                                                    "label": "fs",
+                                                    "singleton": true,
+                                                    "actions": [
+                                                        "list"
+                                                    ],
+                                                    "children": [
+                                                        {
+                                                            "type_id": "volume.dir",
+                                                            "label": "dir",
+                                                            "singleton": false,
+                                                            "actions": [
+                                                                "list"
+                                                            ],
+                                                            "children": [
+                                                                {
+                                                                    "type_id": "volume.dir",
+                                                                    "label": "dir",
+                                                                    "singleton": false,
+                                                                    "actions": [
+                                                                        "list"
+                                                                    ],
+                                                                    "children": null
+                                                                },
+                                                                {
+                                                                    "type_id": "volume.file",
+                                                                    "label": "file",
+                                                                    "singleton": false,
+                                                                    "actions": [
+                                                                        "read",
+                                                                        "stream"
+                                                                    ],
+                                                                    "children": null
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "type_id": "volume.file",
+                                                            "label": "file",
+                                                            "singleton": false,
+                                                            "actions": [
+                                                                "read",
+                                                                "stream"
+                                                            ],
+                                                            "children": null
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

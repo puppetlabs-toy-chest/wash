@@ -34,7 +34,7 @@ func newK8Context(name string, client *k8s.Clientset, config *rest.Config, defau
 	return context
 }
 
-func (c *k8context) ChildSchemas() []plugin.EntrySchema {
+func (c *k8context) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(namespaceBase())
 }
 

@@ -53,7 +53,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	return vol, nil
 }
 
-func (v *volume) ChildSchemas() []plugin.EntrySchema {
+func (v *volume) ChildSchemas() []*plugin.EntrySchema {
 	return vol.ChildSchemas()
 }
 

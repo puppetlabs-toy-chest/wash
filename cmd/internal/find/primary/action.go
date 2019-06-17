@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // Action is the action primary
@@ -14,9 +14,9 @@ import (
 //nolint
 var Action = Parser.add(&Primary{
 	Description: "Returns true if the entry supports action",
-	name: "action",
-	args: "action",
-	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
+	name:        "action",
+	args:        "action",
+	parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
 		}
@@ -31,8 +31,16 @@ var Action = Parser.add(&Primary{
 			validActionsStr := strings.Join(validActionsArray, ", ")
 			return nil, nil, fmt.Errorf("%v is an invalid action. Valid actions are %v", tokens[0], validActionsStr)
 		}
-		p := func(e types.Entry) bool {
+		p := types.ToEntryP(func(e types.Entry) bool {
 			return e.Supports(action)
+		})
+		p.SchemaP = func(s *types.EntrySchema) bool {
+			for _, a := range s.Actions {
+				if action.Name == a {
+					return true
+				}
+			}
+			return false
 		}
 		return p, tokens[1:], nil
 	},
