@@ -37,14 +37,15 @@ func TestVolumeDir(t *testing.T) {
 	entry := mockDirEntry{EntryBase: plugin.NewEntryBase(), dmap: dmap}
 	entry.SetName("mine")
 	entry.SetTestID("/mine")
+	entryDir := newDir("dummy", plugin.EntryAttributes{}, &entry, nil, RootPath)
 
-	assert.NotNil(t, dmap[""]["path"])
-	vd := newDir("path", dmap[""]["path"], &entry, &entry, "/path")
+	assert.NotNil(t, dmap[RootPath]["path"])
+	vd := newDir("path", dmap[RootPath]["path"], &entry, entryDir, "/path")
 	attr := plugin.Attributes(vd)
 	assert.Equal(t, 0755|os.ModeDir, attr.Mode())
 
-	assert.NotNil(t, dmap[""]["path1"])
-	vd = newDir("path", dmap[""]["path1"], &entry, &entry, "/path1")
+	assert.NotNil(t, dmap[RootPath]["path1"])
+	vd = newDir("path", dmap[RootPath]["path1"], &entry, entryDir, "/path1")
 	entries, err := vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
@@ -53,8 +54,8 @@ func TestVolumeDir(t *testing.T) {
 		assert.Equal(t, "/path1/a file", entry.path)
 	}
 
-	assert.NotNil(t, dmap[""]["path2"])
-	vd = newDir("path", dmap[""]["path2"], &entry, &entry, "/path2")
+	assert.NotNil(t, dmap[RootPath]["path2"])
+	vd = newDir("path", dmap[RootPath]["path2"], &entry, entryDir, "/path2")
 	entries, err = vd.List(context.Background())
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))

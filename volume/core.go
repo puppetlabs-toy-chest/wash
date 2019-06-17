@@ -43,10 +43,13 @@ func ChildSchemas() []plugin.EntrySchema {
 	return plugin.ChildSchemas(dirBase(), fileBase())
 }
 
+// RootPath is the root of the filesystem described by a DirMap returned from VolumeList.
+const RootPath = ""
+
 // List constructs an array of entries for the given path from a DirMap.
 // If a directory that hasn't been explored yet is listed it will conduct further exploration.
 // Requests are cached against the supplied Interface using the VolumeListCB op.
 func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
-	return newDir("placeholder", plugin.EntryAttributes{}, impl, impl, "").List(ctx)
+	return newDir("dummy", plugin.EntryAttributes{}, impl, nil, RootPath).List(ctx)
 }

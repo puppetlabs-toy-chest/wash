@@ -17,7 +17,7 @@ import (
 // StatCmd returns the command required to stat all the files in a directory up to maxdepth.
 func StatCmd(path string, maxdepth int) []string {
 	// List uses "" to mean root. Translate for executing on the target.
-	if path == "" {
+	if path == RootPath {
 		path = "/"
 	}
 	// size, atime, mtime, ctime, mode, name
@@ -85,8 +85,8 @@ func StatParse(line string) (plugin.EntryAttributes, string, error) {
 // directory. The directory may not exist if we're parsing stat output for a basepath that's closer
 // to the root directory than where we searched because we want to preserve some of the hierarchy.
 func makedirs(dirmap DirMap, newpath string) Dir {
-	// If it exists, return the children map. Base case would be newpath == "", which we create at
-	// the start of StatParseAll.
+	// If it exists, return the children map. Base case would be newpath == RootPath, which we create
+	// at the start of StatParseAll.
 	if newchildren, ok := dirmap[newpath]; ok {
 		return newchildren
 	}
@@ -117,7 +117,7 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
-	dirmap := DirMap{"": make(Dir)}
+	dirmap := DirMap{RootPath: make(Dir)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		if text != "" {

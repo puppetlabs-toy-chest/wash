@@ -47,10 +47,10 @@ func NewExecCommand(ctx context.Context) *ExecCommandImpl {
 	if ctx == nil {
 		panic("plugin.NewExecCommand called with a nil context")
 	}
-	
+
 	cmd := &ExecCommandImpl{
-		ctx: ctx,
-		exitCodeCh: make(chan int, 1),
+		ctx:           ctx,
+		exitCodeCh:    make(chan int, 1),
 		exitCodeErrCh: make(chan error, 1),
 	}
 
@@ -147,8 +147,4 @@ func (cmd *ExecCommandImpl) ExitCode() (int, error) {
 	case err := <-cmd.exitCodeErrCh:
 		return 0, err
 	}
-}
-
-// sealed implements ExecCommand#sealed
-func (cmd *ExecCommandImpl) sealed() {
 }

@@ -120,7 +120,6 @@ type ExecOutputChunk struct {
 type ExecCommand interface {
 	OutputCh() <-chan ExecOutputChunk
 	ExitCode() (int, error)
-	sealed()
 }
 
 // Execable is an entry that can have a command run on it.
