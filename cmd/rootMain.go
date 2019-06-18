@@ -72,8 +72,8 @@ func runShell(subcommands []*cobra.Command, rundir, mountpath, socketpath, execf
 		}
 
 		for _, alias := range aliases {
-			if err := writeAlias(filepath.Join(rundir, alias), name); err != nil {
-				cmdutil.ErrPrintf("Error creating alias %v for subcommand %v: %v\n", name, subcommand, err)
+			if err := writeAlias(filepath.Join(rundir, alias), alias); err != nil {
+				cmdutil.ErrPrintf("Error creating alias %v for subcommand %v: %v\n", alias, subcommand, err)
 				return exitCode{1}
 			}
 		}
