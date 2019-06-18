@@ -16,9 +16,11 @@ import (
 )
 
 func psCommand() *cobra.Command {
+	use, aliases := generateShellAlias("ps")
 	psCmd := &cobra.Command{
-		Use:   "ps [<node>...]",
-		Short: "Lists the processes running on the indicated compute instances",
+		Use:     use + " [<node>...]",
+		Aliases: aliases,
+		Short:   "Lists the processes running on the indicated compute instances",
 		Long: `Captures /proc/*/{cmdline,stat,statm} on each node by executing 'cat' on them. Collects the output
 to display running processes on all listed nodes. Errors on paths that don't implement exec.`,
 		RunE: toRunE(psMain),

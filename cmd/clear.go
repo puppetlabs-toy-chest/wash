@@ -1,16 +1,12 @@
 package cmd
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func clearCommand() *cobra.Command {
-	use, aliases := "clear", []string{"wclear"}
-	if config.Embedded {
-		use, aliases = "wclear", []string{}
-	}
+	use, aliases := generateShellAlias("clear")
 	clearCmd := &cobra.Command{
 		Use:     use + " [<path>]",
 		Aliases: aliases,

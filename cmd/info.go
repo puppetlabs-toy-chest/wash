@@ -1,16 +1,12 @@
 package cmd
 
 import (
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func infoCommand() *cobra.Command {
-	use, aliases := "info", []string{"winfo"}
-	if config.Embedded {
-		use, aliases = "winfo", []string{}
-	}
+	use, aliases := generateShellAlias("info")
 	infoCmd := &cobra.Command{
 		Use:     use + " <path>",
 		Aliases: aliases,
