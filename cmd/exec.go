@@ -4,16 +4,12 @@ import (
 	"fmt"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func execCommand() *cobra.Command {
-	use, aliases := "exec", []string{"wexec"}
-	if config.Embedded {
-		use, aliases = "wexec", []string{}
-	}
+	use, aliases := generateShellAlias("exec")
 	execCmd := &cobra.Command{
 		Use:     use + " <path> <command> [<arg>...]",
 		Aliases: aliases,

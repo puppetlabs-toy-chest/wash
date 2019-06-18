@@ -23,12 +23,14 @@ func writeAlias(path, subcommand string) error {
 	if err != nil {
 		return err
 	}
+
+	// Use an Embedded config option to specialize help for the wash shell environment.
 	_, err = f.WriteString("#!/bin/sh\nWASH_EMBEDDED=1 exec wash " + subcommand + " \"$@\"")
 	f.Close()
 	return err
 }
 
-func runShell(rundir, mountpath, socketpath, execfile string) exitCode {
+func runShell(subcommands []*cobra.Command, rundir, mountpath, socketpath, execfile string) exitCode {
 	// Add rundir to the PATH and put aliases there.
 	washPath, err := os.Executable()
 	if err != nil {
@@ -41,26 +43,39 @@ func runShell(rundir, mountpath, socketpath, execfile string) exitCode {
 		cmdutil.ErrPrintf("Error linking wash executable to %v: %v\n", newWashPath, err)
 		return exitCode{1}
 	}
+
 	// Executable file can't override shell built-ins, so use wexec instead of exec.
 	// List also isn't very feature complete so we don't override ls.
 	// These are executables instead of aliases because putting alias declarations at the beginning
-	// of stdin for the command doesn't work right.
-	aliases := map[string]string{
-		"wclear":   "clear",
-		"wexec":    "exec",
-		"find":     "find",
-		"help":     "help",
-		"winfo":    "info",
-		"whistory": "history",
-		"list":     "list",
-		"meta":     "meta",
-		"tail":     "tail",
-		"stree":    "stree",
-	}
-	for name, subcommand := range aliases {
-		if err := writeAlias(filepath.Join(rundir, name), subcommand); err != nil {
-			cmdutil.ErrPrintf("Error creating alias %v for subcommand %v: %v\n", name, subcommand, err)
-			return exitCode{1}
+	// of stdin for the command doesn't work right (issues with TTY).
+	// Generate executable wrappers for available subcommands based on their aliases.
+	for _, subcommand := range subcommands {
+		tokens := strings.SplitN(subcommand.Use, " ", 2)
+		if len(tokens) < 1 {
+			panic("all subcommands should have non-empty usage")
+		}
+		name := tokens[0]
+		// Specifically skip server as undocumented when running in wash shell.
+		if name == "server" {
+			continue
+		}
+
+		var aliases []string
+		for _, alias := range subcommand.Aliases {
+			if strings.HasPrefix(alias, "w") {
+				aliases = append(aliases, alias)
+			}
+		}
+
+		if len(aliases) == 0 {
+			aliases = append(aliases, name)
+		}
+
+		for _, alias := range aliases {
+			if err := writeAlias(filepath.Join(rundir, alias), name); err != nil {
+				cmdutil.ErrPrintf("Error creating alias %v for subcommand %v: %v\n", name, subcommand, err)
+				return exitCode{1}
+			}
 		}
 	}
 
@@ -171,7 +186,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 Try 'help'`)
 	}
 
-	exit := runShell(rundir, mountpath, socketpath, execfile)
+	exit := runShell(cmd.Commands(), rundir, mountpath, socketpath, execfile)
 
 	srv.Stop()
 	if plugin.IsInteractive() {

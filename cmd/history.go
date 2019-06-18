@@ -9,16 +9,12 @@ import (
 
 	"github.com/Benchkram/errz"
 	"github.com/kr/logfmt"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func historyCommand() *cobra.Command {
-	use, aliases := "history", []string{"whistory"}
-	if config.Embedded {
-		use, aliases = "whistory", []string{}
-	}
+	use, aliases := generateShellAlias("history")
 	historyCmd := &cobra.Command{
 		Use:     use + " [-f] [<id>]",
 		Aliases: aliases,

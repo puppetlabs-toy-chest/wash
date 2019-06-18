@@ -55,31 +55,9 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		rootCmd.PreRun = nil
 		rootCmd.Long = ""
 		// Augment the usage template to minimize usage when set to empty.
-		rootCmd.SetUsageTemplate(`Usage:{{if (and .Runnable (ne .Use ""))}}
- {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
- {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
-
-Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
-
-Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`)
+		rootCmd.SetUsageTemplate(embeddedUsageTemplate)
 	} else {
+		// Omit server from embedded cases because a daemon is already running.
 		addServerArgs(rootCmd, "warn")
 		rootCmd.AddCommand(serverCommand())
 		// rootCommandFlag is used in rootMain.go.
@@ -124,4 +102,38 @@ func Execute() int {
 	}
 
 	return exitCode.value
+}
+
+// Usage template copied from Cobra and modified to format well with an empty Use clause.
+const embeddedUsageTemplate = `Usage:{{if (and .Runnable (ne .Use ""))}}
+ {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+ {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
+
+// Return use name and alias based on whether we're embedded in a wash shell.
+func generateShellAlias(name string) (string, []string) {
+	if config.Embedded {
+		return "w" + name, []string{}
+	}
+	return name, []string{"w" + name}
 }
