@@ -9,14 +9,19 @@ import (
 
 	"github.com/Benchkram/errz"
 	"github.com/kr/logfmt"
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func historyCommand() *cobra.Command {
+	use, aliases := "history", []string{"whistory"}
+	if config.Embedded {
+		use, aliases = "whistory", []string{}
+	}
 	historyCmd := &cobra.Command{
-		Use:     "history [-f] [<id>]",
-		Aliases: []string{"whistory"},
+		Use:     use + " [-f] [<id>]",
+		Aliases: aliases,
 		Short:   "Prints the wash command history, or journal of a particular item",
 		Long: `Wash maintains a history of commands executed through it. Print that command history, or specify an
 <id> to print a log of activity related to a particular command.`,

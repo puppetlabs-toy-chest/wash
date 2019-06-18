@@ -1,14 +1,19 @@
 package cmd
 
 import (
+	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
 
 func infoCommand() *cobra.Command {
+	use, aliases := "info", []string{"winfo"}
+	if config.Embedded {
+		use, aliases = "winfo", []string{}
+	}
 	infoCmd := &cobra.Command{
-		Use:     "info <path>",
-		Aliases: []string{"winfo"},
+		Use:     use + " <path>",
+		Aliases: aliases,
 		Short:   "Prints the entry's info at the specified path",
 		Long:    `Print all info Wash has about the specified path, including filesystem attributes and metadata.`,
 		Args:    cobra.ExactArgs(1),

@@ -35,9 +35,6 @@ func toRunE(main commandMain) runE {
 
 func rootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		// TODO: Set this to "" when we're ready to ship so that
-		// when we alias our custom commands, someone typing in
-		// e.g. `meta --help` will not see `wash meta` in the usage
 		Use:    "wash [<script>]",
 		PreRun: bindServerArgs,
 		RunE:   toRunE(rootMain),
@@ -52,12 +49,44 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		Args:          cobra.MaximumNArgs(1),
 		Version:       version,
 	}
-	addServerArgs(rootCmd, "warn")
-	// rootCommandFlag is used in rootMain.go.
-	rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
+
+	if config.Embedded {
+		rootCmd.Use = ""
+		rootCmd.PreRun = nil
+		rootCmd.Long = ""
+		// Augment the usage template to minimize usage when set to empty.
+		rootCmd.SetUsageTemplate(`Usage:{{if (and .Runnable (ne .Use ""))}}
+ {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+ {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
+
+Available Commands:{{range .Commands}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`)
+	} else {
+		addServerArgs(rootCmd, "warn")
+		rootCmd.AddCommand(serverCommand())
+		// rootCommandFlag is used in rootMain.go.
+		rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
+	}
 
 	rootCmd.AddCommand(versionCommand())
-	rootCmd.AddCommand(serverCommand())
 	rootCmd.AddCommand(metaCommand())
 	rootCmd.AddCommand(listCommand())
 	rootCmd.AddCommand(execCommand())
