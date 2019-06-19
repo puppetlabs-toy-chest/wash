@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"io/ioutil"
 	"time"
 
 	"github.com/kballard/go-shellquote"
@@ -64,9 +65,23 @@ func sshConnect(host, port, user string, identityfile string, strictHostKeyCheck
 			}
 		}
 
+		var authmethod []ssh.AuthMethod
+		if key, err := ioutil.ReadFile(identityfile); err != nil {
+			return nil, fmt.Errorf("Unable to read private key, falling back to SSH agent: %v", err)
+			// activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
+		} else {
+			if signer, err := ssh.ParsePrivateKey(key); err != nil {
+				return nil, fmt.Errorf("Unable to parse private key, falling back to SSH agent: %v", err)
+				// activity.Record("Unable to parse private key, falling back to SSH agent: %v", err)
+			} else {
+				authmethod = append(authmethod, ssh.PublicKeys(signer))
+			}
+		}
+		// Append agent now so that it comes last in case we find another method to try.
+		authmethod = append(authmethod, agent)
 		sshConfig := &ssh.ClientConfig{
 			User:            user,
-			Auth:            []ssh.AuthMethod{agent},
+			Auth:            authmethod,
 			HostKeyCallback: hostKeyCallback,
 		}
 

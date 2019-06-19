@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"os"
+	"path/filepath"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -219,7 +221,11 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 
 	var identityfile string
 	if name, ok := meta["KeyName"]; ok {
-		identityfile = ("~/.ssh/" + name.(string) + ".pem")
+		homedir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		identityfile = (filepath.Join(homedir, ".ssh", (name.(string) + ".pem")))
 	} else {
 		return nil, fmt.Errorf("No key name found for %v", inst)
 	}
