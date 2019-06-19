@@ -16,7 +16,7 @@ type podsDir struct {
 	ns     string
 }
 
-func podsDirBase() *podsDir {
+func podsDirBase(forInstance bool) *podsDir {
 	pds := &podsDir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -25,7 +25,7 @@ func podsDirBase() *podsDir {
 }
 
 func newPodsDir(ns *namespace) *podsDir {
-	pds := podsDirBase()
+	pds := podsDirBase(true)
 	pds.client = ns.client
 	pds.config = ns.config
 	pds.ns = ns.Name()
@@ -33,7 +33,7 @@ func newPodsDir(ns *namespace) *podsDir {
 }
 
 func (ps *podsDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(podBase())
+	return plugin.ChildSchemas(podBase(false))
 }
 
 func (ps *podsDir) List(ctx context.Context) ([]plugin.Entry, error) {

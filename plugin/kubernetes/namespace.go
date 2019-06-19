@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	
+
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
@@ -11,21 +11,25 @@ import (
 
 type namespace struct {
 	plugin.EntryBase
-	client        *k8s.Clientset
-	config        *rest.Config
-	resources     []plugin.Entry
+	client    *k8s.Clientset
+	config    *rest.Config
+	resources []plugin.Entry
 }
 
-func namespaceBase() *namespace {
+func namespaceBase(forInstance bool) *namespace {
 	ns := &namespace{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	ns.SetLabel("namespace")
+	if !forInstance {
+		ns.
+			SetLabel("namespace").
+			SetMetaAttributeSchema(corev1.Namespace{})
+	}
 	return ns
 }
 
 func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *rest.Config) *namespace {
-	ns := namespaceBase()
+	ns := namespaceBase(true)
 	ns.client = c
 	ns.config = cfg
 	ns.SetName(name)
@@ -39,7 +43,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 }
 
 func (n *namespace) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(podsDirBase(), pvcsDirBase())
+	return plugin.ChildSchemas(podsDirBase(false), pvcsDirBase(false))
 }
 
 func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {

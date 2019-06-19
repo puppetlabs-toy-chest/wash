@@ -68,7 +68,7 @@ func (r *Root) Init(map[string]interface{}) error {
 
 // ChildSchemas returns the root's child schemas
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(k8ContextBase())
+	return plugin.ChildSchemas(k8ContextBase(false))
 }
 
 // List returns available contexts.

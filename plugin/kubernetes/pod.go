@@ -25,46 +25,46 @@ type pod struct {
 	ns     string
 }
 
-func podBase() *pod {
+func podBase(forInstance bool) *pod {
 	pd := &pod{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	pd.SetLabel("pod").DisableDefaultCaching()
+	pd.DisableDefaultCaching()
+	if !forInstance {
+		pd.
+			SetLabel("pod").
+			SetMetaAttributeSchema(podInfoResult{})
+	}
 	return pd
 }
 
 func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
-	pd := podBase()
+	pd := podBase(true)
 	pd.client = client
 	pd.config = config
 	pd.ns = ns
 
 	pdInfo := podInfoResult{
-		pd:         p,
+		Pod:        p,
 		logContent: pd.fetchLogContent(ctx),
 	}
+	pdInfo.LogSize = uint64(len(pdInfo.logContent))
 
-	meta := pdInfo.toMeta()
 	pd.
 		SetName(p.Name).
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
-		SetSize(uint64(meta["LogSize"].(int))).
-		SetMeta(meta)
+		SetSize(pdInfo.LogSize).
+		SetMeta(plugin.ToJSONObject(pdInfo))
 
 	return pd, nil
 }
 
 type podInfoResult struct {
-	pd         *corev1.Pod
+	*corev1.Pod
+	LogSize    uint64 `json:"LogSize"`
 	logContent []byte
-}
-
-func (pdInfo podInfoResult) toMeta() plugin.JSONObject {
-	meta := plugin.ToJSONObject(pdInfo.pd)
-	meta["LogSize"] = len(pdInfo.logContent)
-	return meta
 }
 
 func (p *pod) fetchLogContent(ctx context.Context) []byte {
@@ -89,8 +89,9 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 		if err != nil {
 			return result, err
 		}
-		result.pd = pd
+		result.Pod = pd
 		result.logContent = p.fetchLogContent(ctx)
+		result.LogSize = uint64(len(result.logContent))
 		return result, nil
 	})
 	if err != nil {
@@ -165,8 +166,8 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		streamOpts := remotecommand.StreamOptions{
 			Stdout: execCmd.Stdout(),
 			Stderr: execCmd.Stderr(),
-			Stdin: stdin,
-			Tty: opts.Tty,
+			Stdin:  stdin,
+			Tty:    opts.Tty,
 		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)
