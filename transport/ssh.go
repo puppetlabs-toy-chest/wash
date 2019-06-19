@@ -48,7 +48,7 @@ func getHostKeyCallback() (ssh.HostKeyCallback, error) {
 	return knownhosts.New(filepath.Join(homedir, ".ssh", "known_hosts"))
 }
 
-func sshConnect(host, port, user string, identityfile string, strictHostKeyChecking bool) (*ssh.Client, error) {
+func sshConnect(ctx context.Context, host, port, user string, identityfile string, strictHostKeyChecking bool) (*ssh.Client, error) {
 	connID := user + "@" + host + ":" + port
 	// This is a single-use cache, so pass in an empty category.
 	obj, err := connectionCache.GetOrUpdate("", connID, expires, true, func() (interface{}, error) {
@@ -67,12 +67,10 @@ func sshConnect(host, port, user string, identityfile string, strictHostKeyCheck
 
 		var authmethod []ssh.AuthMethod
 		if key, err := ioutil.ReadFile(identityfile); err != nil {
-			return nil, fmt.Errorf("Unable to read private key, falling back to SSH agent: %v", err)
-			// activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
+			activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
 		} else {
 			if signer, err := ssh.ParsePrivateKey(key); err != nil {
-				return nil, fmt.Errorf("Unable to parse private key, falling back to SSH agent: %v", err)
-				// activity.Record("Unable to parse private key, falling back to SSH agent: %v", err)
+				activity.Record(ctx, "Unable to parse private key, falling back to SSH agent: %v", err)
 			} else {
 				authmethod = append(authmethod, ssh.PublicKeys(signer))
 			}
@@ -139,7 +137,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		return nil, err
 	}
 
-	connection, err := sshConnect(id.Host, port, user, identityfile, strictHostKeyChecking != "no")
+	connection, err := sshConnect(ctx, id.Host, port, user, identityfile, strictHostKeyChecking != "no")
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect: %s", err)
 	}
