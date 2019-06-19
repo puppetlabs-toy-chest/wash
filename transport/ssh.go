@@ -3,10 +3,10 @@ package transport
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
-	"io/ioutil"
 	"time"
 
 	"github.com/kballard/go-shellquote"
@@ -120,7 +120,6 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 	}
 
 	user := id.User
-	identityfile := id.IdentityFile
 	if user == "" {
 		if user, err = ssh_config.GetStrict(id.Host, "User"); err != nil {
 			return nil, err
@@ -139,7 +138,7 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		return nil, err
 	}
 
-	connection, err := sshConnect(ctx, id.Host, port, user, identityfile, strictHostKeyChecking != "no")
+	connection, err := sshConnect(ctx, id.Host, port, user, id.IdentityFile, strictHostKeyChecking != "no")
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect: %s", err)
 	}

@@ -3,10 +3,10 @@ package aws
 import (
 	"context"
 	"fmt"
-	"sync"
-	"time"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -222,15 +222,10 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 
 	var identityfile string
 	if keyname, ok := meta["KeyName"]; ok {
-		if err != nil {
-			activity.Record(ctx, "No key name found: %v but continuing anyway", err)
+		if homedir, err := os.UserHomeDir(); err != nil {
+			activity.Record(ctx, "Cannot determine home directory for location of key file. But key name is "+keyname.(string)+" %v", err)
 		} else {
-			homedir, err := os.UserHomeDir()
-			if err != nil {
-				activity.Record(ctx, "Cannot determine home directory for location of key file. But key name is " + keyname.(string) + " %v", err)
-			} else {
-				identityfile = (filepath.Join(homedir, ".ssh", (keyname.(string) + ".pem")))
-			}
+			identityfile = (filepath.Join(homedir, ".ssh", (keyname.(string) + ".pem")))
 		}
 	}
 	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
