@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"os"
+	"path/filepath"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	ec2Client "github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/transport"
 	"github.com/puppetlabs/wash/volume"
@@ -205,7 +208,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		return nil, err
 	}
 
-	// TODO: scrape default user and authorized keys from console output. Probably only works for Amazon AMIs.
+	// TODO: scrape default user from console output.
 	// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connection-prereqs.html#connection-prereqs-fingerprint
 	// for some helpful defaults we could add.
 	var hostname string
@@ -217,7 +220,20 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		return nil, fmt.Errorf("No public interface found for %v", inst)
 	}
 
+	var identityfile string
+	if keyname, ok := meta["KeyName"]; ok {
+		if err != nil {
+			activity.Record(ctx, "No key name found: %v but continuing anyway", err)
+		} else {
+			homedir, err := os.UserHomeDir()
+			if err != nil {
+				activity.Record(ctx, "Cannot determine home directory for location of key file. But key name is " + keyname.(string) + " %v", err)
+			} else {
+				identityfile = (filepath.Join(homedir, ".ssh", (keyname.(string) + ".pem")))
+			}
+		}
+	}
 	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
 	// overridden in ~/.ssh/config.
-	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, User: "ec2-user"}, append([]string{cmd}, args...), opts)
+	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: "ec2-user", IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
 }
