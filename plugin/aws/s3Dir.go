@@ -18,7 +18,7 @@ type s3Dir struct {
 	client  *s3Client.S3
 }
 
-func s3DirBase() *s3Dir {
+func s3DirBase(forInstance bool) *s3Dir {
 	s3Dir := &s3Dir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -27,14 +27,14 @@ func s3DirBase() *s3Dir {
 }
 
 func newS3Dir(session *session.Session) *s3Dir {
-	s3Dir := s3DirBase()
+	s3Dir := s3DirBase(true)
 	s3Dir.session = session
 	s3Dir.client = s3Client.New(session)
 	return s3Dir
 }
 
 func (s *s3Dir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(s3BucketBase())
+	return plugin.ChildSchemas(s3BucketBase(false))
 }
 
 // List lists the buckets.

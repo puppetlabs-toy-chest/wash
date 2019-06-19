@@ -88,7 +88,7 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 
 // ChildSchemas returns the root's child schema
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(profileBase())
+	return plugin.ChildSchemas(profileBase(false))
 }
 
 // List the available AWS profiles

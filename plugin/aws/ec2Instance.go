@@ -40,14 +40,17 @@ const (
 	EC2InstanceStopped           = 80
 )
 
-func ec2InstanceBase() *ec2Instance {
+func ec2InstanceBase(forInstance bool) *ec2Instance {
 	ec2Instance := &ec2Instance{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	ec2Instance.
-		SetLabel("instance").
-		SetTTLOf(plugin.ListOp, 30*time.Second).
-		DisableCachingFor(plugin.MetadataOp)
+	ec2Instance.DisableCachingFor(plugin.MetadataOp)
+	if !forInstance {
+		ec2Instance.
+			SetLabel("instance").
+			SetTTLOf(plugin.ListOp, 30*time.Second).
+			SetMetaAttributeSchema(ec2Client.Instance{})
+	}
 	return ec2Instance
 }
 
@@ -64,7 +67,7 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 			break
 		}
 	}
-	ec2Instance := ec2InstanceBase()
+	ec2Instance := ec2InstanceBase(true)
 	ec2Instance.id = id
 	ec2Instance.session = session
 	ec2Instance.client = client
@@ -112,8 +115,8 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 
 func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(
-		ec2InstanceConsoleOutputBase(),
-		ec2InstanceMetadataJSONBase(),
+		ec2InstanceConsoleOutputBase(false),
+		ec2InstanceMetadataJSONBase(false),
 		volume.FSBase("fs"),
 	)
 }

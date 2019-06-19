@@ -14,7 +14,7 @@ type resourcesDir struct {
 	resources []plugin.Entry
 }
 
-func resourcesDirBase() *resourcesDir {
+func resourcesDirBase(forInstance bool) *resourcesDir {
 	resourcesDir := &resourcesDir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -26,7 +26,7 @@ func resourcesDirBase() *resourcesDir {
 }
 
 func newResourcesDir(session *session.Session) *resourcesDir {
-	resourcesDir := resourcesDirBase()
+	resourcesDir := resourcesDirBase(true)
 	resourcesDir.session = session
 
 	resourcesDir.resources = []plugin.Entry{
@@ -38,7 +38,7 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 }
 
 func (r *resourcesDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(s3DirBase(), ec2DirBase())
+	return plugin.ChildSchemas(s3DirBase(false), ec2DirBase(false))
 }
 
 // List lists the available AWS resources

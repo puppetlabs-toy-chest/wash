@@ -15,7 +15,7 @@ type ec2InstanceMetadataJSON struct {
 	inst *ec2Instance
 }
 
-func ec2InstanceMetadataJSONBase() *ec2InstanceMetadataJSON {
+func ec2InstanceMetadataJSONBase(forInstance bool) *ec2InstanceMetadataJSON {
 	im := &ec2InstanceMetadataJSON{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -27,7 +27,7 @@ func ec2InstanceMetadataJSONBase() *ec2InstanceMetadataJSON {
 }
 
 func newEC2InstanceMetadataJSON(ctx context.Context, inst *ec2Instance) (*ec2InstanceMetadataJSON, error) {
-	im := ec2InstanceMetadataJSONBase()
+	im := ec2InstanceMetadataJSONBase(true)
 	im.inst = inst
 
 	content, err := im.Open(ctx)

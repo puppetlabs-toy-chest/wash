@@ -19,7 +19,7 @@ type ec2InstanceConsoleOutput struct {
 	latest bool
 }
 
-func ec2InstanceConsoleOutputBase() *ec2InstanceConsoleOutput {
+func ec2InstanceConsoleOutputBase(forInstance bool) *ec2InstanceConsoleOutput {
 	cl := &ec2InstanceConsoleOutput{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -28,7 +28,7 @@ func ec2InstanceConsoleOutputBase() *ec2InstanceConsoleOutput {
 }
 
 func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest bool) (*ec2InstanceConsoleOutput, error) {
-	cl := ec2InstanceConsoleOutputBase()
+	cl := ec2InstanceConsoleOutputBase(true)
 	cl.inst = inst
 	cl.latest = latest
 

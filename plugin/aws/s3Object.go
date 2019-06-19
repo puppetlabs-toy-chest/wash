@@ -22,18 +22,22 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func s3ObjectBase() *s3Object {
+func s3ObjectBase(forInstance bool) *s3Object {
 	s3Obj := &s3Object{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	s3Obj.
-		SetLabel("object").
-		DisableCachingFor(plugin.MetadataOp)
+	s3Obj.DisableCachingFor(plugin.MetadataOp)
+	if !forInstance {
+		s3Obj.
+			SetLabel("object").
+			SetMetaAttributeSchema(s3Client.Object{}).
+			SetMetadataSchema(s3Client.HeadObjectOutput{})
+	}
 	return s3Obj
 }
 
 func newS3Object(o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
-	s3Obj := s3ObjectBase()
+	s3Obj := s3ObjectBase(true)
 	s3Obj.bucket = bucket
 	s3Obj.key = key
 	s3Obj.client = client

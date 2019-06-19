@@ -151,16 +151,20 @@ type s3Bucket struct {
 	session *session.Session
 }
 
-func s3BucketBase() *s3Bucket {
+func s3BucketBase(forInstance bool) *s3Bucket {
 	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	bucket.SetLabel("bucket")
+	if !forInstance {
+		bucket.
+			SetLabel("bucket").
+			SetMetadataSchema(bucketMetadata{})
+	}
 	return bucket
 }
 
 func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Bucket {
-	bucket := s3BucketBase()
+	bucket := s3BucketBase(true)
 	bucket.ctime = ctime
 	bucket.client = s3Client.New(session)
 	bucket.session = session
@@ -175,7 +179,7 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 }
 
 func (b *s3Bucket) ChildSchemas() []*plugin.EntrySchema {
-	return s3ObjectPrefixBase().ChildSchemas()
+	return s3ObjectPrefixBase(false).ChildSchemas()
 }
 
 func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
@@ -185,6 +189,12 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, b.client, b.Name(), "")
 }
 
+type bucketMetadata struct {
+	TagSet []*s3Client.Tag
+	Region string
+	Ctime  time.Time
+}
+
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	request := &s3Client.GetBucketTaggingInput{
 		Bucket: awsSDK.String(b.Name()),
@@ -192,9 +202,9 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 
 	resp, err := b.client.GetBucketTaggingWithContext(ctx, request)
 
-	var metadata plugin.JSONObject
+	var metadata bucketMetadata
 	if err == nil {
-		metadata = plugin.ToJSONObject(resp)
+		metadata.TagSet = resp.TagSet
 	} else if awserr, ok := err.(awserr.Error); ok {
 		// Check if this is a NoSuchTagSet error. If yes, then that means
 		// this bucket doesn't have any tags.
@@ -203,7 +213,7 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 		// if you're interested in knowing why AWS does not return
 		// an empty TagSet instead of a NoSuchTagSet error
 		if awserr.Code() == "NoSuchTagSet" {
-			metadata = plugin.JSONObject{}
+			// Pass-thru, this is OK.
 		} else {
 			return nil, err
 		}
@@ -216,10 +226,10 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	if err != nil {
 		return nil, err
 	}
-	metadata["region"] = region
-	metadata["ctime"] = b.ctime
+	metadata.Region = region
+	metadata.Ctime = b.ctime
 
-	return metadata, nil
+	return plugin.ToJSONObject(metadata), nil
 }
 
 func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
