@@ -86,7 +86,9 @@ type Identity struct {
 
 // ExecSSH executes against a target via SSH. It will look up port, user, and other configuration
 // by exact hostname match from default SSH config files. Identity can be used to override the
-// default user. If opts.Elevate is true, will attempt to `sudo` as root.
+// user configured in SSH config. If opts.Elevate is true, will attempt to `sudo` as root.
+//
+// If present, a local SSH agent will be used for authentication.
 //
 // Lots of SSH configuration is currently omitted, such as global known hosts files, finding known
 // hosts from the config, identity file from config... pretty much everything but port and user

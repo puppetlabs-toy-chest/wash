@@ -43,15 +43,29 @@
 <article>
     
 
+<h2 id="working-on-core-plugins">Working on core plugins</h2>
+
+<p>The <a href="https://godoc.org/github.com/puppetlabs/wash/plugin">plugin</a> package defines a set of interfaces that a plugin can implement to enable specific behaviors.
+- <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Parent">Parent</a> can list its children and is presented as a directory in the Wash filesystem.
+- <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Readable">Readable</a> can retrieve the entire contents of a file and makes it available to read via standard system calls to the filesystem.
+- <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Streamable">Streamable</a> can provide a stream of updates on an entry. That may be events, log entries, or new writes to a file.
+- <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Execable">Execable</a> can execute an arbitrary command on a remote system. This is currently assumed to be a POSIX system, but in the future will be extended to differentiate between systems so we can use different commands as needed.</p>
+
+<p>Each entry must implement <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Entry">plugin.Entry</a>, which is a sealed interface that can only be satisfied by <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntryBase">plugin.NewEntryBase</a>.</p>
+
+<p>Each entry that implements the <code>Parent</code> interface must provide a schema for its children. This is commonly done by giving each child entry a function that constructs a canonical version of the entry object where only the <code>EntryBase</code> field is initialized. Instances of the entry can then build on that canonical version by giving it a name and initializing other fields. If there will only ever be one instance of the entry type - such as a named directory that&rsquo;s a container for a specific type of thing like EC2 instances - then use the <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#EntryBase.IsSingleton">IsSingleton()</a> method when constructing the schema.</p>
+
+<p>Use <a href="https://godoc.org/github.com/puppetlabs/wash/activity">activity.Record</a> for all plugin-related logging. Each plugin method that Wash calls is passed a <code>context.Context</code> object that is initialized with a Journal ID for use with <code>activity.Record</code>.</p>
+
+<p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/transport">transport</a> package contains useful helpers for common methods of executing commands on a remote system. Currently it only supports SSH.</p>
+
+<p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/volume">volume</a> package contains useful helpers that can enumerate a given volume&rsquo;s directories and files.</p>
+
 <h2 id="how-to-create-a-new-core-plugin">How to create a new core plugin</h2>
 
-<p>The <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> package defines a set of interfaces that a plugin can implement to enable specific behaviors.</p>
+<p>Create a new directory in <a href="https://godoc.org/github.com/puppetlabs/wash/plugin">plugin</a> for the plugin.</p>
 
-<h3 id="starting-a-plugin">Starting a plugin</h3>
-
-<p>Create a new directory in <a href="https://github.com/puppetlabs/wash/tree/master/plugin">plugin</a> for the plugin.</p>
-
-<p>Create an object that implements the <code>Root</code> interface. This would typically be in a <code>root.go</code> file. See <a href="https://github.com/puppetlabs/wash/blob/master/plugin/docker/root.go">docker/root.go</a> for an example.</p>
+<p>Create an object that implements the <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Root">Root</a> interface. This would typically be in a <code>root.go</code> file. See <a href="https://github.com/puppetlabs/wash/blob/master/plugin/docker/root.go">docker/root.go</a> for an example.</p>
 
 <p>NOTE: The <code>Init</code> method initializes the Root object&rsquo;s <code>EntryBase</code> configuration and any credentials.</p>
 
@@ -66,11 +80,7 @@
 <li>Entries that execute commands should implement the <code>Execable</code> interface.</li>
 </ul>
 
-<p>TIP: Use <a href="https://github.com/puppetlabs/wash/blob/master/activity/core.go">activity.Record</a> for all plugin-related logging.</p>
-
-<p>TIP: The <a href="https://github.com/puppetlabs/wash/tree/master/volume">volume</a> package contains useful helpers that can enumerate a given volume&rsquo;s directories and files.</p>
-
-<p>TIP: The <a href="https://github.com/puppetlabs/wash/blob/master/volume/fs.go">volume.FS</a> helper can be used to expose an <code>Execable</code> entry&rsquo;s filesystem. Currently only <code>/var/log</code> is mounted.</p>
+<p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/volume#NewFS">volume.FS</a> helper can be used to expose an <code>Execable</code> entry&rsquo;s filesystem. It mounts the entire filesystem, and supports a configurable search depth; set it low if <code>Exec</code> operations for your plugin are fast, high if they&rsquo;re slow so that more of the filesystem is discovered in each batch.</p>
 
 </article>
 
