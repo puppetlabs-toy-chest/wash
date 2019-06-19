@@ -3,7 +3,13 @@ package plugin
 import (
 	"context"
 	"flag"
+	"fmt"
+	"reflect"
 	"time"
+
+	"github.com/ekinanp/jsonschema"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 type defaultOpCode int8
@@ -18,6 +24,9 @@ const (
 )
 
 var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
+
+// JSONSchema represents a JSON schema
+type JSONSchema *jsonschema.Schema
 
 /*
 EntryBase implements Entry, making it easy to create new entries.
@@ -35,15 +44,19 @@ to do something like
 		SetMeta(meta)
 */
 type EntryBase struct {
-	entryName          string
-	attr               EntryAttributes
-	slashReplacerCh    rune
+	entryName       string
+	attr            EntryAttributes
+	slashReplacerCh rune
 	// washID represents the entry's wash ID. It is set in CachedList.
-	washID             string
-	ttl                [3]time.Duration
-	label              string
-	isSingleton        bool
+	washID              string
+	ttl                 [3]time.Duration
+	label               string
+	isSingleton         bool
+	metaAttributeSchema JSONSchema
+	metadataSchema      JSONSchema
 }
+
+var defaultMetaAttributeSchema = jsonschema.Reflect(struct{}{})
 
 // NewEntryBase creates a new EntryBase object
 func NewEntryBase() EntryBase {
@@ -53,6 +66,7 @@ func NewEntryBase() EntryBase {
 	for op := range e.ttl {
 		e.SetTTLOf(defaultOpCode(op), 15*time.Second)
 	}
+	e.metaAttributeSchema = defaultMetaAttributeSchema
 	return e
 }
 
@@ -181,6 +195,33 @@ func (e *EntryBase) IsSingleton() *EntryBase {
 	return e
 }
 
+// SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
+// that will be marshalled into a JSON schema. SetMetaSchema will panic
+// if obj is not a struct.
+func (e *EntryBase) SetMetaAttributeSchema(obj interface{}) *EntryBase {
+	s, err := schemaOf(obj)
+	if err != nil {
+		panic(fmt.Sprintf("e.SetMetaAttributeSchema: %v", err))
+	}
+	e.metaAttributeSchema = s
+	return e
+}
+
+// SetMetadataSchema sets e#Metadata's schema. obj is an empty struct
+// that will be marshalled into a JSON schema. SetMetadataSchema will
+// panic if obj is not a struct.
+//
+// NOTE: Only use SetMetadataSchema if you're overriding e#Metadata.
+// Otherwise, use SetMetaAttributeSchema.
+func (e *EntryBase) SetMetadataSchema(obj interface{}) *EntryBase {
+	s, err := schemaOf(obj)
+	if err != nil {
+		panic(fmt.Sprintf("e.SetMetadataSchema: %v", err))
+	}
+	e.metadataSchema = s
+	return e
+}
+
 // SetTTLOf sets the specified op's TTL
 func (e *EntryBase) SetTTLOf(op defaultOpCode, ttl time.Duration) *EntryBase {
 	e.ttl[op] = ttl
@@ -214,4 +255,30 @@ func (e *EntryBase) SetTestID(id string) {
 
 func notRunningTests() bool {
 	return flag.Lookup("test.v") == nil
+}
+
+var aliases = func() map[reflect.Type]*jsonschema.Type {
+	mp := make(map[reflect.Type]*jsonschema.Type)
+	// v1.Time is an alias to a time.Time object
+	mp[reflect.TypeOf(v1.Time{})] = jsonschema.TimeType
+	mp[reflect.TypeOf(resource.Quantity{})] = jsonschema.NumberType
+	return mp
+}()
+
+// Helper that wraps the common code shared by
+// the SetMeta*Schema methods
+func schemaOf(obj interface{}) (JSONSchema, error) {
+	r := jsonschema.Reflector{
+		// Setting this option ensures that the schema's root is obj's
+		// schema instead of a reference to a definition containing obj's
+		// schema. This way, we can validate that "obj" is a JSON object's
+		// schema. Otherwise, the check below will always fail.
+		ExpandedStruct: true,
+		Aliases: aliases,
+	}
+	s := r.Reflect(obj)
+	if s.Type.Type != "object" {
+		return nil, fmt.Errorf("expected a JSON object but got %v", s.Type.Type)
+	}
+	return s, nil
 }

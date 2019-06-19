@@ -23,6 +23,7 @@ require (
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/ekinanp/go-cache v2.1.0+incompatible
+	github.com/ekinanp/jsonschema v0.0.0-20190619233823-53230bb73f8f
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
 	github.com/fatih/color v1.7.0
 	github.com/ghodss/yaml v1.0.0

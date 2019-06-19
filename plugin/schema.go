@@ -8,12 +8,14 @@ import (
 
 // EntrySchema represents an entry's schema.
 type EntrySchema struct {
-	TypeID    string         `json:"type_id"`
-	Label     string         `json:"label"`
-	Singleton bool           `json:"singleton"`
-	Actions   []string       `json:"actions"`
-	Children  []*EntrySchema `json:"children"`
-	entry     Entry
+	TypeID              string         `json:"type_id"`
+	Label               string         `json:"label"`
+	Singleton           bool           `json:"singleton"`
+	Actions             []string       `json:"actions"`
+	MetaAttributeSchema JSONSchema     `json:"meta_attribute_schema"`
+	MetadataSchema      JSONSchema     `json:"metadata_schema"`
+	Children            []*EntrySchema `json:"children"`
+	entry               Entry
 }
 
 // ChildSchemas is a helper that's used to implement Parent#ChildSchemas.
@@ -56,11 +58,13 @@ func schema(e Entry, includeChildren bool) *EntrySchema {
 	}
 
 	s := &EntrySchema{
-		TypeID:    TypeID(e),
-		Label:     e.entryBase().label,
-		Singleton: e.entryBase().isSingleton,
-		Actions:   SupportedActionsOf(e),
-		entry:     e,
+		TypeID:              TypeID(e),
+		Label:               e.entryBase().label,
+		Singleton:           e.entryBase().isSingleton,
+		Actions:             SupportedActionsOf(e),
+		MetaAttributeSchema: e.entryBase().metaAttributeSchema,
+		MetadataSchema:      e.entryBase().metadataSchema,
+		entry:               e,
 	}
 	if len(s.Label) == 0 {
 		msg := fmt.Sprintf("Schema for type %v has an empty label. Use EntryBase#SetLabel to set the label.", s.TypeID)
