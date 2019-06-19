@@ -18,7 +18,7 @@ type containerLogFile struct {
 	client        *client.Client
 }
 
-func containerLogFileBase() *containerLogFile {
+func containerLogFileBase(forInstance bool) *containerLogFile {
 	clf := &containerLogFile{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -27,7 +27,7 @@ func containerLogFileBase() *containerLogFile {
 }
 
 func newContainerLogFile(container *container) *containerLogFile {
-	clf := containerLogFileBase()
+	clf := containerLogFileBase(true)
 	clf.containerName = container.id
 	clf.client = container.client
 	return clf

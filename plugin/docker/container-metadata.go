@@ -13,7 +13,7 @@ type containerMetadata struct {
 	container *container
 }
 
-func containerMetadataBase() *containerMetadata {
+func containerMetadataBase(forInstance bool) *containerMetadata {
 	cm := &containerMetadata{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -25,7 +25,7 @@ func containerMetadataBase() *containerMetadata {
 }
 
 func newContainerMetadata(container *container) *containerMetadata {
-	cm := containerMetadataBase()
+	cm := containerMetadataBase(true)
 	cm.container = container
 	return cm
 }

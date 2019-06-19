@@ -39,7 +39,7 @@ func (r *Root) Init(map[string]interface{}) error {
 
 // ChildSchemas returns the root's child schema
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(containersDirBase(), volumesDirBase())
+	return plugin.ChildSchemas(containersDirBase(false), volumesDirBase(false))
 }
 
 // List lists the types of resources the Docker plugin exposes.

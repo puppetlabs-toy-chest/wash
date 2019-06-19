@@ -14,7 +14,7 @@ type containersDir struct {
 	client *client.Client
 }
 
-func containersDirBase() *containersDir {
+func containersDirBase(forInstance bool) *containersDir {
 	containersDir := &containersDir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -23,13 +23,13 @@ func containersDirBase() *containersDir {
 }
 
 func newContainersDir(client *client.Client) *containersDir {
-	containersDir := containersDirBase()
+	containersDir := containersDirBase(true)
 	containersDir.client = client
 	return containersDir
 }
 
 func (cs *containersDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(containerBase())
+	return plugin.ChildSchemas(containerBase(false))
 }
 
 // List

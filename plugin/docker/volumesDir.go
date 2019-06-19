@@ -14,7 +14,7 @@ type volumesDir struct {
 	client *client.Client
 }
 
-func volumesDirBase() *volumesDir {
+func volumesDirBase(forInstance bool) *volumesDir {
 	volumesDir := &volumesDir{
 		EntryBase: plugin.NewEntryBase(),
 	}
@@ -23,13 +23,13 @@ func volumesDirBase() *volumesDir {
 }
 
 func newVolumesDir(client *client.Client) *volumesDir {
-	volumesDir := volumesDirBase()
+	volumesDir := volumesDirBase(true)
 	volumesDir.client = client
 	return volumesDir
 }
 
 func (vs *volumesDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(volumeBase())
+	return plugin.ChildSchemas(volumeBase(false))
 }
 
 // List

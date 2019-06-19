@@ -21,16 +21,21 @@ type container struct {
 	client *client.Client
 }
 
-func containerBase() *container {
+func containerBase(forInstance bool) *container {
 	cont := &container{
 		EntryBase: plugin.NewEntryBase(),
 	}
-	cont.SetLabel("container")
+	if !forInstance {
+		cont.
+			SetLabel("container").
+			SetMetaAttributeSchema(types.Container{}).
+			SetMetadataSchema(types.ContainerJSON{})
+	}
 	return cont
 }
 
 func newContainer(inst types.Container, client *client.Client) *container {
-	cont := containerBase()
+	cont := containerBase(true)
 	cont.id = inst.ID
 	cont.client = client
 
@@ -68,8 +73,8 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 
 func (c *container) ChildSchemas() []*plugin.EntrySchema {
 	return plugin.ChildSchemas(
-		containerLogFileBase(),
-		containerMetadataBase(),
+		containerLogFileBase(false),
+		containerMetadataBase(false),
 		vol.FSBase("fs"),
 	)
 }
