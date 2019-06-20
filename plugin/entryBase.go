@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/ekinanp/jsonschema"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type defaultOpCode int8
@@ -261,7 +261,7 @@ var aliases = func() map[reflect.Type]*jsonschema.Type {
 	mp := make(map[reflect.Type]*jsonschema.Type)
 	// v1.Time is an alias to a time.Time object
 	mp[reflect.TypeOf(v1.Time{})] = jsonschema.TimeType
-	mp[reflect.TypeOf(resource.Quantity{})] = jsonschema.NumberType
+	mp[reflect.TypeOf(resource.Quantity{})] = jsonschema.StringType
 	return mp
 }()
 
@@ -274,7 +274,7 @@ func schemaOf(obj interface{}) (JSONSchema, error) {
 		// schema. This way, we can validate that "obj" is a JSON object's
 		// schema. Otherwise, the check below will always fail.
 		ExpandedStruct: true,
-		Aliases: aliases,
+		Aliases:        aliases,
 	}
 	s := r.Reflect(obj)
 	if s.Type.Type != "object" {
