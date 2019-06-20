@@ -20,7 +20,8 @@ title= "Wash Documentation"
   * [Docker](#docker)
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
-  * [Attributes/Metadata](#attributes-metadata)
+  * [Plugin Debugging](#plugin-debugging)
+  * [Attributes/Metadata](#attributes/metadata)
   * [➠External plugins]
   * [➠Core Plugins]
   * [➠Server API]
@@ -158,7 +159,40 @@ For more on implementing plugins, see:
 [➠Core plugins]: /wash/docs/core_plugins
 [➠Server API]: /wash/docs/api
 
-NOTE: We recommend that you read the `Attributes/Metadata` section before reading the plugin tutorials to take full advantage of Wash's capabilities, especially that of `wash find`'s.
+NOTE: We recommend that you read the [Attributes/Metadata](#attributes/metadata) section before reading the plugin tutorials to take full advantage of Wash's capabilities, especially that of `wash find`'s.
+
+### Plugin Debugging
+
+Plugin-related activity is currently logged at `debug` level. You can control logging with the `loglevel` and `logfile` options to `wash` or `wash server`. So when developing a plugin, it's useful to start your shell with
+
+```
+wash --loglevel debug --logfile <file>
+```
+
+then `tail -f <file>` in another terminal to see what Wash is doing.
+
+For external plugins, those logs will include the commands used for all invocations of your plugin script and the responses. For example
+
+```
+level=debug msg="Invoking /washreads/goodreads list /goodreads \\{\\\"userid\\\":\\\"12345678\\\"}"
+level=debug msg="stdout: [{\"name\":\"read\",\"methods\":[\"list\"],\"attributes\":{\"meta\":{\"id\":\"53094184\",\"book_count\":\"494\",\"exclusive_flag\":\"true\",\"description\":\"\",\"sort\":\"\",\"order\":\"\",\"per_page\":\"\",\"display_fields\":\"\",\"featured\":\"true\",\"recommend_for\":\"false\",\"sticky\":\"\"}},\"state\":\"{\\\"type\\\":\\\"shelf\\\",\\\"name\\\":\\\"read\\\",\\\"userid\\\":\\\"16580428\\\",\\\"count\\\":494}\"},...]\n"
+level=debug msg="stderr: something's happening"
+```
+
+Activity related to a specific operation are always available in the `history` entry for that operation. Given a history entry like
+```
+$ whistory
+1  2019-06-20 13:47  wash whistory
+2  2019-06-20 13:47  ls -pG goodreads
+```
+we can view activity related to that command with
+```
+$ whistory 2
+Jun 20 13:47:09.212 FUSE: List /goodreads
+Jun 20 13:47:09.212 Invoking /Users/michaelsmith/puppetlabs/washreads/goodreads list /goodreads \{\"userid\":\"16580428\"}
+Jun 20 13:47:09.886 stdout: [{"name":"read","methods":["list"],"attributes":{"meta":{"id":"53094184","book_count":"494","exclusive_flag":"true","description":"","sort":"","order":"","per_page":"","display_fields":"","featured":"true","recommend_for":"false","sticky":""}},"state":"{\"type\":\"shelf\",\"name\":\"read\",\"userid\":\"16580428\",\"count\":494}"},...]
+Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {Inode:0 Type:dir Name:currently-reading} {Inode:0 Type:dir Name:to-read} {Inode:0 Type:dir Name:fantasy} {Inode:0 Type:dir Name:science-fiction}]
+```
 
 ### Attributes/Metadata
 

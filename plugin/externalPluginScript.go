@@ -42,13 +42,14 @@ func (s externalPluginScriptImpl) InvokeAndWait(
 	if exitCode < 0 {
 		return nil, err
 	}
-	stderr := stderrBuf.Bytes()
+	stderr := stderrBuf.String()
 	if exitCode == 0 {
+		activity.Record(ctx, "stdout: %v", stdoutBuf.String())
 		if len(stderr) != 0 {
-			activity.Record(ctx, "stderr: %v", string(stderr))
+			activity.Record(ctx, "stderr: %v", stderr)
 		}
 	} else {
-		return nil, fmt.Errorf("script returned a non-zero exit code of %v. stderr output: %v", exitCode, string(stderr))
+		return nil, fmt.Errorf("script returned a non-zero exit code of %v. stderr output: %v", exitCode, stderr)
 	}
 	return stdoutBuf.Bytes(), nil
 }
