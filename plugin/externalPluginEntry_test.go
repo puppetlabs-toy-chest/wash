@@ -69,7 +69,47 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 	_, err = decodedEntry.toExternalPluginEntry()
 	suite.Regexp(regexp.MustCompile("methods"), err)
-	decodedEntry.Methods = []string{"list"}
+	decodedEntry.Methods = []interface{}{"list"}
+
+	entry, err := decodedEntry.toExternalPluginEntry()
+	if suite.NoError(err) {
+		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(1, len(entry.methods))
+		suite.Contains(entry.methods, "list")
+		suite.Nil(entry.methods["list"])
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithNil() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name: "decodedEntry",
+		Methods: map[string]interface{}{
+			"list":   nil,
+			"stream": nil,
+		},
+	}
+
+	entry, err := decodedEntry.toExternalPluginEntry()
+	if suite.NoError(err) {
+		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(decodedEntry.Methods, entry.methods)
+		methods := entry.supportedMethods()
+		suite.Equal(2, len(methods))
+		suite.Contains(methods, "list")
+		suite.Nil(entry.methods["list"])
+		suite.Contains(methods, "stream")
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMethodResults() {
+	childEntry := map[string]interface{}{"name": "foo", "methods": []string{"read"}}
+	decodedEntry := decodedExternalPluginEntry{
+		Name: "decodedEntry",
+		Methods: map[string]interface{}{
+			"list": []interface{}{childEntry},
+			"read": "contents of a file",
+		},
+	}
 
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
@@ -80,8 +120,8 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 	return decodedExternalPluginEntry{
-		Name:             name,
-		Methods:          []string{"list"},
+		Name:    name,
+		Methods: []interface{}{"list"},
 	}
 }
 
@@ -189,9 +229,9 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 		entryBase := NewEntry("foo")
 		expectedEntries := []Entry{
 			&externalPluginEntry{
-				EntryBase:        entryBase,
-				methods:          []string{"list"},
-				script:           entry.script,
+				EntryBase: entryBase,
+				methods:   map[string]interface{}{"list": nil},
+				script:    entry.script,
 			},
 		}
 
@@ -228,6 +268,81 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockInvokeAndWait := func(stdout []byte, err error) {
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
+	}
+
+	// Test that List is invoked when
+	stdout := `[
+		{"name": "foo", "methods": {"list": [
+			{"name": "bar", "methods": {"read": "some content"}}
+			]}}
+		]`
+	mockInvokeAndWait([]byte(stdout), nil)
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries))
+		if suite.Equal([]string{"list"}, SupportedActionsOf(entries[0])) {
+			children, err := entries[0].(Parent).List(ctx)
+			if suite.NoError(err) {
+				suite.Equal(1, len(children))
+				if suite.Equal([]string{"read"}, SupportedActionsOf(children[0])) {
+					rdr, err := children[0].(Readable).Open(ctx)
+					suite.NoError(err)
+					buf := make([]byte, rdr.Size())
+					_, err = rdr.ReadAt(buf, 0)
+					suite.NoError(err)
+					suite.Equal("some content", string(buf))
+				}
+			}
+		}
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockInvokeAndWait := func(stdout []byte, err error) {
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
+	}
+
+	// Test that List is invoked when
+	stdout := `[{"name": "foo", "methods": {
+								"list": {"name": "bar"},
+								"read": [1, 2]
+							}}]`
+	mockInvokeAndWait([]byte(stdout), nil)
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries))
+		supported := SupportedActionsOf(entries[0])
+		suite.Contains(supported, "list")
+		suite.Contains(supported, "read")
+
+		_, err = entries[0].(Parent).List(ctx)
+		suite.EqualError(err, `implementation of list must conform to `+
+			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
+
+		_, err = entries[0].(Readable).Open(ctx)
+		suite.EqualError(err, "Read method must provide a string, not [1 2]")
+	}
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
@@ -251,7 +366,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		methods:   []string{"metadata"},
+		methods:   map[string]interface{}{"metadata": nil},
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")

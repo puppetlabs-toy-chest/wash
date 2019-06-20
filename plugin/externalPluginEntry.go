@@ -14,6 +14,10 @@ import (
 	"github.com/puppetlabs/wash/plugin/internal"
 )
 
+type externalPlugin interface {
+	supportedMethods() []string
+}
+
 type decodedCacheTTLs struct {
 	List     time.Duration `json:"list"`
 	Read     time.Duration `json:"read"`
@@ -23,11 +27,39 @@ type decodedCacheTTLs struct {
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
 	Name          string           `json:"name"`
-	Methods       []string         `json:"methods"`
+	Methods       interface{}      `json:"methods"`
 	SlashReplacer string           `json:"slash_replacer"`
 	CacheTTLs     decodedCacheTTLs `json:"cache_ttls"`
 	Attributes    EntryAttributes  `json:"attributes"`
 	State         string           `json:"state"`
+}
+
+const entryMethodTypeError = "the entry's methods must be a list of strings or a map of strings to method-specific data, not %T"
+
+func mungeToMethods(input interface{}) (map[string]interface{}, error) {
+	switch m := input.(type) {
+	case []string:
+		// Supported for root, testing, and in case JSON unmarshal gets smarter.
+		methods := make(map[string]interface{})
+		for _, name := range m {
+			methods[name] = nil
+		}
+		return methods, nil
+	case []interface{}:
+		methods := make(map[string]interface{})
+		for _, nm := range m {
+			if name, ok := nm.(string); ok {
+				methods[name] = nil
+			} else {
+				return nil, fmt.Errorf(entryMethodTypeError, m)
+			}
+		}
+		return methods, nil
+	case map[string]interface{}:
+		return m, nil
+	default:
+		return nil, fmt.Errorf(entryMethodTypeError, m)
+	}
 }
 
 func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
@@ -37,9 +69,15 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 	if e.Methods == nil {
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
+
+	methods, err := mungeToMethods(e.Methods)
+	if err != nil {
+		return nil, err
+	}
+
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry(e.Name),
-		methods:   e.Methods,
+		methods:   methods,
 		state:     e.State,
 	}
 	entry.SetAttributes(e.Attributes)
@@ -59,7 +97,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 type externalPluginEntry struct {
 	EntryBase
 	script  externalPluginScript
-	methods []string
+	methods map[string]interface{}
 	state   string
 }
 
@@ -78,12 +116,16 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 // implements returns true if the entry implements the given method,
 // false otherwise
 func (e *externalPluginEntry) implements(method string) bool {
-	for _, m := range e.methods {
-		if method == m {
-			return true
-		}
+	_, ok := e.methods[method]
+	return ok
+}
+
+func (e *externalPluginEntry) supportedMethods() []string {
+	keys := make([]string, 0, len(e.methods))
+	for k := range e.methods {
+		keys = append(keys, k)
 	}
-	return false
+	return keys
 }
 
 func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
@@ -96,21 +138,30 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 	return nil
 }
 
+const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]"
+
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "list", e)
-	if err != nil {
-		return nil, err
-	}
 	var decodedEntries []decodedExternalPluginEntry
-	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		return nil, newStdoutDecodeErr(
-			ctx,
-			"the entries",
-			err,
-			stdout,
-			"[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]",
-		)
+	if impl, ok := e.methods["list"]; ok && impl != nil {
+		// Entry statically implements list. Construct new entries based on that rather than invoking the script.
+		bits, err := json.Marshal(impl)
+		if err != nil {
+			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
+		}
+
+		if err := json.Unmarshal(bits, &decodedEntries); err != nil {
+			return nil, fmt.Errorf("implementation of list must conform to %v, not %v", listFormat, impl)
+		}
+	} else {
+		stdout, err := e.script.InvokeAndWait(ctx, "list", e)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
+			return nil, newStdoutDecodeErr(ctx, "the entries", err, stdout, listFormat)
+		}
 	}
+
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
 		entry, err := decodedExternalPluginEntry.toExternalPluginEntry()
@@ -124,6 +175,13 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
+	if impl, ok := e.methods["read"]; ok && impl != nil {
+		if content, ok := impl.(string); ok {
+			return strings.NewReader(content), nil
+		}
+		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
+	}
+
 	stdout, err := e.script.InvokeAndWait(ctx, "read", e)
 	if err != nil {
 		return nil, err
