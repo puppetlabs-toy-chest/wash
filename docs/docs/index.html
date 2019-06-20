@@ -70,7 +70,8 @@
 <li><a href="#plugin-concepts">Plugin Concepts</a>
 
 <ul>
-<li><a href="#attributes-metadata">Attributes/Metadata</a></li>
+<li><a href="#plugin-debugging">Plugin Debugging</a></li>
+<li><a href="#attributes/metadata">Attributes/Metadata</a></li>
 <li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
 <li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
 <li><a href="/wash/docs/api">➠Server API</a></li>
@@ -236,8 +237,64 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <li><a href="/wash/docs/api">➠Server API</a></li>
 </ul>
 
-<p>NOTE: We recommend that you read the <code>Attributes/Metadata</code> section before reading the plugin tutorials to take full advantage of Wash&rsquo;s capabilities, especially that of <code>wash find</code>&rsquo;s.</p>
+<p>NOTE: We recommend that you read the <a href="#attributes/metadata">Attributes/Metadata</a> section before reading the plugin tutorials to take full advantage of Wash&rsquo;s capabilities, especially that of <code>wash find</code>&rsquo;s.</p>
 
+<h3 id="plugin-debugging">Plugin Debugging</h3>
+
+<p>Plugin-related activity is currently logged at <code>debug</code> level. You can control logging with the <code>loglevel</code> and <code>logfile</code> options to <code>wash</code> or <code>wash server</code>. So when developing a plugin, it&rsquo;s useful to start your shell with</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash --loglevel debug --logfile &lt;file&gt;</pre></td></tr></table>
+</div>
+</div>
+<p>then <code>tail -f &lt;file&gt;</code> in another terminal to see what Wash is doing.</p>
+
+<p>For external plugins, those logs will include the commands used for all invocations of your plugin script and the responses. For example</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">level=debug msg=&#34;Invoking /washreads/goodreads list /goodreads \\{\\\&#34;userid\\\&#34;:\\\&#34;12345678\\\&#34;}&#34;
+level=debug msg=&#34;stdout: [{\&#34;name\&#34;:\&#34;read\&#34;,\&#34;methods\&#34;:[\&#34;list\&#34;],\&#34;attributes\&#34;:{\&#34;meta\&#34;:{\&#34;id\&#34;:\&#34;53094184\&#34;,\&#34;book_count\&#34;:\&#34;494\&#34;,\&#34;exclusive_flag\&#34;:\&#34;true\&#34;,\&#34;description\&#34;:\&#34;\&#34;,\&#34;sort\&#34;:\&#34;\&#34;,\&#34;order\&#34;:\&#34;\&#34;,\&#34;per_page\&#34;:\&#34;\&#34;,\&#34;display_fields\&#34;:\&#34;\&#34;,\&#34;featured\&#34;:\&#34;true\&#34;,\&#34;recommend_for\&#34;:\&#34;false\&#34;,\&#34;sticky\&#34;:\&#34;\&#34;}},\&#34;state\&#34;:\&#34;{\\\&#34;type\\\&#34;:\\\&#34;shelf\\\&#34;,\\\&#34;name\\\&#34;:\\\&#34;read\\\&#34;,\\\&#34;userid\\\&#34;:\\\&#34;16580428\\\&#34;,\\\&#34;count\\\&#34;:494}\&#34;},...]\n&#34;
+level=debug msg=&#34;stderr: something&#39;s happening&#34;</pre></td></tr></table>
+</div>
+</div>
+<p>Activity related to a specific operation are always available in the <code>history</code> entry for that operation. Given a history entry like</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">$ whistory
+1  2019-06-20 13:47  wash whistory
+2  2019-06-20 13:47  ls -pG goodreads</pre></td></tr></table>
+</div>
+</div>
+<p>we can view activity related to that command with</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">$ whistory 2
+Jun 20 13:47:09.212 FUSE: List /goodreads
+Jun 20 13:47:09.212 Invoking /Users/michaelsmith/puppetlabs/washreads/goodreads list /goodreads \{\&#34;userid\&#34;:\&#34;16580428\&#34;}
+Jun 20 13:47:09.886 stdout: [{&#34;name&#34;:&#34;read&#34;,&#34;methods&#34;:[&#34;list&#34;],&#34;attributes&#34;:{&#34;meta&#34;:{&#34;id&#34;:&#34;53094184&#34;,&#34;book_count&#34;:&#34;494&#34;,&#34;exclusive_flag&#34;:&#34;true&#34;,&#34;description&#34;:&#34;&#34;,&#34;sort&#34;:&#34;&#34;,&#34;order&#34;:&#34;&#34;,&#34;per_page&#34;:&#34;&#34;,&#34;display_fields&#34;:&#34;&#34;,&#34;featured&#34;:&#34;true&#34;,&#34;recommend_for&#34;:&#34;false&#34;,&#34;sticky&#34;:&#34;&#34;}},&#34;state&#34;:&#34;{\&#34;type\&#34;:\&#34;shelf\&#34;,\&#34;name\&#34;:\&#34;read\&#34;,\&#34;userid\&#34;:\&#34;16580428\&#34;,\&#34;count\&#34;:494}&#34;},...]
+Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {Inode:0 Type:dir Name:currently-reading} {Inode:0 Type:dir Name:to-read} {Inode:0 Type:dir Name:fantasy} {Inode:0 Type:dir Name:science-fiction}]</pre></td></tr></table>
+</div>
+</div>
 <h3 id="attributes-metadata">Attributes/Metadata</h3>
 
 <p>All entries have metadata, which is a JSON object containing a complete description of the entry. For example, a Docker container&rsquo;s metadata includes its labels, its state, its start time, the image it was built from, its mounted volumes, etc. <a href="#wash-find"><code>wash find</code></a> can filter on this metadata. In our example, you can use <code>find docker/containers -daystart -fullmeta -m .state .startedAt -{1d} -a .status running</code> to see a list of all running containers that started today (try it out!). Thus, metadata filtering is powerful. However, it also requires the user to query an entry&rsquo;s metadata to construct the filter. Creating a filter on the same property that&rsquo;s shared by many different kinds of entries is repetitive, error-prone, and an obvious candidate for usability improvement. For example, metadata filtering gets annoying when you are trying to filter on an EC2 instance&rsquo;s/Docker container&rsquo;s/Kubernetes pod&rsquo;s state due to the structural differences in their metadata (e.g. an EC2 instance&rsquo;s state is contained in the <code>.state.name</code> key, while a Kubernetes pod&rsquo;s state is contained in the <code>.status.phase</code> key). Metadata filtering is also slow. It requires O(N) API requests, where N is the number of visited entries.</p>
