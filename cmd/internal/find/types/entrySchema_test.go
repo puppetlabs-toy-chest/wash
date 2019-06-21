@@ -72,7 +72,7 @@ func (suite *EntrySchemaTestSuite) TestPrune_Complex() {
 func (suite *EntrySchemaTestSuite) TestPrune_RealWorld_AWS() {
 	s := suite.readFixture("real_world_aws")
 	p := func(s *EntrySchema) bool {
-		for _, action := range s.Actions {
+		for _, action := range s.Actions() {
 			if action == "exec" {
 				return true
 			}
@@ -180,7 +180,7 @@ func (suite *EntrySchemaTestSuite) readFixture(name string) *EntrySchema {
 func (suite *EntrySchemaTestSuite) makeSchemaP(trueValues ...string) EntrySchemaPredicate {
 	return func(s *EntrySchema) bool {
 		for _, typeID := range trueValues {
-			if s.TypeID == typeID {
+			if s.TypeID() == typeID {
 				return true
 			}
 		}

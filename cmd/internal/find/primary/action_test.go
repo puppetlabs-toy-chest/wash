@@ -41,7 +41,7 @@ func TestActionPrimary(t *testing.T) {
 		s := &types.EntrySchema{
 			EntrySchema: &apitypes.EntrySchema{},
 		}
-		s.Actions = v.([]string)
+		s.SetActions(v.([]string))
 		return s
 	}
 	suite.Run(t, s)
