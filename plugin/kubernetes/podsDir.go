@@ -16,24 +16,24 @@ type podsDir struct {
 	ns     string
 }
 
-func podsDirBase() *podsDir {
-	pds := &podsDir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	pds.SetName("pods").IsSingleton()
-	return pds
-}
-
 func newPodsDir(ns *namespace) *podsDir {
-	pds := podsDirBase()
+	pds := &podsDir{
+		EntryBase: plugin.NewEntry("pods"),
+	}
 	pds.client = ns.client
 	pds.config = ns.config
 	pds.ns = ns.Name()
 	return pds
 }
 
+func (ps *podsDir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(ps, "pods").IsSingleton()
+}
+
 func (ps *podsDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(podBase())
+	return []*plugin.EntrySchema{
+		(&pod{}).Schema(),
+	}
 }
 
 func (ps *podsDir) List(ctx context.Context) ([]plugin.Entry, error) {

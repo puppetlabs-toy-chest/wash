@@ -17,25 +17,24 @@ type k8context struct {
 	defaultns string
 }
 
-func k8ContextBase() *k8context {
-	context := &k8context{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	context.SetLabel("context")
-	return context
-}
-
 func newK8Context(name string, client *k8s.Clientset, config *rest.Config, defaultns string) *k8context {
-	context := k8ContextBase()
-	context.SetName(name)
+	context := &k8context{
+		EntryBase: plugin.NewEntry(name),
+	}
 	context.client = client
 	context.config = config
 	context.defaultns = defaultns
 	return context
 }
 
+func (c *k8context) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(c, "context")
+}
+
 func (c *k8context) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(namespaceBase())
+	return []*plugin.EntrySchema{
+		(&namespace{}).Schema(),
+	}
 }
 
 func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
