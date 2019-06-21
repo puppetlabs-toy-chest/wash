@@ -24,6 +24,24 @@ func (g *mockParent) ChildSchemas() []*plugin.EntrySchema {
 	return nil
 }
 
+func (g *mockParent) Schema() *plugin.EntrySchema {
+	return nil
+}
+
+type mockEntry struct {
+	plugin.EntryBase
+}
+
+func newMockEntry(name string) *mockEntry {
+	return &mockEntry{
+		EntryBase: plugin.NewEntry(name),
+	}
+}
+
+func (e *mockEntry) Schema() *plugin.EntrySchema {
+	return nil
+}
+
 type HelpersTestSuite struct {
 	suite.Suite
 }
@@ -56,10 +74,8 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		}
 	}
 
-	foo := plugin.NewEntryBase()
-	foo.SetName("foo/bar")
-	parent := &mockParent{plugin.NewEntryBase(), []plugin.Entry{&foo}}
-	parent.SetName("root")
+	foo := newMockEntry("foo/bar")
+	parent := &mockParent{plugin.NewEntry("root"), []plugin.Entry{foo}}
 	parent.SetTestID("/root")
 	parent.DisableDefaultCaching()
 	for _, c := range []testcase{
@@ -70,10 +86,8 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 		runTestCase(parent, c)
 	}
 
-	baz := plugin.NewEntryBase()
-	baz.SetName("baz")
-	nestedParent := &mockParent{plugin.NewEntryBase(), []plugin.Entry{&baz}}
-	nestedParent.SetName("bar")
+	baz := newMockEntry("baz")
+	nestedParent := &mockParent{plugin.NewEntry("bar"), []plugin.Entry{baz}}
 	nestedParent.DisableDefaultCaching()
 	parent.entries = append(parent.entries, nestedParent)
 	for _, c := range []testcase{
@@ -85,9 +99,8 @@ func (suite *HelpersTestSuite) TestFindEntry() {
 	}
 
 	// Finally, test the duplicate cname error response
-	duplicateFoo := plugin.NewEntryBase()
-	duplicateFoo.SetName("foo#bar")
-	parent.entries = append(parent.entries, &duplicateFoo)
+	duplicateFoo := newMockEntry("foo#bar")
+	parent.entries = append(parent.entries, duplicateFoo)
 	expectedErr := plugin.DuplicateCNameErr{
 		ParentID:                 plugin.ID(parent),
 		FirstChildName:           foo.Name(),
@@ -116,12 +129,12 @@ func (m *mockRoot) List(ctx context.Context) ([]plugin.Entry, error) {
 	return args.Get(0).([]plugin.Entry), args.Error(1)
 }
 
+func (m *mockRoot) Schema() *plugin.EntrySchema {
+	return nil
+}
+
 func (m *mockRoot) ChildSchemas() []*plugin.EntrySchema {
-	return []*plugin.EntrySchema{
-		&plugin.EntrySchema{
-			TypeID: "mockEntry",
-		},
-	}
+	return nil
 }
 
 func getRequest(ctx context.Context, path string) *http.Request {
@@ -130,8 +143,7 @@ func getRequest(ctx context.Context, path string) *http.Request {
 
 func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	reg := plugin.NewRegistry()
-	plug := &mockRoot{EntryBase: plugin.NewEntryBase()}
-	plug.SetName("mine")
+	plug := &mockRoot{EntryBase: plugin.NewEntry("mine")}
 	plug.SetTestID("/mine")
 	suite.NoError(reg.RegisterPlugin(plug, map[string]interface{}{}))
 	ctx := context.WithValue(context.Background(), pluginRegistryKey, reg)
@@ -165,10 +177,9 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	_, _, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/yours"))
 	suite.Error(err)
 
-	file := plugin.NewEntryBase()
-	file.SetName("a file")
+	file := newMockEntry("a file")
 	file.SetTestID("/mine/a file")
-	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
+	plug.On("List", mock.Anything).Return([]plugin.Entry{file}, nil)
 
 	entry, path, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/mine/a file"))
 	if suite.Nil(err) {
@@ -177,7 +188,7 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	}
 	plug.AssertExpectations(suite.T())
 
-	plug.On("List", mock.Anything).Return([]plugin.Entry{&file}, nil)
+	plug.On("List", mock.Anything).Return([]plugin.Entry{file}, nil)
 	_, _, err = getEntryFromRequest(getRequest(ctx, mountpoint+"/mine/a dir"))
 	suite.Error(err)
 	plug.AssertExpectations(suite.T())
