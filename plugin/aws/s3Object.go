@@ -22,22 +22,14 @@ type s3Object struct {
 	client *s3Client.S3
 }
 
-func s3ObjectBase() *s3Object {
-	s3Obj := &s3Object{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	s3Obj.
-		SetLabel("object").
-		DisableCachingFor(plugin.MetadataOp)
-	return s3Obj
-}
-
 func newS3Object(o *s3Client.Object, name string, bucket string, key string, client *s3Client.S3) *s3Object {
-	s3Obj := s3ObjectBase()
+	s3Obj := &s3Object{
+		EntryBase: plugin.NewEntry(name),
+	}
+	s3Obj.DisableCachingFor(plugin.MetadataOp)
 	s3Obj.bucket = bucket
 	s3Obj.key = key
 	s3Obj.client = client
-	s3Obj.SetName(name)
 
 	// S3 objects do not have a "creation time"; they're treated as atomic
 	// blobs that get replaced whenever the user uploads new data. Thus, we
@@ -73,6 +65,10 @@ func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOu
 	}
 
 	return resp.(*s3Client.HeadObjectOutput), nil
+}
+
+func (o *s3Object) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(o, "object")
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {

@@ -17,19 +17,11 @@ type ec2Dir struct {
 	entries []plugin.Entry
 }
 
-func ec2DirBase() *ec2Dir {
-	ec2Dir := &ec2Dir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	ec2Dir.
-		SetName("ec2").
-		IsSingleton().
-		DisableDefaultCaching()
-	return ec2Dir
-}
-
 func newEC2Dir(session *session.Session) *ec2Dir {
-	ec2Dir := ec2DirBase()
+	ec2Dir := &ec2Dir{
+		EntryBase: plugin.NewEntry("ec2"),
+	}
+	ec2Dir.DisableDefaultCaching()
 	ec2Dir.session = session
 	ec2Dir.client = ec2Client.New(session)
 
@@ -40,8 +32,14 @@ func newEC2Dir(session *session.Session) *ec2Dir {
 	return ec2Dir
 }
 
+func (e *ec2Dir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(e, "ec2").IsSingleton()
+}
+
 func (e *ec2Dir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(ec2InstancesDirBase())
+	return []*plugin.EntrySchema{
+		(&ec2InstancesDir{}).Schema(),
+	}
 }
 
 func (e *ec2Dir) List(ctx context.Context) ([]plugin.Entry, error) {

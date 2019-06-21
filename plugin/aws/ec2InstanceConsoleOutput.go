@@ -19,23 +19,15 @@ type ec2InstanceConsoleOutput struct {
 	latest bool
 }
 
-func ec2InstanceConsoleOutputBase() *ec2InstanceConsoleOutput {
-	cl := &ec2InstanceConsoleOutput{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	cl.SetLabel("console.out").DisableDefaultCaching()
-	return cl
-}
-
 func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest bool) (*ec2InstanceConsoleOutput, error) {
-	cl := ec2InstanceConsoleOutputBase()
+	cl := &ec2InstanceConsoleOutput{}
 	cl.inst = inst
 	cl.latest = latest
 
 	if cl.latest {
-		cl.SetName("console-latest.out")
+		cl.EntryBase = plugin.NewEntry("console-latest.out")
 	} else {
-		cl.SetName("console.out")
+		cl.EntryBase = plugin.NewEntry("console.out")
 	}
 
 	output, err := cl.cachedConsoleOutput(ctx)
@@ -88,6 +80,10 @@ func (cl *ec2InstanceConsoleOutput) cachedConsoleOutput(ctx context.Context) (co
 	}
 
 	return output.(consoleOutput), nil
+}
+
+func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(cl, "console.out")
 }
 
 func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
