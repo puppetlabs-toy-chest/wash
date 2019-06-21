@@ -34,11 +34,11 @@ func (m *mockRoot) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (m *mockRoot) ChildSchemas() []*EntrySchema {
-	return []*EntrySchema{
-		&EntrySchema{
-			TypeID: "entry",
-		},
-	}
+	return []*EntrySchema{}
+}
+
+func (m *mockRoot) Schema() *EntrySchema {
+	return nil
 }
 
 func (suite *RegistryTestSuite) TestPluginNameRegex() {
@@ -57,8 +57,7 @@ func (suite *RegistryTestSuite) TestPluginNameRegex() {
 
 func (suite *RegistryTestSuite) TestRegisterPlugin() {
 	reg := NewRegistry()
-	m := &mockRoot{EntryBase: NewEntryBase()}
-	m.SetName("mine")
+	m := &mockRoot{EntryBase: NewEntry("mine")}
 	cfg := map[string]interface{}{}
 	m.On("Init", cfg).Return(nil)
 
@@ -69,8 +68,7 @@ func (suite *RegistryTestSuite) TestRegisterPlugin() {
 
 func (suite *RegistryTestSuite) TestRegisterPluginWithConfig() {
 	reg := NewRegistry()
-	m := &mockRoot{EntryBase: NewEntryBase()}
-	m.SetName("mine")
+	m := &mockRoot{EntryBase: NewEntry("mine")}
 	cfg := map[string]interface{}{"key": "value"}
 	m.On("Init", cfg).Return(nil)
 
@@ -81,8 +79,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginWithConfig() {
 
 func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 	reg := NewRegistry()
-	m := &mockRoot{EntryBase: NewEntryBase()}
-	m.SetName("mine")
+	m := &mockRoot{EntryBase: NewEntry("mine")}
 	m.On("Init", map[string]interface{}(nil)).Return(errors.New("failed"))
 
 	suite.EqualError(reg.RegisterPlugin(m, nil), "failed")
@@ -93,8 +90,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
 	panicFunc := func() {
 		reg := NewRegistry()
-		m := &mockRoot{EntryBase: NewEntryBase()}
-		m.SetName("b@dname")
+		m := &mockRoot{EntryBase: NewEntry("b@dname")}
 		_ = reg.RegisterPlugin(m, map[string]interface{}{})
 	}
 
@@ -107,8 +103,7 @@ func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {
 func (suite *RegistryTestSuite) TestRegisterPluginRegisteredPlugin() {
 	panicFunc := func() {
 		reg := NewRegistry()
-		m1 := &mockRoot{EntryBase: NewEntryBase()}
-		m1.SetName("mine")
+		m1 := &mockRoot{EntryBase: NewEntry("mine")}
 		_ = reg.RegisterPlugin(m1, map[string]interface{}{})
 		_ = reg.RegisterPlugin(m1, map[string]interface{}{})
 	}

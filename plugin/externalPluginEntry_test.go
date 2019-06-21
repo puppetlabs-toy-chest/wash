@@ -99,7 +99,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCach
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
-		expectedTTLs := NewEntryBase().ttl
+		expectedTTLs := NewEntry("foo").ttl
 		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
 		suite.Equal(expectedTTLs, entry.EntryBase.ttl)
 	}
@@ -139,7 +139,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	}
 
 	entry := externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("foo"),
 	}
 	entry.setCacheTTLs(decodedTTLs)
 
@@ -157,7 +157,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -186,8 +186,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
-		entryBase := NewEntryBase()
-		entryBase.SetName("foo")
+		entryBase := NewEntry("foo")
 		expectedEntries := []Entry{
 			&externalPluginEntry{
 				EntryBase:        entryBase,
@@ -203,7 +202,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -232,7 +231,7 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("foo"),
 		script:    mockScript,
 	}
 	expectedMeta := JSONObject{"foo": "bar"}
@@ -251,7 +250,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("foo"),
 		methods:   []string{"metadata"},
 		script:    mockScript,
 	}

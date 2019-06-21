@@ -40,13 +40,13 @@ import (
 // details on when to override it.
 type Entry interface {
 	Metadata(ctx context.Context) (JSONObject, error)
+	Schema() *EntrySchema
 	name() string
 	attributes() EntryAttributes
 	slashReplacer() rune
 	id() string
 	setID(id string)
 	getTTLOf(op defaultOpCode) time.Duration
-	entryBase() *EntryBase
 }
 
 // Parent is an entry with children. It will be represented as a directory in the Wash

@@ -16,11 +16,9 @@ type Registry struct {
 // NewRegistry creates a new plugin registry object
 func NewRegistry() *Registry {
 	r := &Registry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry("/"),
 		plugins:   make(map[string]Root),
 	}
-	r.SetName("/")
-	r.SetLabel("mountpoint")
 	r.setID("/")
 	r.DisableDefaultCaching()
 
@@ -52,7 +50,6 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 		panic(msg)
 	}
 
-	root.entryBase().IsSingleton()
 	r.plugins[root.name()] = root
 	r.pluginRoots = append(r.pluginRoots, root)
 	return nil
@@ -60,7 +57,29 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 
 // ChildSchemas returns the child schemas of the plugin registry
 func (r *Registry) ChildSchemas() []*EntrySchema {
-	return ChildSchemas(r.pluginRoots...)
+	var childSchemas []*EntrySchema
+	for _, root := range r.pluginRoots {
+		s := root.Schema()
+		if s == nil {
+			// s doesn't have a schema, which means it's an external plugin.
+			//
+			// TODO: This makes it possible for core plugins to return nil
+			// schemas, which shouldn't happen. Find a way to rectify this once
+			// external plugin schemas are supported.
+			continue
+		}
+		s.IsSingleton()
+		if len(s.Label()) == 0 {
+			s.SetLabel(CName(root))
+		}
+		childSchemas = append(childSchemas, root.Schema())
+	}
+	return childSchemas
+}
+
+// Schema returns the plugin registry's schema
+func (r *Registry) Schema() *EntrySchema {
+	return NewEntrySchema(r, "mountpoint").IsSingleton()
 }
 
 // List all of Wash's loaded plugins

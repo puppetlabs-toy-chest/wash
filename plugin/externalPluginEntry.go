@@ -38,11 +38,10 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
 	entry := &externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry(e.Name),
 		methods:   e.Methods,
 		state:     e.State,
 	}
-	entry.SetName(e.Name)
 	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
 	if e.SlashReplacer != "" {
@@ -90,6 +89,11 @@ func (e *externalPluginEntry) implements(method string) bool {
 func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
 	// ChildSchema's meant for core plugins.
 	return []*EntrySchema{}
+}
+
+func (e *externalPluginEntry) Schema() *EntrySchema {
+	// TODO: Support external plugin schemas.
+	return nil
 }
 
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
