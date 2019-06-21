@@ -50,12 +50,12 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 }
 
 func fill(stree treeprint.Tree, schema *apitypes.EntrySchema) treeprint.Tree {
-	value := schema.Label
-	if !schema.Singleton {
+	value := schema.Label()
+	if !schema.Singleton() {
 		value = fmt.Sprintf("[%v]", value)
 	}
 	stree.SetValue(value)
-	for _, child := range schema.Children {
+	for _, child := range schema.Children() {
 		// treeprint.Tree has no "AddBranch()" method, so we need to
 		// set a stub value. Note that the value will be reset to the
 		// correct value in the recursive call, so this is OK.
