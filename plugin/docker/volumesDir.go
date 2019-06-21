@@ -14,22 +14,22 @@ type volumesDir struct {
 	client *client.Client
 }
 
-func volumesDirBase() *volumesDir {
-	volumesDir := &volumesDir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	volumesDir.SetName("volumes").IsSingleton()
-	return volumesDir
-}
-
 func newVolumesDir(client *client.Client) *volumesDir {
-	volumesDir := volumesDirBase()
+	volumesDir := &volumesDir{
+		EntryBase: plugin.NewEntry("volumes"),
+	}
 	volumesDir.client = client
 	return volumesDir
 }
 
+func (vs *volumesDir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(vs, "volumes").IsSingleton()
+}
+
 func (vs *volumesDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(volumeBase())
+	return []*plugin.EntrySchema{
+		(&volume{}).Schema(),
+	}
 }
 
 // List

@@ -26,24 +26,17 @@ type volume struct {
 
 const mountpoint = "/mnt"
 
-func volumeBase() *volume {
-	vol := &volume{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	vol.SetLabel("volume")
-	return vol
-}
-
 func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	startTime, err := time.Parse(time.RFC3339, v.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	vol := volumeBase()
+	vol := &volume{
+		EntryBase: plugin.NewEntry(v.Name),
+	}
 	vol.client = c
 	vol.
-		SetName(v.Name).
 		Attributes().
 		SetCtime(startTime).
 		SetMtime(startTime).
@@ -51,6 +44,10 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		SetMeta(v)
 
 	return vol, nil
+}
+
+func (v *volume) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(v, "volume")
 }
 
 func (v *volume) ChildSchemas() []*plugin.EntrySchema {

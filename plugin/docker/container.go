@@ -21,19 +21,7 @@ type container struct {
 	client *client.Client
 }
 
-func containerBase() *container {
-	cont := &container{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	cont.SetLabel("container")
-	return cont
-}
-
 func newContainer(inst types.Container, client *client.Client) *container {
-	cont := containerBase()
-	cont.id = inst.ID
-	cont.client = client
-
 	name := inst.ID
 	if len(inst.Names) > 0 {
 		// The docker API prefixes all names with '/', so remove that.
@@ -43,7 +31,11 @@ func newContainer(inst types.Container, client *client.Client) *container {
 		// it appears to always be a single name, so take the first as the canonical name.
 		name = strings.TrimPrefix(inst.Names[0], "/")
 	}
-	cont.SetName(name)
+	cont := &container{
+		EntryBase: plugin.NewEntry(name),
+	}
+	cont.id = inst.ID
+	cont.client = client
 
 	startTime := time.Unix(inst.Created, 0)
 	cont.
@@ -66,12 +58,16 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	return plugin.ToJSONObject(raw), nil
 }
 
+func (c *container) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(c, "container")
+}
+
 func (c *container) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(
-		containerLogFileBase(),
-		containerMetadataBase(),
-		vol.FSBase("fs"),
-	)
+	return []*plugin.EntrySchema{
+		(&containerLogFile{}).Schema(),
+		(&containerMetadata{}).Schema(),
+		(&vol.FS{}).Schema().SetLabel("fs"),
+	}
 }
 
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {

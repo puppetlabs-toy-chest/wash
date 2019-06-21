@@ -18,16 +18,10 @@ type containerLogFile struct {
 	client        *client.Client
 }
 
-func containerLogFileBase() *containerLogFile {
-	clf := &containerLogFile{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	clf.SetName("log").IsSingleton()
-	return clf
-}
-
 func newContainerLogFile(container *container) *containerLogFile {
-	clf := containerLogFileBase()
+	clf := &containerLogFile{
+		EntryBase: plugin.NewEntry("log"),
+	}
 	clf.containerName = container.id
 	clf.client = container.client
 	return clf
@@ -41,6 +35,10 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 	activity.Record(ctx, "Error reading info for container %v: %v", clf.containerName, err)
 	// Assume true so we don't try to process output if there was an error.
 	return true
+}
+
+func (clf *containerLogFile) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(clf, "log").IsSingleton()
 }
 
 func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
