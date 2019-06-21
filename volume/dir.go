@@ -21,24 +21,17 @@ type dir struct {
 	path        string
 }
 
-func dirBase() *dir {
-	vd := &dir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	vd.SetLabel("dir")
-	return vd
-}
-
 // newDir creates a dir populated from dirs.
 func newDir(name string, attr plugin.EntryAttributes, impl Interface, subtreeRoot *dir, path string) *dir {
-	vd := dirBase()
+	vd := &dir{
+		EntryBase: plugin.NewEntry(name),
+	}
 	vd.impl = impl
 	vd.subtreeRoot = subtreeRoot
 	if vd.subtreeRoot == nil {
 		vd.subtreeRoot = vd
 	}
 	vd.path = path
-	vd.SetName(name)
 	vd.SetAttributes(attr)
 	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
 	// Caching handled in List based on 'impl'.
@@ -49,6 +42,10 @@ func newDir(name string, attr plugin.EntryAttributes, impl Interface, subtreeRoo
 
 func (v *dir) ChildSchemas() []*plugin.EntrySchema {
 	return ChildSchemas()
+}
+
+func (v *dir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(v, "dir")
 }
 
 // List lists the children of the directory.

@@ -37,13 +37,16 @@ func (m *mockFileEntry) VolumeStream(context.Context, string) (io.ReadCloser, er
 	return ioutil.NopCloser(strings.NewReader(m.content)), nil
 }
 
+func (m *mockFileEntry) Schema() *plugin.EntrySchema {
+	return nil
+}
+
 func TestVolumeFile(t *testing.T) {
 	now := time.Now()
 	initialAttr := plugin.EntryAttributes{}
 	initialAttr.SetCtime(now)
 
-	impl := &mockFileEntry{EntryBase: plugin.NewEntryBase(), content: "hello"}
-	impl.SetName("parent")
+	impl := &mockFileEntry{EntryBase: plugin.NewEntry("parent"), content: "hello"}
 	vf := newFile("mine", initialAttr, impl, "my path")
 
 	attr := plugin.Attributes(vf)
@@ -72,8 +75,7 @@ func TestVolumeFile(t *testing.T) {
 }
 
 func TestVolumeFileErr(t *testing.T) {
-	impl := &mockFileEntry{EntryBase: plugin.NewEntryBase(), err: errors.New("fail")}
-	impl.SetName("parent")
+	impl := &mockFileEntry{EntryBase: plugin.NewEntry("parent"), err: errors.New("fail")}
 	vf := newFile("mine", plugin.EntryAttributes{}, impl, "my path")
 
 	rdr, err := vf.Open(context.Background())

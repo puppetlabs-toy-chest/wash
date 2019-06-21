@@ -29,13 +29,16 @@ func (m *mockDirEntry) VolumeStream(context.Context, string) (io.ReadCloser, err
 	return nil, nil
 }
 
+func (m *mockDirEntry) Schema() *plugin.EntrySchema {
+	return nil
+}
+
 func TestVolumeDir(t *testing.T) {
 	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())
-	entry := mockDirEntry{EntryBase: plugin.NewEntryBase(), dmap: dmap}
-	entry.SetName("mine")
+	entry := mockDirEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
 	entry.SetTestID("/mine")
 	entryDir := newDir("dummy", plugin.EntryAttributes{}, &entry, nil, RootPath)
 

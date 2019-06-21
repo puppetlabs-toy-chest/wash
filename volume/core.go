@@ -40,7 +40,10 @@ type DirMap = map[string]Dir
 
 // ChildSchemas returns a volume's child schema
 func ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(dirBase(), fileBase())
+	return []*plugin.EntrySchema{
+		(&dir{}).Schema(),
+		(&file{}).Schema(),
+	}
 }
 
 // RootPath is the root of the filesystem described by a DirMap returned from VolumeList.
