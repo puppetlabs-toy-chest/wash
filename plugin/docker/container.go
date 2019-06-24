@@ -59,7 +59,10 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 }
 
 func (c *container) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(c, "container")
+	return plugin.
+		NewEntrySchema(c, "container").
+		SetMetaAttributeSchema(types.Container{}).
+		SetMetadataSchema(types.ContainerJSON{})
 }
 
 func (c *container) ChildSchemas() []*plugin.EntrySchema {

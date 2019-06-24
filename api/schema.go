@@ -13,7 +13,7 @@ var schemaHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	}
 	jsonEncoder := json.NewEncoder(w)
 	s := entry.Schema()
-	s.FillChildren()
+	s.Fill()
 	if err := jsonEncoder.Encode(s); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal schema for %v: %v", path, err))
 	}

@@ -21,6 +21,7 @@ func NewRegistry() *Registry {
 	}
 	r.setID("/")
 	r.DisableDefaultCaching()
+	r.isPluginRegistry = true
 
 	return r
 }

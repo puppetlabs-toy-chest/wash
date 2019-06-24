@@ -41,6 +41,10 @@ func (m *mockRoot) Schema() *EntrySchema {
 	return nil
 }
 
+func (m *mockRoot) WrappedTypes() SchemaMap {
+	return nil
+}
+
 func (suite *RegistryTestSuite) TestPluginNameRegex() {
 	suite.Regexp(pluginNameRegex, "a")
 	suite.Regexp(pluginNameRegex, "A")

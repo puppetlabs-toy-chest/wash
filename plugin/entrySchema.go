@@ -5,15 +5,19 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/ekinanp/jsonschema"
 )
 
 type entrySchema struct {
-	TypeID    string         `json:"type_id"`
-	Label     string         `json:"label"`
-	Singleton bool           `json:"singleton"`
-	Actions   []string       `json:"actions"`
-	Children  []*EntrySchema `json:"children"`
-	entry     Entry
+	TypeID              string         `json:"type_id"`
+	Label               string         `json:"label"`
+	Singleton           bool           `json:"singleton"`
+	Actions             []string       `json:"actions"`
+	MetaAttributeSchema *JSONSchema    `json:"meta_attribute_schema"`
+	MetadataSchema      *JSONSchema    `json:"metadata_schema"`
+	Children            []*EntrySchema `json:"children"`
+	entry               Entry
 }
 
 // EntrySchema represents an entry's schema. Use plugin.NewEntrySchema
@@ -61,6 +65,8 @@ type EntrySchema struct {
 	//
 	// This pattern was obtained from https://stackoverflow.com/a/11129474
 	entrySchema
+	metaAttributeSchemaObj interface{}
+	metadataSchemaObj      interface{}
 }
 
 // NewEntrySchema returns a new EntrySchema object with the specified label.
@@ -159,6 +165,29 @@ func (s *EntrySchema) SetActions(actions []string) *EntrySchema {
 	return s
 }
 
+// SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
+// that will be marshalled into a JSON schema. SetMetaSchema will panic
+// if obj is not a struct.
+func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
+	// We need to know if s.entry has any wrapped types in order to correctly
+	// compute the schema. However that information is known when s.fill() is
+	// called. Thus, we'll set the schema object to obj so s.fill() can properly
+	// calculate the schema.
+	s.metaAttributeSchemaObj = obj
+	return s
+}
+
+// SetMetadataSchema sets Entry#Metadata's schema. obj is an empty struct that will be
+// marshalled into a JSON schema. SetMetadataSchema will panic if obj is not a struct.
+//
+// NOTE: Only use SetMetadataSchema if you're overriding Entry#Metadata. Otherwise, use
+// SetMetaAttributeSchema.
+func (s *EntrySchema) SetMetadataSchema(obj interface{}) *EntrySchema {
+	// See the comments in SetMetaAttributeSchema to understand why this line's necessary
+	s.metadataSchemaObj = obj
+	return s
+}
+
 // Children returns the entry's child schemas
 func (s *EntrySchema) Children() []*EntrySchema {
 	return s.entrySchema.Children
@@ -174,12 +203,13 @@ func (s *EntrySchema) SetChildren(children []*EntrySchema) *EntrySchema {
 	return s
 }
 
-// FillChildren fills s' children.
-func (s *EntrySchema) FillChildren() {
-	s.fillChildren(make(map[string]bool))
+// Fill fills s' children, its meta attribute schema, and its metadata
+// schema. This is needed by the API. Plugin authors should ignore this.
+func (s *EntrySchema) Fill() {
+	s.fill(make(map[string]bool))
 }
 
-func (s *EntrySchema) fillChildren(visited map[string]bool) {
+func (s *EntrySchema) fill(visited map[string]bool) {
 	if s.entrySchema.Children != nil {
 		return
 	}
@@ -191,17 +221,85 @@ func (s *EntrySchema) fillChildren(visited map[string]bool) {
 		// true if s is e.g. a volume directory.
 		return
 	}
-	children := s.entry.(Parent).ChildSchemas()
+
+	// Fill-in the meta attribute + metadata schemas
+	var err error
+	if s.metaAttributeSchemaObj != nil {
+		s.MetaAttributeSchema, err = s.schemaOf(s.metaAttributeSchemaObj)
+		if err != nil {
+			s.fillPanicf("bad value passed into SetMetaAttributeSchema: %v", err)
+		}
+	}
+	if s.metadataSchemaObj != nil {
+		s.MetadataSchema, err = s.schemaOf(s.metadataSchemaObj)
+		if err != nil {
+			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
+		}
+	}
+
 	visited[s.TypeID()] = true
+
+	// "sParent" is read as "s.parent"
+	sParent := s.entry.(Parent)
+	children := sParent.ChildSchemas()
 	for _, child := range children {
 		if child == nil {
-			msg := fmt.Sprintf("s.fillChildren: found a nil child schema for %v", s.TypeID())
-			panic(msg)
+			s.fillPanicf("found a nil child schema")
 		}
 		s.entrySchema.Children = append(s.entrySchema.Children, child)
-		child.fillChildren(visited)
+		passAlongWrappedTypes(sParent, child.entry)
+		child.fill(visited)
 	}
 	// Delete "s" from visited so that siblings or ancestors that
 	// also use "s" won't be affected.
 	delete(visited, s.TypeID())
+}
+
+// This helper's used by CachedList + EntrySchema#fill(). The reason for
+// the helper is because /fs/schema uses repeated calls to CachedList when
+// fetching the entry, so we need to pass-along the wrapped types when
+// searching for it. However, Parent#ChildSchemas uses empty Entry objects
+// that do not go through CachedList (by definition). Thus, the entry found
+// by /fs/schema needs to pass its wrapped types along to the children to
+// determine their metadata schemas. This is done in s.fill().
+func passAlongWrappedTypes(p Parent, child Entry) {
+	var wrappedTypes SchemaMap
+	// This check is equivalent to "_, ok := child.(Root); ok".
+	// However the latter's more expensive due to the extra
+	// type assertion, which can slow down CachedList.
+	if p.isRegistry() {
+		wrappedTypes = child.(Root).WrappedTypes()
+	} else {
+		wrappedTypes = p.wrappedTypes()
+	}
+	child.setWrappedTypes(wrappedTypes)
+}
+
+// Helper that wraps the common code shared by the SetMeta*Schema methods
+func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
+	typeMappings := make(map[reflect.Type]*jsonschema.Type)
+	for t, s := range s.entry.wrappedTypes() {
+		typeMappings[reflect.TypeOf(t)] = s.Type
+	}
+	r := jsonschema.Reflector{
+		// Setting this option ensures that the schema's root is obj's
+		// schema instead of a reference to a definition containing obj's
+		// schema. This way, we can validate that "obj" is a JSON object's
+		// schema. Otherwise, the check below will always fail.
+		ExpandedStruct: true,
+		TypeMappings:   typeMappings,
+	}
+	schema := r.Reflect(obj)
+	if schema.Type.Type != "object" {
+		return nil, fmt.Errorf("expected a JSON object but got %v", schema.Type.Type)
+	}
+	return schema, nil
+}
+
+// Helper for s.fill(). We make it a separate method to avoid re-creating
+// closures for each recursive s.fill() call.
+func (s *EntrySchema) fillPanicf(format string, a ...interface{}) {
+	formatStr := fmt.Sprintf("s.fill (%v): %v", s.TypeID(), format)
+	msg := fmt.Sprintf(formatStr, a...)
+	panic(msg)
 }

@@ -35,12 +35,14 @@ to do something like
 		SetMeta(meta)
 */
 type EntryBase struct {
-	entryName          string
-	attr               EntryAttributes
-	slashReplacerCh    rune
+	entryName       string
+	attr            EntryAttributes
+	slashReplacerCh rune
 	// washID represents the entry's wash ID. It is set in CachedList.
-	washID string
-	ttl    [3]time.Duration
+	washID           string
+	ttl              [3]time.Duration
+	wrappedTypesMap  SchemaMap
+	isPluginRegistry bool
 }
 
 // NewEntry creates a new entry
@@ -50,7 +52,7 @@ func NewEntry(name string) EntryBase {
 	}
 
 	e := EntryBase{
-		entryName:          name,
+		entryName:       name,
 		slashReplacerCh: '#',
 	}
 	for op := range e.ttl {
@@ -93,6 +95,18 @@ func (e *EntryBase) setID(id string) {
 
 func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 	return e.ttl[op]
+}
+
+func (e *EntryBase) wrappedTypes() SchemaMap {
+	return e.wrappedTypesMap
+}
+
+func (e *EntryBase) setWrappedTypes(wrappedTypes SchemaMap) {
+	e.wrappedTypesMap = wrappedTypes
+}
+
+func (e *EntryBase) isRegistry() bool {
+	return e.isPluginRegistry
 }
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT

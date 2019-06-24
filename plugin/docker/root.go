@@ -49,6 +49,11 @@ func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 	}
 }
 
+// WrappedTypes implements plugin.Root#WrappedTypes
+func (r *Root) WrappedTypes() plugin.SchemaMap {
+	return nil
+}
+
 // List lists the types of resources the Docker plugin exposes.
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	return r.resources, nil
