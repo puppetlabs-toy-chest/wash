@@ -23,25 +23,25 @@ func NewEntrySchema(s *apitypes.EntrySchema) *EntrySchema {
 
 	var gatherNodes func(s *apitypes.EntrySchema)
 	gatherNodes = func(s *apitypes.EntrySchema) {
-		if len(s.TypeID) == 0 {
+		if len(s.TypeID()) == 0 {
 			panic("gatherNodes called with an empty type ID!")
 		}
-		node := nodes[s.TypeID]
+		node := nodes[s.TypeID()]
 		if node == nil {
 			node = &EntrySchema{
 				EntrySchema: s,
 				Children:    make(map[string]*EntrySchema),
 			}
-			nodes[s.TypeID] = node
+			nodes[s.TypeID()] = node
 		}
 		if len(node.Children) > 0 {
 			// We already gathered everything we need to know about this node
 			return
 		}
-		for _, child := range s.Children {
+		for _, child := range s.Children() {
 			// The node's children will be filled in after all the nodes have been
 			// gathered.
-			node.Children[child.TypeID] = nil
+			node.Children[child.TypeID()] = nil
 			gatherNodes(child)
 		}
 	}
@@ -52,27 +52,27 @@ func NewEntrySchema(s *apitypes.EntrySchema) *EntrySchema {
 			node.Children[childTypeID] = nodes[childTypeID]
 		}
 	}
-	return nodes[s.TypeID]
+	return nodes[s.TypeID()]
 }
 
 // Prune prunes s to contain only nodes that satisfy p. It modifies s'
 // state so it is not an idempotent operation.
 func Prune(s *EntrySchema, p EntrySchemaPredicate) *EntrySchema {
 	keep := evaluateNodesToKeep(s, p)
-	if !keep[s.TypeID] {
+	if !keep[s.TypeID()] {
 		return nil
 	}
 
 	visited := make(map[string]bool)
 	var prune func(s *EntrySchema)
 	prune = func(s *EntrySchema) {
-		if visited[s.TypeID] {
+		if visited[s.TypeID()] {
 			return
 		}
-		visited[s.TypeID] = true
+		visited[s.TypeID()] = true
 		for _, child := range s.Children {
-			if !keep[child.TypeID] {
-				delete(s.Children, child.TypeID)
+			if !keep[child.TypeID()] {
+				delete(s.Children, child.TypeID())
 			} else {
 				prune(child)
 			}
@@ -126,14 +126,14 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 	// children.
 	var applyPredicate func(s *EntrySchema)
 	applyPredicate = func(s *EntrySchema) {
-		if _, ok := visited[s.TypeID]; ok {
+		if _, ok := visited[s.TypeID()]; ok {
 			return
 		}
-		result[s.TypeID] = p(s)
-		if !result[s.TypeID] && len(s.Children) > 0 {
-			delete(result, s.TypeID)
+		result[s.TypeID()] = p(s)
+		if !result[s.TypeID()] && len(s.Children) > 0 {
+			delete(result, s.TypeID())
 		}
-		visited[s.TypeID] = true
+		visited[s.TypeID()] = true
 		for _, child := range s.Children {
 			applyPredicate(child)
 		}
@@ -143,14 +143,14 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 	// Now we iteratively update "result".
 	var updateResult func(s *EntrySchema)
 	updateResult = func(s *EntrySchema) {
-		if _, ok := visited[s.TypeID]; ok {
+		if _, ok := visited[s.TypeID()]; ok {
 			return
 		}
-		visited[s.TypeID] = true
+		visited[s.TypeID()] = true
 		for _, child := range s.Children {
 			updateResult(child)
-			if result[child.TypeID] {
-				result[s.TypeID] = true
+			if result[child.TypeID()] {
+				result[s.TypeID()] = true
 			}
 		}
 	}
@@ -174,15 +174,15 @@ func (s *EntrySchema) toMap() map[string][]string {
 	mp := make(map[string][]string)
 	var visit func(s *EntrySchema)
 	visit = func(s *EntrySchema) {
-		if _, ok := mp[s.TypeID]; ok {
+		if _, ok := mp[s.TypeID()]; ok {
 			return
 		}
-		mp[s.TypeID] = []string{}
+		mp[s.TypeID()] = []string{}
 		for _, child := range s.Children {
-			mp[s.TypeID] = append(mp[s.TypeID], child.TypeID)
+			mp[s.TypeID()] = append(mp[s.TypeID()], child.TypeID())
 			visit(child)
 		}
-		sort.Strings(mp[s.TypeID])
+		sort.Strings(mp[s.TypeID()])
 	}
 	visit(s)
 	return mp

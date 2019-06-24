@@ -48,8 +48,7 @@ func (r *Root) Init(map[string]interface{}) error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntryBase()
-	r.SetName("kubernetes")
+	r.EntryBase = plugin.NewEntry("kubernetes")
 	r.DisableDefaultCaching()
 
 	contexts := make([]plugin.Entry, 0)
@@ -66,9 +65,16 @@ func (r *Root) Init(map[string]interface{}) error {
 	return nil
 }
 
+// Schema returns the root's schema
+func (r *Root) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(r, "kubernetes").IsSingleton()
+}
+
 // ChildSchemas returns the root's child schemas
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(k8ContextBase())
+	return []*plugin.EntrySchema{
+		(&k8context{}).Schema(),
+	}
 }
 
 // List returns available contexts.

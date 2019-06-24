@@ -62,8 +62,7 @@ func exists(path string) error {
 
 // Init for root
 func (r *Root) Init(cfg map[string]interface{}) error {
-	r.EntryBase = plugin.NewEntryBase()
-	r.SetName("aws")
+	r.EntryBase = plugin.NewEntry("aws")
 	r.SetTTLOf(plugin.ListOp, 1*time.Minute)
 
 	if profsI, ok := cfg["profiles"]; ok {
@@ -88,7 +87,14 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 
 // ChildSchemas returns the root's child schema
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(profileBase())
+	return []*plugin.EntrySchema{
+		(&profile{}).Schema(),
+	}
+}
+
+// Schema returns the root's schema
+func (r *Root) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(r, "aws").IsSingleton()
 }
 
 // List the available AWS profiles

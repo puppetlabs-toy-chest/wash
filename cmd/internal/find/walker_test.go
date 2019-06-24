@@ -71,15 +71,10 @@ func (s *WalkerTestSuite) TestWalk_HappyCase() {
 func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
 	// Set-up the mocks
 	fileSchema := func(typeID string) *apitypes.EntrySchema {
-		return &apitypes.EntrySchema{
-			TypeID: typeID,
-		}
+		return (&apitypes.EntrySchema{}).SetTypeID(typeID)
 	}
 	dirSchema := func(typeID string, children ...*apitypes.EntrySchema) *apitypes.EntrySchema {
-		return &apitypes.EntrySchema{
-			TypeID: typeID,
-			Children: children,
-		}
+		return (&apitypes.EntrySchema{}).SetTypeID(typeID).SetChildren(children)
 	}
 	schema := dirSchema(
 		".",
@@ -108,7 +103,7 @@ func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
 
 	s.walker.p.SchemaP = func(s *types.EntrySchema) bool {
 		// Print only "foo" or "file"s. Ignore everything else.
-		return s.TypeID == "foo" || s.TypeID == "file"
+		return s.TypeID() == "foo" || s.TypeID() == "file"
 	}
 
 	s.True(s.walker.Walk("."))
@@ -326,8 +321,8 @@ func (s *WalkerTestSuite) toAbsPath(path string) string {
 
 func (s *WalkerTestSuite) toEntry(path string, isParent bool, typeID string) apitypes.Entry {
 	e := apitypes.Entry{
-		Path:  s.toAbsPath(path),
-		CName: filepath.Base(path),
+		Path:   s.toAbsPath(path),
+		CName:  filepath.Base(path),
 		TypeID: typeID,
 	}
 	if isParent {

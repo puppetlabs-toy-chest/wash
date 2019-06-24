@@ -30,9 +30,8 @@ func (s ExternalPluginSpec) Load() (Root, error) {
 	}
 
 	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry(s.Name()),
 		script:    externalPluginScriptImpl{path: s.Script},
 	}}
-	root.SetName(s.Name())
 	return root, nil
 }

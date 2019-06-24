@@ -63,8 +63,7 @@ func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
 }
 
 func (suite *fsTestSuite) createExec(fixt string, depth int) *mockExecutor {
-	exec := &mockExecutor{EntryBase: plugin.NewEntryBase()}
-	exec.SetName("instance")
+	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	// Used when recording activity.
 	exec.SetTestID("/instance")
 	cmd := StatCmd("/", depth)
@@ -181,8 +180,7 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 96 1550611510 1550611448 1550611448 41ed /var/log/path
 `
 	depth := 3
-	exec := &mockExecutor{EntryBase: plugin.NewEntryBase()}
-	exec.SetName("instance")
+	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	exec.SetTestID("/instance")
 	cmd := StatCmd("/", depth)
 	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(mockExecCmd{shortFixture}, nil)
@@ -241,6 +239,10 @@ type mockExecutor struct {
 func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
 	return arger.Get(0).(plugin.ExecCommand), arger.Error(1)
+}
+
+func (m *mockExecutor) Schema() *plugin.EntrySchema {
+	return nil
 }
 
 // Mock ExecCommand that can be used repeatedly when mocking a repeated call.

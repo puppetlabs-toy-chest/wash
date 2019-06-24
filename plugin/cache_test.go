@@ -123,9 +123,8 @@ type cacheTestsMockEntry struct {
 
 func newCacheTestsMockEntry(name string) *cacheTestsMockEntry {
 	e := &cacheTestsMockEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry(name),
 	}
-	e.SetName(name)
 	return e
 }
 
@@ -135,6 +134,10 @@ func (e *cacheTestsMockEntry) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (e *cacheTestsMockEntry) ChildSchemas() []*EntrySchema {
+	return nil
+}
+
+func (e *cacheTestsMockEntry) Schema() *EntrySchema {
 	return nil
 }
 
@@ -192,12 +195,12 @@ func (suite *CacheTestSuite) TestCachedOp() {
 
 func (suite *CacheTestSuite) TestDuplicateCNameErr() {
 	err := DuplicateCNameErr{
-		ParentID:                        "/my_plugin/foo",
-		FirstChildName:                  "foo/bar/",
-		FirstChildSlashReplacer:         '#',
-		SecondChildName:                 "foo#bar/",
-		SecondChildSlashReplacer:        '#',
-		CName:                           "foo#bar#",
+		ParentID:                 "/my_plugin/foo",
+		FirstChildName:           "foo/bar/",
+		FirstChildSlashReplacer:  '#',
+		SecondChildName:          "foo#bar/",
+		SecondChildSlashReplacer: '#',
+		CName:                    "foo#bar#",
 	}
 
 	suite.Regexp("listing /my_plugin/foo", err.Error())
@@ -288,12 +291,12 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	_, err := CachedList(ctx, entry)
 	if suite.Error(err) {
 		expectedErr := DuplicateCNameErr{
-			ParentID:                        "/my_plugin/foo",
-			FirstChildName:                  "foo/bar/",
-			FirstChildSlashReplacer:         '#',
-			SecondChildName:                 "foo#bar/",
-			SecondChildSlashReplacer:        '#',
-			CName:                           "foo#bar#",
+			ParentID:                 "/my_plugin/foo",
+			FirstChildName:           "foo/bar/",
+			FirstChildSlashReplacer:  '#',
+			SecondChildName:          "foo#bar/",
+			SecondChildSlashReplacer: '#',
+			CName:                    "foo#bar#",
 		}
 
 		suite.Equal(expectedErr, err)

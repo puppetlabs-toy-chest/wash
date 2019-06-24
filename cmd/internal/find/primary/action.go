@@ -35,7 +35,7 @@ var Action = Parser.add(&Primary{
 			return e.Supports(action)
 		})
 		p.SchemaP = func(s *types.EntrySchema) bool {
-			for _, a := range s.Actions {
+			for _, a := range s.Actions() {
 				if action.Name == a {
 					return true
 				}

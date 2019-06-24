@@ -13,18 +13,10 @@ type file struct {
 	*fsnode
 }
 
-func fileBase() *file {
-	f := &file{
-		fsnode: fsnodeBase(),
-	}
-	f.SetLabel("file")
-	return f
-}
-
 func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
-	f := fileBase()
-	f.build(finfo, path)
-	return f
+	return &file{
+		newFSNode(ctx, finfo, path),
+	}
 }
 
 func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {
@@ -33,4 +25,8 @@ func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {
 		return nil, err
 	}
 	return bytes.NewReader(content), nil
+}
+
+func (f *file) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(f, "file")
 }

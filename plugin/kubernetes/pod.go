@@ -25,16 +25,11 @@ type pod struct {
 	ns     string
 }
 
-func podBase() *pod {
-	pd := &pod{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	pd.SetLabel("pod").DisableDefaultCaching()
-	return pd
-}
-
 func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.Pod) (*pod, error) {
-	pd := podBase()
+	pd := &pod{
+		EntryBase: plugin.NewEntry(p.Name),
+	}
+	pd.DisableDefaultCaching()
 	pd.client = client
 	pd.config = config
 	pd.ns = ns
@@ -46,7 +41,6 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 
 	meta := pdInfo.toMeta()
 	pd.
-		SetName(p.Name).
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
@@ -54,6 +48,10 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 		SetMeta(meta)
 
 	return pd, nil
+}
+
+func (p *pod) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(p, "pod")
 }
 
 type podInfoResult struct {
@@ -165,8 +163,8 @@ func (p *pod) Exec(ctx context.Context, cmd string, args []string, opts plugin.E
 		streamOpts := remotecommand.StreamOptions{
 			Stdout: execCmd.Stdout(),
 			Stderr: execCmd.Stderr(),
-			Stdin: stdin,
-			Tty: opts.Tty,
+			Stdin:  stdin,
+			Tty:    opts.Tty,
 		}
 		err = executor.Stream(streamOpts)
 		activity.Record(ctx, "Exec on %v complete: %v", p.Name(), err)

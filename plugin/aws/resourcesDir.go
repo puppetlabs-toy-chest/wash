@@ -14,19 +14,11 @@ type resourcesDir struct {
 	resources []plugin.Entry
 }
 
-func resourcesDirBase() *resourcesDir {
-	resourcesDir := &resourcesDir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	resourcesDir.
-		SetName("resources").
-		IsSingleton().
-		DisableDefaultCaching()
-	return resourcesDir
-}
-
 func newResourcesDir(session *session.Session) *resourcesDir {
-	resourcesDir := resourcesDirBase()
+	resourcesDir := &resourcesDir{
+		EntryBase: plugin.NewEntry("resources"),
+	}
+	resourcesDir.DisableDefaultCaching()
 	resourcesDir.session = session
 
 	resourcesDir.resources = []plugin.Entry{
@@ -37,8 +29,15 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 	return resourcesDir
 }
 
+func (r *resourcesDir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(r, "resources").IsSingleton()
+}
+
 func (r *resourcesDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(s3DirBase(), ec2DirBase())
+	return []*plugin.EntrySchema{
+		(&s3Dir{}).Schema(),
+		(&ec2Dir{}).Schema(),
+	}
 }
 
 // List lists the available AWS resources

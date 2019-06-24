@@ -22,30 +22,29 @@ func (suite *HelpersTestSuite) TearDownSuite() {
 }
 
 func (suite *HelpersTestSuite) TestName() {
-	e := NewEntryBase()
-	e.SetName("foo")
-	suite.Equal(Name(&e), "foo")
+	e := newHelpersTestsMockEntry("foo")
+	suite.Equal(Name(e), "foo")
 }
 
 func (suite *HelpersTestSuite) TestCName() {
-	e := NewEntryBase()
-	e.SetName("foo/bar/baz")
-	suite.Equal("foo#bar#baz", CName(&e))
+	e := newHelpersTestsMockEntry("foo/bar/baz")
+	suite.Equal("foo#bar#baz", CName(e))
 
 	e.SetSlashReplacer(':')
-	suite.Equal("foo:bar:baz", CName(&e))
+	suite.Equal("foo:bar:baz", CName(e))
 }
 
 func (suite *HelpersTestSuite) TestID() {
-	e := NewEntryBase()
-	e.SetName("foo/bar")
+	e := newHelpersTestsMockEntry("foo/bar")
 
+	e.SetTestID("")
 	suite.Panics(
-		func() { ID(&e) },
+		func() { ID(e) },
 		"plugin.ID: entry foo (cname foo#bar) has no ID",
 	)
-	e.setID("/foo/bar")
-	suite.Equal(ID(&e), "/foo/bar")
+
+	e.SetTestID("/foo/bar")
+	suite.Equal(ID(e), "/foo/bar")
 }
 
 type helpersTestsMockEntry struct {
@@ -53,11 +52,14 @@ type helpersTestsMockEntry struct {
 	mock.Mock
 }
 
-func newHelpersTestsMockEntry() *helpersTestsMockEntry {
+func (e *helpersTestsMockEntry) Schema() *EntrySchema {
+	return nil
+}
+
+func newHelpersTestsMockEntry(name string) *helpersTestsMockEntry {
 	e := &helpersTestsMockEntry{
-		EntryBase: NewEntryBase(),
+		EntryBase: NewEntry(name),
 	}
-	e.SetName("mockEntry")
 	e.SetTestID("id")
 	e.DisableDefaultCaching()
 
@@ -65,7 +67,7 @@ func newHelpersTestsMockEntry() *helpersTestsMockEntry {
 }
 
 func (suite *HelpersTestSuite) TestAttributes() {
-	e := newHelpersTestsMockEntry()
+	e := newHelpersTestsMockEntry("mockEntry")
 	e.attr = EntryAttributes{}
 	e.attr.SetCtime(time.Now())
 	suite.Equal(e.attr, Attributes(e))

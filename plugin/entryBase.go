@@ -21,12 +21,12 @@ var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
 
 /*
 EntryBase implements Entry, making it easy to create new entries.
-You should use plugin.NewEntryBaseBase to create new EntryBase objects.
+You should use plugin.NewEntry to create new EntryBase objects.
 
 Each of the setters supports the builder pattern, which enables you
 to do something like
 
-	e := plugin.NewEntryBaseBase()
+	e := plugin.NewEntry("foo")
 	e.
 		DisableCachingFor(plugin.ListOp).
 		Attributes().
@@ -39,15 +39,18 @@ type EntryBase struct {
 	attr               EntryAttributes
 	slashReplacerCh    rune
 	// washID represents the entry's wash ID. It is set in CachedList.
-	washID             string
-	ttl                [3]time.Duration
-	label              string
-	isSingleton        bool
+	washID string
+	ttl    [3]time.Duration
 }
 
-// NewEntryBase creates a new EntryBase object
-func NewEntryBase() EntryBase {
+// NewEntry creates a new entry
+func NewEntry(name string) EntryBase {
+	if name == "" {
+		panic("plugin.NewEntry: received an empty name")
+	}
+
 	e := EntryBase{
+		entryName:          name,
 		slashReplacerCh: '#',
 	}
 	for op := range e.ttl {
@@ -92,27 +95,14 @@ func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
 	return e.ttl[op]
 }
 
-func (e *EntryBase) entryBase() *EntryBase {
-	return e
-}
-
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
 // AND TESTING
 
 // Name returns the entry's name as it was passed into
-// e.SetName. You should use e.Name() when making the
-// appropriate API calls within your plugin.
+// plugin.NewEntry. You should use e.Name() when making
+// the appropriate API calls within your plugin.
 func (e *EntryBase) Name() string {
 	return e.name()
-}
-
-// SetName sets the entry's name.
-func (e *EntryBase) SetName(name string) *EntryBase {
-	if name == "" {
-		panic("e.SetName: received an empty name")
-	}
-	e.entryName = name
-	return e
 }
 
 // Attributes returns a pointer to the entry's attributes. Use it
@@ -140,44 +130,6 @@ func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 	}
 
 	e.slashReplacerCh = char
-	return e
-}
-
-/*
-SetLabel sets the entry's label, which is a shortened version
-of the class/struct name. It is useful when documenting your
-plugin's hierarchy.
-
-NOTE: If your entry's a singleton, then Wash will default to using the
-entry's cname as its label.
-
-TODO: Give an example of why this is important once the stree command's
-implemented.
-*/
-func (e *EntryBase) SetLabel(label string) *EntryBase {
-	if len(label) == 0 {
-		panic("e.SetLabel called with an empty label")
-	}
-	e.label = label
-	return e
-}
-
-/*
-IsSingleton indicates that the given entry's a singleton, meaning there
-will only ever be one instance of the entry. It is useful when documenting
-your plugin's hierarchy.
-
-NOTE: If the entry's short type was not set, then IsSingleton sets it to
-the entry's cname.
-
-TODO: Give an example of why this is important once the stree command's
-implemented.
-*/
-func (e *EntryBase) IsSingleton() *EntryBase {
-	e.isSingleton = true
-	if len(e.label) == 0 {
-		e.SetLabel(CName(e))
-	}
 	return e
 }
 

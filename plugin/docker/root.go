@@ -26,8 +26,7 @@ func (r *Root) Init(map[string]interface{}) error {
 		return err
 	}
 
-	r.EntryBase = plugin.NewEntryBase()
-	r.SetName("docker")
+	r.EntryBase = plugin.NewEntry("docker")
 	r.DisableDefaultCaching()
 	r.resources = []plugin.Entry{
 		newContainersDir(dockerCli),
@@ -37,9 +36,17 @@ func (r *Root) Init(map[string]interface{}) error {
 	return nil
 }
 
+// Schema returns the root's schema
+func (r *Root) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(r, "docker").IsSingleton()
+}
+
 // ChildSchemas returns the root's child schema
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(containersDirBase(), volumesDirBase())
+	return []*plugin.EntrySchema{
+		(&containersDir{}).Schema(),
+		(&volumesDir{}).Schema(),
+	}
 }
 
 // List lists the types of resources the Docker plugin exposes.

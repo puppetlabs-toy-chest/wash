@@ -17,23 +17,13 @@ type FS struct {
 	maxdepth int
 }
 
-// FSBase returns a base FS entry
-func FSBase(name string) *FS {
-	fs := &FS{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	fs.
-		SetName(name).
-		IsSingleton().
-		// Caching handled in List.
-		DisableCachingFor(plugin.ListOp)
-	return fs
-}
-
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
 func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
-	fs := FSBase(name)
+	fs := &FS{
+		EntryBase: plugin.NewEntry(name),
+	}
+	fs.DisableCachingFor(plugin.ListOp)
 	fs.executor = executor
 	fs.maxdepth = maxdepth
 	return fs
@@ -42,6 +32,12 @@ func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
 // ChildSchemas returns the FS entry's child schema
 func (d *FS) ChildSchemas() []*plugin.EntrySchema {
 	return ChildSchemas()
+}
+
+// Schema returns the FS entry's schema. You can override its label with
+// EntrySchema#SetLabel
+func (d *FS) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(d, "fs")
 }
 
 // List creates a hierarchy of the filesystem of an Execable resource (the executor).

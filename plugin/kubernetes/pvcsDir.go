@@ -14,23 +14,23 @@ type pvcsDir struct {
 	ns     string
 }
 
-func pvcsDirBase() *pvcsDir {
-	pv := &pvcsDir{
-		EntryBase: plugin.NewEntryBase(),
-	}
-	pv.SetName("persistentvolumeclaims").IsSingleton()
-	return pv
-}
-
 func newPVCSDir(ns *namespace) *pvcsDir {
-	pv := pvcsDirBase()
+	pv := &pvcsDir{
+		EntryBase: plugin.NewEntry("persistentvolumeclaims"),
+	}
 	pv.client = ns.client
 	pv.ns = ns.Name()
 	return pv
 }
 
+func (pv *pvcsDir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(pv, "persistentvolumeclaims").IsSingleton()
+}
+
 func (pv *pvcsDir) ChildSchemas() []*plugin.EntrySchema {
-	return plugin.ChildSchemas(pvcBase())
+	return []*plugin.EntrySchema{
+		(&pvc{}).Schema(),
+	}
 }
 
 func (pv *pvcsDir) List(ctx context.Context) ([]plugin.Entry, error) {

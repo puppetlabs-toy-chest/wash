@@ -16,13 +16,16 @@ import (
 )
 
 func toAPIEntry(e plugin.Entry) apitypes.Entry {
-	return apitypes.Entry{
-		TypeID:     plugin.TypeID(e),
+	apiEntry := apitypes.Entry{
 		Name:       plugin.Name(e),
 		CName:      plugin.CName(e),
 		Actions:    plugin.SupportedActionsOf(e),
 		Attributes: plugin.Attributes(e),
 	}
+	if s := e.Schema(); s != nil {
+		apiEntry.TypeID = s.TypeID()
+	}
+	return apiEntry
 }
 
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
