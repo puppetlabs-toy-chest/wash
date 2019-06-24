@@ -2,6 +2,17 @@
 title= "External Plugins"
 +++
 
+- [Plugin Script](#Plugin-Script)
+- [init](#init)
+- [list](#list)
+- [read](#read)
+- [metadata](#metadata)
+- [stream](#stream)
+- [exec](#exec)
+- [Errors](#Errors)
+- [Aside (optional)](#Aside-optional)
+- [Bash Example](#Bash-Example)
+
 External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:
 
 1. Write the [plugin script](#plugin-script). This is the script that Wash will shell out to whenever it needs to invoke a method on a specific entry within your plugin.
@@ -176,13 +187,13 @@ When `exec` is invoked, the plugin script's stdout and stderr must be connected 
 
 Because `exec` effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
-## Errors <a name="errors"></a>
+## Errors
 All errors are printed to `stderr`. A method invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of `stderr` into an error object, then documents that error in the process' activity and the server logs.
 
 **NOTE:** Not all method invocations adopt this error handling convention (e.g. `exec`). The error handling for these "snowflake" methods is described in their respective sections.
 
 
-## Aside (optional)<a name="aside"></a>
+## Aside (optional)
 This section talks about the reasoning behind the plugin script's usage, shown below for convenience:
 
 ```s
