@@ -49,8 +49,26 @@ type Entry interface {
 	getTTLOf(op defaultOpCode) time.Duration
 }
 
-// Parent is an entry with children. It will be represented as a directory in the Wash
-// filesystem.
+/*
+Parent is an entry with children. It will be represented as a directory in the Wash filesystem.
+All parents must implement ChildSchemas, which is useful for documenting your plugin's hierarchy
+via the stree command, and for optimizing `wash find`'s traversal by eliminating non-satisfying
+paths. Your implementation of ChildSchemas should be something like
+	return []*plugin.EntrySchema{
+		(&childObj1{}).Schema(),
+		(&childObj2{}).Schema(),
+		...
+		(&childObjN{}).Schema(),
+	}
+
+For example,
+	return []*plugin.EntrySchema{
+		(&containerLogFile{}).Schema(),
+		(&containerMetadata{}).Schema(),
+		(&vol.FS{}).Schema().SetLabel("fs"),
+	}
+is the implementation of ChildSchemas for a Docker container.
+*/
 type Parent interface {
 	Entry
 	// TODO: "nil" schemas mean that the schema's unknown. This condition's necessary for
