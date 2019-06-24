@@ -45,19 +45,15 @@
 
 <ul>
 <li><a href="#Plugin-Script">Plugin Script</a></li>
-<li><a href="#init">init</a>
-
-<ul>
-<li><a href="#static-methods">static methods</a></li>
-</ul></li>
+<li><a href="#init">init</a></li>
 <li><a href="#list">list</a></li>
 <li><a href="#read">read</a></li>
 <li><a href="#metadata">metadata</a></li>
 <li><a href="#stream">stream</a></li>
 <li><a href="#exec">exec</a></li>
-<li><a href="#errors">Errors</a></li>
-<li><a href="#aside-optional">Aside (optional)</a></li>
-<li><a href="#bash-example">Bash Example</a></li>
+<li><a href="#Errors">Errors</a></li>
+<li><a href="#Aside-optional">Aside (optional)</a></li>
+<li><a href="#Bash-Example">Bash Example</a></li>
 </ul>
 
 <p>External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:</p>
@@ -68,16 +64,16 @@
 <li><p>Add the plugin to your <code>wash.yaml</code> file under the <code>external-plugins</code> key, and specify the path to the plugin script. <em>The plugin&rsquo;s name is the basename of the script without the extension.</em> An example <code>wash.yaml</code> config adding the <code>sshfs</code> plugin is shown below:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">external-plugins:
-    - script: &#39;/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh&#39;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">external-plugins:
+    - script: <span style="color:#a31515">&#39;/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh&#39;</span></code></pre></td></tr></table>
 </div>
-</div></li>
-
-<li><p>Start the Wash shell to see your plugin in action.</p></li>
+</div>
+<ol>
+<li>Start the Wash shell to see your plugin in action.</li>
 </ol>
 
 <h2 id="plugin-script">Plugin Script</h2>
@@ -85,12 +81,14 @@
 <p>Wash shells out to the external plugin&rsquo;s script whenever it needs to invoke a method on one of its entries. The script must have the following usage:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</code></pre></td></tr></table>
 </div>
-</div>
+</div></li>
+</ol>
+
 <p>where</p>
 
 <ul>
@@ -111,29 +109,29 @@
 <p>The <code>init</code> method is special. It is invoked as <code>&lt;plugin_script&gt; init &lt;config&gt;</code>, and it is invoked only once, when the external plugin is loaded. <code>&lt;config&gt;</code> is JSON containing any config supplied to Wash under the plugin&rsquo;s key. Given a Wash config file (<code>wash.yaml</code>)</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">external-plugins:
-  - script: &#39;/path/to/myplugin.rb&#39;
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-yaml" data-lang="yaml">external-plugins:
+  - script: <span style="color:#a31515">&#39;/path/to/myplugin.rb&#39;</span>
 myplugin:
   profiles:
     - profile_a
-    - profile_b</pre></td></tr></table>
+    - profile_b</code></pre></td></tr></table>
 </div>
 </div>
 <p>the <code>init</code> method for a plugin named <code>myplugin</code> will be invoked with</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; init &#39;{&#34;profiles&#34;:[&#34;profile_a&#34;,&#34;profile_b&#34;]}&#39;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">&lt;plugin_script&gt; init <span style="color:#a31515">&#39;{&#34;profiles&#34;:[&#34;profile_a&#34;,&#34;profile_b&#34;]}&#39;</span></code></pre></td></tr></table>
 </div>
 </div>
 <p>When <code>init</code> is invoked, the script must output a JSON object representing the plugin root. The <em>minimum</em> amount of information required for Wash to construct the plugin root is an empty object, <code>{}</code>.</p>
@@ -151,7 +149,7 @@ myplugin:
 <p>Below is an example JSON object showcasing all possible keys at once.</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
@@ -166,10 +164,10 @@ myplugin:
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
-  &#34;methods&#34;: [&#34;list&#34;]
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  &#34;methods&#34;: [<span style="color:#a31515">&#34;list&#34;</span>],
   &#34;cache_ttls&#34;: {
     &#34;list&#34;: 30
   },
@@ -177,12 +175,12 @@ myplugin:
     &#34;mtime&#34;: 1551942012,
     &#34;meta&#34;: {
       &#34;LastModifiedTime&#34;: 1551942012,
-      &#34;Owner&#34;: &#34;Wash&#34;,
+      &#34;Owner&#34;: <span style="color:#a31515">&#34;Wash&#34;</span>,
     }
   },
-  &#34;slash_replacer&#34;: &#34;:&#34;,
-  &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::Directory\&#34;}&#34;
-}</pre></td></tr></table>
+  &#34;slash_replacer&#34;: <span style="color:#a31515">&#34;:&#34;</span>,
+  &#34;state&#34;: <span style="color:#a31515">&#34;{\&#34;klass\&#34;:\&#34;SSHFS::Directory\&#34;}&#34;</span>
+}</code></pre></td></tr></table>
 </div>
 </div>
 <p>We see from <code>cache_ttls</code> that the result of <code>some_entry</code>&rsquo;s <code>list</code> method will be cached for 30 seconds. We see from <code>attributes</code> that <code>some_entry</code> has an <code>mtime</code> attribute, and that it also includes the <code>meta</code> attribute. We see from <code>slash_replacer</code> that any <code>/</code>&lsquo;es in the entry&rsquo;s returned name will be replaced by a <code>:</code> instead of a <code>#</code>. Finally, we see from <code>state</code> that <code>some_entry</code> has some state that Wash will pass-back in via the <code>&lt;state&gt;</code> parameter whenever it invokes one of its methods. In this case, <code>&lt;state&gt;</code> is a stringified JSON object containing the entry&rsquo;s class (<code>SSHFS::Directory</code>) in whatever language the plugin script was written in.</p>
@@ -194,28 +192,30 @@ myplugin:
 <p><code>list</code> is invoked as <code>&lt;plugin_script&gt; list &lt;path&gt; &lt;state&gt;</code>. When <code>list</code> is invoked, the script must output an array of JSON objects. The <em>minimum</em> information required is each entry&rsquo;s name and its implemented methods</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
-  &#34;name&#34;: &#34;mydirectory&#34;,
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  &#34;name&#34;: <span style="color:#a31515">&#34;mydirectory&#34;</span>,
   &#34;methods&#34;: [
-    &#34;list&#34;
+    <span style="color:#a31515">&#34;list&#34;</span>
   ]
-}</pre></td></tr></table>
+}</code></pre></td></tr></table>
 </div>
 </div>
+<p>The <code>&lt;path&gt;</code> takes the form of a UNIX-style path rooted at Wash&rsquo;s root directory. So the first call will be <code>&lt;plugin_script&gt; list /&lt;plugin_name&gt;</code>, followed by <code>&lt;plugin_script&gt; list /&lt;plugin_name&gt;/&lt;directory_name&gt;</code>, etc.</p>
+
 <p>Each entry may additionally return any keys described in <a href="#init">init</a>.</p>
 
 <p>Below is an example of valid <code>list</code> output:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
@@ -249,42 +249,97 @@ myplugin:
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">[
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">[
   {
-    &#34;name&#34;: &#34;fooVM&#34;,
+    &#34;name&#34;: <span style="color:#a31515">&#34;fooVM&#34;</span>,
     &#34;methods&#34;: [
-      &#34;list&#34;,
-      &#34;exec&#34;,
-      &#34;metadata&#34;
+      <span style="color:#a31515">&#34;list&#34;</span>,
+      <span style="color:#a31515">&#34;exec&#34;</span>,
+      <span style="color:#a31515">&#34;metadata&#34;</span>
     ],
     &#34;attributes&#34;: {
       &#34;mtime&#34;: 1558062927,
       &#34;meta&#34;: {
         &#34;LastModifiedTime&#34;: 1558062927,
-        &#34;Owner&#34;: &#34;Alice&#34;
+        &#34;Owner&#34;: <span style="color:#a31515">&#34;Alice&#34;</span>
       }
     },
-    &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;
+    &#34;state&#34;: <span style="color:#a31515">&#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;</span>
   },
   {
-    &#34;name&#34;: &#34;barVM&#34;,
+    &#34;name&#34;: <span style="color:#a31515">&#34;barVM&#34;</span>,
     &#34;methods&#34;: [
-      &#34;list&#34;,
-      &#34;exec&#34;,
-      &#34;metadata&#34;
+      <span style="color:#a31515">&#34;list&#34;</span>,
+      <span style="color:#a31515">&#34;exec&#34;</span>,
+      <span style="color:#a31515">&#34;metadata&#34;</span>
     ],
     &#34;attributes&#34;: {
       &#34;mtime&#34;: 1558062927,
       &#34;meta&#34;: {
         &#34;LastModifiedTime&#34;: 1558062927,
-        &#34;Owner&#34;: &#34;Alice&#34;
+        &#34;Owner&#34;: <span style="color:#a31515">&#34;Alice&#34;</span>
       }
     },
-    &#34;state&#34;: &#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;
+    &#34;state&#34;: <span style="color:#a31515">&#34;{\&#34;klass\&#34;:\&#34;SSHFS::VM\&#34;}&#34;</span>
   }
-]</pre></td></tr></table>
+]</code></pre></td></tr></table>
+</div>
+</div>
+<p>If you&rsquo;re able to pre-fetch a method&rsquo;s result as part of the <code>list</code> method, then you can include the result as a tuple of <code>[&lt;method&gt;, &lt;result&gt;]</code> in the <code>methods</code> array. Pre-fetching is a useful way to avoid unnecessary plugin script invocations.</p>
+
+<p>Below is an example that includes pre-fetched method results for a static directory that contains known files and content, but may also support streaming new updates dynamically (by invoking the <code>stream</code> method on the script). Notice how <code>list</code>&rsquo;s result matches what would have been returned by <code>&lt;plugin_script&gt; list /&lt;plugin_name&gt;/mydir</code>. Note that when <code>read</code> content is provided in this manner, the size of that content will be automatically populated in <code>attributes</code>.</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">[
+  {
+    &#34;name&#34;: <span style="color:#a31515">&#34;mydir&#34;</span>,
+    &#34;methods&#34;: [
+      [<span style="color:#a31515">&#34;list&#34;</span>, [
+        {
+          &#34;name&#34;: <span style="color:#a31515">&#34;myfile 1&#34;</span>,
+          &#34;methods&#34;: [
+            [<span style="color:#a31515">&#34;read&#34;</span>, <span style="color:#a31515">&#34;some content&#34;</span>],
+            <span style="color:#a31515">&#34;stream&#34;</span>
+          ]
+        },
+        {
+          &#34;name&#34;: <span style="color:#a31515">&#34;myfile 2&#34;</span>,
+          &#34;methods&#34;: [
+            [<span style="color:#a31515">&#34;read&#34;</span>, <span style="color:#a31515">&#34;more content&#34;</span>],
+            <span style="color:#a31515">&#34;stream&#34;</span>
+          ]
+        }
+      ]]
+    ]
+  }
+]</code></pre></td></tr></table>
 </div>
 </div>
 <p><strong>NOTE:</strong> Remember that the state displayed here is the same <code>&lt;state&gt;</code> parameter that will be passed in to other methods invoked on that entry. For example, if <code>read</code> is invoked on <code>fooVM</code> via <code>&lt;plugin_script&gt; read &lt;parent_path&gt;/fooVM &lt;state&gt;</code>, then the value of <code>fooVM</code>&rsquo;s <code>state</code> key will be passed-in for <code>&lt;state&gt;</code>.</p>
@@ -302,16 +357,16 @@ myplugin:
 <p><code>metadata</code> is invoked as <code>&lt;plugin_script&gt; metadata &lt;path&gt; &lt;state&gt;</code>. When <code>metadata</code> is invoked, the script must output a JSON object representing the entry&rsquo;s metadata. Below is an example of acceptable <code>metadata</code> output:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
-</span></pre></td>
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
-  &#34;key1&#34;: &#34;value1&#34;,
-  &#34;key2&#34;: &#34;value2&#34;
-}</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  &#34;key1&#34;: <span style="color:#a31515">&#34;value1&#34;</span>,
+  &#34;key2&#34;: <span style="color:#a31515">&#34;value2&#34;</span>
+}</code></pre></td></tr></table>
 </div>
 </div>
 <p><code>metadata</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
@@ -343,28 +398,28 @@ myplugin:
 <p>This section talks about the reasoning behind the plugin script&rsquo;s usage, shown below for convenience:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">&lt;plugin_script&gt; &lt;method&gt; &lt;path&gt; &lt;state&gt; &lt;args...&gt;</code></pre></td></tr></table>
 </div>
 </div>
 <p>If we let <code>&lt;entry&gt; = &lt;path&gt; &lt;state&gt;</code>, then our usage becomes:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;plugin_script&gt; &lt;method&gt; &lt;entry&gt; &lt;args...&gt;</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">&lt;plugin_script&gt; &lt;method&gt; &lt;entry&gt; &lt;args...&gt;</code></pre></td></tr></table>
 </div>
 </div>
 <p>If we ignore <code>&lt;plugin_script&gt;</code> then the above turns into <code>&lt;method&gt; &lt;entry&gt; &lt;args...&gt;</code>. When read out loud, this looks like the function call <code>&lt;method&gt;(&lt;entry&gt;, &lt;args...&gt;)</code>. If we imagine <code>&lt;entry&gt;</code> as an object in an OOP language, this is semantically equivalent to:</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">&lt;entry&gt;.&lt;method&gt;(&lt;args...&gt;)</pre></td></tr></table>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">&lt;entry&gt;.&lt;method&gt;(&lt;args...&gt;)</code></pre></td></tr></table>
 </div>
 </div>
 <p>For example, if <code>&lt;entry&gt; = myS3Bucket</code>, <code>&lt;method&gt; = list</code>, and <code>&lt;args...&gt;</code> is empty, then we can read the above as <code>myS3Bucket.list()</code>. Thus, the plugin script&rsquo;s usage can be thought of as invoking a method (<code>&lt;method&gt;</code>) on the specified entry (<code>&lt;path&gt; &lt;state&gt;</code>) with the given arguments (<code>&lt;args...&gt;</code>).</p>
@@ -378,10 +433,10 @@ myplugin:
 <p><a href="./examples/sshfs.sh">Download</a></p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
-</span></pre></td>
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></code></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">#!/usr/bin/env bash
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-s" data-lang="s">#!/usr/bin/env bash
 
 # This examples implements an SSH filesystem in Bash.
 # The filesystem is laid out as:
@@ -727,7 +782,7 @@ case &#34;${method}&#34; in
   exit 1
 ;;
 esac
-</pre></td></tr></table>
+</code></pre></td></tr></table>
 </div>
 </div>
 </article>

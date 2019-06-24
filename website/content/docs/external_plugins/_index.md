@@ -111,6 +111,8 @@ We see from `cache_ttls` that the result of `some_entry`'s `list` method will be
 }
 ```
 
+The `<path>` takes the form of a UNIX-style path rooted at Wash's root directory. So the first call will be `<plugin_script> list /<plugin_name>`, followed by `<plugin_script> list /<plugin_name>/<directory_name>`, etc.
+
 Each entry may additionally return any keys described in [init](#init).
 
 Below is an example of valid `list` output:
@@ -148,6 +150,36 @@ Below is an example of valid `list` output:
       }
     },
     "state": "{\"klass\":\"SSHFS::VM\"}"
+  }
+]
+```
+
+If you're able to pre-fetch a method's result as part of the `list` method, then you can include the result as a tuple of `[<method>, <result>]` in the `methods` array. Pre-fetching is a useful way to avoid unnecessary plugin script invocations.
+
+Below is an example that includes pre-fetched method results for a static directory that contains known files and content, but may also support streaming new updates dynamically (by invoking the `stream` method on the script). Notice how `list`'s result matches what would have been returned by `<plugin_script> list /<plugin_name>/mydir`. Note that when `read` content is provided in this manner, the size of that content will be automatically populated in `attributes`.
+
+```json
+[
+  {
+    "name": "mydir",
+    "methods": [
+      ["list", [
+        {
+          "name": "myfile 1",
+          "methods": [
+            ["read", "some content"],
+            "stream"
+          ]
+        },
+        {
+          "name": "myfile 2",
+          "methods": [
+            ["read", "more content"],
+            "stream"
+          ]
+        }
+      ]]
+    ]
   }
 ]
 ```
