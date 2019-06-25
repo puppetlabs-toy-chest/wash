@@ -137,6 +137,10 @@ func (m *mockRoot) ChildSchemas() []*plugin.EntrySchema {
 	return nil
 }
 
+func (m *mockRoot) WrappedTypes() plugin.SchemaMap {
+	return nil
+}
+
 func getRequest(ctx context.Context, path string) *http.Request {
 	return (&http.Request{URL: &url.URL{RawQuery: url.Values{"path": []string{path}}.Encode()}}).WithContext(ctx)
 }

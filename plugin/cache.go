@@ -117,12 +117,12 @@ func CachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 // DuplicateCNameErr represents a duplicate cname error, which
 // occurs when at least two children have the same cname.
 type DuplicateCNameErr struct {
-	ParentID                        string
-	FirstChildName                  string
-	FirstChildSlashReplacer         rune
-	SecondChildName                 string
-	SecondChildSlashReplacer        rune
-	CName                           string
+	ParentID                 string
+	FirstChildName           string
+	FirstChildSlashReplacer  rune
+	SecondChildName          string
+	SecondChildSlashReplacer rune
+	CName                    string
 }
 
 func (c DuplicateCNameErr) Error() string {
@@ -163,12 +163,12 @@ func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 
 			if duplicateEntry, ok := searchedEntries[cname]; ok {
 				return nil, DuplicateCNameErr{
-					ParentID:                        p.id(),
-					FirstChildName:                  duplicateEntry.name(),
-					FirstChildSlashReplacer:         duplicateEntry.slashReplacer(),
-					SecondChildName:                 entry.name(),
-					SecondChildSlashReplacer:        entry.slashReplacer(),
-					CName:                           cname,
+					ParentID:                 p.id(),
+					FirstChildName:           duplicateEntry.name(),
+					FirstChildSlashReplacer:  duplicateEntry.slashReplacer(),
+					SecondChildName:          entry.name(),
+					SecondChildSlashReplacer: entry.slashReplacer(),
+					CName:                    cname,
 				}
 			}
 			searchedEntries[cname] = entry
@@ -177,6 +177,8 @@ func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 			// where the context doesn't include the parent's ID.
 			id := strings.TrimRight(p.id(), "/") + "/" + cname
 			entry.setID(id)
+
+			passAlongWrappedTypes(p, entry)
 		}
 
 		return searchedEntries, nil

@@ -8,6 +8,8 @@ import (
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -74,6 +76,14 @@ func (r *Root) Schema() *plugin.EntrySchema {
 func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&k8context{}).Schema(),
+	}
+}
+
+// WrappedTypes implements plugin.Root#WrappedTypes
+func (r *Root) WrappedTypes() plugin.SchemaMap {
+	return map[interface{}]*plugin.JSONSchema{
+		v1.Time{}:           plugin.TimeSchema(),
+		resource.Quantity{}: plugin.StringSchema(),
 	}
 }
 

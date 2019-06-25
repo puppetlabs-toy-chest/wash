@@ -35,34 +35,31 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	pd.ns = ns
 
 	pdInfo := podInfoResult{
-		pd:         p,
+		Pod:        p,
 		logContent: pd.fetchLogContent(ctx),
 	}
+	pdInfo.LogSize = uint64(len(pdInfo.logContent))
 
-	meta := pdInfo.toMeta()
 	pd.
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
-		SetSize(uint64(meta["LogSize"].(int))).
-		SetMeta(meta)
+		SetSize(pdInfo.LogSize).
+		SetMeta(plugin.ToJSONObject(pdInfo))
 
 	return pd, nil
 }
 
 func (p *pod) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(p, "pod")
+	return plugin.
+		NewEntrySchema(p, "pod").
+		SetMetaAttributeSchema(podInfoResult{})
 }
 
 type podInfoResult struct {
-	pd         *corev1.Pod
+	*corev1.Pod
+	LogSize    uint64 `json:"LogSize"`
 	logContent []byte
-}
-
-func (pdInfo podInfoResult) toMeta() plugin.JSONObject {
-	meta := plugin.ToJSONObject(pdInfo.pd)
-	meta["LogSize"] = len(pdInfo.logContent)
-	return meta
 }
 
 func (p *pod) fetchLogContent(ctx context.Context) []byte {
@@ -87,8 +84,9 @@ func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
 		if err != nil {
 			return result, err
 		}
-		result.pd = pd
+		result.Pod = pd
 		result.logContent = p.fetchLogContent(ctx)
+		result.LogSize = uint64(len(result.logContent))
 		return result, nil
 	})
 	if err != nil {

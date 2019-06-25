@@ -65,3 +65,9 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	r.externalPluginEntry.script = script
 	return nil
 }
+
+func (r *externalPluginRoot) WrappedTypes() SchemaMap {
+	// This only makes sense for core plugins because it is a Go-specific
+	// limitation.
+	return nil
+}
