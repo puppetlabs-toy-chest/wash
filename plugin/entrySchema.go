@@ -264,11 +264,8 @@ func (s *EntrySchema) fill(visited map[string]bool) {
 // determine their metadata schemas. This is done in s.fill().
 func passAlongWrappedTypes(p Parent, child Entry) {
 	var wrappedTypes SchemaMap
-	// This check is equivalent to "_, ok := child.(Root); ok".
-	// However the latter's more expensive due to the extra
-	// type assertion, which can slow down CachedList.
-	if p.isRegistry() {
-		wrappedTypes = child.(Root).WrappedTypes()
+	if root, ok := child.(HasWrappedTypes); ok {
+		wrappedTypes = root.WrappedTypes()
 	} else {
 		wrappedTypes = p.wrappedTypes()
 	}

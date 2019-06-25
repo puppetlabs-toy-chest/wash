@@ -49,7 +49,6 @@ type Entry interface {
 	getTTLOf(op defaultOpCode) time.Duration
 	wrappedTypes() map[interface{}]*JSONSchema
 	setWrappedTypes(map[interface{}]*JSONSchema)
-	isRegistry() bool
 }
 
 /*
@@ -87,11 +86,16 @@ type Parent interface {
 type SchemaMap = map[interface{}]*JSONSchema
 
 // Root represents the plugin root. The Init function is passed a config map representing
-// plugin-specific configuration. WrappedTypes returns a map of <type> => <JSONSchema>.
-// It is used by the EntrySchema#SetMeta*Schema methods to return the right metadata schema
-// for wrapped types. You should only implement WrappedTypes if your plugin's API wraps primitive
-// types like date, integer, number, string, boolean, etc. Otherwise, WrappedTypes should return
-// nil. See kubernetes/root.go for an example of when WrappedTypes should not return nil.
+// plugin-specific configuration.
+type Root interface {
+	Parent
+	Init(map[string]interface{}) error
+}
+
+// HasWrappedTypes is an interface that's used by the EntrySchema#SetMeta*Schema methods to return
+// the right metadata schema for wrapped types. Plugin roots should implement this interface if the
+// plugin's SDK wraps primitive types like date, integer, number, string, boolean, etc. See
+// kubernetes/root.go for an example of when WrappedTypes is used.
 //
 // NOTE: Type aliases like "type Time = time.Time" do NOT count as wrapped types. Pointers
 // also don't count. Only promoted types ("type Time time.Time") and wrapper structs
@@ -100,9 +104,8 @@ type SchemaMap = map[interface{}]*JSONSchema
 // NOTE: Without WrappedTypes, the underlying JSON schema library will treat promoted types and
 // wrapper structs as JSON objects, which would be incorrect. This, unfortunately, is a
 // limitation of Go's reflect package.
-type Root interface {
-	Parent
-	Init(map[string]interface{}) error
+type HasWrappedTypes interface {
+	Root
 	WrappedTypes() SchemaMap
 }
 

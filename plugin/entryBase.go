@@ -39,10 +39,9 @@ type EntryBase struct {
 	attr            EntryAttributes
 	slashReplacerCh rune
 	// washID represents the entry's wash ID. It is set in CachedList.
-	washID           string
-	ttl              [3]time.Duration
-	wrappedTypesMap  SchemaMap
-	isPluginRegistry bool
+	washID          string
+	ttl             [3]time.Duration
+	wrappedTypesMap SchemaMap
 }
 
 // NewEntry creates a new entry
@@ -103,10 +102,6 @@ func (e *EntryBase) wrappedTypes() SchemaMap {
 
 func (e *EntryBase) setWrappedTypes(wrappedTypes SchemaMap) {
 	e.wrappedTypesMap = wrappedTypes
-}
-
-func (e *EntryBase) isRegistry() bool {
-	return e.isPluginRegistry
 }
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT

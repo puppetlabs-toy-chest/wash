@@ -97,11 +97,6 @@ func (r *Root) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(r, "aws").IsSingleton()
 }
 
-// WrappedTypes implements plugin.Root#WrappedTypes
-func (r *Root) WrappedTypes() plugin.SchemaMap {
-	return nil
-}
-
 // List the available AWS profiles
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	awsCredentials, err := awsCredentialsFile()
