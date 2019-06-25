@@ -11,23 +11,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type mockParent struct {
-	plugin.EntryBase
-	entries []plugin.Entry
-}
-
-func (g *mockParent) List(context.Context) ([]plugin.Entry, error) {
-	return g.entries, nil
-}
-
-func (g *mockParent) ChildSchemas() []*plugin.EntrySchema {
-	return nil
-}
-
-func (g *mockParent) Schema() *plugin.EntrySchema {
-	return nil
-}
-
 type mockEntry struct {
 	plugin.EntryBase
 }
@@ -52,67 +35,6 @@ func (suite *HelpersTestSuite) SetupSuite() {
 
 func (suite *HelpersTestSuite) TearDownSuite() {
 	plugin.UnsetTestCache()
-}
-
-func (suite *HelpersTestSuite) TestFindEntry() {
-	type testcase struct {
-		segments      []string
-		expectedEntry string
-		expectedErr   error
-	}
-	runTestCase := func(parent plugin.Parent, c testcase) {
-		got, err := findEntry(context.Background(), parent, c.segments)
-		if c.expectedEntry != "" && suite.NotNil(got) {
-			suite.Equal(c.expectedEntry, plugin.CName(got))
-		} else {
-			suite.Nil(got)
-		}
-		if c.expectedErr == nil {
-			suite.Nil(err)
-		} else {
-			suite.Equal(c.expectedErr, err)
-		}
-	}
-
-	foo := newMockEntry("foo/bar")
-	parent := &mockParent{plugin.NewEntry("root"), []plugin.Entry{foo}}
-	parent.SetTestID("/root")
-	parent.DisableDefaultCaching()
-	for _, c := range []testcase{
-		{[]string{"not found"}, "", entryNotFoundResponse("not found", "The not found entry does not exist")},
-		{[]string{"foo#bar"}, "foo#bar", nil},
-		{[]string{"foo#bar", "bar"}, "", entryNotFoundResponse("foo#bar/bar", "The entry foo#bar is not a parent")},
-	} {
-		runTestCase(parent, c)
-	}
-
-	baz := newMockEntry("baz")
-	nestedParent := &mockParent{plugin.NewEntry("bar"), []plugin.Entry{baz}}
-	nestedParent.DisableDefaultCaching()
-	parent.entries = append(parent.entries, nestedParent)
-	for _, c := range []testcase{
-		{[]string{"bar"}, "bar", nil},
-		{[]string{"bar", "foo"}, "", entryNotFoundResponse("bar/foo", "The foo entry does not exist in the bar parent")},
-		{[]string{"bar", "baz"}, "baz", nil},
-	} {
-		runTestCase(parent, c)
-	}
-
-	// Finally, test the duplicate cname error response
-	duplicateFoo := newMockEntry("foo#bar")
-	parent.entries = append(parent.entries, duplicateFoo)
-	expectedErr := plugin.DuplicateCNameErr{
-		ParentID:                 plugin.ID(parent),
-		FirstChildName:           foo.Name(),
-		FirstChildSlashReplacer:  '#',
-		SecondChildName:          duplicateFoo.Name(),
-		SecondChildSlashReplacer: '#',
-		CName:                    "foo#bar",
-	}
-	runTestCase(
-		parent,
-		testcase{[]string{"foo#bar"}, "", duplicateCNameResponse(expectedErr)},
-	)
 }
 
 type mockRoot struct {
