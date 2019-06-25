@@ -27,39 +27,35 @@ type decodedCacheTTLs struct {
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
 	Name          string           `json:"name"`
-	Methods       interface{}      `json:"methods"`
+	Methods       []interface{}    `json:"methods"`
 	SlashReplacer string           `json:"slash_replacer"`
 	CacheTTLs     decodedCacheTTLs `json:"cache_ttls"`
 	Attributes    EntryAttributes  `json:"attributes"`
 	State         string           `json:"state"`
 }
 
-const entryMethodTypeError = "the entry's methods must be a list of strings or a map of strings to method-specific data, not %T"
+const entryMethodTypeError = "each method must be a string or tuple [<method>, <result>], not %v"
 
-func mungeToMethods(input interface{}) (map[string]interface{}, error) {
-	switch m := input.(type) {
-	case []string:
-		// Supported for root, testing, and in case JSON unmarshal gets smarter.
-		methods := make(map[string]interface{})
-		for _, name := range m {
-			methods[name] = nil
-		}
-		return methods, nil
-	case []interface{}:
-		methods := make(map[string]interface{})
-		for _, nm := range m {
-			if name, ok := nm.(string); ok {
-				methods[name] = nil
-			} else {
-				return nil, fmt.Errorf(entryMethodTypeError, m)
+func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
+	methods := make(map[string]interface{})
+	for _, val := range input {
+		switch data := val.(type) {
+		case string:
+			methods[data] = nil
+		case []interface{}:
+			if len(data) != 2 {
+				return nil, fmt.Errorf(entryMethodTypeError, data)
 			}
+			name, ok := data[0].(string)
+			if !ok {
+				return nil, fmt.Errorf(entryMethodTypeError, data)
+			}
+			methods[name] = data[1]
+		default:
+			return nil, fmt.Errorf(entryMethodTypeError, data)
 		}
-		return methods, nil
-	case map[string]interface{}:
-		return m, nil
-	default:
-		return nil, fmt.Errorf(entryMethodTypeError, m)
 	}
+	return methods, nil
 }
 
 func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {

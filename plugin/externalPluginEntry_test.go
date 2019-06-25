@@ -80,23 +80,23 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithNil() {
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFields() {
 	decodedEntry := decodedExternalPluginEntry{
-		Name: "decodedEntry",
-		Methods: map[string]interface{}{
-			"list":   nil,
-			"stream": nil,
-		},
+		Name:    "decodedEntry",
+		Methods: []interface{}{"list", "stream"},
 	}
 
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
-		suite.Equal(decodedEntry.Methods, entry.methods)
+		suite.Contains(entry.methods, "list")
+		suite.Nil(entry.methods["list"])
+		suite.Contains(entry.methods, "stream")
+		suite.Nil(entry.methods["stream"])
+
 		methods := entry.supportedMethods()
 		suite.Equal(2, len(methods))
 		suite.Contains(methods, "list")
-		suite.Nil(entry.methods["list"])
 		suite.Contains(methods, "stream")
 	}
 }
@@ -104,17 +104,17 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithNil(
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMethodResults() {
 	childEntry := map[string]interface{}{"name": "foo", "methods": []string{"read"}}
 	decodedEntry := decodedExternalPluginEntry{
-		Name: "decodedEntry",
-		Methods: map[string]interface{}{
-			"list": []interface{}{childEntry},
-			"read": "contents of a file",
-		},
+		Name:    "decodedEntry",
+		Methods: []interface{}{[]interface{}{"list", []interface{}{childEntry}}, "read"},
 	}
 
 	entry, err := decodedEntry.toExternalPluginEntry()
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
-		suite.Equal(decodedEntry.Methods, entry.methods)
+		suite.Contains(entry.methods, "list")
+		suite.NotNil(entry.methods["list"])
+		suite.Contains(entry.methods, "read")
+		suite.Nil(entry.methods["read"])
 	}
 }
 
@@ -282,11 +282,11 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 	}
 
 	// Test that List is invoked when
-	stdout := `[
-		{"name": "foo", "methods": {"list": [
-			{"name": "bar", "methods": {"read": "some content"}}
-			]}}
-		]`
+	stdout := `[{"name": "foo", "methods": [
+								["list", [
+									{"name": "bar", "methods": [["read", "some content"]]}
+									]]
+							]}]`
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
@@ -322,10 +322,10 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 	}
 
 	// Test that List is invoked when
-	stdout := `[{"name": "foo", "methods": {
-								"list": {"name": "bar"},
-								"read": [1, 2]
-							}}]`
+	stdout := `[{"name": "foo", "methods": [
+								["list", {"name": "bar"}],
+								["read", [1, 2]]
+							]}]`
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {

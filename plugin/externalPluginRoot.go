@@ -51,7 +51,7 @@ func (r *externalPluginRoot) Init(cfg map[string]interface{}) error {
 it's safe to omit name from the response to 'init'`, r.script.Path()))
 	}
 	if decodedRoot.Methods == nil {
-		decodedRoot.Methods = []string{"list"}
+		decodedRoot.Methods = []interface{}{"list"}
 	}
 	entry, err := decodedRoot.toExternalPluginEntry()
 	if err != nil {
