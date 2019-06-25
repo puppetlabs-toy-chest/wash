@@ -4,6 +4,10 @@ import (
 	"github.com/ekinanp/jsonschema"
 )
 
+// This file has wrappers around the jsonschema library so that
+// core plugin authors do not need to understand how it works in
+// order to use it.
+
 // JSONSchema represents a JSON schema
 type JSONSchema = jsonschema.Schema
 
