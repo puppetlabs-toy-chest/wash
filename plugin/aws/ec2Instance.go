@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"regexp"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -212,6 +213,17 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	// TODO: scrape default user from console output.
 	// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connection-prereqs.html#connection-prereqs-fingerprint
 	// for some helpful defaults we could add.
+
+	var fallbackuser string
+	re := regexp.MustCompile(`\WAuthorized keys from .home.*authorized_keys for user ([^+]*)+`)
+	output, err := (inst.cachedConsoleOutput(ctx))
+	outputstream := (string(output.content))
+	match := re.FindStringSubmatch(outputstream)
+	if match != nil {
+		fallbackuser = (match[1])
+		fmt.Println(fallbackuser)
+	}
+
 	var hostname string
 	if name, ok := meta["PublicDnsName"]; ok {
 		hostname = name.(string)
@@ -231,5 +243,5 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	}
 	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
 	// overridden in ~/.ssh/config.
-	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: "ec2-user", IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
+	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: fallbackuser, IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
 }
