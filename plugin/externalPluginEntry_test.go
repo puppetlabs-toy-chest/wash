@@ -93,7 +93,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 		suite.Nil(entry.methods["list"])
 		suite.Contains(entry.methods, "stream")
 		suite.Nil(entry.methods["stream"])
-		suite.False(entry.HasSourceParent())
+		suite.False(entry.isPrefetched())
 
 		methods := entry.supportedMethods()
 		suite.Equal(2, len(methods))
@@ -116,7 +116,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 		suite.NotNil(entry.methods["list"])
 		suite.Contains(entry.methods, "read")
 		suite.Nil(entry.methods["read"])
-		suite.True(entry.HasSourceParent())
+		suite.True(entry.isPrefetched())
 	}
 }
 

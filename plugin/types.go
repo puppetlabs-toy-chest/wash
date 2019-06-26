@@ -49,6 +49,7 @@ type Entry interface {
 	getTTLOf(op defaultOpCode) time.Duration
 	wrappedTypes() map[interface{}]*JSONSchema
 	setWrappedTypes(map[interface{}]*JSONSchema)
+	isPrefetched() bool
 }
 
 /*
@@ -107,15 +108,6 @@ type Root interface {
 type HasWrappedTypes interface {
 	Root
 	WrappedTypes() SchemaMap
-}
-
-// HasSourceAncestor can be implemented by entries where the actual data is populated by an
-// ancestor when it lists its children. Implementation can be passed through several layers by
-// having them all return true for HasSourceParent.
-type HasSourceAncestor interface {
-	Entry
-	// HasSourceParent returns true if we should look to the parent for up-to-date data.
-	HasSourceParent() bool
 }
 
 // ExecOptions is a struct we can add new features to that must be serializable to JSON.

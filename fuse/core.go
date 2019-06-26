@@ -115,7 +115,7 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 func (f *fuseNode) getSource() (plugin.Parent, []string) {
 	cur, segments := f.parent, []string{plugin.CName(f.entry)}
 	for cur != nil {
-		if sanc, ok := cur.entry.(plugin.HasSourceAncestor); ok && sanc.HasSourceParent() {
+		if plugin.IsPrefetched(cur.entry) {
 			segments = append([]string{plugin.CName(cur.entry)}, segments...)
 			cur = cur.parent
 		} else {

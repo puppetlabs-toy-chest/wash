@@ -93,9 +93,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		entry.SetSlashReplacer([]rune(e.SlashReplacer)[0])
 	}
 
-	// If some data originated from the parent via list, update HasSourceParent to return true.
+	// If some data originated from the parent via list, mark as prefetched.
 	if entry.methods["list"] != nil || entry.methods["read"] != nil {
-		entry.hasSourceParent = true
+		entry.Prefetched()
 	}
 
 	return entry, nil
@@ -104,10 +104,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 // externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
-	script          externalPluginScript
-	methods         map[string]interface{}
-	state           string
-	hasSourceParent bool
+	script  externalPluginScript
+	methods map[string]interface{}
+	state   string
 }
 
 func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
@@ -145,10 +144,6 @@ func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
 func (e *externalPluginEntry) Schema() *EntrySchema {
 	// TODO: Support external plugin schemas.
 	return nil
-}
-
-func (e *externalPluginEntry) HasSourceParent() bool {
-	return e.hasSourceParent
 }
 
 const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]"
