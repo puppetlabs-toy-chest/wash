@@ -8,7 +8,7 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
 
 1. Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the path to the plugin script. *The plugin's name is the basename of the script without the extension.* An example `wash.yaml` config adding the `sshfs` plugin is shown below:
 
-    ```
+    ```yaml
     external-plugins:
         - script: '/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh'
     ```
@@ -19,7 +19,7 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
 
 Wash shells out to the external plugin's script whenever it needs to invoke a method on one of its entries. The script must have the following usage:
 
-```
+```s
 <plugin_script> <method> <path> <state> <args...>
 ```
 
@@ -39,7 +39,7 @@ NOTE: Plugin script invocations run in their own process group (pgrp). Wash will
 ## init
 The `init` method is special. It is invoked as `<plugin_script> init <config>`, and it is invoked only once, when the external plugin is loaded. `<config>` is JSON containing any config supplied to Wash under the plugin's key. Given a Wash config file (`wash.yaml`)
 
-```
+```yaml
 external-plugins:
   - script: '/path/to/myplugin.rb'
 myplugin:
@@ -50,7 +50,7 @@ myplugin:
 
 the `init` method for a plugin named `myplugin` will be invoked with
 
-```
+```s
 <plugin_script> init '{"profiles":["profile_a","profile_b"]}'
 ```
 
@@ -66,9 +66,9 @@ You can include additional (optional) keys in the printed JSON object. These key
 
 Below is an example JSON object showcasing all possible keys at once.
 
-```
+```json
 {
-  "methods": ["list"]
+  "methods": ["list"],
   "cache_ttls": {
     "list": 30
   },
@@ -91,7 +91,7 @@ We see from `cache_ttls` that the result of `some_entry`'s `list` method will be
 ## list
 `list` is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. The *minimum* information required is each entry's name and its implemented methods
 
-```
+```json
 {
   "name": "mydirectory",
   "methods": [
@@ -104,7 +104,7 @@ Each entry may additionally return any keys described in [init](#init).
 
 Below is an example of valid `list` output:
 
-```
+```json
 [
   {
     "name": "fooVM",
@@ -153,7 +153,7 @@ Below is an example of valid `list` output:
 ## metadata
 `metadata` is invoked as `<plugin_script> metadata <path> <state>`. When `metadata` is invoked, the script must output a JSON object representing the entry's metadata. Below is an example of acceptable `metadata` output:
 
-```
+```json
 {
   "key1": "value1",
   "key2": "value2"
@@ -185,19 +185,19 @@ All errors are printed to `stderr`. A method invocation is said to have errored 
 ## Aside (optional)<a name="aside"></a>
 This section talks about the reasoning behind the plugin script's usage, shown below for convenience:
 
-```
+```s
 <plugin_script> <method> <path> <state> <args...>
 ```
 
 If we let `<entry> = <path> <state>`, then our usage becomes:
 
-```
+```s
 <plugin_script> <method> <entry> <args...>
 ```
 
 If we ignore `<plugin_script>` then the above turns into `<method> <entry> <args...>`. When read out loud, this looks like the function call `<method>(<entry>, <args...>)`. If we imagine `<entry>` as an object in an OOP language, this is semantically equivalent to:
 
-```
+```s
 <entry>.<method>(<args...>)
 ```
 
@@ -211,6 +211,6 @@ You might be wondering why we don't just lump `<path>` and `<state>` together in
 
 [Download](./examples/sshfs.sh)
 
-```
+```s
 {{< snippet "static/docs/external_plugins/examples/sshfs.sh" >}}
 ```
