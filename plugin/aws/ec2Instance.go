@@ -136,11 +136,6 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 			return nil, err
 	}
 	entries = append(entries, consoleOutput)
-
-	// output, err := consoleOutput.cachedConsoleOutput(ctx)
-	output, err := inst.cachedConsoleOutput(ctx)
-	fmt.Println(string(output.content))
-
 	if inst.hasLatestConsoleOutput {
 		if latestConsoleOutput == nil {
 			latestConsoleOutput, err = newEC2InstanceConsoleOutput(ctx, inst, true)
@@ -209,21 +204,6 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: scrape default user from console output.
-	// See https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connection-prereqs.html#connection-prereqs-fingerprint
-	// for some helpful defaults we could add.
-
-	var fallbackuser string
-	re := regexp.MustCompile(`\WAuthorized keys from .home.*authorized_keys for user ([^+]*)+`)
-	output, err := (inst.cachedConsoleOutput(ctx))
-	outputstream := (string(output.content))
-	match := re.FindStringSubmatch(outputstream)
-	if match != nil {
-		fallbackuser = (match[1])
-		fmt.Println(fallbackuser)
-	}
-
 	var hostname string
 	if name, ok := meta["PublicDnsName"]; ok {
 		hostname = name.(string)
@@ -232,7 +212,6 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	} else {
 		return nil, fmt.Errorf("No public interface found for %v", inst)
 	}
-
 	var identityfile string
 	if keyname, ok := meta["KeyName"]; ok {
 		if homedir, err := os.UserHomeDir(); err != nil {
@@ -241,7 +220,24 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			identityfile = (filepath.Join(homedir, ".ssh", (keyname.(string) + ".pem")))
 		}
 	}
-	// Use the default user for Amazon AMIs. See above for ideas on making this more general. Can be
-	// overridden in ~/.ssh/config.
+	var fallbackuser string
+	// Scan console output for user name instance was provisioned with. Set to ec2-user if not found
+	re := regexp.MustCompile(`\WAuthorized keys from .home.*authorized_keys for user ([^+]*)+`)
+	output, err := (inst.cachedConsoleOutput(ctx))
+	if err != nil {
+		activity.Record(ctx, "Cannot get cached console output", err)
+		fallbackuser = "ec2-user"
+	} else {
+		match := re.FindStringSubmatch(string(output.content))
+		if match != nil {
+			fallbackuser = (match[1])
+		} else {
+			activity.Record(ctx, "Cannot find provisioned user name in console output", err)
+			fallbackuser = "ec2-user"
+		}
+	}
+	//
+	// fallbackuser and identiyfile can be overridden in ~/.ssh/config.
+	//
 	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: fallbackuser, IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
 }
