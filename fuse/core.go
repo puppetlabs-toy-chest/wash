@@ -3,7 +3,6 @@ package fuse
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/user"
 	"strconv"
@@ -55,12 +54,12 @@ var uid, gid = getIDs()
 
 type fuseNode struct {
 	ftype             string
-	parent            plugin.Parent
+	parent            *dir
 	entry             plugin.Entry
 	entryCreationTime time.Time
 }
 
-func newFuseNode(ftype string, parent plugin.Parent, entry plugin.Entry) *fuseNode {
+func newFuseNode(ftype string, parent *dir, entry plugin.Entry) *fuseNode {
 	return &fuseNode{
 		ftype:             ftype,
 		parent:            parent,
@@ -74,7 +73,7 @@ func (f *fuseNode) String() string {
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
-func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
+func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir bool) {
 	// Setting a.Valid to 1 second avoids frequent Attr calls.
 	a.Valid = 1 * time.Second
 
@@ -83,7 +82,7 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 
 	if attr.HasMode() {
 		a.Mode = attr.Mode()
-	} else if plugin.ListAction().IsSupportedOn(f.entry) {
+	} else if isdir {
 		a.Mode = os.ModeDir | 0550
 	} else {
 		a.Mode = 0440
@@ -111,40 +110,52 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes) {
 	a.Gid = gid
 }
 
+// Re-discovers the source ancestor of the current node to get fresh data. It returns that ancestor
+// and the path between it and the current node.
+func (f *fuseNode) getSource() (plugin.Parent, []string) {
+	cur, segments := f.parent, []string{plugin.CName(f.entry)}
+	for cur != nil {
+		if sanc, ok := cur.entry.(plugin.HasSourceAncestor); ok && sanc.HasSourceParent() {
+			segments = append([]string{plugin.CName(cur.entry)}, segments...)
+			cur = cur.parent
+		} else {
+			// All dirs must contain a parent or they wouldn't have been able to create children.
+			return cur.entry.(plugin.Parent), segments
+		}
+	}
+	return nil, segments
+}
+
+// Re-discovers the current entry, based on any source ancestors.
+func (f *fuseNode) refind(ctx context.Context) (plugin.Entry, error) {
+	parent, segments := f.getSource()
+	if parent == nil {
+		return f.entry, nil
+	}
+	return plugin.FindEntry(ctx, parent, segments)
+}
+
 func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	// Attr is not a particularly interesting call and happens a lot. Log it to debug like other
 	// activity, but leave it out of activity because it introduces history entries for lots of
 	// miscellaneous shell activity.
 	log.Debugf("FUSE: Attr %v", f)
 
-	var attr plugin.EntryAttributes
-	if f.parent == nil {
-		attr = plugin.Attributes(f.entry)
-	} else {
-		// FUSE caches nodes for a long time, meaning there's a chance
-		// that f's attributes are outdated. CachedList returns the entry's
-		// and its sibling's updated attributes in a single request, so use
-		// it to get f's updated attributes.
-		entries, err := plugin.CachedList(ctx, f.parent)
-		if err != nil {
-			err := fmt.Errorf("could not refresh the attributes: %v", err)
-			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			return err
-		}
-		updatedEntry, ok := entries[plugin.CName(f.entry)]
-		if !ok {
-			err := fmt.Errorf("entry does not exist anymore")
-			activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
-			return err
-		}
-		attr = plugin.Attributes(updatedEntry)
-		// NOTE: We could set f.entry to updatedEntry, but doing so would require
-		// a separate mutex which may hinder performance. Since updating f.entry
-		// is not strictly necessary for the other FUSE operations, we choose to
-		// leave it alone.
+	// FUSE caches nodes for a long time, meaning there's a chance that
+	// f's attributes are outdated. 'refind' requests the entry from its
+	// parent to ensure it has updated attributes.
+	updatedEntry, err := f.refind(ctx)
+	if err != nil {
+		activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+		return err
 	}
+	attr := plugin.Attributes(updatedEntry)
+	// NOTE: We could set f.entry to updatedEntry, but doing so would require
+	// a separate mutex which may hinder performance. Since updating f.entry
+	// is not strictly necessary for the other FUSE operations, we choose to
+	// leave it alone.
 
-	f.applyAttr(a, &attr)
+	f.applyAttr(a, &attr, plugin.ListAction().IsSupportedOn(updatedEntry))
 	log.Debugf("FUSE: Attr finished %v", f)
 	return nil
 }

@@ -92,15 +92,22 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 
 		entry.SetSlashReplacer([]rune(e.SlashReplacer)[0])
 	}
+
+	// If some data originated from the parent via list, update HasSourceParent to return true.
+	if entry.methods["list"] != nil || entry.methods["read"] != nil {
+		entry.hasSourceParent = true
+	}
+
 	return entry, nil
 }
 
 // externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
-	script  externalPluginScript
-	methods map[string]interface{}
-	state   string
+	script          externalPluginScript
+	methods         map[string]interface{}
+	state           string
+	hasSourceParent bool
 }
 
 func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
@@ -140,6 +147,10 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 	return nil
 }
 
+func (e *externalPluginEntry) HasSourceParent() bool {
+	return e.hasSourceParent
+}
+
 const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]"
 
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
@@ -170,6 +181,7 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		entry.script = e.script
 		entries[i] = entry
 	}
