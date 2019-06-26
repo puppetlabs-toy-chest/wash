@@ -282,12 +282,16 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 	}
 
 	// Test that List is invoked when
-	stdout := `[{"name": "foo", "methods": [
-								["list", [
-									{"name": "bar", "methods": [["read", "some content"]]}
-									]]
-							]}]`
-	mockInvokeAndWait([]byte(stdout), nil)
+	stdoutFn := func(content string) []byte {
+		return []byte(`
+[{"name": "foo", "methods": [
+	["list", [
+		{"name": "bar", "methods": [["read", "` + content + `"]]}
+	]]
+]}]`)
+	}
+	someContent := "some content"
+	mockInvokeAndWait([]byte(stdoutFn(someContent)), nil)
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries))
@@ -295,13 +299,18 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 			children, err := entries[0].(Parent).List(ctx)
 			if suite.NoError(err) {
 				suite.Equal(1, len(children))
+				attr := Attributes(children[0])
+				if suite.True(attr.HasSize()) {
+					suite.Equal(uint64(len(someContent)), attr.Size())
+				}
+
 				if suite.Equal([]string{"read"}, SupportedActionsOf(children[0])) {
 					rdr, err := children[0].(Readable).Open(ctx)
 					suite.NoError(err)
 					buf := make([]byte, rdr.Size())
 					_, err = rdr.ReadAt(buf, 0)
 					suite.NoError(err)
-					suite.Equal("some content", string(buf))
+					suite.Equal(someContent, string(buf))
 				}
 			}
 		}

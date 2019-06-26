@@ -71,6 +71,12 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 		return nil, err
 	}
 
+	// If read content is static, it's likely it's not coming from a source that separately provides
+	// the size of that data. If not provided, update it since we know what it is.
+	if content, ok := methods["read"].(string); ok && !e.Attributes.HasSize() {
+		e.Attributes.SetSize(uint64(len(content)))
+	}
+
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry(e.Name),
 		methods:   methods,
