@@ -30,7 +30,7 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		cl.EntryBase = plugin.NewEntry("console.out")
 	}
 
-	output, err := cl.cachedConsoleOutput(ctx)
+	output, err := cl.inst.cachedConsoleOutput(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,16 +50,18 @@ type consoleOutput struct {
 	content []byte
 }
 
-func (cl *ec2InstanceConsoleOutput) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
-	output, err := plugin.CachedOp(ctx, "ConsoleOutput", cl, 30*time.Second, func() (interface{}, error) {
+func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
+	output, err := plugin.CachedOp(ctx, "ConsoleOutput", inst, 30*time.Second, func() (interface{}, error) {
 		request := &ec2Client.GetConsoleOutputInput{
-			InstanceId: awsSDK.String(cl.inst.id),
+			InstanceId: awsSDK.String(inst.id),
 		}
-		if cl.latest {
-			request.Latest = awsSDK.Bool(cl.latest)
+//		if cl.latest {
+		if inst.hasLatestConsoleOutput {
+			request.Latest = awsSDK.Bool(inst.hasLatestConsoleOutput)
 		}
 
-		resp, err := cl.inst.client.GetConsoleOutputWithContext(ctx, request)
+//		resp, err := cl.inst.client.GetConsoleOutputWithContext(ctx, request)
+		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +89,7 @@ func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
 }
 
 func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
-	output, err := cl.cachedConsoleOutput(ctx)
+	output, err := cl.inst.cachedConsoleOutput(ctx)
 	if err != nil {
 		return nil, err
 	}
