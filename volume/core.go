@@ -54,5 +54,5 @@ const RootPath = ""
 // Requests are cached against the supplied Interface using the VolumeListCB op.
 func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
-	return newDir("dummy", plugin.EntryAttributes{}, impl, nil, RootPath).List(ctx)
+	return newDir("dummy", plugin.EntryAttributes{}, impl, RootPath).List(ctx)
 }

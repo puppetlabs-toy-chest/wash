@@ -10,15 +10,17 @@ import (
 	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 type mockDirEntry struct {
 	plugin.EntryBase
-	dmap DirMap
+	mock.Mock
 }
 
-func (m *mockDirEntry) VolumeList(context.Context, string) (DirMap, error) {
-	return m.dmap, nil
+func (m *mockDirEntry) VolumeList(ctx context.Context, path string) (DirMap, error) {
+	arger := m.Called(ctx, path)
+	return arger.Get(0).(DirMap), arger.Error(1)
 }
 
 func (m *mockDirEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
@@ -38,18 +40,19 @@ func TestVolumeDir(t *testing.T) {
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())
-	entry := mockDirEntry{EntryBase: plugin.NewEntry("mine"), dmap: dmap}
+	entry := mockDirEntry{EntryBase: plugin.NewEntry("mine")}
 	entry.SetTestID("/mine")
-	entryDir := newDir("dummy", plugin.EntryAttributes{}, &entry, nil, RootPath)
+	ctx := context.Background()
 
 	assert.NotNil(t, dmap[RootPath]["path"])
-	vd := newDir("path", dmap[RootPath]["path"], &entry, entryDir, "/path")
+	vd := newDir("path", dmap[RootPath]["path"], &entry, "/path")
 	attr := plugin.Attributes(vd)
 	assert.Equal(t, 0755|os.ModeDir, attr.Mode())
 
 	assert.NotNil(t, dmap[RootPath]["path1"])
-	vd = newDir("path", dmap[RootPath]["path1"], &entry, entryDir, "/path1")
-	entries, err := vd.List(context.Background())
+	vd = newDir("path", dmap[RootPath]["path1"], &entry, "/path1")
+	entry.On("VolumeList", ctx, "/path1").Return(dmap, nil).Once()
+	entries, err := vd.List(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "a file", plugin.Name(entries[0]))
@@ -58,8 +61,9 @@ func TestVolumeDir(t *testing.T) {
 	}
 
 	assert.NotNil(t, dmap[RootPath]["path2"])
-	vd = newDir("path", dmap[RootPath]["path2"], &entry, entryDir, "/path2")
-	entries, err = vd.List(context.Background())
+	vd = newDir("path", dmap[RootPath]["path2"], &entry, "/path2")
+	vd.dirmap = dmap
+	entries, err = vd.List(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "dir", plugin.Name(entries[0]))

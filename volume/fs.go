@@ -23,7 +23,6 @@ func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
 	fs := &FS{
 		EntryBase: plugin.NewEntry(name),
 	}
-	fs.DisableCachingFor(plugin.ListOp)
 	fs.executor = executor
 	fs.maxdepth = maxdepth
 	return fs
