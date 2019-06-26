@@ -55,12 +55,10 @@ func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context) (consoleOutput
 		request := &ec2Client.GetConsoleOutputInput{
 			InstanceId: awsSDK.String(inst.id),
 		}
-//		if cl.latest {
 		if inst.hasLatestConsoleOutput {
 			request.Latest = awsSDK.Bool(inst.hasLatestConsoleOutput)
 		}
 
-//		resp, err := cl.inst.client.GetConsoleOutputWithContext(ctx, request)
 		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
 		if err != nil {
 			return nil, err

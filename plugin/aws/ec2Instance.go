@@ -133,9 +133,10 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	consoleOutput, err := newEC2InstanceConsoleOutput(ctx, inst, false)
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 	entries = append(entries, consoleOutput)
+
 	if inst.hasLatestConsoleOutput {
 		if latestConsoleOutput == nil {
 			latestConsoleOutput, err = newEC2InstanceConsoleOutput(ctx, inst, true)
@@ -212,6 +213,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	} else {
 		return nil, fmt.Errorf("No public interface found for %v", inst)
 	}
+
 	var identityfile string
 	if keyname, ok := meta["KeyName"]; ok {
 		if homedir, err := os.UserHomeDir(); err != nil {
