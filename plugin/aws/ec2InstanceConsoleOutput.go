@@ -3,11 +3,8 @@ package aws
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"time"
 
-	awsSDK "github.com/aws/aws-sdk-go/aws"
-	ec2Client "github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -48,38 +45,6 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 type consoleOutput struct {
 	mtime   time.Time
 	content []byte
-}
-
-func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
-	output, err := plugin.CachedOp(ctx, "ConsoleOutput", inst, 30*time.Second, func() (interface{}, error) {
-		request := &ec2Client.GetConsoleOutputInput{
-			InstanceId: awsSDK.String(inst.id),
-		}
-		if inst.hasLatestConsoleOutput {
-			request.Latest = awsSDK.Bool(inst.hasLatestConsoleOutput)
-		}
-
-		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
-		if err != nil {
-			return nil, err
-		}
-
-		content, err := base64.StdEncoding.DecodeString(awsSDK.StringValue(resp.Output))
-		if err != nil {
-			return nil, err
-		}
-
-		return consoleOutput{
-			mtime:   awsSDK.TimeValue(resp.Timestamp),
-			content: content,
-		}, nil
-	})
-
-	if err != nil {
-		return consoleOutput{}, err
-	}
-
-	return output.(consoleOutput), nil
 }
 
 func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {

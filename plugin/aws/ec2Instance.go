@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 	"regexp"
+	"encoding/base64"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -65,6 +66,38 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 		SetAttributes(getAttributes(inst))
 
 	return ec2Instance
+}
+
+func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
+	output, err := plugin.CachedOp(ctx, "ConsoleOutput", inst, 30*time.Second, func() (interface{}, error) {
+		request := &ec2Client.GetConsoleOutputInput{
+			InstanceId: awsSDK.String(inst.id),
+		}
+		if inst.hasLatestConsoleOutput {
+			request.Latest = awsSDK.Bool(inst.hasLatestConsoleOutput)
+		}
+
+		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+
+		content, err := base64.StdEncoding.DecodeString(awsSDK.StringValue(resp.Output))
+		if err != nil {
+			return nil, err
+		}
+
+		return consoleOutput{
+			mtime:   awsSDK.TimeValue(resp.Timestamp),
+			content: content,
+		}, nil
+	})
+
+	if err != nil {
+		return consoleOutput{}, err
+	}
+
+	return output.(consoleOutput), nil
 }
 
 func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
@@ -222,19 +255,20 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 			identityfile = (filepath.Join(homedir, ".ssh", (keyname.(string) + ".pem")))
 		}
 	}
+
 	var fallbackuser string
 	// Scan console output for user name instance was provisioned with. Set to ec2-user if not found
 	re := regexp.MustCompile(`\WAuthorized keys from .home.*authorized_keys for user ([^+]*)+`)
 	output, err := (inst.cachedConsoleOutput(ctx))
 	if err != nil {
-		activity.Record(ctx, "Cannot get cached console output", err)
+		activity.Record(ctx, "Cannot get cached console output: %v", err)
 		fallbackuser = "ec2-user"
 	} else {
 		match := re.FindStringSubmatch(string(output.content))
 		if match != nil {
 			fallbackuser = (match[1])
 		} else {
-			activity.Record(ctx, "Cannot find provisioned user name in console output", err)
+			activity.Record(ctx, "Cannot find provisioned user name in console output: %v", err)
 			fallbackuser = "ec2-user"
 		}
 	}
