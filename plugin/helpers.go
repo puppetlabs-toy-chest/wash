@@ -81,3 +81,9 @@ func TrackTime(start time.Time, name string) {
 func Attributes(e Entry) EntryAttributes {
 	return e.attributes()
 }
+
+// IsPrefetched returns whether an entry has data that was added during creation that it would
+// like to have updated.
+func IsPrefetched(e Entry) bool {
+	return e.isPrefetched()
+}

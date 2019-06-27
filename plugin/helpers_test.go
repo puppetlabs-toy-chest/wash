@@ -73,6 +73,13 @@ func (suite *HelpersTestSuite) TestAttributes() {
 	suite.Equal(e.attr, Attributes(e))
 }
 
+func (suite *HelpersTestSuite) TestPrefetched() {
+	e := newHelpersTestsMockEntry("mockEntry")
+	suite.False(IsPrefetched(e))
+	e.Prefetched()
+	suite.True(IsPrefetched(e))
+}
+
 func TestHelpers(t *testing.T) {
 	suite.Run(t, new(HelpersTestSuite))
 }

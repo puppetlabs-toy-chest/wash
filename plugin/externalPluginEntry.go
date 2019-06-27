@@ -14,6 +14,10 @@ import (
 	"github.com/puppetlabs/wash/plugin/internal"
 )
 
+type externalPlugin interface {
+	supportedMethods() []string
+}
+
 type decodedCacheTTLs struct {
 	List     time.Duration `json:"list"`
 	Read     time.Duration `json:"read"`
@@ -23,11 +27,35 @@ type decodedCacheTTLs struct {
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
 	Name          string           `json:"name"`
-	Methods       []string         `json:"methods"`
+	Methods       []interface{}    `json:"methods"`
 	SlashReplacer string           `json:"slash_replacer"`
 	CacheTTLs     decodedCacheTTLs `json:"cache_ttls"`
 	Attributes    EntryAttributes  `json:"attributes"`
 	State         string           `json:"state"`
+}
+
+const entryMethodTypeError = "each method must be a string or tuple [<method>, <result>], not %v"
+
+func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
+	methods := make(map[string]interface{})
+	for _, val := range input {
+		switch data := val.(type) {
+		case string:
+			methods[data] = nil
+		case []interface{}:
+			if len(data) != 2 {
+				return nil, fmt.Errorf(entryMethodTypeError, data)
+			}
+			name, ok := data[0].(string)
+			if !ok {
+				return nil, fmt.Errorf(entryMethodTypeError, data)
+			}
+			methods[name] = data[1]
+		default:
+			return nil, fmt.Errorf(entryMethodTypeError, data)
+		}
+	}
+	return methods, nil
 }
 
 func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntry, error) {
@@ -37,9 +65,21 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 	if e.Methods == nil {
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
+
+	methods, err := mungeToMethods(e.Methods)
+	if err != nil {
+		return nil, err
+	}
+
+	// If read content is static, it's likely it's not coming from a source that separately provides
+	// the size of that data. If not provided, update it since we know what it is.
+	if content, ok := methods["read"].(string); ok && !e.Attributes.HasSize() {
+		e.Attributes.SetSize(uint64(len(content)))
+	}
+
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry(e.Name),
-		methods:   e.Methods,
+		methods:   methods,
 		state:     e.State,
 	}
 	entry.SetAttributes(e.Attributes)
@@ -52,6 +92,12 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 
 		entry.SetSlashReplacer([]rune(e.SlashReplacer)[0])
 	}
+
+	// If some data originated from the parent via list, mark as prefetched.
+	if entry.methods["list"] != nil || entry.methods["read"] != nil {
+		entry.Prefetched()
+	}
+
 	return entry, nil
 }
 
@@ -59,7 +105,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry() (*externalPluginEntr
 type externalPluginEntry struct {
 	EntryBase
 	script  externalPluginScript
-	methods []string
+	methods map[string]interface{}
 	state   string
 }
 
@@ -78,12 +124,16 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 // implements returns true if the entry implements the given method,
 // false otherwise
 func (e *externalPluginEntry) implements(method string) bool {
-	for _, m := range e.methods {
-		if method == m {
-			return true
-		}
+	_, ok := e.methods[method]
+	return ok
+}
+
+func (e *externalPluginEntry) supportedMethods() []string {
+	keys := make([]string, 0, len(e.methods))
+	for k := range e.methods {
+		keys = append(keys, k)
 	}
-	return false
+	return keys
 }
 
 func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
@@ -96,27 +146,37 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 	return nil
 }
 
+const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]"
+
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
-	stdout, err := e.script.InvokeAndWait(ctx, "list", e)
-	if err != nil {
-		return nil, err
-	}
 	var decodedEntries []decodedExternalPluginEntry
-	if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-		return nil, newStdoutDecodeErr(
-			ctx,
-			"the entries",
-			err,
-			stdout,
-			"[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]",
-		)
+	if impl, ok := e.methods["list"]; ok && impl != nil {
+		// Entry statically implements list. Construct new entries based on that rather than invoking the script.
+		bits, err := json.Marshal(impl)
+		if err != nil {
+			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
+		}
+
+		if err := json.Unmarshal(bits, &decodedEntries); err != nil {
+			return nil, fmt.Errorf("implementation of list must conform to %v, not %v", listFormat, impl)
+		}
+	} else {
+		stdout, err := e.script.InvokeAndWait(ctx, "list", e)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
+			return nil, newStdoutDecodeErr(ctx, "the entries", err, stdout, listFormat)
+		}
 	}
+
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
 		entry, err := decodedExternalPluginEntry.toExternalPluginEntry()
 		if err != nil {
 			return nil, err
 		}
+
 		entry.script = e.script
 		entries[i] = entry
 	}
@@ -124,6 +184,13 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
+	if impl, ok := e.methods["read"]; ok && impl != nil {
+		if content, ok := impl.(string); ok {
+			return strings.NewReader(content), nil
+		}
+		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
+	}
+
 	stdout, err := e.script.InvokeAndWait(ctx, "read", e)
 	if err != nil {
 		return nil, err

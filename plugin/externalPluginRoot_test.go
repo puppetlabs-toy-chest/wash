@@ -49,7 +49,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 		expectedRoot := &externalPluginRoot{
 			externalPluginEntry: &externalPluginEntry{
 				EntryBase: NewEntry("foo"),
-				methods:   []string{"list"},
+				methods:   map[string]interface{}{"list": nil},
 				script:    root.script,
 			},
 		}

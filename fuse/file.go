@@ -19,7 +19,7 @@ type file struct {
 var _ fs.Node = (*file)(nil)
 var _ = fs.NodeOpener(&file{})
 
-func newFile(p plugin.Parent, e plugin.Entry) *file {
+func newFile(p *dir, e plugin.Entry) *file {
 	return &file{newFuseNode("f", p, e)}
 }
 
@@ -27,9 +27,16 @@ func newFile(p plugin.Parent, e plugin.Entry) *file {
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	activity.Record(ctx, "FUSE: Open %v", f)
 
+	// Check for an updated entry in case it has static state.
+	updatedEntry, err := f.refind(ctx)
+	if err != nil {
+		activity.Record(ctx, "FUSE: Open errored %v, %v", f, err)
+		return nil, err
+	}
+
 	// Initiate content request and return a channel providing the results.
-	if plugin.ReadAction().IsSupportedOn(f.entry) {
-		content, err := plugin.CachedOpen(ctx, f.entry.(plugin.Readable))
+	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
+		content, err := plugin.CachedOpen(ctx, updatedEntry.(plugin.Readable))
 		if err != nil {
 			activity.Record(ctx, "FUSE: Open %v errored: %v", f, err)
 			return nil, err

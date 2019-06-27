@@ -2,13 +2,24 @@
 title= "External Plugins"
 +++
 
+- [Plugin Script](#Plugin-Script)
+- [init](#init)
+- [list](#list)
+- [read](#read)
+- [metadata](#metadata)
+- [stream](#stream)
+- [exec](#exec)
+- [Errors](#Errors)
+- [Aside (optional)](#Aside-optional)
+- [Bash Example](#Bash-Example)
+
 External plugins let Wash talk to other things outside of the built-in plugins. They can be written in any language. To write an external plugin, you need to do the following:
 
 1. Write the [plugin script](#plugin-script). This is the script that Wash will shell out to whenever it needs to invoke a method on a specific entry within your plugin.
 
 1. Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the path to the plugin script. *The plugin's name is the basename of the script without the extension.* An example `wash.yaml` config adding the `sshfs` plugin is shown below:
 
-    ```
+    ```yaml
     external-plugins:
         - script: '/path/to/wash/website/static/docs/external_plugins/examples/sshfs.sh'
     ```
@@ -19,7 +30,7 @@ External plugins let Wash talk to other things outside of the built-in plugins. 
 
 Wash shells out to the external plugin's script whenever it needs to invoke a method on one of its entries. The script must have the following usage:
 
-```
+```s
 <plugin_script> <method> <path> <state> <args...>
 ```
 
@@ -39,7 +50,7 @@ NOTE: Plugin script invocations run in their own process group (pgrp). Wash will
 ## init
 The `init` method is special. It is invoked as `<plugin_script> init <config>`, and it is invoked only once, when the external plugin is loaded. `<config>` is JSON containing any config supplied to Wash under the plugin's key. Given a Wash config file (`wash.yaml`)
 
-```
+```yaml
 external-plugins:
   - script: '/path/to/myplugin.rb'
 myplugin:
@@ -50,7 +61,7 @@ myplugin:
 
 the `init` method for a plugin named `myplugin` will be invoked with
 
-```
+```s
 <plugin_script> init '{"profiles":["profile_a","profile_b"]}'
 ```
 
@@ -66,9 +77,9 @@ You can include additional (optional) keys in the printed JSON object. These key
 
 Below is an example JSON object showcasing all possible keys at once.
 
-```
+```json
 {
-  "methods": ["list"]
+  "methods": ["list"],
   "cache_ttls": {
     "list": 30
   },
@@ -91,7 +102,7 @@ We see from `cache_ttls` that the result of `some_entry`'s `list` method will be
 ## list
 `list` is invoked as `<plugin_script> list <path> <state>`. When `list` is invoked, the script must output an array of JSON objects. The *minimum* information required is each entry's name and its implemented methods
 
-```
+```json
 {
   "name": "mydirectory",
   "methods": [
@@ -100,11 +111,13 @@ We see from `cache_ttls` that the result of `some_entry`'s `list` method will be
 }
 ```
 
+The `<path>` takes the form of a UNIX-style path rooted at Wash's root directory. So the first call will be `<plugin_script> list /<plugin_name>`, followed by `<plugin_script> list /<plugin_name>/<directory_name>`, etc.
+
 Each entry may additionally return any keys described in [init](#init).
 
 Below is an example of valid `list` output:
 
-```
+```json
 [
   {
     "name": "fooVM",
@@ -141,6 +154,36 @@ Below is an example of valid `list` output:
 ]
 ```
 
+If you're able to pre-fetch a method's result as part of the `list` method, then you can include the result as a tuple of `[<method>, <result>]` in the `methods` array. Pre-fetching is a useful way to avoid unnecessary plugin script invocations.
+
+Below is an example that includes pre-fetched method results for a static directory that contains known files and content, but may also support streaming new updates dynamically (by invoking the `stream` method on the script). Notice how `list`'s result matches what would have been returned by `<plugin_script> list /<plugin_name>/mydir`. Note that when `read` content is provided in this manner, the size of that content will be automatically populated in `attributes`.
+
+```json
+[
+  {
+    "name": "mydir",
+    "methods": [
+      ["list", [
+        {
+          "name": "myfile 1",
+          "methods": [
+            ["read", "some content"],
+            "stream"
+          ]
+        },
+        {
+          "name": "myfile 2",
+          "methods": [
+            ["read", "more content"],
+            "stream"
+          ]
+        }
+      ]]
+    ]
+  }
+]
+```
+
 **NOTE:** Remember that the state displayed here is the same `<state>` parameter that will be passed in to other methods invoked on that entry. For example, if `read` is invoked on `fooVM` via `<plugin_script> read <parent_path>/fooVM <state>`, then the value of `fooVM`'s `state` key will be passed-in for `<state>`.
 
 `list` adopts the standard error convention described in the [Errors](#errors) section.
@@ -153,7 +196,7 @@ Below is an example of valid `list` output:
 ## metadata
 `metadata` is invoked as `<plugin_script> metadata <path> <state>`. When `metadata` is invoked, the script must output a JSON object representing the entry's metadata. Below is an example of acceptable `metadata` output:
 
-```
+```json
 {
   "key1": "value1",
   "key2": "value2"
@@ -176,28 +219,28 @@ When `exec` is invoked, the plugin script's stdout and stderr must be connected 
 
 Because `exec` effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
-## Errors <a name="errors"></a>
+## Errors
 All errors are printed to `stderr`. A method invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of `stderr` into an error object, then documents that error in the process' activity and the server logs.
 
 **NOTE:** Not all method invocations adopt this error handling convention (e.g. `exec`). The error handling for these "snowflake" methods is described in their respective sections.
 
 
-## Aside (optional)<a name="aside"></a>
+## Aside (optional)
 This section talks about the reasoning behind the plugin script's usage, shown below for convenience:
 
-```
+```s
 <plugin_script> <method> <path> <state> <args...>
 ```
 
 If we let `<entry> = <path> <state>`, then our usage becomes:
 
-```
+```s
 <plugin_script> <method> <entry> <args...>
 ```
 
 If we ignore `<plugin_script>` then the above turns into `<method> <entry> <args...>`. When read out loud, this looks like the function call `<method>(<entry>, <args...>)`. If we imagine `<entry>` as an object in an OOP language, this is semantically equivalent to:
 
-```
+```s
 <entry>.<method>(<args...>)
 ```
 
@@ -211,6 +254,6 @@ You might be wondering why we don't just lump `<path>` and `<state>` together in
 
 [Download](./examples/sshfs.sh)
 
-```
+```s
 {{< snippet "static/docs/external_plugins/examples/sshfs.sh" >}}
 ```

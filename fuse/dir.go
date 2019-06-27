@@ -20,17 +20,24 @@ var _ fs.Node = (*dir)(nil)
 var _ = fs.NodeRequestLookuper(&dir{})
 var _ = fs.HandleReadDirAller(&dir{})
 
-func newDir(p plugin.Parent, e plugin.Parent) *dir {
+func newDir(p *dir, e plugin.Parent) *dir {
 	return &dir{newFuseNode("d", p, e)}
 }
 
 func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
-	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
-	if plugin.ListAction().IsSupportedOn(d.entry) {
-		return plugin.CachedList(ctx, d.entry.(plugin.Parent))
+	// Check for an updated entry in case it has static state.
+	updatedEntry, err := d.refind(ctx)
+	if err != nil {
+		activity.Record(ctx, "FUSE: List errored %v, %v", d, err)
+		return nil, err
 	}
 
-	return map[string]plugin.Entry{}, fuse.ENOENT
+	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
+	if plugin.ListAction().IsSupportedOn(updatedEntry) {
+		return plugin.CachedList(ctx, updatedEntry.(plugin.Parent))
+	}
+
+	return nil, fuse.ENOENT
 }
 
 // Lookup searches a directory for children.
@@ -53,13 +60,13 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 
 	if plugin.ListAction().IsSupportedOn(entry) {
-		childdir := newDir(d.entry.(plugin.Parent), entry.(plugin.Parent))
+		childdir := newDir(d, entry.(plugin.Parent))
 		log.Debugf("FUSE: Found directory %v", childdir)
 		return childdir, nil
 	}
 
 	log.Debugf("FUSE: Found file %v/%v", d, cname)
-	return newFile(d.entry.(plugin.Parent), entry), nil
+	return newFile(d, entry), nil
 }
 
 // ReadDirAll lists all children of the directory.

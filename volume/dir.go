@@ -10,33 +10,20 @@ import (
 // dir represents a directory in a volume. It populates a subtree from the Interface as needed.
 type dir struct {
 	plugin.EntryBase
-	impl Interface
-	// subtreeRoot represents the location we started searching for this subtree, which is used both as
-	// a cache key for that search and to be able to repeat the search. We must always query the same
-	// path when running VolumeList for its related key. If we didn't, we might start with a cache at
-	// '/', then later refill the same cache entry with a hierarchy starting at '/foo'. If we used that
-	// new cache data to try and list '/', we'd only get back a directory containing 'foo' and omit any
-	// other files in '/' because they wouldn't be in the cache at the time.
-	subtreeRoot *dir
-	path        string
+	impl   Interface
+	path   string
+	dirmap DirMap
 }
 
 // newDir creates a dir populated from dirs.
-func newDir(name string, attr plugin.EntryAttributes, impl Interface, subtreeRoot *dir, path string) *dir {
+func newDir(name string, attr plugin.EntryAttributes, impl Interface, path string) *dir {
 	vd := &dir{
 		EntryBase: plugin.NewEntry(name),
 	}
 	vd.impl = impl
-	vd.subtreeRoot = subtreeRoot
-	if vd.subtreeRoot == nil {
-		vd.subtreeRoot = vd
-	}
 	vd.path = path
 	vd.SetAttributes(attr)
-	vd.SetTTLOf(plugin.OpenOp, 60*time.Second)
-	// Caching handled in List based on 'impl'.
-	vd.DisableCachingFor(plugin.ListOp)
-
+	vd.SetTTLOf(plugin.ListOp, 30*time.Second)
 	return vd
 }
 
@@ -48,35 +35,39 @@ func (v *dir) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(v, "dir")
 }
 
+// Generate children using the provided DirMap. The dir may not have a dirmap
+// stored if it's a source because it should dynamically generate it.
+func (v *dir) generateChildren(dirmap DirMap) []plugin.Entry {
+	parent := dirmap[v.path]
+	entries := make([]plugin.Entry, 0, len(parent))
+	for name, attr := range parent {
+		subpath := v.path + "/" + name
+		if attr.Mode().IsDir() {
+			newEntry := newDir(name, attr, v.impl, subpath)
+			if d, ok := dirmap[subpath]; ok && d != nil {
+				newEntry.dirmap = dirmap
+				newEntry.Prefetched()
+			}
+			entries = append(entries, newEntry)
+		} else {
+			entries = append(entries, newFile(name, attr, v.impl, subpath))
+		}
+	}
+	return entries
+}
+
 // List lists the children of the directory.
 func (v *dir) List(ctx context.Context) ([]plugin.Entry, error) {
-	// Use subtree root if specified. If it's the base path, then use impl instead because we started
-	// from a dummy root that doesn't have an ID, so can't be used for caching.
-	var subtreeRoot plugin.Entry = v.subtreeRoot
-	if v.subtreeRoot.path == RootPath {
-		subtreeRoot = v.impl
+	if v.dirmap != nil {
+		// Children have been pre-populated by a source parent.
+		return v.generateChildren(v.dirmap), nil
 	}
-	result, err := plugin.CachedOp(ctx, "VolumeListCB", subtreeRoot, 30*time.Second, func() (interface{}, error) {
-		return v.impl.VolumeList(ctx, v.subtreeRoot.path)
-	})
+
+	// Generate child hierarchy. Don't store it on this entry, but populate new dirs from it.
+	dirmap, err := v.impl.VolumeList(ctx, v.path)
 	if err != nil {
 		return nil, err
 	}
 
-	root := result.(DirMap)[v.path]
-	entries := make([]plugin.Entry, 0, len(root))
-	for name, attr := range root {
-		if attr.Mode().IsDir() {
-			subpath := v.path + "/" + name
-			newEntry := newDir(name, attr, v.impl, v.subtreeRoot, subpath)
-			if d, ok := result.(DirMap)[subpath]; !ok || d == nil {
-				// Update key so we trigger new exploration with a new cache key at this subpath.
-				newEntry.subtreeRoot = newEntry
-			}
-			entries = append(entries, newEntry)
-		} else {
-			entries = append(entries, newFile(name, attr, v.impl, v.path+"/"+name))
-		}
-	}
-	return entries, nil
+	return v.generateChildren(dirmap), nil
 }

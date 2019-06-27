@@ -30,41 +30,14 @@ func toAPIEntry(e plugin.Entry) apitypes.Entry {
 
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
 	path := strings.Join(segments, "/")
-
-	curEntry := root
-	visitedSegments := make([]string, 0, cap(segments))
-	for _, segment := range segments {
-		switch curParent := curEntry.(type) {
-		case plugin.Parent:
-			// Get the entries via. List()
-			entries, err := plugin.CachedList(ctx, curParent)
-			if err != nil {
-				if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
-					return nil, duplicateCNameResponse(cnameErr)
-				}
-
-				return nil, entryNotFoundResponse(path, err.Error())
-			}
-
-			// Search for the specific entry
-			entry, ok := entries[segment]
-			if !ok {
-				reason := fmt.Sprintf("The %v entry does not exist", segment)
-				if len(visitedSegments) != 0 {
-					reason += fmt.Sprintf(" in the %v parent", strings.Join(visitedSegments, "/"))
-				}
-
-				return nil, entryNotFoundResponse(path, reason)
-			}
-
-			curEntry = entry
-			visitedSegments = append(visitedSegments, segment)
-		default:
-			reason := fmt.Sprintf("The entry %v is not a parent", strings.Join(visitedSegments, "/"))
-			return nil, entryNotFoundResponse(path, reason)
+	curEntry, err := plugin.FindEntry(ctx, root, segments)
+	if err != nil {
+		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
+			return nil, duplicateCNameResponse(cnameErr)
 		}
-	}
 
+		return nil, entryNotFoundResponse(path, err.Error())
+	}
 	return curEntry, nil
 }
 

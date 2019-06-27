@@ -30,24 +30,25 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 }
 
 var listAction = newAction("list", "Parent")
+var readAction = newAction("read", "Readable")
+var streamAction = newAction("stream", "Streamable")
+var execAction = newAction("exec", "Execable")
+
 // ListAction represents the list action
 func ListAction() Action {
 	return listAction
 }
 
-var readAction = newAction("read", "Readable")
 // ReadAction represents the read action
 func ReadAction() Action {
 	return readAction
 }
 
-var streamAction = newAction("stream", "Streamable")
 // StreamAction represents the stream action
 func StreamAction() Action {
 	return streamAction
 }
 
-var execAction = newAction("exec", "Execable")
 // ExecAction represents the exec action
 func ExecAction() Action {
 	return execAction
@@ -60,7 +61,7 @@ func Actions() map[string]Action {
 	// be able to modify it.
 	mp := make(map[string]Action)
 	for k, v := range actions {
-		mp[k] = v 
+		mp[k] = v
 	}
 	return mp
 }
@@ -69,12 +70,8 @@ func Actions() map[string]Action {
 // entry's supported actions.
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
-	case *externalPluginRoot:
-		return t.methods
-	case *externalPluginEntry:
-		// The supported actions are a subset of an external plugin
-		// entry's methods
-		return t.methods
+	case externalPlugin:
+		return t.supportedMethods()
 	default:
 		actions := make([]string, 0)
 

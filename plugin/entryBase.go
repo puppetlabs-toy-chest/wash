@@ -42,6 +42,7 @@ type EntryBase struct {
 	washID          string
 	ttl             [3]time.Duration
 	wrappedTypesMap SchemaMap
+	prefetched      bool
 }
 
 // NewEntry creates a new entry
@@ -104,6 +105,10 @@ func (e *EntryBase) setWrappedTypes(wrappedTypes SchemaMap) {
 	e.wrappedTypesMap = wrappedTypes
 }
 
+func (e *EntryBase) isPrefetched() bool {
+	return e.prefetched
+}
+
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
 // AND TESTING
 
@@ -125,6 +130,16 @@ func (e *EntryBase) Attributes() *EntryAttributes {
 // when you've already pre-computed them.
 func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 	e.attr = attr
+	return e
+}
+
+// Prefetched marks the entry as a prefetched entry. A prefetched entry
+// is an entry that was fetched as part of a batch operation that
+// fetched multiple levels of hierarchy at once. Volume directories and
+// files are good examples of prefetched entries (see the volume
+// package for more details).
+func (e *EntryBase) Prefetched() *EntryBase {
+	e.prefetched = true
 	return e
 }
 

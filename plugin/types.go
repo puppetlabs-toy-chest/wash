@@ -49,6 +49,7 @@ type Entry interface {
 	getTTLOf(op defaultOpCode) time.Duration
 	wrappedTypes() map[interface{}]*JSONSchema
 	setWrappedTypes(map[interface{}]*JSONSchema)
+	isPrefetched() bool
 }
 
 /*
