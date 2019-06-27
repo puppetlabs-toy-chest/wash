@@ -27,7 +27,7 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		cl.EntryBase = plugin.NewEntry("console.out")
 	}
 
-	output, err := cl.inst.cachedConsoleOutput(ctx)
+	output, err := cl.inst.cachedConsoleOutput(ctx, cl.latest)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
 }
 
 func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
-	output, err := cl.inst.cachedConsoleOutput(ctx)
+	output, err := cl.inst.cachedConsoleOutput(ctx, cl.latest)
 	if err != nil {
 		return nil, err
 	}

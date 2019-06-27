@@ -68,13 +68,13 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	return ec2Instance
 }
 
-func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context) (consoleOutput, error) {
+func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (consoleOutput, error) {
 	output, err := plugin.CachedOp(ctx, "ConsoleOutput", inst, 30*time.Second, func() (interface{}, error) {
 		request := &ec2Client.GetConsoleOutputInput{
 			InstanceId: awsSDK.String(inst.id),
 		}
-		if inst.hasLatestConsoleOutput {
-			request.Latest = awsSDK.Bool(inst.hasLatestConsoleOutput)
+		if latest {
+			request.Latest = awsSDK.Bool(latest)
 		}
 
 		resp, err := inst.client.GetConsoleOutputWithContext(ctx, request)
@@ -259,7 +259,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	var fallbackuser string
 	// Scan console output for user name instance was provisioned with. Set to ec2-user if not found
 	re := regexp.MustCompile(`\WAuthorized keys from .home.*authorized_keys for user ([^+]*)+`)
-	output, err := (inst.cachedConsoleOutput(ctx))
+	output, err := (inst.cachedConsoleOutput(ctx, inst.hasLatestConsoleOutput))
 	if err != nil {
 		activity.Record(ctx, "Cannot get cached console output: %v", err)
 		fallbackuser = "ec2-user"
