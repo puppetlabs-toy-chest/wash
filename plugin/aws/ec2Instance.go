@@ -69,7 +69,13 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 }
 
 func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (consoleOutput, error) {
-	output, err := plugin.CachedOp(ctx, "ConsoleOutput", inst, 30*time.Second, func() (interface{}, error) {
+	var opname string
+	if latest {
+		opname = "ConsoleOutputLatest"
+	} else {
+		opname = "ConsoleOutput"
+	}
+	output, err := plugin.CachedOp(ctx, opname, inst, 30*time.Second, func() (interface{}, error) {
 		request := &ec2Client.GetConsoleOutputInput{
 			InstanceId: awsSDK.String(inst.id),
 		}
