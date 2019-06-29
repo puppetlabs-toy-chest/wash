@@ -14,7 +14,7 @@ type predicateExpressionParser struct {
 
 func newPredicateExpressionParser(isInnerExpression bool) predicate.Parser {
 	p := &predicateExpressionParser{
-		Parser: expression.NewParser(predicate.ToParser(parsePredicate)),
+		Parser:            expression.NewParser(predicate.ToParser(parsePredicate), &predicateAnd{}, &predicateOr{}),
 		isInnerExpression: isInnerExpression,
 	}
 	if isInnerExpression {

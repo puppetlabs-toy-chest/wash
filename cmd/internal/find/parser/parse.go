@@ -9,7 +9,7 @@ import (
 type Result struct {
 	Paths     []string
 	Options   types.Options
-	Predicate *types.EntryPredicate
+	Predicate types.EntryPredicate
 }
 
 /*

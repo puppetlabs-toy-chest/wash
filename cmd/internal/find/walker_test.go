@@ -101,10 +101,10 @@ func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
 		},
 	})
 
-	s.walker.p.SchemaP = func(s *types.EntrySchema) bool {
+	s.walker.p.SetSchemaP(types.ToEntrySchemaP(func(s *types.EntrySchema) bool {
 		// Print only "foo" or "file"s. Ignore everything else.
 		return s.TypeID() == "foo" || s.TypeID() == "file"
-	}
+	}))
 
 	s.True(s.walker.Walk("."))
 	s.assertPrintedTree(
@@ -202,9 +202,9 @@ func (s *WalkerTestSuite) TestVisit_NilSchema_DoesNotVisit() {
 func (s *WalkerTestSuite) TestVisit_UnsatisfyingSchema_DoesNotVisit() {
 	e := newMockEntryForVisit()
 	e.SetSchema(&types.EntrySchema{})
-	s.walker.p.SchemaP = func(_ *types.EntrySchema) bool {
+	s.walker.p.SetSchemaP(types.ToEntrySchemaP(func(_ *types.EntrySchema) bool {
 		return false
-	}
+	}))
 	s.walker.visit(e, 0)
 	s.assertNotPrintedEntry(e)
 }

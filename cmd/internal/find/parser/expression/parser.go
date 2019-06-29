@@ -3,16 +3,16 @@ package expression
 import (
 	"fmt"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"github.com/golang-collections/collections/stack"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
 /*
 Parser is a predicate parser that parses predicate expressions. Expressions
 have the following grammar:
   Expression => Expression (-a|-and) Atom |
-                Expression Atom           | 
+                Expression Atom           |
                 Expression (-o|-or)  Atom |
                 Atom
 
@@ -52,26 +52,26 @@ type parser struct {
 	// for callers to extend the parser if they'd like to support additional binary
 	// ops. We will likely need this capability in the future if/when we add the ","
 	// operator to `wash find`.
-	binaryOps map[string]*BinaryOp
-	Atom *predicate.CompositeParser
-	Stack *evalStack
+	binaryOps     map[string]*BinaryOp
+	Atom          *predicate.CompositeParser
+	Stack         *evalStack
 	numOpenParens int
-	opTokens map[string]struct{}
+	opTokens      map[string]struct{}
 }
 
 // NewParser returns a new predicate expression parser. The passed-in
 // predicateParser must be able to parse the "Predicate" nonterminal
 // in the expression grammar.
-func NewParser(predicateParser predicate.Parser) Parser {
+func NewParser(predicateParser predicate.Parser, andOp predicate.BinaryOp, orOp predicate.BinaryOp) Parser {
 	p := &parser{}
 	p.binaryOps = make(map[string]*BinaryOp)
 	p.opTokens = map[string]struct{}{
-		"!": struct{}{},
+		"!":    struct{}{},
 		"-not": struct{}{},
-		"(": struct{}{},
-		")": struct{}{},
+		"(":    struct{}{},
+		")":    struct{}{},
 	}
-	for _, op := range []*BinaryOp{andOp, orOp} {
+	for _, op := range []*BinaryOp{newAndOp(andOp), newOrOp(orOp)} {
 		for _, token := range op.tokens {
 			p.binaryOps[token] = op
 			p.opTokens[token] = struct{}{}
@@ -134,7 +134,7 @@ when parsing `meta` primary expressions.
 If tokens is empty, then Parse will return an ErrEmptyExpression error.
 */
 func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
-	parser.setStack(newEvalStack())
+	parser.setStack(newEvalStack(parser.binaryOps["-a"]))
 
 	// Declare these as variables so that we can cleanly update
 	// err for each iteration without having to worry about the
@@ -157,7 +157,7 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 				return nil, nil, fmt.Errorf("): no beginning '('")
 			}
 			// We've finished parsing a parenthesized expression
-			break	
+			break
 		}
 		// Try parsing an atom first.
 		p, tks, err = parser.Atom.Parse(tokens)
@@ -177,7 +177,7 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 			// Found an unknown token. Break out of the loop to evaluate
 			// the final predicate.
 			err = UnknownTokenError{token}
-			break	
+			break
 		}
 		// Parsed a binaryOp, so shift tokens and push the op on the evaluation stack.
 		tokens = tokens[1:]
@@ -236,12 +236,14 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 
 type evalStack struct {
 	*stack.Stack
-	mostRecentOp *BinaryOp
+	andOp             *BinaryOp
+	mostRecentOp      *BinaryOp
 	mostRecentOpToken string
 }
 
-func newEvalStack() *evalStack {
+func newEvalStack(andOp *BinaryOp) *evalStack {
 	return &evalStack{
+		andOp: andOp,
 		Stack: stack.New(),
 	}
 }
@@ -262,7 +264,7 @@ func (s *evalStack) pushPredicate(p predicate.Predicate) {
 	if _, ok := s.Peek().(predicate.Predicate); ok {
 		// We have p1 p2, where p1 == s.Peek() and p2 = p. Since p1 p2 == p1 -and p2,
 		// push andOp before pushing p2.
-		s.pushBinaryOp(andOp.tokens[0], andOp)
+		s.pushBinaryOp(s.andOp.tokens[0], s.andOp)
 	}
 	s.Push(p)
 }
@@ -273,7 +275,6 @@ func (s *evalStack) evaluate() {
 		p2 := s.Pop().(predicate.Predicate)
 		op := s.Pop().(*BinaryOp)
 		p1 := s.Pop().(predicate.Predicate)
-		s.Push(op.combine(p1, p2))
+		s.Push(op.op.Combine(p1, p2))
 	}
 }
-

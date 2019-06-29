@@ -21,42 +21,80 @@ func parsePredicate(tokens []string) (predicate.Predicate, []string, error) {
 	return cp.Parse(tokens)
 }
 
-// genericPredicate represents a `meta` primary predicate "base" class.
-// Child classes should only override the Negate method. Here's why:
-//   * Some `meta` primary predicates perform type validation, returning
-//     false for a mis-typed value. genericPredicate#Negate is a strict
-//     negation, so it will return true for a mis-typed value. This is bad.
-//
-//   * Some of the more complicated predicates require additional negation
-//     semantics. For example, ObjectPredicate returns false if the key does
-//     not exist. A negated ObjectPredicate should also return false for this
-//     case.
-//
-// Both of these issues are resolved if the child class overrides Negate.
-type genericPredicate func(interface{}) bool
-
-// And returns p1 && p2
-func (p1 genericPredicate) And(p2 predicate.Predicate) predicate.Predicate {
-	return genericPredicate(func(v interface{}) bool {
-		return p1(v) && p2.IsSatisfiedBy(v)
-	})
+// Predicate is a wrapper to the predicate.Predicate interface.
+// We'll need it later for the meta schema work.
+type Predicate interface {
+	predicate.Predicate
 }
 
-// Or returns p1 || p2
-func (p1 genericPredicate) Or(p2 predicate.Predicate) predicate.Predicate {
-	return genericPredicate(func(v interface{}) bool {
-		return p1(v) || p2.IsSatisfiedBy(v)
-	})
-}
-
-// Negate returns Not(p1)
-func (p1 genericPredicate) Negate() predicate.Predicate {
-	return genericPredicate(func(v interface{}) bool {
-		return !p1(v)
-	})
-}
+// predicateBase represents a `meta` primary predicate "base" class.
+// Child classes must implement the Negate method.
+type predicateBase func(interface{}) bool
 
 // IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 predicateBase) IsSatisfiedBy(v interface{}) bool {
+	return p1(v)
+}
+
+// genericPredicate represents a generic meta primary predicate that adheres
+// to strict negation
+type genericPredicate func(interface{}) bool
+
 func (p1 genericPredicate) IsSatisfiedBy(v interface{}) bool {
 	return p1(v)
+}
+
+func (p1 genericPredicate) Negate() predicate.Predicate {
+	return genericPredicate((func(v interface{}) bool {
+		return !p1(v)
+	}))
+}
+
+// predicateAnd and predicateOr are necessary to strictly enforce De'Morgan's law.
+// This is because child classes of predicateBase implement their own negate method.
+
+type predicateAnd struct {
+	predicateBase
+	p1 Predicate
+	p2 Predicate
+}
+
+func (op *predicateAnd) Combine(p1 predicate.Predicate, p2 predicate.Predicate) predicate.Predicate {
+	pp1 := p1.(Predicate)
+	pp2 := p2.(Predicate)
+	return &predicateAnd{
+		p1: pp1,
+		p2: pp2,
+	}
+}
+
+func (op *predicateAnd) IsSatisfiedBy(v interface{}) bool {
+	return op.p1.IsSatisfiedBy(v) && op.p2.IsSatisfiedBy(v)
+}
+
+func (op *predicateAnd) Negate() predicate.Predicate {
+	return (&predicateOr{}).Combine(op.p1.Negate(), op.p2.Negate())
+}
+
+type predicateOr struct {
+	predicateBase
+	p1 Predicate
+	p2 Predicate
+}
+
+func (op *predicateOr) Combine(p1 predicate.Predicate, p2 predicate.Predicate) predicate.Predicate {
+	pp1 := p1.(Predicate)
+	pp2 := p2.(Predicate)
+	return &predicateOr{
+		p1: pp1,
+		p2: pp2,
+	}
+}
+
+func (op *predicateOr) IsSatisfiedBy(v interface{}) bool {
+	return op.p1.IsSatisfiedBy(v) || op.p2.IsSatisfiedBy(v)
+}
+
+func (op *predicateOr) Negate() predicate.Predicate {
+	return (&predicateAnd{}).Combine(op.p1.Negate(), op.p2.Negate())
 }

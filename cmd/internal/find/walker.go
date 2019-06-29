@@ -16,7 +16,7 @@ type walker interface {
 }
 
 type walkerImpl struct {
-	p    *types.EntryPredicate
+	p    types.EntryPredicate
 	opts types.Options
 	conn client.Client
 }
@@ -42,7 +42,7 @@ func (w *walkerImpl) Walk(path string) bool {
 		return false
 	}
 	if s != nil {
-		schema := types.Prune(types.NewEntrySchema(s), w.p.SchemaP)
+		schema := types.Prune(types.NewEntrySchema(s), w.p.SchemaP())
 		e.SetSchema(schema)
 	}
 	return w.walk(e, 0)
@@ -92,7 +92,7 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 		return true
 	}
 	if e.SchemaKnown {
-		if e.Schema == nil || !w.p.SchemaP(e.Schema) {
+		if e.Schema == nil || !w.p.SchemaP().P(e.Schema) {
 			// This is possible if e's a sibling/ancestor to a satisfying
 			// node
 			return true

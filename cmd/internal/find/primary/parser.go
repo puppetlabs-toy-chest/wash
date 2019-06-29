@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/cmd/internal/find/types"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 )
 
 // Get retrieves the specified primary
@@ -46,7 +46,7 @@ func Table() *cmdutil.Table {
 
 // Parser parses `wash find` primaries.
 var Parser = &parser{
-	primaryMap: make(map[string]*Primary),
+	primaryMap:   make(map[string]*Primary),
 	SetPrimaries: make(map[*Primary]bool),
 }
 
@@ -65,7 +65,7 @@ func (parser *parser) IsPrimary(token string) bool {
 	return ok
 }
 
-func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error)  {
+func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a primary")
 	}
@@ -99,13 +99,13 @@ func (parser *parser) add(p *Primary) *Primary {
 
 // Primary represents a `wash find` primary.
 type Primary struct {
-	Description string
+	Description         string
 	DetailedDescription string
-	args string
-	shortName string
-	name string
-	tokens map[string]struct{}
-	parseFunc types.EntryPredicateParser
+	args                string
+	shortName           string
+	name                string
+	tokens              map[string]struct{}
+	parseFunc           types.EntryPredicateParser
 }
 
 // Usage returns the primary's usage string.

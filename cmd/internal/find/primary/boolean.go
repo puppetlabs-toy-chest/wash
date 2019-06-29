@@ -11,13 +11,13 @@ func newBooleanPrimary(val bool) *Primary {
 	return Parser.add(&Primary{
 		Description: fmt.Sprintf("Always returns %v", val),
 		name:        fmt.Sprintf("%v", val),
-		parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
+		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 			p := types.ToEntryP(func(e types.Entry) bool {
 				return val
 			})
-			p.SchemaP = func(s *types.EntrySchema) bool {
+			p.SetSchemaP(types.ToEntrySchemaP(func(s *types.EntrySchema) bool {
 				return val
-			}
+			}))
 			return p, tokens, nil
 		},
 	})

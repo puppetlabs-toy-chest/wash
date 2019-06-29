@@ -119,11 +119,11 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate {
 	arryP := &arrayPredicate{
 		ptype: ptype,
-		p: p,
+		p:     p,
 	}
 	switch ptype.t {
 	case 's':
-		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
+		arryP.predicateBase = toArrayP(func(vs []interface{}) bool {
 			for _, v := range vs {
 				if p.IsSatisfiedBy(v) {
 					return true
@@ -134,7 +134,7 @@ func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate
 			return false
 		})
 	case 'a':
-		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
+		arryP.predicateBase = toArrayP(func(vs []interface{}) bool {
 			for _, v := range vs {
 				if !p.IsSatisfiedBy(v) {
 					return false
@@ -145,7 +145,7 @@ func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate
 		})
 	case 'n':
 		n := ptype.n
-		arryP.genericPredicate = toArrayP(func(vs []interface{}) bool {
+		arryP.predicateBase = toArrayP(func(vs []interface{}) bool {
 			if n >= uint(len(vs)) {
 				return false
 			}
@@ -160,8 +160,8 @@ func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate
 
 // toArrayP is a helper for arrayP that's meant to reduce
 // the boilerplate type validation.
-func toArrayP(p func([]interface{}) bool) genericPredicate {
-	return genericPredicate(func(v interface{}) bool {
+func toArrayP(p func([]interface{}) bool) predicateBase {
+	return predicateBase(func(v interface{}) bool {
 		arrayV, ok := v.([]interface{})
 		if !ok {
 			return false
@@ -171,9 +171,9 @@ func toArrayP(p func([]interface{}) bool) genericPredicate {
 }
 
 type arrayPredicate struct {
-	genericPredicate
+	predicateBase
 	ptype arrayPredicateType
-	p predicate.Predicate
+	p     predicate.Predicate
 }
 
 func (arryP *arrayPredicate) Negate() predicate.Predicate {

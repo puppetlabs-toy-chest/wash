@@ -102,7 +102,7 @@ func (s *ObjectPredicateTestSuite) TestObjectP_ExistantKey() {
 
 	s.True(objP.IsSatisfiedBy(mp), "objectP did not return p(mp[key])")
 	s.True(calledP, "objectP did not invoke p")
-	
+
 	// Now test negation
 	calledP = false
 	s.False(objP.Negate().IsSatisfiedBy(mp), "objectP.Negate() did not return !p(mp[key])")

@@ -9,8 +9,13 @@ package predicate
 // support, so we should re-evaluate this approach once it is
 // released.
 type Predicate interface {
-	And(Predicate) Predicate
-	Or(Predicate) Predicate
 	Negate() Predicate
 	IsSatisfiedBy(v interface{}) bool
+}
+
+// BinaryOp represents a binary operation that combines
+// predicates to return a new predicate.
+type BinaryOp interface {
+	Predicate
+	Combine(Predicate, Predicate) Predicate
 }
