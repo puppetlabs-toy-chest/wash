@@ -11,7 +11,7 @@ import (
 // The predicates are tested separately in their *Predicate.go files, so they
 // will not be tested here. Instead, the tests here serve as "integration tests" for
 // the parsePredicateExpression function. They're meant to test parser errors, each of
-// the operators, and whether operator precedence is enforced. 
+// the operators, and whether operator precedence is enforced.
 //
 // Note that inner expressions are tested in ObjectPredicate/ArrayPredicate since that
 // is where they are used. They're also tested in the meta primary tests.
@@ -84,7 +84,7 @@ func (s *PredicateExpressionTestSuite) TestNotOpEval() {
 	// boolean predicate
 	s.RNTC("-not -true -primary", "-primary", "false")
 	s.RNTC("-not -not -true -primary", "-primary", "true")
-	// string predicate	
+	// string predicate
 	s.RNTC("-not f -primary", "-primary", 'g')
 	s.RNTC("-not -not f -primary", "-primary", 'f')
 	// time predicate
@@ -185,6 +185,15 @@ func (s *PredicateExpressionTestSuite) TestPredicateExpressions() {
 	// Parsed as "true AND empty object/array" (should always return false)
 	s.RNTC("-true -a -empty -primary", "-primary", true)
 	s.RNTC("-true -a -empty -primary", "-primary", []interface{}{})
+}
+
+func (s *PredicateExpressionTestSuite) TestDeMorgansLaw() {
+	// Parsed as "NOT(3) AND NOT(6)"
+	s.RTC("! ( 3 -o 6 ) -primary", "-primary", float64(5))
+	s.RNTC("! ( 3 -o 6 ) -primary", "-primary", "foo")
+	// Parsed as "NOT(3) OR NOT(6)"
+	s.RTC("! ( 3 -a 6 ) -primary", "-primary", float64(3))
+	s.RNTC("! ( 3 -a 6 ) -primary", "-primary", "foo")
 }
 
 func TestPredicateExpression(t *testing.T) {
