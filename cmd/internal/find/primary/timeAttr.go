@@ -34,7 +34,7 @@ func newTimeAttrPrimary(name string) *Primary {
 		DetailedDescription: timeAttrDetailedDescription(name),
 		name:                name,
 		args:                "[+|-]n[smhdw]",
-		parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
+		parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 			if params.ReferenceTime.IsZero() {
 				panic("Attempting to parse a time primary without setting params.ReferenceTime")
 			}

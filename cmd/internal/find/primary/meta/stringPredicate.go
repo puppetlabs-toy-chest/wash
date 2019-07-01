@@ -35,7 +35,7 @@ func parseStringPredicate(tokens []string) (predicate.Predicate, []string, error
 
 func stringP(p func(string) bool) predicate.Predicate {
 	return &stringPredicate{
-		genericPredicate: func(v interface{}) bool {
+		predicateBase: func(v interface{}) bool {
 			strV, ok := v.(string)
 			if !ok {
 				return false
@@ -47,7 +47,7 @@ func stringP(p func(string) bool) predicate.Predicate {
 }
 
 type stringPredicate struct {
-	genericPredicate
+	predicateBase
 	p func(string) bool
 }
 

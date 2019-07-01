@@ -24,19 +24,17 @@ func (s *primaryTestSuite) RTC(input string, remInput string, trueValue interfac
 	}
 }
 
-// RSTC => RunSchemaPTestCase
+func (s *primaryTestSuite) RNTC(input string, remInput string, falseValue interface{}) {
+	s.Suite.RNTC(input, remInput, s.ConstructEntry(falseValue))
+}
+
 func (s *primaryTestSuite) RSTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
-	oldParser := s.Parser.(*Primary)
-	defer func() {
-		s.Parser = oldParser
-	}()
-	s.Parser = types.EntryPredicateParser(oldParser.parseFunc).ToSchemaPParser()
-	s.Suite.RTC(input, remInput, s.ConstructEntrySchema(trueValue))
+	s.Suite.RSTC(input, remInput, s.ConstructEntrySchema(trueValue))
 	if len(falseValue) > 0 {
-		s.Suite.RNTC(input, remInput, s.ConstructEntrySchema(falseValue[0]))
+		s.Suite.RNSTC(input, remInput, s.ConstructEntrySchema(falseValue[0]))
 	}
 }
 
-func (s *primaryTestSuite) RNTC(input string, remInput string, falseValue interface{}) {
-	s.Suite.RNTC(input, remInput, s.ConstructEntry(falseValue))
+func (s *primaryTestSuite) RNSTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+	s.Suite.RNSTC(input, remInput, s.ConstructEntrySchema(falseValue))
 }

@@ -18,7 +18,7 @@ var Size = Parser.add(&Primary{
 	DetailedDescription: sizeDetailedDescription,
 	name:                "size",
 	args:                "[+|-]n[ckMGTP]",
-	parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
+	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
 		}

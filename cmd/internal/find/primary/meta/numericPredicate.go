@@ -34,7 +34,7 @@ func parseNumericPredicate(tokens []string) (predicate.Predicate, []string, erro
 
 func numericP(p numeric.Predicate) predicate.Predicate {
 	return &numericPredicate{
-		genericPredicate: func(v interface{}) bool {
+		predicateBase: func(v interface{}) bool {
 			floatV, ok := v.(float64)
 			if !ok {
 				return false
@@ -46,7 +46,7 @@ func numericP(p numeric.Predicate) predicate.Predicate {
 }
 
 type numericPredicate struct {
-	genericPredicate
+	predicateBase
 	p numeric.Predicate
 }
 

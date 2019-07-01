@@ -8,7 +8,7 @@ import (
 // The functionality here is tested in primary/meta_test.go
 
 // Parse is the meta primary's parse function.
-func Parse(tokens []string) (*types.EntryPredicate, []string, error) {
+func Parse(tokens []string) (types.EntryPredicate, []string, error) {
 	p, tokens, err := parseExpression(tokens)
 	if err != nil {
 		return nil, nil, err

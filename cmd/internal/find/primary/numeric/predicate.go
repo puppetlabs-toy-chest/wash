@@ -10,20 +10,6 @@ import (
 // Predicate represents a Numeric predicate
 type Predicate func(int64) bool
 
-// And returns p1 && p2
-func (p1 Predicate) And(p2 predicate.Predicate) predicate.Predicate {
-	return Predicate(func(n int64) bool {
-		return p1(n) && (p2.(Predicate))(n)
-	})
-}
-
-// Or returns p1 || p2
-func (p1 Predicate) Or(p2 predicate.Predicate) predicate.Predicate {
-	return Predicate(func(n int64) bool {
-		return p1(n) || (p2.(Predicate))(n)
-	})
-}
-
 // Negate returns Not(p1)
 func (p1 Predicate) Negate() predicate.Predicate {
 	return Predicate(func(n int64) bool {

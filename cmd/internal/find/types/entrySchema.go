@@ -129,7 +129,7 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 		if _, ok := visited[s.TypeID()]; ok {
 			return
 		}
-		result[s.TypeID()] = p(s)
+		result[s.TypeID()] = p.P(s)
 		if !result[s.TypeID()] && len(s.Children) > 0 {
 			delete(result, s.TypeID())
 		}

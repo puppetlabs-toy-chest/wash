@@ -82,7 +82,7 @@ var falseP = booleanP(false)
 
 func booleanP(value bool) predicate.Predicate {
 	return &booleanPredicate{
-		genericPredicate: func(v interface{}) bool {
+		predicateBase: func(v interface{}) bool {
 			bv, ok := v.(bool)
 			if !ok {
 				return false
@@ -94,7 +94,7 @@ func booleanP(value bool) predicate.Predicate {
 }
 
 type booleanPredicate struct {
-	genericPredicate
+	predicateBase
 	value bool
 }
 

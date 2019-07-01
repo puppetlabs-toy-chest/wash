@@ -13,7 +13,7 @@ import (
 See the comments of expression.Parser#Parse for the grammar. Substitute
 Predicate with Primary.
 */
-func parseExpression(tokens []string) (*types.EntryPredicate, error) {
+func parseExpression(tokens []string) (types.EntryPredicate, error) {
 	if len(tokens) == 0 {
 		// tokens is empty, meaning the user did not provide an expression
 		// to `wash find`. Thus, we default to a predicate that always returns
@@ -22,7 +22,7 @@ func parseExpression(tokens []string) (*types.EntryPredicate, error) {
 			return true
 		}), nil
 	}
-	parser := expression.NewParser(primary.Parser)
+	parser := expression.NewParser(primary.Parser, &types.EntryPredicateAnd{}, &types.EntryPredicateOr{})
 	p, tks, err := parser.Parse(tokens)
 	if err != nil {
 		if tkErr, ok := err.(expression.UnknownTokenError); ok {
@@ -35,7 +35,7 @@ func parseExpression(tokens []string) (*types.EntryPredicate, error) {
 		msg := fmt.Sprintf("parser.parseExpression(): returned a non-empty set of tokens: %v", tks)
 		panic(msg)
 	}
-	return p.(*types.EntryPredicate), nil
+	return p.(types.EntryPredicate), nil
 }
 
 // OperandsTable returns a table containing all of `wash find`'s available
@@ -54,7 +54,7 @@ func OperandsTable() *cmdutil.Table {
 }
 
 func isPartOfExpression(arg string) bool {
-	parser := expression.NewParser(primary.Parser)
+	parser := expression.NewParser(primary.Parser, &types.EntryPredicateAnd{}, &types.EntryPredicateOr{})
 	return arg == "--" || parser.IsOp(arg) || primary.Parser.IsPrimary(arg)
 }
 

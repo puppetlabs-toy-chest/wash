@@ -12,10 +12,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Suite represents a type that tests predicate parsers
+// Suite represents a type that tests `wash find` predicate parsers
 type Suite struct {
 	suite.Suite
-	Parser predicate.Parser
+	Parser        predicate.Parser
+	SchemaPParser predicate.Parser
 }
 
 // Case represents a parser test case
@@ -25,15 +26,12 @@ type Case struct {
 	SatisfyingValue interface{}
 	ErrRegex        *regexp.Regexp
 	IsMatchError    bool
+	parser          predicate.Parser
 }
 
 // RTC => RunTestCase. Saves some typing
 func (suite *Suite) RTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
-	suite.runTestCase(Case{
-		Input:           input,
-		RemInput:        remInput,
-		SatisfyingValue: trueValue,
-	})
+	suite.rTC(suite.Parser, input, remInput, trueValue)
 	if len(falseValue) > 0 {
 		suite.RNTC(input, remInput, falseValue[0])
 	}
@@ -41,11 +39,20 @@ func (suite *Suite) RTC(input string, remInput string, trueValue interface{}, fa
 
 // RNTC => RunNegativeTestCase. Saves some typing
 func (suite *Suite) RNTC(input string, remInput string, falseValue interface{}) {
-	suite.runTestCase(Case{
-		Input:           input,
-		RemInput:        remInput,
-		SatisfyingValue: falseV{falseValue},
-	})
+	suite.rTC(suite.Parser, input, remInput, falseV{falseValue})
+}
+
+// RSTC => RunSchemaTestCase. Saves some typing.
+func (suite *Suite) RSTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+	suite.rTC(suite.SchemaPParser, input, remInput, trueValue)
+	if len(falseValue) > 0 {
+		suite.rTC(suite.SchemaPParser, input, remInput, falseValue[0])
+	}
+}
+
+// RNSTC => RunNegativeSchemaTestCase. Saves some typing
+func (suite *Suite) RNSTC(input string, remInput string, falseValue interface{}) {
+	suite.rTC(suite.SchemaPParser, input, remInput, falseV{falseValue})
 }
 
 // RETC => RunErrorTestCase
@@ -54,6 +61,16 @@ func (suite *Suite) RETC(input string, errRegex string, isMatchError bool) {
 		Input:        input,
 		ErrRegex:     regexp.MustCompile(errRegex),
 		IsMatchError: isMatchError,
+		parser:       suite.Parser,
+	})
+}
+
+func (suite *Suite) rTC(parser predicate.Parser, input string, remInput string, trueValue interface{}) {
+	suite.runTestCase(Case{
+		Input:           input,
+		RemInput:        remInput,
+		SatisfyingValue: trueValue,
+		parser:          parser,
 	})
 }
 
@@ -67,7 +84,7 @@ func (suite *Suite) runTestCase(c Case) {
 		}
 	}()
 	input = c.Input
-	p, tokens, err := suite.Parser.Parse(suite.ToTks(input))
+	p, tokens, err := c.parser.Parse(suite.ToTks(input))
 	if c.ErrRegex != nil {
 		if c.IsMatchError {
 			suite.True(errz.IsMatchError(err), "Input %v: expected an errz.MatchError", input)
@@ -106,7 +123,6 @@ func (suite *Suite) SetupTest() {
 func (suite *Suite) TeardownTest() {
 	params.ReferenceTime = time.Time{}
 }
-
 
 // falseV's a wrapper type that's used to distingush between "positive" and "negative"
 // satisfying values. We need it b/c "nil" could be a satisfying value.

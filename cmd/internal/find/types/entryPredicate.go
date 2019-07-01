@@ -5,66 +5,25 @@ import (
 )
 
 // EntryPredicate represents a predicate on a Wash entry.
-type EntryPredicate struct {
-	P func(Entry) bool
-	// Maintain a SchemaP object for the walker so that it only
-	// traverses satisfying paths.
-	SchemaP EntrySchemaPredicate
+type EntryPredicate interface {
+	predicate.Predicate
+	P(Entry) bool
+	SchemaP() EntrySchemaPredicate
+	SetSchemaP(EntrySchemaPredicate)
 }
 
 // ToEntryP converts p to an EntryPredicate object
-func ToEntryP(p func(e Entry) bool) *EntryPredicate {
-	return &EntryPredicate{
-		P: p,
-		SchemaP: func(s *EntrySchema) bool {
+func ToEntryP(p func(e Entry) bool) EntryPredicate {
+	return &entryPredicate{
+		p: p,
+		schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
 			return true
-		},
+		}),
 	}
-}
-
-// And returns p1 && p2
-func (p1 *EntryPredicate) And(p2 predicate.Predicate) predicate.Predicate {
-	ep2 := p2.(*EntryPredicate)
-	return &EntryPredicate{
-		P: func(e Entry) bool {
-			return p1.P(e) && ep2.P(e)
-		},
-		SchemaP: p1.SchemaP.And(ep2.SchemaP).(EntrySchemaPredicate),
-	}
-}
-
-// Or returns p1 || p2
-func (p1 *EntryPredicate) Or(p2 predicate.Predicate) predicate.Predicate {
-	ep2 := p2.(*EntryPredicate)
-	return &EntryPredicate{
-		P: func(e Entry) bool {
-			return p1.P(e) || ep2.P(e)
-		},
-		SchemaP: p1.SchemaP.Or(ep2.SchemaP).(EntrySchemaPredicate),
-	}
-}
-
-// Negate returns Not(p1)
-func (p1 EntryPredicate) Negate() predicate.Predicate {
-	return &EntryPredicate{
-		P: func(e Entry) bool {
-			return !p1.P(e)
-		},
-		SchemaP: p1.SchemaP.Negate().(EntrySchemaPredicate),
-	}
-}
-
-// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
-func (p1 *EntryPredicate) IsSatisfiedBy(v interface{}) bool {
-	entry, ok := v.(Entry)
-	if !ok {
-		return false
-	}
-	return p1.P(entry)
 }
 
 // EntryPredicateParser parses Entry predicates
-type EntryPredicateParser func(tokens []string) (*EntryPredicate, []string, error)
+type EntryPredicateParser func(tokens []string) (EntryPredicate, []string, error)
 
 // Parse parses an EntryPredicate from the given input.
 func (parser EntryPredicateParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
@@ -79,6 +38,86 @@ func (parser EntryPredicateParser) ToSchemaPParser() EntrySchemaPredicateParser 
 		if err != nil {
 			return nil, tokens, err
 		}
-		return entryP.SchemaP, tokens, nil
+		return entryP.SchemaP(), tokens, nil
+	}
+}
+
+type entryPredicate struct {
+	p func(Entry) bool
+	// Maintain a SchemaP object for the walker so that it only
+	// traverses satisfying paths.
+	schemaP EntrySchemaPredicate
+}
+
+func (p1 *entryPredicate) P(e Entry) bool {
+	return p1.p(e)
+}
+
+func (p1 *entryPredicate) SchemaP() EntrySchemaPredicate {
+	return p1.schemaP
+}
+
+func (p1 *entryPredicate) SetSchemaP(schemaP EntrySchemaPredicate) {
+	p1.schemaP = schemaP
+}
+
+// Negate returns Not(p1)
+func (p1 *entryPredicate) Negate() predicate.Predicate {
+	return &entryPredicate{
+		p: func(e Entry) bool {
+			return !p1.P(e)
+		},
+		schemaP: p1.SchemaP().Negate().(EntrySchemaPredicate),
+	}
+}
+
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (p1 *entryPredicate) IsSatisfiedBy(v interface{}) bool {
+	entry, ok := v.(Entry)
+	if !ok {
+		return false
+	}
+	return p1.P(entry)
+}
+
+// EntryPredicateAnd represents an And operation on Entry predicates
+type EntryPredicateAnd struct {
+	*entryPredicate
+}
+
+// Combine implements predicate.BinaryOp#Combine
+func (op *EntryPredicateAnd) Combine(p1 predicate.Predicate, p2 predicate.Predicate) predicate.Predicate {
+	ep1 := p1.(EntryPredicate)
+	ep2 := p2.(EntryPredicate)
+	return &EntryPredicateAnd{
+		entryPredicate: &entryPredicate{
+			p: func(e Entry) bool {
+				return ep1.P(e) && ep2.P(e)
+			},
+			schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
+				return ep1.SchemaP().P(s) && ep2.SchemaP().P(s)
+			}),
+		},
+	}
+}
+
+// EntryPredicateOr represents an Or operation on Entry predicates
+type EntryPredicateOr struct {
+	*entryPredicate
+}
+
+// Combine implements predicate.BinaryOp#Combine
+func (op *EntryPredicateOr) Combine(p1 predicate.Predicate, p2 predicate.Predicate) predicate.Predicate {
+	ep1 := p1.(EntryPredicate)
+	ep2 := p2.(EntryPredicate)
+	return &EntryPredicateOr{
+		entryPredicate: &entryPredicate{
+			p: func(e Entry) bool {
+				return ep1.P(e) || ep2.P(e)
+			},
+			schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
+				return ep1.SchemaP().P(s) || ep2.SchemaP().P(s)
+			}),
+		},
 	}
 }

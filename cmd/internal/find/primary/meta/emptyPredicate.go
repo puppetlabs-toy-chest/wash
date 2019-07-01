@@ -15,7 +15,7 @@ func parseEmptyPredicate(tokens []string) (predicate.Predicate, []string, error)
 
 func emptyP(negated bool) predicate.Predicate {
 	return &emptyPredicate{
-		genericPredicate: func(v interface{}) bool {
+		predicateBase: func(v interface{}) bool {
 			switch t := v.(type) {
 			case map[string]interface{}:
 				if negated {
@@ -29,18 +29,17 @@ func emptyP(negated bool) predicate.Predicate {
 				return len(t) == 0
 			default:
 				return false
-			}	
+			}
 		},
 		negated: negated,
 	}
 }
 
 type emptyPredicate struct {
-	genericPredicate
+	predicateBase
 	negated bool
 }
 
 func (p *emptyPredicate) Negate() predicate.Predicate {
 	return emptyP(!p.negated)
-} 
-
+}

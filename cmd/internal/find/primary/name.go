@@ -15,7 +15,7 @@ var Name = Parser.add(&Primary{
 	Description: "Returns true if the entry's cname matches glob",
 	name:        "name",
 	args:        "glob",
-	parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
+	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
 		}

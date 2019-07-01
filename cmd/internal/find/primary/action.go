@@ -16,7 +16,7 @@ var Action = Parser.add(&Primary{
 	Description: "Returns true if the entry supports action",
 	name:        "action",
 	args:        "action",
-	parseFunc: func(tokens []string) (*types.EntryPredicate, []string, error) {
+	parseFunc: func(tokens []string) (types.EntryPredicate, []string, error) {
 		if len(tokens) == 0 {
 			return nil, nil, fmt.Errorf("requires additional arguments")
 		}
@@ -34,14 +34,14 @@ var Action = Parser.add(&Primary{
 		p := types.ToEntryP(func(e types.Entry) bool {
 			return e.Supports(action)
 		})
-		p.SchemaP = func(s *types.EntrySchema) bool {
+		p.SetSchemaP(types.ToEntrySchemaP(func(s *types.EntrySchema) bool {
 			for _, a := range s.Actions() {
 				if action.Name == a {
 					return true
 				}
 			}
 			return false
-		}
+		}))
 		return p, tokens[1:], nil
 	},
 })

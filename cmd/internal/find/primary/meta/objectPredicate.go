@@ -74,7 +74,7 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 
 func objectP(key string, p predicate.Predicate) predicate.Predicate {
 	return &objectPredicate{
-		genericPredicate: func(v interface{}) bool {
+		predicateBase: func(v interface{}) bool {
 			mp, ok := v.(map[string]interface{})
 			if !ok {
 				return false
@@ -87,7 +87,7 @@ func objectP(key string, p predicate.Predicate) predicate.Predicate {
 			return p.IsSatisfiedBy(mp[matchingKey])
 		},
 		key: key,
-		p: p,
+		p:   p,
 	}
 }
 
@@ -102,9 +102,9 @@ func findMatchingKey(mp map[string]interface{}, key string) string {
 }
 
 type objectPredicate struct {
-	genericPredicate
+	predicateBase
 	key string
-	p predicate.Predicate
+	p   predicate.Predicate
 }
 
 func (objP *objectPredicate) Negate() predicate.Predicate {
