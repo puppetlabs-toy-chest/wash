@@ -33,7 +33,14 @@ func emptyP(negated bool) Predicate {
 		}),
 		negated: negated,
 	}
-	ep.SchemaP = newEmptyPredicateSchemaP()
+	// An empty predicate's schemaP returns true iff the value's
+	// an empty array OR an empty object.
+	ep.SchemaP = &emptyPredicateSchemaP{
+		schemaPOr: newSchemaPOr(
+			newObjectValueSchemaP(),
+			newArrayValueSchemaP(),
+		),
+	}
 	return ep
 }
 
@@ -48,17 +55,6 @@ func (p *emptyPredicate) Negate() predicate.Predicate {
 
 type emptyPredicateSchemaP struct {
 	*schemaPOr
-}
-
-func newEmptyPredicateSchemaP() *emptyPredicateSchemaP {
-	// An empty predicate's schemaP returns true iff the value's
-	// an empty array OR an empty object.
-	return &emptyPredicateSchemaP{
-		schemaPOr: newSchemaPOr(
-			newObjectValueSchemaP(),
-			newArrayValueSchemaP(),
-		),
-	}
 }
 
 func (p1 *emptyPredicateSchemaP) Negate() predicate.Predicate {
