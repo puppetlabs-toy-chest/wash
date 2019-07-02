@@ -62,6 +62,10 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		rootCmd.AddCommand(serverCommand())
 		// rootCommandFlag is used in rootMain.go.
 		rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
+
+		// Omit validate because it's meant to be run independently to test a plugin and should not be
+		// part of normal shell interaction.
+		rootCmd.AddCommand(validateCommand())
 	}
 
 	rootCmd.AddCommand(versionCommand())

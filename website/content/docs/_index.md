@@ -15,6 +15,7 @@ title= "Wash Documentation"
   * [wash server](#wash-server)
   * [wash stree](#wash-stree)
   * [wash tail](#wash-tail)
+  * [wash validate](#wash-validate)
 * [Config] (#config)
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
@@ -85,6 +86,12 @@ Displays the entry's stree (schema-tree), which is a high-level overview of the 
 ### wash tail
 
 Output any new updates to files and/or resources (that support the stream action). Currently requires the '-f' option to run. Attempts to mimic the functionality of `tail -f` for remote logs.
+
+### wash validate
+
+Validates an external plugin, using it's schema to limit exploration. The plugin can be one you've configured in Wash's config file, or it can be a script to load as an external plugin. Plugin-specific config from Wash's config file will be used. The Wash daemon does not need to be running to use this command.
+
+Validate starts from the plugin root and does a breadth-first traversal of the plugin hierarchy, invoking all supported methods on examples at each level. If the plugin provides a schema, it will be used to limit exploration to one example of each type of entry. Exploration can be stopped with Ctrl-C when needed.
 
 ## Config
 
