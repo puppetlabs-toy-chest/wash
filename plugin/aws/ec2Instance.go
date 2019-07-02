@@ -2,13 +2,13 @@ package aws
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
-	"regexp"
-	"encoding/base64"
 
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -106,6 +106,12 @@ func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (
 	return output.(consoleOutput), nil
 }
 
+type ec2InstanceMetadata struct {
+	*ec2Client.Instance
+	CreationTime     time.Time
+	LastModifiedTime time.Time
+}
+
 func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 	attr := plugin.EntryAttributes{}
 
@@ -129,9 +135,11 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 		}
 	}
 
-	meta := plugin.ToJSONObject(inst)
-	meta["CreationTime"] = ctime
-	meta["LastModifiedTime"] = mtime
+	meta := plugin.ToJSONObject(ec2InstanceMetadata{
+		Instance:         inst,
+		CreationTime:     ctime,
+		LastModifiedTime: mtime,
+	})
 
 	attr.
 		SetCtime(ctime).
@@ -144,7 +152,7 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(inst, "instance").
-		SetMetaAttributeSchema(ec2Client.Instance{})
+		SetMetaAttributeSchema(ec2InstanceMetadata{})
 }
 
 func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
