@@ -1,0 +1,99 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "minProperties": 1,
+    "properties": {
+        "AP": {
+            "type": "null"
+        },
+        "BP": {
+            "type": "null"
+        },
+        "CP": {
+            "items": {
+                "type": "null"
+            },
+            "type": "array",
+            "minItems": 1
+        },
+        "DP": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/schema::Dp"
+        },
+        "EP": {
+            "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "$ref": "#/definitions/__anonStruct__0"
+            },
+            "type": "array"
+        },
+        "FP": {
+            "minProperties": 1,
+            "patternProperties": {
+                ".*": {
+                    "type": "null"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "definitions": {
+        "__anonStruct__0": {
+            "minProperties": 1,
+            "properties": {
+                "EAP": {
+                    "type": "null"
+                },
+                "EBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "__anonStruct__1": {
+            "minProperties": 1,
+            "properties": {
+                "EAP": {
+                    "type": "null"
+                },
+                "EBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp": {
+            "minProperties": 1,
+            "properties": {
+                "DAP": {
+                    "type": "null"
+                },
+                "DBP": {
+                    "type": "null"
+                },
+                "DCP": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "$ref": "#/definitions/schema::Dp::DCp"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp::DCp": {
+            "minProperties": 1,
+            "properties": {
+                "DCAP": {
+                    "type": "null"
+                },
+                "DCBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        }
+    }
+}
