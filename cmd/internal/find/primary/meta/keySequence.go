@@ -19,7 +19,7 @@ will have the following call sequence:
 		AddObject("key1")
 */
 type keySequence struct {
-	// If len(segments[i]) <= 0, then segments[i] is an array. Otherwise, segments[i]
+	// If len(segments[i]) == 0, then segments[i] is an array. Otherwise, segments[i]
 	// is an object with key "segments[i]".
 	segments       []string
 	endValueType   string
