@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // EntrySchema is a wrapper to apitypes.EntrySchema
@@ -12,13 +13,18 @@ type EntrySchema struct {
 	*apitypes.EntrySchema
 	// Use a map for faster lookup
 	Children map[string]*EntrySchema
+	// MetadataSchemaPValue is the metadata schema value that
+	// will be passed into the meta primary's schema predicate.
+	// This value will be filled-in by the Walker since it requires
+	// one to know whether the fullmeta option was set.
+	MetadataSchemaPValue *plugin.JSONSchema
 }
 
 // NewEntrySchema returns a new EntrySchema object. The returned
 // object is faithful to s' representation as a graph. This means
 // that all duplicate nodes are filtered out and that cycles are
 // collapsed.
-func NewEntrySchema(s *apitypes.EntrySchema) *EntrySchema {
+func NewEntrySchema(s *apitypes.EntrySchema, opts Options) *EntrySchema {
 	nodes := make(map[string]*EntrySchema)
 
 	var gatherNodes func(s *apitypes.EntrySchema)
@@ -31,6 +37,11 @@ func NewEntrySchema(s *apitypes.EntrySchema) *EntrySchema {
 			node = &EntrySchema{
 				EntrySchema: s,
 				Children:    make(map[string]*EntrySchema),
+			}
+			// Set the metadata schema
+			node.MetadataSchemaPValue = node.EntrySchema.MetaAttributeSchema()
+			if opts.Fullmeta && node.EntrySchema.MetadataSchema() != nil {
+				node.MetadataSchemaPValue = node.EntrySchema.MetadataSchema()
 			}
 			nodes[s.TypeID()] = node
 		}

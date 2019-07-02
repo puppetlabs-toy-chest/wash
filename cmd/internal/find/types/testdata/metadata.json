@@ -1,0 +1,21 @@
+{
+    "type_id": "A",
+    "meta_attribute_schema": {
+        "type": "object",
+        "properties": {
+            "foo": {}
+        }
+    },
+    "metadata_schema": null,
+    "children": [
+        {
+            "type_id": "B",
+            "metadata_schema": {
+                "type": "array"
+            }
+        },
+        {
+            "type_id": "C"
+        }
+    ]
+}
