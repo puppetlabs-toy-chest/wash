@@ -67,6 +67,7 @@ type EntrySchema struct {
 	entrySchema
 	metaAttributeSchemaObj interface{}
 	metadataSchemaObj      interface{}
+	partialSchema          bool
 }
 
 // NewEntrySchema returns a new EntrySchema object with the specified label.
@@ -82,6 +83,9 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 			// its child schemas.
 			entry: e,
 		},
+		// The meta attribute's empty by default
+		metaAttributeSchemaObj: struct{}{},
+		partialSchema:          true,
 	}
 	s.SetLabel(label)
 	return s
@@ -165,6 +169,12 @@ func (s *EntrySchema) SetActions(actions []string) *EntrySchema {
 	return s
 }
 
+// MetaAttributeSchema returns the entry's meta attribute
+// schema
+func (s *EntrySchema) MetaAttributeSchema() *JSONSchema {
+	return s.entrySchema.MetaAttributeSchema
+}
+
 // SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
 // that will be marshalled into a JSON schema. SetMetaSchema will panic
 // if obj is not a struct.
@@ -177,6 +187,20 @@ func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
 	return s
 }
 
+// SetTestMetaAttributeSchema sets the entry's meta attribute
+// schema to s. Only the tests can call this method.
+func (s *EntrySchema) SetTestMetaAttributeSchema(schema *JSONSchema) {
+	if notRunningTests() {
+		panic("s.SetTestMetaAttributeSchema can only be called by the tests")
+	}
+	s.entrySchema.MetaAttributeSchema = schema
+}
+
+// MetadataSchema returns the entry's metadata schema
+func (s *EntrySchema) MetadataSchema() *JSONSchema {
+	return s.entrySchema.MetadataSchema
+}
+
 // SetMetadataSchema sets Entry#Metadata's schema. obj is an empty struct that will be
 // marshalled into a JSON schema. SetMetadataSchema will panic if obj is not a struct.
 //
@@ -186,6 +210,15 @@ func (s *EntrySchema) SetMetadataSchema(obj interface{}) *EntrySchema {
 	// See the comments in SetMetaAttributeSchema to understand why this line's necessary
 	s.metadataSchemaObj = obj
 	return s
+}
+
+// SetTestMetadataSchema sets the entry's metadata schema to s. Only the tests can
+// call this method.
+func (s *EntrySchema) SetTestMetadataSchema(schema *JSONSchema) {
+	if notRunningTests() {
+		panic("s.SetTestMetadataSchema can only be called by the tests")
+	}
+	s.entrySchema.MetadataSchema = schema
 }
 
 // Children returns the entry's child schemas
@@ -206,39 +239,45 @@ func (s *EntrySchema) SetChildren(children []*EntrySchema) *EntrySchema {
 // Fill fills s' children, its meta attribute schema, and its metadata
 // schema. This is needed by the API. Plugin authors should ignore this.
 func (s *EntrySchema) Fill() {
-	s.fill(make(map[string]bool))
+	if s.partialSchema {
+		s.fill(make(map[string]bool))
+		s.partialSchema = false
+	}
 }
 
 func (s *EntrySchema) fill(visited map[string]bool) {
-	if s.entrySchema.Children != nil {
-		return
-	}
-	if !ListAction().IsSupportedOn(s.entry) {
-		return
-	}
-	if visited[s.TypeID()] {
-		// This means that s' children can have s' type, which is
-		// true if s is e.g. a volume directory.
-		return
-	}
-
 	// Fill-in the meta attribute + metadata schemas
+	//
+	// TODO: This causes duplicate metadata schemas to be returned
+	// for nodes that are part of a cycle. We will fix that once we
+	// clean up /fs/schema's response to adopt a representation that's
+	// more idiomatic with graph serialization. For now, we need this
+	// hack for metadata schemas to work correctly in `wash find`.
 	var err error
 	if s.metaAttributeSchemaObj != nil {
-		s.MetaAttributeSchema, err = s.schemaOf(s.metaAttributeSchemaObj)
+		s.entrySchema.MetaAttributeSchema, err = s.schemaOf(s.metaAttributeSchemaObj)
 		if err != nil {
 			s.fillPanicf("bad value passed into SetMetaAttributeSchema: %v", err)
 		}
 	}
 	if s.metadataSchemaObj != nil {
-		s.MetadataSchema, err = s.schemaOf(s.metadataSchemaObj)
+		s.entrySchema.MetadataSchema, err = s.schemaOf(s.metadataSchemaObj)
 		if err != nil {
 			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
 		}
 	}
 
+	if visited[s.TypeID()] {
+		// This means that s' children can have s' type, which is
+		// true if s is e.g. a volume directory.
+		return
+	}
 	visited[s.TypeID()] = true
 
+	// Fill-in the children
+	if !ListAction().IsSupportedOn(s.entry) {
+		return
+	}
 	// "sParent" is read as "s.parent"
 	sParent := s.entry.(Parent)
 	children := sParent.ChildSchemas()
@@ -279,6 +318,7 @@ func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
 		typeMappings[reflect.TypeOf(t)] = s.Type
 	}
 	r := jsonschema.Reflector{
+		AllowAdditionalProperties: false,
 		// Setting this option ensures that the schema's root is obj's
 		// schema instead of a reference to a definition containing obj's
 		// schema. This way, we can validate that "obj" is a JSON object's
