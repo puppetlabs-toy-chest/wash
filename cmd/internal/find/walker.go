@@ -42,7 +42,7 @@ func (w *walkerImpl) Walk(path string) bool {
 		return false
 	}
 	if s != nil {
-		schema := types.Prune(types.NewEntrySchema(s), w.p.SchemaP())
+		schema := types.Prune(types.NewEntrySchema(s, w.opts), w.p.SchemaP())
 		e.SetSchema(schema)
 	}
 	return w.walk(e, 0)
@@ -98,14 +98,20 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 			return true
 		}
 	}
+
 	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
-		// Fetch the entry's full metadata
-		meta, err := w.conn.Metadata(e.Path)
-		if err != nil {
-			cmdutil.ErrPrintf("could not get full metadata of %v: %v\n", e.NormalizedPath, err)
-			return false
+		fetchFullMetadata := !e.SchemaKnown || e.Schema.MetadataSchemaPValue != nil
+		if !fetchFullMetadata {
+			cmdutil.ErrPrintf("%v did not provide a metadata schema so its full metadata will not be fetched", e.NormalizedPath)
+		} else {
+			// Fetch the entry's full metadata
+			meta, err := w.conn.Metadata(e.Path)
+			if err != nil {
+				cmdutil.ErrPrintf("could not get full metadata of %v: %v\n", e.NormalizedPath, err)
+				return false
+			}
+			e.Metadata = meta
 		}
-		e.Metadata = meta
 	}
 	if w.p.P(e) {
 		cmdutil.Printf("%v\n", e.NormalizedPath)

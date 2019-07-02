@@ -262,6 +262,38 @@ func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_UnsatisfyingSchem
 	s.Client.AssertNotCalled(s.T(), "Metadata")
 }
 
+func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_NilMetadataSchema_DoesNotFetchFullMetadata() {
+	s.walker.opts.Fullmeta = true
+	primary.Parser.SetPrimaries[primary.Meta] = true
+	e := newMockEntryForVisit()
+	e.SetSchema(&types.EntrySchema{})
+	s.walker.visit(e, 0)
+	s.Client.AssertNotCalled(s.T(), "Metadata")
+	s.Regexp(".*foo.*provide.*metadata.*schema", s.Stderr())
+}
+
+func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_HasMetadataSchema_FetchesFullMetadata() {
+	s.walker.opts.Fullmeta = true
+	primary.Parser.SetPrimaries[primary.Meta] = true
+
+	fullMeta := plugin.JSONObject{"foo": "bar"}
+	s.walker.p = types.ToEntryP(func(entry types.Entry) bool {
+		return s.Equal(fullMeta, entry.Metadata)
+	})
+
+	e := newMockEntryForVisit()
+	e.SetSchema(&types.EntrySchema{
+		MetadataSchemaPValue: &plugin.JSONSchema{},
+	})
+	s.Client.On("Metadata", e.Path).Return(fullMeta, nil).Once()
+
+	s.walker.visit(e, 0)
+	s.Client.AssertCalled(s.T(), "Metadata", e.Path)
+	// Ensure that the entry was printed to stdout. This is only true if
+	// e.Metadata is set to fullMeta (based on our predicate)
+	s.assertPrintedEntry(e)
+}
+
 func (s *WalkerTestSuite) TestVisit_PrintsSatisfyingEntry() {
 	e := newMockEntryForVisit()
 	s.True(s.walker.visit(e, 0))
