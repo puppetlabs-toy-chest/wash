@@ -6,13 +6,17 @@ import (
 
 // parseOAPredicate is tested in the tests for ObjectPredicate/ArrayPredicate
 
-func parseOAPredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseOAPredicate(tokens []string) (Predicate, []string, error) {
 	cp := &predicate.CompositeParser{
 		MatchErrMsg: "expected a predicate or a parenthesized predicate expression",
 		Parsers: []predicate.Parser{
-			predicate.ToParser(parsePredicate),
+			toPredicateParser(parsePredicate),
 			newPredicateExpressionParser(true),
 		},
 	}
-	return cp.Parse(tokens)
+	p, tokens, err := cp.Parse(tokens)
+	if err != nil {
+		return nil, tokens, err
+	}
+	return p.(Predicate), tokens, err
 }

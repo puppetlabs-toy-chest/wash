@@ -13,7 +13,7 @@ PrimitivePredicate => NullPredicate       |
                       TimePredicate       |
                       StringPredicate
 */
-func parsePrimitivePredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parsePrimitivePredicate(tokens []string) (Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a primitive predicate")
 	}

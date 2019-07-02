@@ -3,7 +3,6 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -68,6 +67,6 @@ func (s *NumericPredicateTestSuite) TestNumericP() {
 
 func TestNumericPredicate(t *testing.T) {
 	s := new(NumericPredicateTestSuite)
-	s.SetParser(predicate.ToParser(parseNumericPredicate))
+	s.SetParser(toPredicateParser(parseNumericPredicate))
 	suite.Run(t, s)
 }

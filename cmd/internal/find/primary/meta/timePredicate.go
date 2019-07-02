@@ -12,7 +12,7 @@ import (
 
 // TimePredicate => (+|-)? Duration
 // Duration      => numeric.DurationRegex | '{' numeric.DurationRegex '}'
-func parseTimePredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseTimePredicate(tokens []string) (Predicate, []string, error) {
 	if params.ReferenceTime.IsZero() {
 		panic("meta.parseTimePredicate called without setting params.ReferenceTime")
 	}

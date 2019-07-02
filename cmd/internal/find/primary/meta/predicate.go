@@ -9,16 +9,20 @@ Predicate => ObjectPredicate |
              ArrayPredicate  |
              PrimitivePredicate
 */
-func parsePredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parsePredicate(tokens []string) (Predicate, []string, error) {
 	cp := &predicate.CompositeParser{
 		MatchErrMsg: "expected either a primitive, object, or array predicate",
 		Parsers: []predicate.Parser{
-			predicate.ToParser(parseObjectPredicate),
-			predicate.ToParser(parseArrayPredicate),
-			predicate.ToParser(parsePrimitivePredicate),
+			toPredicateParser(parseObjectPredicate),
+			toPredicateParser(parseArrayPredicate),
+			toPredicateParser(parsePrimitivePredicate),
 		},
 	}
-	return cp.Parse(tokens)
+	p, tokens, err := cp.Parse(tokens)
+	if err != nil {
+		return nil, tokens, err
+	}
+	return p.(Predicate), tokens, err
 }
 
 // Predicate is a wrapper to the predicate.Predicate interface.
@@ -27,6 +31,16 @@ func parsePredicate(tokens []string) (predicate.Predicate, []string, error) {
 type Predicate interface {
 	predicate.Predicate
 	schemaP() schemaPredicate
+}
+
+func toPredicateParser(parseFunc func(tokens []string) (Predicate, []string, error)) predicate.Parser {
+	return predicate.ToParser(func(tokens []string) (predicate.Predicate, []string, error) {
+		p, tokens, err := parseFunc(tokens)
+		if err != nil {
+			return nil, tokens, err
+		}
+		return p, tokens, nil
+	})
 }
 
 // predicateBase represents a `meta` primary predicate "base" class.

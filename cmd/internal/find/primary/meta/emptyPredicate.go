@@ -6,7 +6,7 @@ import (
 )
 
 // emptyPredicate => -empty
-func parseEmptyPredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseEmptyPredicate(tokens []string) (Predicate, []string, error) {
 	if len(tokens) == 0 || tokens[0] != "-empty" {
 		return nil, nil, errz.NewMatchError("expected '-empty'")
 	}

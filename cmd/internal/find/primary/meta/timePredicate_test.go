@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -99,6 +98,6 @@ func addTRT(v int64) time.Time {
 
 func TestTimePredicate(t *testing.T) {
 	s := new(TimePredicateTestSuite)
-	s.SetParser(predicate.ToParser(parseTimePredicate))
+	s.SetParser(toPredicateParser(parseTimePredicate))
 	suite.Run(t, s)
 }

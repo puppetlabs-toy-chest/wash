@@ -3,7 +3,6 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
@@ -103,6 +102,6 @@ func (s *PrimitivePredicateTestSuite) TestFalseP() {
 
 func TestPrimitivePredicate(t *testing.T) {
 	s := new(PrimitivePredicateTestSuite)
-	s.SetParser(predicate.ToParser(parsePrimitivePredicate))
+	s.SetParser(toPredicateParser(parsePrimitivePredicate))
 	suite.Run(t, s)
 }
