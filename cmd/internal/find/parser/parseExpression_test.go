@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/ekinanp/jsonschema"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
@@ -143,11 +144,41 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 	s.Suite.RNTC("-m .key foo -a -m .key bar", "", entry)
 }
 
+func (s *ParseExpressionTestSuite) TestParseExpressionSchemaPEval() {
+	schema := &types.EntrySchema{}
+	s.RSTC("-true", "", schema)
+	s.RNSTC("-false", "", schema)
+	s.RSTC("-true -o -false", "", schema)
+	s.RNSTC("-true -a -false", "", schema)
+	s.RNSTC("! -true", "", schema)
+	s.RNSTC("! ( -true -o -false )", "", schema)
+	s.RSTC("! ( -true -a -false )", "", schema)
+}
+
+func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {
+	// The meta primary's schema predicate implements its own Negate method.
+	// These tests make sure that the expression parser is aware of that.
+	schema := &types.EntrySchema{
+		MetadataSchemaPValue: &jsonschema.Schema{
+			Type: &jsonschema.Type{
+				Type:                 "object",
+				AdditionalProperties: []byte("false"),
+			},
+		},
+	}
+
+	s.RSTC("-m -empty", "", schema)
+	s.RSTC("! -m -empty", "", schema)
+	s.RNSTC("-m .key 1", "", schema)
+	s.RNSTC("! -m .key 1", "", schema)
+}
+
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
 	s.Parser = types.EntryPredicateParser(func(tokens []string) (types.EntryPredicate, []string, error) {
 		p, err := parseExpression(tokens)
 		return p, []string{}, err
 	})
+	s.SchemaPParser = s.Parser.(types.EntryPredicateParser).ToSchemaPParser()
 	suite.Run(t, s)
 }

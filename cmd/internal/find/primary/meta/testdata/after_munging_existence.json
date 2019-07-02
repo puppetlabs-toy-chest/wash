@@ -1,0 +1,92 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "properties": {
+        "AP": {
+            "type": "null"
+        },
+        "BP": {
+            "type": "null"
+        },
+        "CP": {
+            "items": {
+                "type": "null"
+            },
+            "type": "array"
+        },
+        "DP": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/schema::Dp"
+        },
+        "EP": {
+            "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "$ref": "#/definitions/__anonStruct__0"
+            },
+            "type": "array"
+        },
+        "FP": {
+            "patternProperties": {
+                ".*": {
+                    "type": "null"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "definitions": {
+        "__anonStruct__0": {
+            "properties": {
+                "EAP": {
+                    "type": "null"
+                },
+                "EBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "__anonStruct__1": {
+            "properties": {
+                "EAP": {
+                    "type": "null"
+                },
+                "EBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp": {
+            "properties": {
+                "DAP": {
+                    "type": "null"
+                },
+                "DBP": {
+                    "type": "null"
+                },
+                "DCP": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "$ref": "#/definitions/schema::Dp::DCp"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp::DCp": {
+            "properties": {
+                "DCAP": {
+                    "type": "null"
+                },
+                "DCBP": {
+                    "type": "null"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        }
+    }
+}

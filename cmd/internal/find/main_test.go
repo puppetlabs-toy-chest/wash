@@ -1,23 +1,23 @@
 package find
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/suite"
 	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/cmdtest"
-	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	"github.com/puppetlabs/wash/cmd/internal/find/params"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary"
-	"github.com/puppetlabs/wash/cmd/internal/find/params"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
 )
 
 type MainTestSuite struct {
 	*cmdtest.Suite
-	oldNewWalker   func(r parser.Result, conn client.Client) walker
-	walker         *mockWalker
+	oldNewWalker func(r parser.Result, conn client.Client) walker
+	walker       *mockWalker
 }
 
 func (s *MainTestSuite) SetupTest() {
@@ -59,18 +59,6 @@ func (s *MainTestSuite) TestMain_ReferenceTime_WithDaystart() {
 	s.Equal(0, params.ReferenceTime.Nanosecond())
 }
 
-func (s *MainTestSuite)  TestMain_MetaPrimarySet_MaxdepthSet() {
-	s.walker.On("Walk", mock.Anything).Return(true)
-	Main([]string{"-maxdepth", "10", "-meta", "-empty"})
-	s.Equal(s.walker.opts.Maxdepth, 10)
-}
-
-func (s *MainTestSuite)  TestMain_MetaPrimarySet_MaxdepthNotSet() {
-	s.walker.On("Walk", mock.Anything).Return(true)
-	Main([]string{"-meta", "-empty"})
-	s.Equal(s.walker.opts.Maxdepth, 1)
-}
-
 func (s *MainTestSuite) TestMain_SinglePath_SuccessfulWalk() {
 	s.walker.On("Walk", ".").Return(true)
 	s.Equal(0, Main([]string{}))
@@ -108,7 +96,7 @@ func (s *MainTestSuite) TestPrintHelp_NoValue() {
 func (s *MainTestSuite) TestPrintHelp_Syntax() {
 	helpOpt := types.HelpOption{
 		HasValue: true,
-		Syntax: true,
+		Syntax:   true,
 	}
 	printHelp(helpOpt)
 	expectedStdout := strings.Trim(parser.ExpressionSyntaxDescription, "\n") + "\n"
@@ -118,7 +106,7 @@ func (s *MainTestSuite) TestPrintHelp_Syntax() {
 func (s *MainTestSuite) TestPrintHelp_Primary_NoDetailedDescription() {
 	helpOpt := types.HelpOption{
 		HasValue: true,
-		Primary: "true",
+		Primary:  "true",
 	}
 	printHelp(helpOpt)
 	expectedStdout := primary.True.Usage() + "\n" + primary.True.Description + "\n"
@@ -128,7 +116,7 @@ func (s *MainTestSuite) TestPrintHelp_Primary_NoDetailedDescription() {
 func (s *MainTestSuite) TestPrintHelp_Primary_WithDetailedDescription() {
 	helpOpt := types.HelpOption{
 		HasValue: true,
-		Primary: "meta",
+		Primary:  "meta",
 	}
 	printHelp(helpOpt)
 	expectedStdout := strings.Trim(primary.Meta.DetailedDescription, "\n") + "\n"

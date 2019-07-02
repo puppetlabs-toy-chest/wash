@@ -19,12 +19,12 @@ var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
 
 // ObjectPredicate => EmptyPredicate | ‘.’ Key Predicate
 // Key             => keyRegex
-func parseObjectPredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseObjectPredicate(tokens []string) (Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match, so try '.' Key Predicate
-	parseOAPredicate := predicate.ToParser(parseOAPredicate)
+	parseOAPredicate := toPredicateParser(parseOAPredicate)
 	return parseObjectP(
 		tokens,
 		parseOAPredicate,
@@ -33,7 +33,7 @@ func parseObjectPredicate(tokens []string) (predicate.Predicate, []string, error
 }
 
 // This helper's used by parseObjectPredicate and parseObjectExpression.
-func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (predicate.Predicate, []string, error) {
+func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a key sequence")
 	}
@@ -69,12 +69,12 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 		}
 		return nil, nil, err
 	}
-	return objectP(key, p), tokens, nil
+	return objectP(key, p.(Predicate)), tokens, nil
 }
 
-func objectP(key string, p predicate.Predicate) predicate.Predicate {
-	return &objectPredicate{
-		predicateBase: func(v interface{}) bool {
+func objectP(key string, p Predicate) Predicate {
+	objP := &objectPredicate{
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			mp, ok := v.(map[string]interface{})
 			if !ok {
 				return false
@@ -85,10 +85,15 @@ func objectP(key string, p predicate.Predicate) predicate.Predicate {
 				return false
 			}
 			return p.IsSatisfiedBy(mp[matchingKey])
-		},
+		}),
 		key: key,
 		p:   p,
 	}
+	objP.SchemaP = p.(Predicate).schemaP()
+	objP.SchemaP.updateKS(func(ks keySequence) keySequence {
+		return ks.AddObject(key)
+	})
+	return objP
 }
 
 func findMatchingKey(mp map[string]interface{}, key string) string {
@@ -102,11 +107,14 @@ func findMatchingKey(mp map[string]interface{}, key string) string {
 }
 
 type objectPredicate struct {
-	predicateBase
+	*predicateBase
 	key string
 	p   predicate.Predicate
 }
 
 func (objP *objectPredicate) Negate() predicate.Predicate {
-	return objectP(objP.key, objP.p.Negate())
+	// ! .key p == .key ! p
+	//
+	// Note that these semantics also hold for schemaP negation.
+	return objectP(objP.key, objP.p.Negate().(Predicate))
 }

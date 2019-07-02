@@ -9,7 +9,7 @@ import (
 )
 
 // StringPredicate => [^-].*
-func parseStringPredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseStringPredicate(tokens []string) (Predicate, []string, error) {
 	if len(tokens) == 0 || len(tokens[0]) == 0 {
 		return nil, nil, errz.NewMatchError("expected a nonempty string")
 	}
@@ -33,26 +33,28 @@ func parseStringPredicate(tokens []string) (predicate.Predicate, []string, error
 	return p, tokens[1:], nil
 }
 
-func stringP(p func(string) bool) predicate.Predicate {
+func stringP(p func(string) bool) *stringPredicate {
 	return &stringPredicate{
-		predicateBase: func(v interface{}) bool {
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			strV, ok := v.(string)
 			if !ok {
 				return false
 			}
 			return p(strV)
-		},
+		}),
 		p: p,
 	}
 }
 
 type stringPredicate struct {
-	predicateBase
+	*predicateBase
 	p func(string) bool
 }
 
 func (sp *stringPredicate) Negate() predicate.Predicate {
-	return stringP(func(s string) bool {
+	nsp := stringP(func(s string) bool {
 		return !sp.p(s)
 	})
+	nsp.negateSchemaP()
+	return nsp
 }

@@ -13,23 +13,23 @@ PrimitivePredicate => NullPredicate       |
                       TimePredicate       |
                       StringPredicate
 */
-func parsePrimitivePredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parsePrimitivePredicate(tokens []string) (Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a primitive predicate")
 	}
 	switch token := tokens[0]; token {
 	case "-null":
 		// NullPredicate
-		return genericPredicate(nullP), tokens[1:], nil
+		return nullP(), tokens[1:], nil
 	case "-exists":
 		// ExistsPredicate
-		return genericPredicate(existsP), tokens[1:], nil
+		return existsP(), tokens[1:], nil
 	case "-true":
 		// BooleanPredicate
-		return trueP, tokens[1:], nil
+		return trueP(), tokens[1:], nil
 	case "-false":
 		// BooleanPredicate
-		return falseP, tokens[1:], nil
+		return falseP(), tokens[1:], nil
 	}
 	// We have either a NumericPredicate, a TimePredicate, or a StringPredicate.
 
@@ -69,35 +69,85 @@ func parsePrimitivePredicate(tokens []string) (predicate.Predicate, []string, er
 	return nil, nil, err
 }
 
-func nullP(v interface{}) bool {
-	return v == nil
+func nullP() Predicate {
+	return genericP(func(v interface{}) bool {
+		return v == nil
+	})
 }
 
-func existsP(v interface{}) bool {
-	return v != nil
+func existsP() Predicate {
+	gp := genericP(func(v interface{}) bool {
+		return v != nil
+	})
+	gp.SchemaP = newExistsPredicateSchemaP(false)
+	return gp
 }
 
-var trueP = booleanP(true)
-var falseP = booleanP(false)
+type existsPredicateSchemaP struct {
+	ks      keySequence
+	negated bool
+}
 
-func booleanP(value bool) predicate.Predicate {
+func newExistsPredicateSchemaP(negated bool) *existsPredicateSchemaP {
+	return &existsPredicateSchemaP{
+		ks:      (keySequence{}).CheckExistence(),
+		negated: negated,
+	}
+}
+
+func (p *existsPredicateSchemaP) IsSatisfiedBy(v interface{}) bool {
+	s, ok := v.(schema)
+	if !ok {
+		return false
+	}
+	result := s.IsValidKeySequence(p.ks)
+	if p.negated {
+		// ".key ! -exists" will return false if m['key'] does not exist.
+		// This implies that the corresponding schemaP should also return
+		// false, i.e. that we adhere to strict negation.
+		result = !result
+	}
+	return result
+}
+
+func (p *existsPredicateSchemaP) Negate() predicate.Predicate {
+	return newExistsPredicateSchemaP(!p.negated)
+}
+
+func (p *existsPredicateSchemaP) updateKS(updateFunc func(keySequence) keySequence) {
+	p.ks = updateFunc(p.ks)
+}
+
+// Note that we can't set trueP/falseP to variables because their schema
+// predicates need to be re-created each time they're parsed.
+func trueP() *booleanPredicate {
+	return booleanP(true)
+}
+
+func falseP() *booleanPredicate {
+	return booleanP(false)
+}
+
+func booleanP(value bool) *booleanPredicate {
 	return &booleanPredicate{
-		predicateBase: func(v interface{}) bool {
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			bv, ok := v.(bool)
 			if !ok {
 				return false
 			}
 			return bv == value
-		},
+		}),
 		value: value,
 	}
 }
 
 type booleanPredicate struct {
-	predicateBase
+	*predicateBase
 	value bool
 }
 
 func (bp *booleanPredicate) Negate() predicate.Predicate {
-	return booleanP(!bp.value)
+	nbp := booleanP(!bp.value)
+	nbp.negateSchemaP()
+	return nbp
 }

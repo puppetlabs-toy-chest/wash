@@ -13,12 +13,12 @@ import (
 //                   ‘[' ? ‘]’ Predicate |
 //                   ‘[' * ‘]’ Predicate |
 //                   ‘[' N ‘]’ Predicate |
-func parseArrayPredicate(tokens []string) (predicate.Predicate, []string, error) {
+func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match
-	parseOAPredicate := predicate.ToParser(parseOAPredicate)
+	parseOAPredicate := toPredicateParser(parseOAPredicate)
 	return parseArrayP(
 		tokens,
 		parseOAPredicate,
@@ -27,7 +27,7 @@ func parseArrayPredicate(tokens []string) (predicate.Predicate, []string, error)
 }
 
 // This helper's used by parseArrayPredicate and parseArrayExpression
-func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (predicate.Predicate, []string, error) {
+func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected an opening '['")
 	}
@@ -64,7 +64,7 @@ func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Pa
 		}
 		return nil, nil, err
 	}
-	return arrayP(ptype, p), tokens, nil
+	return arrayP(ptype, p.(Predicate)), tokens, nil
 }
 
 type arrayPredicateType struct {
@@ -116,7 +116,7 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 	return ptype, token[endIx+1:], nil
 }
 
-func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate {
+func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
 	arryP := &arrayPredicate{
 		ptype: ptype,
 		p:     p,
@@ -155,13 +155,17 @@ func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate
 		msg := fmt.Sprintf("meta.arrayP called with an unkown ptype %v", ptype.t)
 		panic(msg)
 	}
+	arryP.SchemaP = p.(Predicate).schemaP()
+	arryP.SchemaP.updateKS(func(ks keySequence) keySequence {
+		return ks.AddArray()
+	})
 	return arryP
 }
 
 // toArrayP is a helper for arrayP that's meant to reduce
 // the boilerplate type validation.
-func toArrayP(p func([]interface{}) bool) predicateBase {
-	return predicateBase(func(v interface{}) bool {
+func toArrayP(p func([]interface{}) bool) *predicateBase {
+	return newPredicateBase(func(v interface{}) bool {
 		arrayV, ok := v.([]interface{})
 		if !ok {
 			return false
@@ -171,26 +175,28 @@ func toArrayP(p func([]interface{}) bool) predicateBase {
 }
 
 type arrayPredicate struct {
-	predicateBase
+	*predicateBase
 	ptype arrayPredicateType
 	p     predicate.Predicate
 }
 
 func (arryP *arrayPredicate) Negate() predicate.Predicate {
+	// Note that the negation semantics here also hold true
+	// for schemaP negation.
 	switch t := arryP.ptype.t; t {
 	case 's':
-		// Not("Some element satisfies p") => "All elements satisfy Not(p)"
+		// ! [?] p == [*] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 'a'
-		return arrayP(ptype, arryP.p.Negate())
+		return arrayP(ptype, arryP.p.Negate().(Predicate))
 	case 'a':
-		// Not("All elements satisfy p") => "Some element satisfies Not(p)"
+		// ! [*] p == [?] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 's'
-		return arrayP(ptype, arryP.p.Negate())
+		return arrayP(ptype, arryP.p.Negate().(Predicate))
 	case 'n':
-		// Not("Nth element satisfies p") => "Nth element satisfies Not(p)"
-		return arrayP(arryP.ptype, arryP.p.Negate())
+		// ! [n] p == [n] ! p
+		return arrayP(arryP.ptype, arryP.p.Negate().(Predicate))
 	default:
 		msg := fmt.Sprintf("meta.arrayPredicate contains an unknown ptype %v", t)
 		panic(msg)

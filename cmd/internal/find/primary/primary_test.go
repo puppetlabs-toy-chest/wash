@@ -35,6 +35,6 @@ func (s *primaryTestSuite) RSTC(input string, remInput string, trueValue interfa
 	}
 }
 
-func (s *primaryTestSuite) RNSTC(input string, remInput string, trueValue interface{}, falseValue ...interface{}) {
+func (s *primaryTestSuite) RNSTC(input string, remInput string, falseValue interface{}) {
 	s.Suite.RNSTC(input, remInput, s.ConstructEntrySchema(falseValue))
 }

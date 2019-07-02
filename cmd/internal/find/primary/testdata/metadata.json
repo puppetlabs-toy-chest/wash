@@ -1,150 +1,150 @@
 {
-    "AmiLaunchIndex": 0,
-    "Architecture": "x86_64",
-    "BlockDeviceMappings": [
-      {
-        "DeviceName": "/dev/sda1",
-        "Ebs": {
-          "AttachTime": "2018-08-07T13:55:25Z",
-          "DeleteOnTermination": true,
-          "Status": "attached",
-          "VolumeId": "vol-0f6a9b57391d099bb"
+  "AmiLaunchIndex": 0,
+  "Architecture": "x86_64",
+  "BlockDeviceMappings": [
+    {
+      "DeviceName": "/dev/sda1",
+      "Ebs": {
+        "AttachTime": "2018-08-07T13:55:25Z",
+        "DeleteOnTermination": true,
+        "Status": "attached",
+        "VolumeId": "vol-0f6a9b57391d099bb"
+      }
+    }
+  ],
+  "CapacityReservationId": null,
+  "CapacityReservationSpecification": {
+    "CapacityReservationPreference": "open",
+    "CapacityReservationTarget": null
+  },
+  "ClientToken": "",
+  "CpuOptions": {
+    "CoreCount": 4,
+    "ThreadsPerCore": 1
+  },
+  "CreationTime": "2018-08-07T13:55:25Z",
+  "EbsOptimized": false,
+  "ElasticGpuAssociations": null,
+  "ElasticInferenceAcceleratorAssociations": null,
+  "EnaSupport": true,
+  "HibernationOptions": {
+    "Configured": false
+  },
+  "Hypervisor": "xen",
+  "IamInstanceProfile": null,
+  "ImageId": "ami-0ead4c08015751a37",
+  "InstanceId": "i-06b4f0f14864915e5",
+  "InstanceLifecycle": null,
+  "InstanceType": "t2.xlarge",
+  "KernelId": null,
+  "KeyName": "mike.smith.SE",
+  "LastModifiedTime": "2018-10-01T17:37:05Z",
+  "LaunchTime": "2018-10-01T17:37:05Z",
+  "Licenses": null,
+  "Monitoring": {
+    "State": "disabled"
+  },
+  "NetworkInterfaces": [
+    {
+      "Association": {
+        "IpOwnerId": "amazon",
+        "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
+        "PublicIp": "18.236.186.96"
+      },
+      "Attachment": {
+        "AttachTime": "2018-08-07T13:55:24Z",
+        "AttachmentId": "eni-attach-00a1ac6ea935316a6",
+        "DeleteOnTermination": true,
+        "DeviceIndex": 0,
+        "Status": "attached"
+      },
+      "Description": "Primary network interface",
+      "Groups": [
+        {
+          "GroupId": "sg-0a6a56ccb175928e7",
+          "GroupName": "launch-wizard-102"
         }
-      }
-    ],
-    "CapacityReservationId": null,
-    "CapacityReservationSpecification": {
-      "CapacityReservationPreference": "open",
-      "CapacityReservationTarget": null
+      ],
+      "Ipv6Addresses": null,
+      "MacAddress": "02:a8:74:70:c4:2e",
+      "NetworkInterfaceId": "eni-04c6eeea9efa025be",
+      "OwnerId": "482693910459",
+      "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
+      "PrivateIpAddress": "10.0.124.233",
+      "PrivateIpAddresses": [
+        {
+          "Association": {
+            "IpOwnerId": "amazon",
+            "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
+            "PublicIp": "18.236.186.96"
+          },
+          "Primary": true,
+          "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
+          "PrivateIpAddress": "10.0.124.233"
+        }
+      ],
+      "SourceDestCheck": true,
+      "Status": "in-use",
+      "SubnetId": "subnet-05e99aa622e12192c",
+      "VpcId": "vpc-0eb70f7f626d3db83"
+    }
+  ],
+  "Placement": {
+    "Affinity": null,
+    "AvailabilityZone": "us-west-2a",
+    "GroupName": "",
+    "HostId": null,
+    "PartitionNumber": null,
+    "SpreadDomain": null,
+    "Tenancy": "default"
+  },
+  "Platform": "windows",
+  "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
+  "PrivateIpAddress": "10.0.124.233",
+  "ProductCodes": null,
+  "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
+  "PublicIpAddress": "18.236.186.96",
+  "RamdiskId": null,
+  "RootDeviceName": "/dev/sda1",
+  "RootDeviceType": "ebs",
+  "SecurityGroups": [
+    {
+      "GroupId": "sg-0a6a56ccb175928e7",
+      "GroupName": "launch-wizard-102"
+    }
+  ],
+  "SourceDestCheck": true,
+  "SpotInstanceRequestId": null,
+  "SriovNetSupport": null,
+  "State": {
+    "Code": 16,
+    "Name": "running"
+  },
+  "StateReason": null,
+  "StateTransitionReason": "",
+  "SubnetId": "subnet-05e99aa622e12192c",
+  "Tags": [
+    {
+      "Key": "department",
+      "Value": "SE"
     },
-    "ClientToken": "",
-    "CpuOptions": {
-      "CoreCount": 4,
-      "ThreadsPerCore": 1
+    {
+      "Key": "project",
+      "Value": "SE Demo"
     },
-    "CreationTime": "2018-08-07T13:55:25Z",
-    "EbsOptimized": false,
-    "ElasticGpuAssociations": null,
-    "ElasticInferenceAcceleratorAssociations": null,
-    "EnaSupport": true,
-    "HibernationOptions": {
-      "Configured": false
+    {
+      "Key": "created_by",
+      "Value": "Mike Smith"
     },
-    "Hypervisor": "xen",
-    "IamInstanceProfile": null,
-    "ImageId": "ami-0ead4c08015751a37",
-    "InstanceId": "i-06b4f0f14864915e5",
-    "InstanceLifecycle": null,
-    "InstanceType": "t2.xlarge",
-    "KernelId": null,
-    "KeyName": "mike.smith.SE",
-    "LastModifiedTime": "2018-10-01T17:37:05Z",
-    "LaunchTime": "2018-10-01T17:37:05Z",
-    "Licenses": null,
-    "Monitoring": {
-      "State": "disabled"
+    {
+      "Key": "lifetime",
+      "Value": "52w"
     },
-    "NetworkInterfaces": [
-      {
-        "Association": {
-          "IpOwnerId": "amazon",
-          "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
-          "PublicIp": "18.236.186.96"
-        },
-        "Attachment": {
-          "AttachTime": "2018-08-07T13:55:24Z",
-          "AttachmentId": "eni-attach-00a1ac6ea935316a6",
-          "DeleteOnTermination": true,
-          "DeviceIndex": 0,
-          "Status": "attached"
-        },
-        "Description": "Primary network interface",
-        "Groups": [
-          {
-            "GroupId": "sg-0a6a56ccb175928e7",
-            "GroupName": "launch-wizard-102"
-          }
-        ],
-        "Ipv6Addresses": null,
-        "MacAddress": "02:a8:74:70:c4:2e",
-        "NetworkInterfaceId": "eni-04c6eeea9efa025be",
-        "OwnerId": "482693910459",
-        "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
-        "PrivateIpAddress": "10.0.124.233",
-        "PrivateIpAddresses": [
-          {
-            "Association": {
-              "IpOwnerId": "amazon",
-              "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
-              "PublicIp": "18.236.186.96"
-            },
-            "Primary": true,
-            "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
-            "PrivateIpAddress": "10.0.124.233"
-          }
-        ],
-        "SourceDestCheck": true,
-        "Status": "in-use",
-        "SubnetId": "subnet-05e99aa622e12192c",
-        "VpcId": "vpc-0eb70f7f626d3db83"
-      }
-    ],
-    "Placement": {
-      "Affinity": null,
-      "AvailabilityZone": "us-west-2a",
-      "GroupName": "",
-      "HostId": null,
-      "PartitionNumber": null,
-      "SpreadDomain": null,
-      "Tenancy": "default"
-    },
-    "Platform": "windows",
-    "PrivateDnsName": "ip-10-0-124-233.us-west-2.compute.internal",
-    "PrivateIpAddress": "10.0.124.233",
-    "ProductCodes": null,
-    "PublicDnsName": "ec2-18-236-186-96.us-west-2.compute.amazonaws.com",
-    "PublicIpAddress": "18.236.186.96",
-    "RamdiskId": null,
-    "RootDeviceName": "/dev/sda1",
-    "RootDeviceType": "ebs",
-    "SecurityGroups": [
-      {
-        "GroupId": "sg-0a6a56ccb175928e7",
-        "GroupName": "launch-wizard-102"
-      }
-    ],
-    "SourceDestCheck": true,
-    "SpotInstanceRequestId": null,
-    "SriovNetSupport": null,
-    "State": {
-      "Code": 16,
-      "Name": "running"
-    },
-    "StateReason": null,
-    "StateTransitionReason": "",
-    "SubnetId": "subnet-05e99aa622e12192c",
-    "Tags": [
-      {
-        "Key": "department",
-        "Value": "SE"
-      },
-      {
-        "Key": "project",
-        "Value": "SE Demo"
-      },
-      {
-        "Key": "created_by",
-        "Value": "Mike Smith"
-      },
-      {
-        "Key": "lifetime",
-        "Value": "52w"
-      },
-      {
-        "Key": "termination_date",
-        "Value": "2017-08-06T13:55:25.680464+00:00"
-      }
-    ],
-    "VirtualizationType": "hvm",
-    "VpcId": "vpc-0eb70f7f626d3db83"
-  }
+    {
+      "Key": "termination_date",
+      "Value": "2017-08-06T13:55:25.680464+00:00"
+    }
+  ],
+  "VirtualizationType": "hvm",
+  "VpcId": "vpc-0eb70f7f626d3db83"
+}

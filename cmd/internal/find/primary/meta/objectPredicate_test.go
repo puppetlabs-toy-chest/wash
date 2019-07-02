@@ -3,13 +3,11 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type ObjectPredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *ObjectPredicateTestSuite) TestKeyRegex() {
@@ -75,17 +73,64 @@ func (s *ObjectPredicateTestSuite) TestParseObjectPredicateValidInput() {
 	s.RTC(".key ( ! ( -true -a -false ) ) -size", "-size", mp1)
 }
 
+func (s *ObjectPredicateTestSuite) TestParseObjectPredicateValidInput_SchemaP() {
+	// Test -empty
+	s.RSTC("-empty -size", "-size", "o")
+	// Test -exists
+	s.RSTC(".key -exists -size", "-size", ".key p")
+	s.RSTC(".key -exists -size", "-size", ".key o")
+	s.RSTC(".key -exists -size", "-size", ".key a")
+	// Test a non-key sequence
+	s.RSTC(".key -true -size", "-size", ".key p")
+	// Test an object key sequence
+	s.RSTC(".key1.key2 -true -size", "-size", ".key1.key2 p")
+	s.RNSTC(".key1.key2 -true -size", "-size", "p")
+	s.RNSTC(".key1.key2 -true -size", "-size", ".key1.key2 o")
+	s.RNSTC(".key1.key2 -true -size", "-size", ".key1 p")
+	s.RNSTC(".key1.key2 -true -size", "-size", ".key2 p")
+	// Test an array key sequence
+	s.RSTC(".key[?] -true -size", "-size", ".key[] p")
+	s.RNSTC(".key[?] -true -size", "-size", "p")
+	s.RNSTC(".key[?] -true -size", "-size", ".key[] o")
+	s.RNSTC(".key[?] -true -size", "-size", ".key p")
+	s.RNSTC(".key[?] -true -size", "-size", "[] p")
+	// Test a key sequence with the empty predicate
+	s.RSTC(".key1.key2 -empty -size", "-size", ".key1.key2 o")
+
+	// Now test predicate expressions. In particular, we want to test
+	// that nested schema predicates are properly handled
+
+	// This expects m['key1']['key2'] == primitive_value AND m['key1'] == primitive_value,
+	// which is impossible.
+	s.RNSTC(".key1 ( .key2 -true -a -false ) -size", "-size", ".key1.key2 p")
+	s.RNSTC(".key1 ( .key2 -true -a -false ) -size", "-size", ".key1 p")
+
+	// This expects m['key1']['key2'] == primitive_value OR m['key1'] == primitive_value,
+	// which is possible.
+	s.RSTC(".key1 ( .key2 -true -o -false ) -size", "-size", ".key1.key2 p")
+	s.RSTC(".key1 ( .key2 -true -o -false ) -size", "-size", ".key1 p")
+	s.RNSTC(".key1 ( .key2 -true -o -false ) -size", "-size", "p")
+}
+
 func (s *ObjectPredicateTestSuite) TestObjectP_NotAnObject() {
-	objP := objectP("foo", trueP)
+	objP := objectP("foo", trueP())
+	negatedObjP := objP.Negate().(Predicate)
+
 	s.False(objP.IsSatisfiedBy("not an object"))
-	s.False(objP.Negate().IsSatisfiedBy("not an object"))
+	s.False(negatedObjP.IsSatisfiedBy("not an object"))
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_NonexistantKey() {
 	mp := make(map[string]interface{})
-	objP := objectP("foo", trueP)
+	objP := objectP("foo", trueP())
+	negatedObjP := objP.Negate().(Predicate)
 	s.False(objP.IsSatisfiedBy(mp))
-	s.False(objP.Negate().IsSatisfiedBy(mp))
+	s.False(negatedObjP.IsSatisfiedBy(mp))
+
+	// The schemaPs should still expect the ".foo" key because that
+	// is what the user's querying
+	s.True(objP.schemaP().IsSatisfiedBy(s.newSchema(".foo p")))
+	s.True(negatedObjP.schemaP().IsSatisfiedBy(s.newSchema(".foo p")))
 }
 
 func (s *ObjectPredicateTestSuite) TestObjectP_ExistantKey() {
@@ -93,7 +138,7 @@ func (s *ObjectPredicateTestSuite) TestObjectP_ExistantKey() {
 	mp["foo"] = "baz"
 
 	var calledP bool
-	p := genericPredicate(func(v interface{}) bool {
+	p := genericP(func(v interface{}) bool {
 		calledP = true
 		s.Equal("baz", v, "objectP did not pass-in mp[key] into p")
 		return true
@@ -121,6 +166,6 @@ func (s *ObjectPredicateTestSuite) TestFindMatchingKey() {
 
 func TestObjectPredicate(t *testing.T) {
 	s := new(ObjectPredicateTestSuite)
-	s.Parser = predicate.ToParser(parseObjectPredicate)
+	s.SetParser(toPredicateParser(parseObjectPredicate))
 	suite.Run(t, s)
 }

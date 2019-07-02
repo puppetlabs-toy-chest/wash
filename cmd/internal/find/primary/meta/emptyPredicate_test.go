@@ -3,13 +3,11 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type EmptyPredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *EmptyPredicateTestSuite) TestErrors() {
@@ -21,6 +19,12 @@ func (s *EmptyPredicateTestSuite) TestValidInput() {
 	s.RTC("-empty", "", []interface{}{})
 }
 
+func (s *EmptyPredicateTestSuite) TestValidInput_SchemaP() {
+	s.RSTC("-empty", "", "o")
+	s.RSTC("-empty", "", "a")
+	s.RNSTC("-empty", "", "p")
+}
+
 func (s *EmptyPredicateTestSuite) TestEmptyPInvalidType() {
 	p := emptyP(false)
 	s.False(p.IsSatisfiedBy("foo"))
@@ -30,15 +34,22 @@ func (s *EmptyPredicateTestSuite) TestEmptyPInvalidType() {
 func (s *EmptyPredicateTestSuite) TestEmptyPObject() {
 	mp := make(map[string]interface{})
 	p := emptyP(false)
-	
+	np := p.Negate().(Predicate)
+
 	// Test empty map
 	s.True(p.IsSatisfiedBy(mp))
-	s.False(p.Negate().IsSatisfiedBy(mp))
+	s.False(np.IsSatisfiedBy(mp))
 
 	// Test nonempty map
 	mp["foo"] = 1
 	s.False(p.IsSatisfiedBy(mp))
-	s.True(p.Negate().IsSatisfiedBy(mp))
+	s.True(np.IsSatisfiedBy(mp))
+
+	// Test the schemaP
+	s.True(p.schemaP().IsSatisfiedBy(s.newSchema("o")))
+	s.True(p.schemaP().IsSatisfiedBy(s.newSchema("a")))
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("o")))
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("a")))
 }
 
 func (s *EmptyPredicateTestSuite) TestEmptyPArray() {
@@ -57,6 +68,6 @@ func (s *EmptyPredicateTestSuite) TestEmptyPArray() {
 
 func TestEmptyPredicate(t *testing.T) {
 	s := new(EmptyPredicateTestSuite)
-	s.Parser = predicate.ToParser(parseEmptyPredicate)
+	s.SetParser(toPredicateParser(parseEmptyPredicate))
 	suite.Run(t, s)
 }

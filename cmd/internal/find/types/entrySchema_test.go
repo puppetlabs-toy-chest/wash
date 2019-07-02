@@ -37,6 +37,27 @@ func (suite *EntrySchemaTestSuite) TestNewEntrySchema() {
 	suite.True(A == ABEA, "A != ABEA")
 }
 
+func (suite *EntrySchemaTestSuite) TestNewEntrySchema_MetadataSchemaPValue_DefaultsToMetaAttributeSchema() {
+	s := suite.readFixture("metadata")
+	suite.Equal(s.MetadataSchemaPValue.Type.Type, "object")
+	suite.Contains(s.MetadataSchemaPValue.Type.Properties, "foo")
+}
+
+func (suite *EntrySchemaTestSuite) TestNewEntrySchema_MetadataSchemaPValue_FullmetaSet_NilMetadataSchema_FallsbackToMetaAttributeSchema() {
+	opts := NewOptions()
+	opts.Fullmeta = true
+	s := suite.readFixture("metadata", opts)
+	suite.Equal(s.MetadataSchemaPValue.Type.Type, "object")
+	suite.Contains(s.MetadataSchemaPValue.Type.Properties, "foo")
+}
+func (suite *EntrySchemaTestSuite) TestNewEntrySchema_MetadataSchemaPValue_FullmetaSet_SetToMetadataSchema() {
+	opts := NewOptions()
+	opts.Fullmeta = true
+	s := suite.readFixture("metadata", opts)
+	s = suite.findNestedChild(s, "B")
+	suite.Equal(s.MetadataSchemaPValue.Type.Type, "array")
+}
+
 func (suite *EntrySchemaTestSuite) TestPrune_CanPruneRoot() {
 	s := suite.readFixture("tree")
 	p := suite.makeSchemaP()
@@ -71,7 +92,7 @@ func (suite *EntrySchemaTestSuite) TestPrune_Complex() {
 
 func (suite *EntrySchemaTestSuite) TestPrune_RealWorld_AWS() {
 	s := suite.readFixture("real_world_aws")
-	p := entrySchemaPredicate(func(s *EntrySchema) bool {
+	p := ToEntrySchemaP(func(s *EntrySchema) bool {
 		for _, action := range s.Actions() {
 			if action == "exec" {
 				return true
@@ -164,7 +185,7 @@ func (suite *EntrySchemaTestSuite) findNestedChild(s *EntrySchema, segments ...s
 	return child
 }
 
-func (suite *EntrySchemaTestSuite) readFixture(name string) *EntrySchema {
+func (suite *EntrySchemaTestSuite) readFixture(name string, options ...Options) *EntrySchema {
 	filePath := path.Join("testdata", name+".json")
 	rawSchema, err := ioutil.ReadFile(filePath)
 	if err != nil {
@@ -174,11 +195,15 @@ func (suite *EntrySchemaTestSuite) readFixture(name string) *EntrySchema {
 	if err := json.Unmarshal(rawSchema, &s); err != nil {
 		suite.T().Fatal(fmt.Sprintf("Failed to unmarshal %v: %v", filePath, err))
 	}
-	return NewEntrySchema(s)
+	opts := NewOptions()
+	if len(options) > 0 {
+		opts = options[0]
+	}
+	return NewEntrySchema(s, opts)
 }
 
 func (suite *EntrySchemaTestSuite) makeSchemaP(trueValues ...string) EntrySchemaPredicate {
-	return entrySchemaPredicate(func(s *EntrySchema) bool {
+	return ToEntrySchemaP(func(s *EntrySchema) bool {
 		for _, typeID := range trueValues {
 			if s.TypeID() == typeID {
 				return true
