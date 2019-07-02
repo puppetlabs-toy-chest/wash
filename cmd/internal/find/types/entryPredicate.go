@@ -94,9 +94,7 @@ func (op *EntryPredicateAnd) Combine(p1 predicate.Predicate, p2 predicate.Predic
 			p: func(e Entry) bool {
 				return ep1.P(e) && ep2.P(e)
 			},
-			schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
-				return ep1.SchemaP().P(s) && ep2.SchemaP().P(s)
-			}),
+			schemaP: newEntrySchemaPredicateAnd(ep1.SchemaP(), ep2.SchemaP()),
 		},
 	}
 }
@@ -115,9 +113,7 @@ func (op *EntryPredicateOr) Combine(p1 predicate.Predicate, p2 predicate.Predica
 			p: func(e Entry) bool {
 				return ep1.P(e) || ep2.P(e)
 			},
-			schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
-				return ep1.SchemaP().P(s) || ep2.SchemaP().P(s)
-			}),
+			schemaP: newEntrySchemaPredicateOr(ep1.SchemaP(), ep2.SchemaP()),
 		},
 	}
 }
