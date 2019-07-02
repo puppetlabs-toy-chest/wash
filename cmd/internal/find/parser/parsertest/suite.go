@@ -97,9 +97,9 @@ func (suite *Suite) runTestCase(c Case) {
 			suite.Equal(suite.ToTks(c.RemInput), tokens, "Input: %v", input)
 			falseV, ok := c.SatisfyingValue.(falseV)
 			if ok {
-				suite.False(p.IsSatisfiedBy(falseV.v), "Input: %v, Value: %t", input, falseV.v)
+				suite.False(p.IsSatisfiedBy(falseV.v), "Input: %v, Value: %t", input, fmt.Sprintf("%v", falseV.v))
 			} else {
-				suite.True(p.IsSatisfiedBy(c.SatisfyingValue), "Input: %v, Value: %t", input, c.SatisfyingValue)
+				suite.True(p.IsSatisfiedBy(c.SatisfyingValue), "Input: %v, Value: %t", input, fmt.Sprintf("%v", c.SatisfyingValue))
 			}
 		}
 	}
