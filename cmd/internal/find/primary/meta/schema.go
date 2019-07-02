@@ -46,11 +46,11 @@ func newSchema(s *plugin.JSONSchema) schema {
 		// to be capitalized.
 		upcasedProperties := make(map[string]*jsonschema.Type)
 		for property, schema := range properties {
-			if _, ok := upcasedProperties[property]; ok {
+			p := strings.ToUpper(property)
+			if _, ok := upcasedProperties[p]; ok {
 				continue
 			}
 			mungeType(schema, forExistenceSchema)
-			p := strings.ToUpper(property)
 			upcasedProperties[p] = schema
 		}
 		return upcasedProperties
