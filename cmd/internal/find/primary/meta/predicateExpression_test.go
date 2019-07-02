@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,7 +16,7 @@ import (
 // is where they are used. They're also tested in the meta primary tests.
 
 type PredicateExpressionTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *PredicateExpressionTestSuite) RETC(input string, errRegex string) {
@@ -196,8 +195,28 @@ func (s *PredicateExpressionTestSuite) TestDeMorgansLaw() {
 	s.RNTC("! ( 3 -a 6 ) -primary", "-primary", "foo")
 }
 
+func (s *PredicateExpressionTestSuite) TestDeMorgansLaw_SchemaP() {
+	// Returns true if m['key1']['key2'] == primitive_value AND
+	// m['key1'] == primitive_value, which is impossible.
+	s.RNSTC("! .key1 ( .key2 3 -o 6 ) -primary", "-primary", ".key1.key2 p")
+	s.RNSTC("! .key1 ( .key2 3 -o 6 ) -primary", "-primary", ".key1 p")
+	// Returns true if m['key1']['key2'] == primitive_value OR
+	// m['key1'] == primitive_value, which is possible.
+	s.RSTC("! .key1 ( .key2 3 -a 6 ) -primary", "-primary", ".key1.key2 p")
+	s.RSTC("! .key1 ( .key2 3 -a 6 ) -primary", "-primary", ".key1 p")
+	// Returns true if []['key'] == primitive_value AND [] == primitive_value,
+	// which is impossible.
+	s.RNSTC("! [?] ( .key 3 -o 6 ) -primary", "-primary", "[].key p")
+	s.RNSTC("! [?] ( .key 3 -o 6 ) -primary", "-primary", "[] p")
+	// Returns true if []['key'] == primitive_value OR [] == primitive_value,
+	// which is possible.
+	s.RSTC("! [?] ( .key 3 -a 6 ) -primary", "-primary", "[].key p")
+	s.RSTC("! [?] ( .key 3 -a 6 ) -primary", "-primary", "[] p")
+
+}
+
 func TestPredicateExpression(t *testing.T) {
 	s := new(PredicateExpressionTestSuite)
-	s.Parser = newPredicateExpressionParser(false)
+	s.SetParser(newPredicateExpressionParser(false))
 	suite.Run(t, s)
 }

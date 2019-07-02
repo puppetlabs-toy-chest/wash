@@ -3,14 +3,13 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
 
 type NumericPredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *NumericPredicateTestSuite) TestErrors() {
@@ -34,12 +33,24 @@ func (s *NumericPredicateTestSuite) TestValidInput() {
 	s.RTC("-2G -size", "-size", float64(1*numeric.BytesOf('G')))
 }
 
+func (s *NumericPredicateTestSuite) TestValidInput_SchemaP() {
+	s.RSTC("2", "", "p")
+	s.RNSTC("2", "", "o")
+	s.RNSTC("2", "", "a")
+}
+
 func (s *NumericPredicateTestSuite) TestNumericP_NotANumber() {
 	np := numericP(func(n int64) bool {
 		return n > 5
 	})
+	negatedNp := np.Negate().(Predicate)
+
 	s.False(np.IsSatisfiedBy("6"))
-	s.False(np.Negate().IsSatisfiedBy("3"))
+	s.False(negatedNp.IsSatisfiedBy("3"))
+
+	// The schemaP should still return true for primitive types
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("p")))
+	s.True(negatedNp.schemaP().IsSatisfiedBy(s.newSchema("p")))
 }
 
 func (s *NumericPredicateTestSuite) TestNumericP() {
@@ -57,6 +68,6 @@ func (s *NumericPredicateTestSuite) TestNumericP() {
 
 func TestNumericPredicate(t *testing.T) {
 	s := new(NumericPredicateTestSuite)
-	s.Parser = predicate.ToParser(parseNumericPredicate)
+	s.SetParser(predicate.ToParser(parseNumericPredicate))
 	suite.Run(t, s)
 }

@@ -3,13 +3,12 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type StringPredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *StringPredicateTestSuite) TestErrors() {
@@ -24,13 +23,22 @@ func (s *StringPredicateTestSuite) TestValidInput() {
 	s.RNTC("foo -size", "-size", "bar")
 }
 
+func (s *StringPredicateTestSuite) TestValidInput_SchemaP() {
+	s.RSTC("foo", "", "p")
+	s.RNSTC("foo", "", "o")
+	s.RNSTC("foo", "", "a")
+}
+
 func (s *StringPredicateTestSuite) TestStringP_NotAString() {
 	sp := stringP(func(s string) bool {
 		return s == "f"
 	})
 
 	s.False(sp.IsSatisfiedBy('f'))
-	s.False(sp.Negate().IsSatisfiedBy('g'))
+	nsp := sp.Negate().(Predicate)
+	s.False(nsp.IsSatisfiedBy('g'))
+	// The schemaP should still return true for a primitive value
+	s.True(nsp.schemaP().IsSatisfiedBy(s.newSchema("p")))
 }
 
 func (s *StringPredicateTestSuite) TestStringP() {
@@ -39,14 +47,16 @@ func (s *StringPredicateTestSuite) TestStringP() {
 	})
 
 	s.True(sp.IsSatisfiedBy("f"))
-	
+
 	// Test negation
-	s.False(sp.Negate().IsSatisfiedBy("f"))
-	s.True(sp.Negate().IsSatisfiedBy("g"))
+	nsp := sp.Negate().(Predicate)
+	s.False(nsp.IsSatisfiedBy("f"))
+	s.True(nsp.IsSatisfiedBy("g"))
+	s.True(nsp.schemaP().IsSatisfiedBy(s.newSchema("p")))
 }
 
 func TestStringPredicate(t *testing.T) {
 	s := new(StringPredicateTestSuite)
-	s.Parser = predicate.ToParser(parseStringPredicate)
+	s.SetParser(predicate.ToParser(parseStringPredicate))
 	suite.Run(t, s)
 }

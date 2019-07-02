@@ -3,13 +3,12 @@ package meta
 import (
 	"testing"
 
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
 type ArrayPredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *ArrayPredicateTestSuite) TestParseArrayPredicateErrors() {
@@ -40,7 +39,7 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 	mp := make(map[string]interface{})
 	mp["key"] = true
 	// Test -empty
-	s.RTC("-empty", "", []interface{}{})
+	s.RTC("-empty -size", "-size", []interface{}{})
 	// Test each of the possible arrayPs
 	s.RTC("[?] -true -size", "-size", toA(false, true))
 	s.RTC("[*] -true -size", "-size", toA(true, true))
@@ -54,6 +53,46 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput() {
 	s.RTC("[0] ( -true -o -false ) -size", "-size", toA(true))
 	s.RTC("[0] ( ! -false ) -size", "-size", toA(true))
 	s.RTC("[0] ( ! ( -true -a -false ) ) -size", "-size", toA(true))
+}
+
+func (s *ArrayPredicateTestSuite) TestParseArrayPredicateValidInput_SchemaP() {
+	// Test -empty
+	s.RSTC("-empty -size", "-size", "a")
+	// Test each of the possible arrayPs
+	s.RSTC("[?] -true -size", "-size", "[] p")
+	s.RSTC("[*] -true -size", "-size", "[] p")
+	s.RSTC("[0] -true -size", "-size", "[] p")
+	// Test -exists
+	s.RSTC("[?] -exists -size", "-size", "[] p")
+	s.RSTC("[?] -exists -size", "-size", "[] o")
+	s.RSTC("[?] -exists -size", "-size", "[] a")
+	// Test an object key sequence
+	s.RSTC("[?].key -true -size", "-size", "[].key p")
+	s.RNSTC("[?].key -true -size", "-size", "p")
+	s.RNSTC("[?].key -true -size", "-size", "[].key o")
+	s.RNSTC("[?].key -true -size", "-size", "[] p")
+	s.RNSTC("[?].key -true -size", "-size", ".key p")
+	// Test an array key sequence
+	s.RSTC("[?][?] -true -size", "-size", "[][] p")
+	s.RNSTC("[?][?] -true -size", "-size", "p")
+	s.RNSTC("[?][?] -true -size", "-size", "[][] o")
+	s.RNSTC("[?][?] -true -size", "-size", "[] p")
+	// Test a key sequence with the empty predicate
+	s.RSTC("[?].key -empty -size", "-size", "[].key a")
+
+	// Now test predicate expressions. In particular, we want to test
+	// that nested schema predicates are properly handled
+
+	// This expects []['key'] == primitive_value AND [] == primitive_value,
+	// which is impossible.
+	s.RNSTC("[?] ( .key -true -a -false ) -size", "-size", "[].key p")
+	s.RNSTC("[?] ( .key -true -a -false ) -size", "-size", "[].key p")
+
+	// This expects []['key'] == primitive_value OR [] == primitive_value,
+	// which is possible.
+	s.RSTC("[?] ( .key -true -o -false ) -size", "-size", "[].key p")
+	s.RSTC("[?] ( .key -true -o -false ) -size", "-size", "[].key p")
+	s.RNSTC("[?] ( .key -true -o -false ) -size", "-size", "p")
 }
 
 func (s *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
@@ -81,71 +120,86 @@ func (s *ArrayPredicateTestSuite) TestParseArrayPredicateType() {
 }
 
 func (s *ArrayPredicateTestSuite) TestArrayPSome() {
-	p := arrayP(arrayPredicateType{t: 's'}, trueP)
+	p := arrayP(arrayPredicateType{t: 's'}, trueP())
+	np := p.Negate().(Predicate)
 
 	// Returns false for a non-array value. Not(p) should also
 	// return false.
 	s.False(p.IsSatisfiedBy("foo"))
-	s.False(p.Negate().IsSatisfiedBy("foo"))
+	s.False(np.IsSatisfiedBy("foo"))
 
 	// Returns false if no elements satisfy p. Not(p) should return
 	// true here.
 	s.False(p.IsSatisfiedBy(toA(false, false)))
-	s.True(p.Negate().IsSatisfiedBy(toA(false, false)))
+	s.True(np.IsSatisfiedBy(toA(false, false)))
 
 	// Returns true if some element satifies . Not(p) should return
 	// false here.
 	s.True(p.IsSatisfiedBy(toA(true, false)))
-	s.False(p.Negate().IsSatisfiedBy(toA(true, false)))
+	s.False(np.IsSatisfiedBy(toA(true, false)))
+
+	// Test the schemaP
+	s.True(p.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
 }
 
 func (s *ArrayPredicateTestSuite) TestArrayPAll() {
-	p := arrayP(arrayPredicateType{t: 'a'}, trueP)
+	p := arrayP(arrayPredicateType{t: 'a'}, trueP())
+	np := p.Negate().(Predicate)
 
 	// Returns false for a non-array value. Not(p) should also
 	// return false.
 	s.False(p.IsSatisfiedBy("foo"))
-	s.False(p.Negate().IsSatisfiedBy("foo"))
+	s.False(np.IsSatisfiedBy("foo"))
 
 	// Returns false if no elements satisfy p. Not(p) should return
 	// true here.
 	s.False(p.IsSatisfiedBy(toA(false)))
-	s.True(p.Negate().IsSatisfiedBy(toA(false)))
+	s.True(np.IsSatisfiedBy(toA(false)))
 
 	// Returns false if only some of the elements satisfy p. Not(p) should
 	// return true here
 	s.False(p.IsSatisfiedBy(toA(false, true)))
-	s.True(p.Negate().IsSatisfiedBy(toA(false, true)))
+	s.True(np.IsSatisfiedBy(toA(false, true)))
 
 	// Returns true if all the elements satisfy P. Not(p) should return
 	// false here.
 	s.True(p.IsSatisfiedBy(toA(true)))
-	s.False(p.Negate().IsSatisfiedBy(toA(true)))
+	s.False(np.IsSatisfiedBy(toA(true)))
 	s.True(p.IsSatisfiedBy(toA(true, true)))
-	s.False(p.Negate().IsSatisfiedBy(toA(true, true)))
+	s.False(np.IsSatisfiedBy(toA(true, true)))
+
+	// Test the schemaP
+	s.True(p.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
 }
 
 func (s *ArrayPredicateTestSuite) TestArrayPNth() {
-	p := arrayP(arrayPredicateType{t: 'n', n: 1}, trueP)
+	p := arrayP(arrayPredicateType{t: 'n', n: 1}, trueP())
+	np := p.Negate().(Predicate)
 
 	// Returns false for a non-array value. Not(p) should also
 	// return false.
 	s.False(p.IsSatisfiedBy("foo"))
-	s.False(p.Negate().IsSatisfiedBy("foo"))
+	s.False(np.IsSatisfiedBy("foo"))
 
 	// Returns false if n >= len(vs). Not(p) should also return
 	// false.
 	s.False(p.IsSatisfiedBy(toA(true)))
-	s.False(p.Negate().IsSatisfiedBy(toA(true)))
+	s.False(np.IsSatisfiedBy(toA(true)))
 
 	// Returns false if vs[n] does not satisfy p. Not(p) should return
 	// true here.
 	s.False(p.IsSatisfiedBy(toA(true, false)))
-	s.True(p.Negate().IsSatisfiedBy(toA(true, false)))
+	s.True(np.IsSatisfiedBy(toA(true, false)))
 
 	// Returns true if vs[n] satisfies p. Not(p) should return false.
 	s.True(p.IsSatisfiedBy(toA(true, true)))
-	s.False(p.Negate().IsSatisfiedBy(toA(true, true)))
+	s.False(np.IsSatisfiedBy(toA(true, true)))
+
+	// Test the schemaP
+	s.True(p.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
+	s.True(np.schemaP().IsSatisfiedBy(s.newSchema("[] p")))
 }
 
 func toA(vs ...interface{}) []interface{} {
@@ -154,6 +208,6 @@ func toA(vs ...interface{}) []interface{} {
 
 func TestArrayPredicate(t *testing.T) {
 	s := new(ArrayPredicateTestSuite)
-	s.Parser = predicate.ToParser(parseArrayPredicate)
+	s.SetParser(predicate.ToParser(parseArrayPredicate))
 	suite.Run(t, s)
 }

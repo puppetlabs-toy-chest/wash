@@ -116,7 +116,7 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 	return ptype, token[endIx+1:], nil
 }
 
-func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate {
+func arrayP(ptype arrayPredicateType, p predicate.Predicate) Predicate {
 	arryP := &arrayPredicate{
 		ptype: ptype,
 		p:     p,
@@ -155,13 +155,17 @@ func arrayP(ptype arrayPredicateType, p predicate.Predicate) predicate.Predicate
 		msg := fmt.Sprintf("meta.arrayP called with an unkown ptype %v", ptype.t)
 		panic(msg)
 	}
+	arryP.SchemaP = p.(Predicate).schemaP()
+	arryP.SchemaP.updateKS(func(ks keySequence) keySequence {
+		return ks.AddArray()
+	})
 	return arryP
 }
 
 // toArrayP is a helper for arrayP that's meant to reduce
 // the boilerplate type validation.
-func toArrayP(p func([]interface{}) bool) predicateBase {
-	return predicateBase(func(v interface{}) bool {
+func toArrayP(p func([]interface{}) bool) *predicateBase {
+	return newPredicateBase(func(v interface{}) bool {
 		arrayV, ok := v.([]interface{})
 		if !ok {
 			return false
@@ -171,25 +175,27 @@ func toArrayP(p func([]interface{}) bool) predicateBase {
 }
 
 type arrayPredicate struct {
-	predicateBase
+	*predicateBase
 	ptype arrayPredicateType
 	p     predicate.Predicate
 }
 
 func (arryP *arrayPredicate) Negate() predicate.Predicate {
+	// Note that the negation semantics here also hold true
+	// for schemaP negation.
 	switch t := arryP.ptype.t; t {
 	case 's':
-		// Not("Some element satisfies p") => "All elements satisfy Not(p)"
+		// ! [?] p == [*] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 'a'
 		return arrayP(ptype, arryP.p.Negate())
 	case 'a':
-		// Not("All elements satisfy p") => "Some element satisfies Not(p)"
+		// ! [*] p == [?] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 's'
 		return arrayP(ptype, arryP.p.Negate())
 	case 'n':
-		// Not("Nth element satisfies p") => "Nth element satisfies Not(p)"
+		// ! [n] p == [n] ! p
 		return arrayP(arryP.ptype, arryP.p.Negate())
 	default:
 		msg := fmt.Sprintf("meta.arrayPredicate contains an unknown ptype %v", t)

@@ -13,9 +13,9 @@ func parseEmptyPredicate(tokens []string) (predicate.Predicate, []string, error)
 	return emptyP(false), tokens[1:], nil
 }
 
-func emptyP(negated bool) predicate.Predicate {
-	return &emptyPredicate{
-		predicateBase: func(v interface{}) bool {
+func emptyP(negated bool) Predicate {
+	ep := &emptyPredicate{
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			switch t := v.(type) {
 			case map[string]interface{}:
 				if negated {
@@ -30,16 +30,39 @@ func emptyP(negated bool) predicate.Predicate {
 			default:
 				return false
 			}
-		},
+		}),
 		negated: negated,
 	}
+	ep.SchemaP = newEmptyPredicateSchemaP()
+	return ep
 }
 
 type emptyPredicate struct {
-	predicateBase
+	*predicateBase
 	negated bool
 }
 
 func (p *emptyPredicate) Negate() predicate.Predicate {
 	return emptyP(!p.negated)
+}
+
+type emptyPredicateSchemaP struct {
+	*schemaPOr
+}
+
+func newEmptyPredicateSchemaP() *emptyPredicateSchemaP {
+	// An empty predicate's schemaP returns true iff the value's
+	// an empty array OR an empty object.
+	return &emptyPredicateSchemaP{
+		schemaPOr: newSchemaPOr(
+			newObjectValueSchemaP(),
+			newArrayValueSchemaP(),
+		),
+	}
+}
+
+func (p1 *emptyPredicateSchemaP) Negate() predicate.Predicate {
+	// The empty predicate's negation still expects an empty object/array
+	// for its schemaP. Thus, we return p1 here.
+	return p1
 }

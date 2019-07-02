@@ -32,24 +32,26 @@ func parseNumericPredicate(tokens []string) (predicate.Predicate, []string, erro
 	return numericP(p), tokens[1:], nil
 }
 
-func numericP(p numeric.Predicate) predicate.Predicate {
+func numericP(p numeric.Predicate) *numericPredicate {
 	return &numericPredicate{
-		predicateBase: func(v interface{}) bool {
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			floatV, ok := v.(float64)
 			if !ok {
 				return false
 			}
 			return p(int64(floatV))
-		},
+		}),
 		p: p,
 	}
 }
 
 type numericPredicate struct {
-	predicateBase
+	*predicateBase
 	p numeric.Predicate
 }
 
 func (np *numericPredicate) Negate() predicate.Predicate {
-	return numericP(np.p.Negate().(numeric.Predicate))
+	nnp := numericP(np.p.Negate().(numeric.Predicate))
+	nnp.negateSchemaP()
+	return nnp
 }

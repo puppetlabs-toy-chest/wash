@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/params"
-	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/puppetlabs/wash/cmd/internal/find/primary/numeric"
 	"github.com/stretchr/testify/suite"
 )
 
 type TimePredicateTestSuite struct {
-	parsertest.Suite
+	parserTestSuite
 }
 
 func (s *TimePredicateTestSuite) TestErrors() {
@@ -43,12 +42,21 @@ func (s *TimePredicateTestSuite) TestValidInputFalseValues() {
 	s.RNTC("-2h", "", addTRT(5*numeric.DurationOf('h')))
 }
 
+func (s *TimePredicateTestSuite) TestValidInput_SchemaP() {
+	s.RSTC("2h", "", "p")
+	s.RNSTC("2h", "", "o")
+	s.RNSTC("2h", "", "a")
+}
+
 func (s *TimePredicateTestSuite) TestTimeP_Negation_NotATime() {
 	d := 5 * numeric.DurationOf('h')
 	tp := timeP(true, func(n int64) bool {
-		return n > d 
+		return n > d
 	})
-	s.False(tp.Negate().IsSatisfiedBy("not_a_valid_time_value"))
+	ntp := tp.Negate().(Predicate)
+	s.False(ntp.IsSatisfiedBy("not_a_valid_time_value"))
+	// The schemaP should still return true for a primitive value
+	s.True(ntp.schemaP().IsSatisfiedBy(s.newSchema("p")))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation_TimeMismatch() {
@@ -60,24 +68,27 @@ func (s *TimePredicateTestSuite) TestTimeP_Negation_TimeMismatch() {
 	tp := timeP(true, func(n int64) bool {
 		return n > d
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTRT(d+1)))
-	s.False(tp.Negate().IsSatisfiedBy(addTRT(d-1)))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(d + 1)))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(d - 1)))
 
 	// Test future queries
 	tp = timeP(false, func(n int64) bool {
-		return n > d 
+		return n > d
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d+1))))
-	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d-1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d + 1))))
+	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d - 1))))
 }
 
 func (s *TimePredicateTestSuite) TestTimeP_Negation() {
 	d := 5 * numeric.DurationOf('h')
 	tp := timeP(true, func(n int64) bool {
-		return n > d 
+		return n > d
 	})
-	s.False(tp.Negate().IsSatisfiedBy(addTRT(-(d+1))))
-	s.True(tp.Negate().IsSatisfiedBy(addTRT(-(d-1))))
+	ntp := tp.Negate().(Predicate)
+	s.False(ntp.IsSatisfiedBy(addTRT(-(d + 1))))
+	s.True(ntp.IsSatisfiedBy(addTRT(-(d - 1))))
+	// The schemaP should still return true for a primitive value
+	s.True(ntp.schemaP().IsSatisfiedBy(s.newSchema("p")))
 }
 
 // addTRT => addToReferenceTime. Saves some typing. Note that v
@@ -88,6 +99,6 @@ func addTRT(v int64) time.Time {
 
 func TestTimePredicate(t *testing.T) {
 	s := new(TimePredicateTestSuite)
-	s.Parser = predicate.ToParser(parseTimePredicate)
+	s.SetParser(predicate.ToParser(parseTimePredicate))
 	suite.Run(t, s)
 }

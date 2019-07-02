@@ -72,9 +72,9 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 	return objectP(key, p), tokens, nil
 }
 
-func objectP(key string, p predicate.Predicate) predicate.Predicate {
-	return &objectPredicate{
-		predicateBase: func(v interface{}) bool {
+func objectP(key string, p predicate.Predicate) Predicate {
+	objP := &objectPredicate{
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			mp, ok := v.(map[string]interface{})
 			if !ok {
 				return false
@@ -85,10 +85,15 @@ func objectP(key string, p predicate.Predicate) predicate.Predicate {
 				return false
 			}
 			return p.IsSatisfiedBy(mp[matchingKey])
-		},
+		}),
 		key: key,
 		p:   p,
 	}
+	objP.SchemaP = p.(Predicate).schemaP()
+	objP.SchemaP.updateKS(func(ks keySequence) keySequence {
+		return ks.AddObject(key)
+	})
+	return objP
 }
 
 func findMatchingKey(mp map[string]interface{}, key string) string {
@@ -102,11 +107,14 @@ func findMatchingKey(mp map[string]interface{}, key string) string {
 }
 
 type objectPredicate struct {
-	predicateBase
+	*predicateBase
 	key string
 	p   predicate.Predicate
 }
 
 func (objP *objectPredicate) Negate() predicate.Predicate {
+	// ! .key p == .key ! p
+	//
+	// Note that these semantics also hold for schemaP negation.
 	return objectP(objP.key, objP.p.Negate())
 }

@@ -43,9 +43,9 @@ func parseTimePredicate(tokens []string) (predicate.Predicate, []string, error) 
 	return timeP(subFromReferenceTime, p), tokens[1:], nil
 }
 
-func timeP(subFromReferenceTime bool, p numeric.Predicate) predicate.Predicate {
+func timeP(subFromReferenceTime bool, p numeric.Predicate) *timePredicate {
 	return &timePredicate{
-		predicateBase: func(v interface{}) bool {
+		predicateBase: newPredicateBase(func(v interface{}) bool {
 			timeV, err := munge.ToTime(v)
 			if err != nil {
 				return false
@@ -67,18 +67,20 @@ func timeP(subFromReferenceTime bool, p numeric.Predicate) predicate.Predicate {
 				return false
 			}
 			return p(diff)
-		},
+		}),
 		subFromReferenceTime: subFromReferenceTime,
 		p:                    p,
 	}
 }
 
 type timePredicate struct {
-	predicateBase
+	*predicateBase
 	subFromReferenceTime bool
 	p                    numeric.Predicate
 }
 
 func (tp *timePredicate) Negate() predicate.Predicate {
-	return timeP(tp.subFromReferenceTime, tp.p.Negate().(numeric.Predicate))
+	ntp := timeP(tp.subFromReferenceTime, tp.p.Negate().(numeric.Predicate))
+	ntp.negateSchemaP()
+	return ntp
 }
