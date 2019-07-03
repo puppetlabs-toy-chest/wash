@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/plugin/internal"
-
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -28,9 +27,9 @@ func (m *mockExternalPluginScript) InvokeAndWait(
 	method string,
 	entry *externalPluginEntry,
 	args ...string,
-) ([]byte, error) {
+) (invocation, error) {
 	retValues := m.Called(ctx, method, entry, args)
-	return retValues.Get(0).([]byte), retValues.Error(1)
+	return retValues.Get(0).(invocation), retValues.Error(1)
 }
 
 func (m *mockExternalPluginScript) NewInvocation(
@@ -38,7 +37,7 @@ func (m *mockExternalPluginScript) NewInvocation(
 	method string,
 	entry *externalPluginEntry,
 	args ...string,
-) *internal.Command {
+) invocation {
 	// A stub's still necessary to satisfy the externalPluginScript
 	// interface
 	panic("mockExternalPluginScript#NewInvocation called by tests")
@@ -196,6 +195,10 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 // but could be worth considering later if we add similarly structured
 // methods.
 
+func mockInvocation(stdout []byte) invocation {
+	return invocation{command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
@@ -206,7 +209,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then List returns its error
@@ -251,7 +254,7 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "read", entry).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "read", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Open returns its error
@@ -280,7 +283,7 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that List is invoked when
@@ -329,7 +332,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that List is invoked when
@@ -384,7 +387,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 
 	ctx := context.Background()
 	mockInvokeAndWait := func(stdout []byte, err error) {
-		mockScript.OnInvokeAndWait(ctx, "metadata", entry).Return(stdout, err).Once()
+		mockScript.OnInvokeAndWait(ctx, "metadata", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Metadata returns its error

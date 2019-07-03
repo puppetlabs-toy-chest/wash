@@ -23,7 +23,7 @@ func (r *externalPluginRoot) Init(cfg map[string]interface{}) error {
 	// initialization
 	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelFunc()
-	stdout, err := r.script.InvokeAndWait(ctx, "init", nil, string(cfgJSON))
+	inv, err := r.script.InvokeAndWait(ctx, "init", nil, string(cfgJSON))
 	if err != nil {
 		select {
 		case <-ctx.Done():
@@ -33,12 +33,12 @@ func (r *externalPluginRoot) Init(cfg map[string]interface{}) error {
 		}
 	}
 	var decodedRoot decodedExternalPluginEntry
-	if err := json.Unmarshal(stdout, &decodedRoot); err != nil {
+	if err := json.Unmarshal(inv.stdout.Bytes(), &decodedRoot); err != nil {
 		return newStdoutDecodeErr(
 			context.Background(),
 			"the plugin root",
 			err,
-			stdout,
+			inv,
 			"{}",
 		)
 	}

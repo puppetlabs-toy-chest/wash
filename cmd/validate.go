@@ -93,7 +93,7 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 
 	registry := plugin.NewRegistry()
 	if err := registry.RegisterPlugin(root, serverOpts.PluginConfig[plug]); err != nil {
-		cmdutil.ErrPrintf("Error loading plugin: %v\n", err)
+		cmdutil.ErrPrintf("%v\n", formatErr("Error loading plugin", "init", err))
 		return exitCode{1}
 	}
 
@@ -217,7 +217,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Ent
 	if plugin.ListAction().IsSupportedOn(e) {
 		entries, err := plugin.CachedList(ctx, e.(plugin.Parent))
 		if err != nil {
-			errs <- fmt.Errorf("Error validating List on %v: %v", name, err)
+			errs <- formatErr(fmt.Sprintf("Error validating List on %v", name), "list", err)
 			return
 		}
 
@@ -246,7 +246,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Ent
 	if plugin.ReadAction().IsSupportedOn(e) {
 		_, err := plugin.CachedOpen(ctx, e.(plugin.Readable))
 		if err != nil {
-			errs <- fmt.Errorf("Error validating Read on %v: %v", name, err)
+			errs <- formatErr(fmt.Sprintf("Error validating Read on %v", name), "read", err)
 			return
 		}
 	}
@@ -255,14 +255,19 @@ func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Ent
 	if plugin.StreamAction().IsSupportedOn(e) {
 		rdr, err := e.(plugin.Streamable).Stream(ctx)
 		if err != nil {
-			errs <- fmt.Errorf("Error validating Stream on %v: %v", name, err)
+			errs <- formatErr(fmt.Sprintf("Error validating Stream on %v", name), "stream", err)
 			return
 		}
 		rdr.Close()
 	}
 	tracker.Increment(1)
 
-	// TODO: decide how to test exec
+	// TODO: decide how to test exec. 'echo' is pretty portable.
 	//if plugin.ExecAction().IsSupportedOn(e) {}
 	tracker.MarkAsDone()
+}
+
+func formatErr(msg, method string, err error) error {
+	helpURL := "https://puppetlabs.github.io/wash/docs/external_plugins/#" + method
+	return fmt.Errorf("%v: %v\nSee %v for response format", msg, err, helpURL)
 }
