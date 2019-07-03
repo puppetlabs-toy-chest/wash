@@ -91,7 +91,9 @@ Output any new updates to files and/or resources (that support the stream action
 
 Validates an external plugin, using it's schema to limit exploration. The plugin can be one you've configured in Wash's config file, or it can be a script to load as an external plugin. Plugin-specific config from Wash's config file will be used. The Wash daemon does not need to be running to use this command.
 
-Validate starts from the plugin root and does a breadth-first traversal of the plugin hierarchy, invoking all supported methods on examples at each level. If the plugin provides a schema, it will be used to limit exploration to one example of each type of entry. Exploration can be stopped with Ctrl-C when needed.
+Validate starts from the plugin root and does a breadth-first traversal of the plugin hierarchy, invoking all supported methods on an example at each level. If the plugin provides a schema, it will be used to explore one example of each type of entry. Exploration can be stopped with Ctrl-C when needed.
+
+Each line represents validation of an entry type. The `lrsx` fields represent support for `list`, `read`, `stream`, and `execute` methods respectively, with '-' representing lack of support for a method.
 
 ## Config
 
