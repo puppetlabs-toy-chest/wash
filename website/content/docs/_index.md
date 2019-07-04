@@ -13,6 +13,7 @@ title= "Wash Documentation"
   * [wash meta](#wash-meta)
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
+  * [wash stree](#wash-stree)
   * [wash tail](#wash-tail)
 * [Config] (#config)
 * [Core Plugins](#core-plugins)
@@ -76,6 +77,10 @@ to display running processes on all listed nodes. Errors on paths that don't imp
 Initializes all of the plugins, then sets up the Wash daemon (its API and [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
 
 Server API docs can be found [here](/wash/docs/api). The server config is described in the [`config`](#config) section.
+
+### wash stree
+
+Displays the entry's stree (schema-tree), which is a high-level overview of the entry's hierarchy. Non-singleton types are bracketed with "[]".
 
 ### wash tail
 
