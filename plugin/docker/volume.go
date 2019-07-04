@@ -144,7 +144,7 @@ func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReade
 		return nil, err
 	}
 	defer func() {
-		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		err := v.client.ContainerRemove(context.Background(), cid, types.ContainerRemoveOptions{})
 		activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
 	}()
 
@@ -153,7 +153,7 @@ func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReade
 		return nil, err
 	}
 	defer func() {
-		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		err := v.client.ContainerKill(context.Background(), cid, "SIGKILL")
 		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
 	}()
 
@@ -186,42 +186,28 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 	}
 
 	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
-	delete := func() {
-		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+	delete := func(ct context.Context) {
+		err := v.client.ContainerRemove(ct, cid, types.ContainerRemoveOptions{})
 		activity.Record(ctx, "Deleted container %v: %v", cid, err)
 	}
 
 	activity.Record(ctx, "Starting container %v", cid)
 	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		delete()
+		activity.Record(ctx, "Error starting container %v: %v", cid, err)
+		delete(context.Background())
 		return nil, err
 	}
 
 	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
 	killAndDelete := func() {
-		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		ct := context.Background()
+		err := v.client.ContainerKill(ct, cid, "SIGKILL")
 		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
-		delete()
+		delete(ct)
 	}
 
-	activity.Record(ctx, "Waiting for container %v", cid)
-	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-	var statusCode int64
-	select {
-	case err := <-errC:
-		killAndDelete()
-		return nil, err
-	case result := <-waitC:
-		statusCode = result.StatusCode
-		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-	}
-
-	opts := types.ContainerLogsOptions{ShowStdout: true}
-	if statusCode != 0 {
-		opts.ShowStderr = true
-	}
-
-	activity.Record(ctx, "Gathering log for %v", cid)
+	opts := types.ContainerLogsOptions{ShowStdout: true, Follow: true, Tail: "10"}
+	activity.Record(ctx, "Streaming log for %v", cid)
 	output, err := v.client.ContainerLogs(ctx, cid, opts)
 	if err != nil {
 		killAndDelete()
