@@ -39,6 +39,12 @@ returned by NewParser when overriding the interface's methods.
 type Parser interface {
 	predicate.Parser
 	IsOp(token string) bool
+	// SetUnknownTokenErrFunc sets a function to generate an error
+	// message when the parser encounters an unknown token.
+	SetUnknownTokenErrFunc(func(string) string)
+	// SetEmptyExpressionErrMsg sets the error message that will be used
+	// when the parser encounters an empty expression.
+	SetEmptyExpressionErrMsg(string)
 	atom() *predicate.CompositeParser
 	stack() *evalStack
 	setStack(s *evalStack)
@@ -52,11 +58,13 @@ type parser struct {
 	// for callers to extend the parser if they'd like to support additional binary
 	// ops. We will likely need this capability in the future if/when we add the ","
 	// operator to `wash find`.
-	binaryOps     map[string]*BinaryOp
-	Atom          *predicate.CompositeParser
-	Stack         *evalStack
-	numOpenParens int
-	opTokens      map[string]struct{}
+	binaryOps             map[string]*BinaryOp
+	Atom                  *predicate.CompositeParser
+	Stack                 *evalStack
+	numOpenParens         int
+	opTokens              map[string]struct{}
+	unknownTokenErrFunc   func(string) string
+	emptyExpressionErrMsg string
 }
 
 // NewParser returns a new predicate expression parser. The passed-in
@@ -85,6 +93,10 @@ func NewParser(predicateParser predicate.Parser, andOp predicate.BinaryOp, orOp 
 			predicateParser,
 		},
 	}
+	p.SetEmptyExpressionErrMsg("empty expression")
+	p.SetUnknownTokenErrFunc(func(token string) string {
+		return fmt.Sprintf("unknown token %v", token)
+	})
 	return p
 }
 
@@ -119,19 +131,58 @@ func (parser *parser) IsOp(token string) bool {
 	return ok
 }
 
+func (parser *parser) SetUnknownTokenErrFunc(errFunc func(string) string) {
+	if errFunc == nil {
+		panic("parser.SetUnknownTokenErrFunc called with a nil errFunc!")
+	}
+	parser.unknownTokenErrFunc = errFunc
+}
+
+func (parser *parser) SetEmptyExpressionErrMsg(msg string) {
+	if len(msg) <= 0 {
+		panic("parser.SetEmptyExpressionErrMsg called with an empty msg")
+	}
+	parser.emptyExpressionErrMsg = msg
+}
+
 /*
 Parse parses a predicate expression captured by the given tokens. It will process
-the tokens until it either (1) exhausts the input tokens, (2) stumbles upon a
-a token that it cannot parse, or (3) finds a syntax error. For Cases (1) and (2),
-Parse will return a syntax error if it did not parse a predicate. Otherwise, it will
-return the parsed predicate + any remaining tokens. Case (2) will also return an
-UnknownTokenError containing the offending token.
+the tokens until it either:
+	1. Exhausts the input tokens
+	2. Stumbles upon an unknown token (token that it cannot parse)
+	3. Finds a syntax error
+For Cases (1) and (2), Parse will return a syntax error if it did not parse a
+predicate. Otherwise, it will return the parsed predicate + any remaining tokens.
+Case (2) will also return an UnknownTokenError containing the offending token.
 
-Case 2's useful if we're parsing an expression inside an expression. It lets the caller
-decide if they've finished parsing the inner expression. We will take advantage of Case 2
-when parsing `meta` primary expressions.
+If you're using the expression parser, then instead of the usual
 
-If tokens is empty, then Parse will return an ErrEmptyExpression error.
+	p, tokens, err := expression.NewParser(...).Parse(tokens)
+	if err != nil {
+		// Optional code to wrap the error //
+		return nil, nil, err
+	}
+	return p, tokens, err
+
+the following pattern's recommended:
+
+	p, tokens, err := expression.NewParser(...).Parse(tokens)
+	if err != nil {
+		// Optional code to wrap the error    //
+		// Set the error to the wrapped error //
+	}
+	return p, tokens, err
+
+This pattern makes it easy for the expression parser to handle parsing nested
+predicate expressions without burdening the caller with that responsibility. We
+take advantage of this pattern when parsing meta primary predicate expressions.
+
+NOTE: If an unknown token is encountered inside a parenthesized expression, then a
+syntax error is returned. The reason for this decision is because parenthesized
+expressions have their own context (they are their own inner expression). Hence, they
+can handle their unknown token errors. However, non-parenthesized expressions could be
+embedded as part of an outer expression. In the latter case, the outer expression's
+parser would handle the error.
 */
 func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	parser.setStack(newEvalStack(parser.binaryOps["-a"]))
@@ -168,15 +219,30 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 			continue
 		}
 		if !errz.IsMatchError(err) {
-			// Syntax error when parsing the atom, so return the error
-			return nil, nil, err
+			if errz.IsSyntaxError(err) {
+				return nil, nil, err
+			}
+			// INVARIANT: If !errz.IsSyntaxError(err), then p != nil
+			if p == nil {
+				msg := fmt.Sprintf("parser.Parse: a non-syntax error was returned but no predicate was parsed: %v", err)
+				panic(msg)
+			}
+			// Push the parsed predicate onto the stack, then set tokens to tks and reset
+			// the error so that we (the callers) handle it in the next iteration.
+			parser.stack().pushPredicate(p)
+			tokens = tks
+			err = nil
+			continue
 		}
 		// Parsing an atom didn't work, so try parsing a binaryOp
 		b, ok := parser.binaryOps[token]
 		if !ok {
 			// Found an unknown token. Break out of the loop to evaluate
 			// the final predicate.
-			err = UnknownTokenError{token}
+			err = errz.UnknownTokenError{
+				Token: token,
+				Msg:   parser.unknownTokenErrFunc(token),
+			}
 			break
 		}
 		// Parsed a binaryOp, so shift tokens and push the op on the evaluation stack.
@@ -203,11 +269,23 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	// Parsing's finished.
 	if parser.stack().Len() <= 0 {
 		// We didn't parse anything. Either we have an empty expression, or
-		// err is an UnknownTokenError
+		// err is an UnknownTokenError. In either case, this is considered
+		// a syntax error.
 		if err == nil {
-			err = NewEmptyExpressionError("empty expression")
+			err = emptyExpressionError{
+				parser.emptyExpressionErrMsg,
+			}
+		} else {
+			// err is an UnknownTokenError
+			err = fmt.Errorf(err.Error())
 		}
-		// err is an UnknownTokenError
+		return nil, tokens, err
+	}
+	if parser.insideParens() && err != nil {
+		// We have an UnknownTokenError inside a parenthesized expression. Since a
+		// parenthesized expression is its own context, this is considered a syntax
+		// error.
+		err = fmt.Errorf(err.Error())
 		return nil, tokens, err
 	}
 	if _, ok := parser.stack().Peek().(*BinaryOp); ok {
@@ -277,4 +355,12 @@ func (s *evalStack) evaluate() {
 		p1 := s.Pop().(predicate.Predicate)
 		s.Push(op.op.Combine(p1, p2))
 	}
+}
+
+type emptyExpressionError struct {
+	msg string
+}
+
+func (e emptyExpressionError) Error() string {
+	return e.msg
 }

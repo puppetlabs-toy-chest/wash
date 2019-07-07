@@ -60,11 +60,10 @@ func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Pa
 	if err != nil {
 		if errz.IsMatchError(err) {
 			parsedToken := rawToken[0 : len(rawToken)-len(token)]
-			return nil, nil, fmt.Errorf("expected a predicate after %v", parsedToken)
+			err = fmt.Errorf("expected a predicate after %v", parsedToken)
 		}
-		return nil, nil, err
 	}
-	return arrayP(ptype, p), tokens, nil
+	return arrayP(ptype, p), tokens, err
 }
 
 type arrayPredicateType struct {
@@ -117,6 +116,9 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 }
 
 func arrayP(ptype arrayPredicateType, p predicate.Predicate) Predicate {
+	if p == nil {
+		return nil
+	}
 	arryP := &arrayPredicate{
 		ptype: ptype,
 		p:     p,

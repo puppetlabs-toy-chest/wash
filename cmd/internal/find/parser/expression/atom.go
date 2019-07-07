@@ -25,9 +25,11 @@ func notOpParser(parser Parser) predicate.Parser {
 			if errz.IsMatchError(err) {
 				err = fmt.Errorf("%v: no following expression", notToken)
 			}
-			return nil, nil, err
 		}
-		return p.Negate(), tokens, err
+		if p != nil {
+			p = p.Negate()
+		}
+		return p, tokens, err
 	})
 }
 
@@ -35,8 +37,8 @@ func notOpParser(parser Parser) predicate.Parser {
 // The expressions themselves are parsed by the given parser. Note that the parser
 // returned by Parenthesize mutates the passed-in parser's state.
 //
-// If Parser#Parse returns an EmptyExpressionError, then Parenthesize also returns an
-// EmptyExpressionError,
+// If Parser#Parse returns an error for an empty expression, then Parenthesize also
+// returns an error.
 func Parenthesize(parser Parser) predicate.Parser {
 	return predicate.ToParser(func(tokens []string) (predicate.Predicate, []string, error) {
 		if len(tokens) == 0 {
@@ -58,14 +60,15 @@ func Parenthesize(parser Parser) predicate.Parser {
 			parser.closeParens()
 		}()
 		p, tokens, err := parser.Parse(tokens)
-		if err != nil && !IsEmptyExpressionError(err) {
+		_, isEmptyExpressionError := err.(emptyExpressionError)
+		if err != nil && !isEmptyExpressionError {
 			return p, tokens, err
 		}
-		// err == nil || IsEmptyExpressionError(err)
+		// err == nil || isEmptyExpressionError
 		if len(tokens) == 0 || tokens[0] != ")" {
 			return nil, nil, fmt.Errorf("(: missing closing ')'")
 		}
-		if IsEmptyExpressionError(err) {
+		if isEmptyExpressionError {
 			return nil, nil, fmt.Errorf("(): empty inner expression")
 		}
 		tokens = tokens[1:]

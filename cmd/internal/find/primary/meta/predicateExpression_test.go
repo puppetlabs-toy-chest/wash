@@ -212,7 +212,6 @@ func (s *PredicateExpressionTestSuite) TestDeMorgansLaw_SchemaP() {
 	// which is possible.
 	s.RSTC("! [?] ( .key 3 -a 6 ) -primary", "-primary", "[].key p")
 	s.RSTC("! [?] ( .key 3 -a 6 ) -primary", "-primary", "[] p")
-
 }
 
 func TestPredicateExpression(t *testing.T) {

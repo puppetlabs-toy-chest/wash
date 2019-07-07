@@ -11,16 +11,16 @@ import (
 // Parse is the meta primary's parse function.
 func Parse(tokens []string) (types.EntryPredicate, []string, error) {
 	p, tokens, err := parseExpression(tokens)
-	if err != nil {
-		return nil, nil, err
+	var entryP types.EntryPredicate
+	if p != nil {
+		entryP = types.ToEntryP(func(e types.Entry) bool {
+			return p.IsSatisfiedBy(e.Metadata)
+		})
+		entryP.SetSchemaP(&entrySchemaPredicate{
+			p: p.(Predicate).schemaP(),
+		})
 	}
-	entryP := types.ToEntryP(func(e types.Entry) bool {
-		return p.IsSatisfiedBy(e.Metadata)
-	})
-	entryP.SetSchemaP(&entrySchemaPredicate{
-		p: p.(Predicate).schemaP(),
-	})
-	return entryP, tokens, nil
+	return entryP, tokens, err
 }
 
 // entrySchemaPredicate is the meta primary's entry schema predicate.

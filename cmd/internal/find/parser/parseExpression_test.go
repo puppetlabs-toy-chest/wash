@@ -131,6 +131,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 	m := make(map[string]interface{})
 	m["key"] = "foo"
 	entry := types.Entry{}
+	entry.CName = "foo"
 	entry.Metadata = m
 
 	s.RTC("( -true -o -true ) -false", false)
@@ -142,6 +143,8 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 	// we're providing our own entry
 	s.Suite.RTC("-m .key foo -o -m .key bar", "", entry)
 	s.Suite.RNTC("-m .key foo -a -m .key bar", "", entry)
+	s.Suite.RTC("-m .key foo -name foo", "", entry)
+	s.Suite.RTC("! -m .key -null -name foo", "", entry)
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionSchemaPEval() {
@@ -175,6 +178,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {
 
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
+	s.IsTopLevelExpressionParser = true
 	s.Parser = types.EntryPredicateParser(func(tokens []string) (types.EntryPredicate, []string, error) {
 		p, err := parseExpression(tokens)
 		return p, []string{}, err

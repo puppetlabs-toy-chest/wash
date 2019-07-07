@@ -23,11 +23,11 @@ func parseExpression(tokens []string) (types.EntryPredicate, error) {
 		}), nil
 	}
 	parser := expression.NewParser(primary.Parser, &types.EntryPredicateAnd{}, &types.EntryPredicateOr{})
+	parser.SetUnknownTokenErrFunc(func(token string) string {
+		return fmt.Sprintf("%v: unknown primary or operator", token)
+	})
 	p, tks, err := parser.Parse(tokens)
 	if err != nil {
-		if tkErr, ok := err.(expression.UnknownTokenError); ok {
-			err = fmt.Errorf("%v: unknown primary or operator", tkErr.Token)
-		}
 		return nil, err
 	}
 	if len(tks) != 0 {

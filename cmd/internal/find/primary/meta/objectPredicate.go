@@ -65,14 +65,16 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 
 	if err != nil {
 		if errz.IsMatchError(err) {
-			return nil, nil, fmt.Errorf("expected a predicate after %v", key)
+			err = fmt.Errorf("expected a predicate after %v", key)
 		}
-		return nil, nil, err
 	}
-	return objectP(key, p), tokens, nil
+	return objectP(key, p), tokens, err
 }
 
 func objectP(key string, p predicate.Predicate) Predicate {
+	if p == nil {
+		return nil
+	}
 	objP := &objectPredicate{
 		predicateBase: newPredicateBase(func(v interface{}) bool {
 			mp, ok := v.(map[string]interface{})

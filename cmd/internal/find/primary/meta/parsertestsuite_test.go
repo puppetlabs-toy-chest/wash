@@ -25,10 +25,10 @@ func (s *parserTestSuite) SetParser(parser predicate.Parser) {
 	s.Parser = parser
 	s.SchemaPParser = predicate.ToParser(func(tokens []string) (predicate.Predicate, []string, error) {
 		p, tokens, err := s.Parser.Parse(tokens)
-		if err != nil {
-			return p, tokens, err
+		var schemaP schemaPredicate
+		if p != nil {
+			schemaP = p.(Predicate).schemaP()
 		}
-		schemaP := p.(Predicate).schemaP()
 		return schemaP, tokens, err
 	})
 }
