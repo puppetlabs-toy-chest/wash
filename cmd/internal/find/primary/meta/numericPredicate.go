@@ -10,7 +10,7 @@ import (
 
 // NumericPredicate => (+|-)? Number
 // Number           => N | '{' N '}' | numeric.SizeRegex
-func parseNumericPredicate(tokens []string) (Predicate, []string, error) {
+func parseNumericPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a +, -, or a digit")
 	}

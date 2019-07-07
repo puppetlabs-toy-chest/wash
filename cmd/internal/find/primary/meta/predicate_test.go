@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -43,6 +44,6 @@ func (s *PredicateTestSuite) TestValidInput() {
 
 func TestPredicate(t *testing.T) {
 	s := new(PredicateTestSuite)
-	s.Parser = toPredicateParser(parsePredicate)
+	s.Parser = predicate.ToParser(parsePredicate)
 	suite.Run(t, s)
 }

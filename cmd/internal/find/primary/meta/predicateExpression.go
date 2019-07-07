@@ -14,7 +14,7 @@ type predicateExpressionParser struct {
 
 func newPredicateExpressionParser(isInnerExpression bool) predicate.Parser {
 	p := &predicateExpressionParser{
-		Parser:            expression.NewParser(toPredicateParser(parsePredicate), &predicateAnd{}, &predicateOr{}),
+		Parser:            expression.NewParser(predicate.ToParser(parsePredicate), &predicateAnd{}, &predicateOr{}),
 		isInnerExpression: isInnerExpression,
 	}
 	if isInnerExpression {
@@ -25,7 +25,6 @@ func newPredicateExpressionParser(isInnerExpression bool) predicate.Parser {
 	return p
 }
 
-// This needs to return predicate.Predicate in order for it to use expression.Parenthesize
 func (parser *predicateExpressionParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, expression.NewEmptyExpressionError("expected a predicate expression")

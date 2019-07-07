@@ -13,12 +13,12 @@ import (
 //                   ‘[' ? ‘]’ Predicate |
 //                   ‘[' * ‘]’ Predicate |
 //                   ‘[' N ‘]’ Predicate |
-func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
+func parseArrayPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match
-	parseOAPredicate := toPredicateParser(parseOAPredicate)
+	parseOAPredicate := predicate.ToParser(parseOAPredicate)
 	return parseArrayP(
 		tokens,
 		parseOAPredicate,
@@ -27,7 +27,7 @@ func parseArrayPredicate(tokens []string) (Predicate, []string, error) {
 }
 
 // This helper's used by parseArrayPredicate and parseArrayExpression
-func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (Predicate, []string, error) {
+func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected an opening '['")
 	}
@@ -64,7 +64,7 @@ func parseArrayP(tokens []string, baseCaseParser, keySequenceParser predicate.Pa
 		}
 		return nil, nil, err
 	}
-	return arrayP(ptype, p.(Predicate)), tokens, nil
+	return arrayP(ptype, p), tokens, nil
 }
 
 type arrayPredicateType struct {
@@ -116,7 +116,7 @@ func parseArrayPredicateType(token string) (arrayPredicateType, string, error) {
 	return ptype, token[endIx+1:], nil
 }
 
-func arrayP(ptype arrayPredicateType, p Predicate) Predicate {
+func arrayP(ptype arrayPredicateType, p predicate.Predicate) Predicate {
 	arryP := &arrayPredicate{
 		ptype: ptype,
 		p:     p,
@@ -188,15 +188,15 @@ func (arryP *arrayPredicate) Negate() predicate.Predicate {
 		// ! [?] p == [*] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 'a'
-		return arrayP(ptype, arryP.p.Negate().(Predicate))
+		return arrayP(ptype, arryP.p.Negate())
 	case 'a':
 		// ! [*] p == [?] ! p
 		ptype := arrayPredicateType{}
 		ptype.t = 's'
-		return arrayP(ptype, arryP.p.Negate().(Predicate))
+		return arrayP(ptype, arryP.p.Negate())
 	case 'n':
 		// ! [n] p == [n] ! p
-		return arrayP(arryP.ptype, arryP.p.Negate().(Predicate))
+		return arrayP(arryP.ptype, arryP.p.Negate())
 	default:
 		msg := fmt.Sprintf("meta.arrayPredicate contains an unknown ptype %v", t)
 		panic(msg)
