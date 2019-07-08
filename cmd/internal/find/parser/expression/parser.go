@@ -188,108 +188,11 @@ latter case, the outer expression's parser would handle the error.
 */
 func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	parser.setStack(newEvalStack(parser.binaryOps["-a"]))
-
-	// Declare these as variables so that we can cleanly update
-	// err for each iteration without having to worry about the
-	// := operator's scoping rules. tks is used to avoid accidentally
-	// overwriting tokens.
-	//
-	// POST-LOOP INVARIANT: err == nil or err is an UnknownTokenError/IncompleteOperatorError
-	var p predicate.Predicate
-	var tks []string
-	var err error
-Loop:
-	for {
-		// Reset err in each iteration to maintain the post-loop invariant
-		err = nil
-		if len(tokens) == 0 {
-			break
-		}
-		token := tokens[0]
-		if token == ")" {
-			if !parser.insideParens() {
-				err = errz.IncompleteOperatorError{
-					Reason: "): no beginning '('",
-				}
-			}
-			// We've finished parsing a parenthesized expression
-			break
-		}
-		// Try parsing an atom first.
-		p, tks, err = parser.Atom.Parse(tokens)
-		if err == nil {
-			// Successfully parsed an atom, so push the parsed predicate onto the stack.
-			parser.stack().pushPredicate(p)
-			tokens = tks
-			continue
-		}
-		if !errz.IsMatchError(err) {
-			if errz.IsSyntaxError(err) {
-				return nil, nil, err
-			}
-			if p != nil {
-				// Push the parsed predicate onto the stack, then set tokens to tks and reset
-				// the error so that we (the callers) handle it in the next iteration.
-				parser.stack().pushPredicate(p)
-				tokens = tks
-				err = nil
-				continue
-			}
-			// p == nil
-			switch err.(type) {
-			case errz.UnknownTokenError:
-				msg := fmt.Sprintf("parser.Parse: an atom returned an unknown token error without parsing a predicate: %v", err)
-				panic(msg)
-			case errz.IncompleteOperatorError:
-				// A predicate wasn't parsed. This is possible via something like
-				// "-m .key -exists -a ! -name foo" where the "!" would return this
-				// error because "-name" is not a valid meta primary expression.
-				//
-				// If we hit this case, that means parsing's finished. Thus, we break
-				// out of the loop and let our caller handle the IncompleteOperatorError.
-				// Note that in our example, this would mean that `wash find`'s top-level
-				// expression parser would handle the "! -name foo" part of the expression,
-				// which is correct.
-				break Loop
-			default:
-				// We should never hit this code-path
-				msg := fmt.Sprintf("Unknown error %v", err)
-				panic(msg)
-			}
-		}
-		// Parsing an atom didn't work, so try parsing a binaryOp
-		b, ok := parser.binaryOps[token]
-		if !ok {
-			// Found an unknown token. Break out of the loop to evaluate
-			// the final predicate.
-			err = errz.UnknownTokenError{
-				Token: token,
-				Msg:   parser.unknownTokenErrFunc(token),
-			}
-			break
-		}
-		// Parsed a binaryOp, so shift tokens and push the op on the evaluation stack.
-		tokens = tokens[1:]
-		if parser.stack().mostRecentOp == nil {
-			if _, ok := parser.stack().Peek().(predicate.Predicate); !ok {
-				return nil, nil, fmt.Errorf("%v: no expression before %v", token, token)
-			}
-			parser.stack().pushBinaryOp(token, b)
-			continue
-		}
-		if _, ok := parser.stack().Peek().(*BinaryOp); ok {
-			// mostRecentOp's on the stack, and the parser's asking us to
-			// push b. This means that mostRecentOp did not have an expression
-			// after it, so report the syntax error.
-			return nil, nil, fmt.Errorf(
-				"%v: no expression after %v",
-				parser.stack().mostRecentOpToken,
-				parser.stack().mostRecentOpToken,
-			)
-		}
-		parser.stack().pushBinaryOp(token, b)
+	tokens, err := parser.parse(tokens)
+	if errz.IsSyntaxError(err) {
+		return nil, nil, err
 	}
-	// Parsing's finished.
+	// INVARIANT: err == nil or err is an UnknownTokenError/IncompleteOperatorError
 	if parser.stack().Len() <= 0 {
 		// We didn't parse anything. Either we have an empty expression, or
 		// err is an UnknownTokenError/IncompleteOperatorError. In either case,
@@ -335,6 +238,100 @@ Loop:
 	// Call s.evaluate() to handle cases like "p1 -and p2"
 	parser.stack().evaluate()
 	return parser.stack().Pop().(predicate.Predicate), tokens, err
+}
+
+// Note that parse doesn't return a predicate because all parsed
+// predicates are stored on the evaluation stack.
+func (parser *parser) parse(tokens []string) ([]string, error) {
+	for {
+		var err error
+		if len(tokens) == 0 {
+			return tokens, err
+		}
+		token := tokens[0]
+		if token == ")" {
+			if !parser.insideParens() {
+				err = errz.IncompleteOperatorError{
+					Reason: "): no beginning '('",
+				}
+			}
+			// We've finished parsing a parenthesized expression
+			return tokens, err
+		}
+		// Try parsing an atom first.
+		p, tks, err := parser.Atom.Parse(tokens)
+		if err == nil {
+			// Successfully parsed an atom, so push the parsed predicate onto the stack.
+			parser.stack().pushPredicate(p)
+			tokens = tks
+			continue
+		}
+		if !errz.IsMatchError(err) {
+			if errz.IsSyntaxError(err) {
+				return tokens, err
+			}
+			if p != nil {
+				// Push the parsed predicate onto the stack, then set tokens to tks and reset
+				// the error so that we (the callers) handle it in the next iteration.
+				parser.stack().pushPredicate(p)
+				tokens = tks
+				err = nil
+				continue
+			}
+			// p == nil
+			switch err.(type) {
+			case errz.UnknownTokenError:
+				msg := fmt.Sprintf("parser.Parse: an atom returned an unknown token error without parsing a predicate: %v", err)
+				panic(msg)
+			case errz.IncompleteOperatorError:
+				// A predicate wasn't parsed. This is possible via something like
+				// "-m .key -exists -a ! -name foo" where the "!" would return this
+				// error because "-name" is not a valid meta primary expression.
+				//
+				// If we hit this case, that means parsing's finished. Thus, we break
+				// out of the loop and let our caller handle the IncompleteOperatorError.
+				// Note that in our example, this would mean that `wash find`'s top-level
+				// expression parser would handle the "! -name foo" part of the expression,
+				// which is correct.
+				return tokens, err
+			default:
+				// We should never hit this code-path
+				msg := fmt.Sprintf("Unknown error %v", err)
+				panic(msg)
+			}
+		}
+		// Parsing an atom didn't work, so try parsing a binaryOp
+		b, ok := parser.binaryOps[token]
+		if !ok {
+			// Found an unknown token. Break out of the loop to evaluate
+			// the final predicate.
+			err = errz.UnknownTokenError{
+				Token: token,
+				Msg:   parser.unknownTokenErrFunc(token),
+			}
+			return tokens, err
+		}
+		// Parsed a binaryOp, so shift tokens and push the op on the evaluation stack.
+		tokens = tokens[1:]
+		if parser.stack().mostRecentOp == nil {
+			if _, ok := parser.stack().Peek().(predicate.Predicate); !ok {
+				return tokens, fmt.Errorf("%v: no expression before %v", token, token)
+			}
+			parser.stack().pushBinaryOp(token, b)
+			continue
+		}
+		if _, ok := parser.stack().Peek().(*BinaryOp); ok {
+			// mostRecentOp's on the stack, and the parser's asking us to
+			// push b. This means that mostRecentOp did not have an expression
+			// after it, so report the syntax error.
+			return tokens, fmt.Errorf(
+				"%v: no expression after %v",
+				parser.stack().mostRecentOpToken,
+				parser.stack().mostRecentOpToken,
+			)
+		}
+		parser.stack().pushBinaryOp(token, b)
+	}
 }
 
 type evalStack struct {
