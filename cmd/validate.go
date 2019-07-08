@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"math/rand"
 	"strings"
 	"sync"
@@ -207,6 +208,32 @@ func (c criteria) String() string {
 	return string(s)
 }
 
+var timeoutDuration = 30 * time.Second
+
+// Invokes 'fn' with a context with timeout. Invokes the cancelFunc on error.
+func withTimeout(ctx context.Context, method, name string,
+	fn func(context.Context) (interface{}, error)) (interface{}, context.CancelFunc, error) {
+	limitedCtx, cancelFunc := context.WithTimeout(ctx, timeoutDuration)
+	obj, err := fn(limitedCtx)
+
+	var cancelled bool
+	select {
+	case <-limitedCtx.Done():
+		cancelled = true
+	default:
+	}
+
+	if err != nil {
+		cancelFunc()
+		msg := fmt.Sprintf("Error validating %v on %v", strings.Title(method), name)
+		if cancelled {
+			msg = fmt.Sprintf("%v, operation timed out after %v", msg, timeoutDuration)
+		}
+		return nil, nil, formatErr(msg, method, err)
+	}
+	return obj, cancelFunc, nil
+}
+
 func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Entry, all bool, errs chan<- error) {
 	defer wp.Done()
 	name := plugin.ID(e)
@@ -215,11 +242,15 @@ func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Ent
 	pw.AppendTracker(&tracker)
 
 	if plugin.ListAction().IsSupportedOn(e) {
-		entries, err := plugin.CachedList(ctx, e.(plugin.Parent))
+		obj, cancelFunc, err := withTimeout(ctx, "list", name, func(ctx context.Context) (interface{}, error) {
+			return plugin.CachedList(ctx, e.(plugin.Parent))
+		})
 		if err != nil {
-			errs <- formatErr(fmt.Sprintf("Error validating List on %v", name), "list", err)
+			errs <- err
 			return
 		}
+		cancelFunc()
+		entries := obj.(map[string]plugin.Entry)
 
 		if all {
 			for _, entry := range entries {
@@ -244,26 +275,63 @@ func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Ent
 	tracker.Increment(1)
 
 	if plugin.ReadAction().IsSupportedOn(e) {
-		_, err := plugin.CachedOpen(ctx, e.(plugin.Readable))
+		_, cancelFunc, err := withTimeout(ctx, "read", name, func(ctx context.Context) (interface{}, error) {
+			return plugin.CachedOpen(ctx, e.(plugin.Readable))
+		})
 		if err != nil {
-			errs <- formatErr(fmt.Sprintf("Error validating Read on %v", name), "read", err)
+			errs <- err
 			return
 		}
+		cancelFunc()
 	}
 	tracker.Increment(1)
 
 	if plugin.StreamAction().IsSupportedOn(e) {
-		rdr, err := e.(plugin.Streamable).Stream(ctx)
+		obj, cancelFunc, err := withTimeout(ctx, "stream", name, func(ctx context.Context) (interface{}, error) {
+			return e.(plugin.Streamable).Stream(ctx)
+		})
 		if err != nil {
-			errs <- formatErr(fmt.Sprintf("Error validating Stream on %v", name), "stream", err)
+			errs <- err
 			return
 		}
-		rdr.Close()
+		obj.(io.Closer).Close()
+		cancelFunc()
 	}
 	tracker.Increment(1)
 
-	// TODO: decide how to test exec. 'echo' is pretty portable.
-	//if plugin.ExecAction().IsSupportedOn(e) {}
+	if plugin.ExecAction().IsSupportedOn(e) {
+		const testMessage = "hello"
+		obj, cancelFunc, err := withTimeout(ctx, "exec", name, func(ctx context.Context) (interface{}, error) {
+			return e.(plugin.Execable).Exec(ctx, "echo", []string{testMessage}, plugin.ExecOptions{})
+		})
+		if err != nil {
+			errs <- err
+			return
+		}
+		cmd := obj.(plugin.ExecCommand)
+
+		var output string
+		for chunk := range cmd.OutputCh() {
+			if err := chunk.Err; err != nil {
+				errs <- err
+			} else if chunk.StreamID == plugin.Stdout {
+				output += chunk.Data
+			} else if chunk.StreamID == plugin.Stderr {
+				errs <- fmt.Errorf("Unexpected error output on Exec: %v", chunk.Data)
+			}
+		}
+
+		if msg := strings.Trim(output, "\n"); msg != testMessage {
+			errs <- fmt.Errorf("Unexpected output on Exec: %v", msg)
+		}
+
+		if exitCode, err := cmd.ExitCode(); err != nil {
+			errs <- fmt.Errorf("Error getting exit code for 'echo': %v", err)
+		} else if exitCode != 0 {
+			errs <- fmt.Errorf("Non-zero exit code for 'echo': %v", exitCode)
+		}
+		cancelFunc()
+	}
 	tracker.MarkAsDone()
 }
 
