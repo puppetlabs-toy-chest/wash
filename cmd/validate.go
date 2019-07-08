@@ -157,12 +157,18 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{0}
 }
 
+// If the entry has a schema providing a TypeID, use it to help further distinguish between
+// different things that behave the same.
 type criteria struct {
+	typeID                   string
 	list, read, stream, exec bool
 }
 
 func newCriteria(entry plugin.Entry) criteria {
 	var crit criteria
+	if schema := entry.Schema(); schema != nil {
+		crit.typeID = schema.TypeID()
+	}
 	crit.list = plugin.ListAction().IsSupportedOn(entry)
 	crit.read = plugin.ReadAction().IsSupportedOn(entry)
 	crit.stream = plugin.StreamAction().IsSupportedOn(entry)
@@ -187,7 +193,12 @@ func (c criteria) String() string {
 	if c.exec {
 		s[3] = 'x'
 	}
-	return string(s)
+
+	result := string(s)
+	if c.typeID != "" {
+		result = fmt.Sprintf("%s %-30s", result, "["+c.typeID+"]")
+	}
+	return result
 }
 
 var timeoutDuration = 30 * time.Second
@@ -249,8 +260,12 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 			// Group children by ones that look "similar", and select one from each group to test.
 			groups := make(map[criteria][]plugin.Entry)
 			for _, entry := range entries {
-				crit := newCriteria(entry)
-				groups[crit] = append(groups[crit], entry)
+				ccrit := newCriteria(entry)
+				// If we have a TypeID, only explore children if they are different from the parent.
+				// This prevents simple recursion like volume directories containing more dirs.
+				if ccrit.typeID == "" || ccrit != crit {
+					groups[ccrit] = append(groups[ccrit], entry)
+				}
 			}
 
 			for _, items := range groups {
