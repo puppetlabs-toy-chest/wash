@@ -19,12 +19,12 @@ var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
 
 // ObjectPredicate => EmptyPredicate | ‘.’ Key Predicate
 // Key             => keyRegex
-func parseObjectPredicate(tokens []string) (Predicate, []string, error) {
+func parseObjectPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
 	}
 	// EmptyPredicate did not match, so try '.' Key Predicate
-	parseOAPredicate := toPredicateParser(parseOAPredicate)
+	parseOAPredicate := predicate.ToParser(parseOAPredicate)
 	return parseObjectP(
 		tokens,
 		parseOAPredicate,
@@ -33,7 +33,7 @@ func parseObjectPredicate(tokens []string) (Predicate, []string, error) {
 }
 
 // This helper's used by parseObjectPredicate and parseObjectExpression.
-func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (Predicate, []string, error) {
+func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.Parser) (predicate.Predicate, []string, error) {
 	if len(tokens) == 0 {
 		return nil, nil, errz.NewMatchError("expected a key sequence")
 	}
@@ -65,14 +65,16 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 
 	if err != nil {
 		if errz.IsMatchError(err) {
-			return nil, nil, fmt.Errorf("expected a predicate after %v", key)
+			err = fmt.Errorf("expected a predicate after %v", key)
 		}
-		return nil, nil, err
 	}
-	return objectP(key, p.(Predicate)), tokens, nil
+	return objectP(key, p), tokens, err
 }
 
-func objectP(key string, p Predicate) Predicate {
+func objectP(key string, p predicate.Predicate) Predicate {
+	if p == nil {
+		return nil
+	}
 	objP := &objectPredicate{
 		predicateBase: newPredicateBase(func(v interface{}) bool {
 			mp, ok := v.(map[string]interface{})
@@ -116,5 +118,5 @@ func (objP *objectPredicate) Negate() predicate.Predicate {
 	// ! .key p == .key ! p
 	//
 	// Note that these semantics also hold for schemaP negation.
-	return objectP(objP.key, objP.p.Negate().(Predicate))
+	return objectP(objP.key, objP.p.Negate())
 }

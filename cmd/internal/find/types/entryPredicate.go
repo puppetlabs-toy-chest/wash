@@ -35,10 +35,11 @@ func (parser EntryPredicateParser) Parse(tokens []string) (predicate.Predicate, 
 func (parser EntryPredicateParser) ToSchemaPParser() EntrySchemaPredicateParser {
 	return func(tokens []string) (EntrySchemaPredicate, []string, error) {
 		entryP, tokens, err := parser(tokens)
-		if err != nil {
-			return nil, tokens, err
+		var schemaP EntrySchemaPredicate
+		if entryP != nil {
+			schemaP = entryP.SchemaP()
 		}
-		return entryP.SchemaP(), tokens, nil
+		return schemaP, tokens, err
 	}
 }
 

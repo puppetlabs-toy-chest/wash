@@ -11,7 +11,7 @@ type Parser interface {
 // parsers.
 type CompositeParser struct {
 	MatchErrMsg string
-	Parsers []Parser
+	Parsers     []Parser
 }
 
 // Parse is a wrapper to ParseAndReturnParserID. It implements the predicate.Parser
@@ -28,17 +28,13 @@ func (cp CompositeParser) Parse(tokens []string) (Predicate, []string, error) {
 func (cp CompositeParser) ParseAndReturnParserID(tokens []string) (Predicate, []string, int, error) {
 	for i, parser := range cp.Parsers {
 		p, tokens, err := parser.Parse(tokens)
-		if err == nil {
-			return p, tokens, i, nil
+		if errz.IsMatchError(err) {
+			continue
 		}
-		if !errz.IsMatchError(err) {
-			// Parser matched the input, but returned a syntax error. Return
-			// the error.
-			return nil, nil, i, err
-		}
+		return p, tokens, i, err
 	}
 	// None of the parsers matched the input, so return a MatchError
-	return nil, nil, -1, errz.NewMatchError(cp.MatchErrMsg)		
+	return nil, nil, -1, errz.NewMatchError(cp.MatchErrMsg)
 }
 
 // ToParser converts the given parse function to a predicate.Parser object

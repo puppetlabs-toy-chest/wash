@@ -3,6 +3,7 @@ package meta
 import (
 	"testing"
 
+	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -56,6 +57,6 @@ func (s *StringPredicateTestSuite) TestStringP() {
 
 func TestStringPredicate(t *testing.T) {
 	s := new(StringPredicateTestSuite)
-	s.SetParser(toPredicateParser(parseStringPredicate))
+	s.SetParser(predicate.ToParser(parseStringPredicate))
 	suite.Run(t, s)
 }

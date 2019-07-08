@@ -15,8 +15,9 @@ import (
 // Suite represents a type that tests `wash find` predicate parsers
 type Suite struct {
 	suite.Suite
-	Parser        predicate.Parser
-	SchemaPParser predicate.Parser
+	Parser                     predicate.Parser
+	SchemaPParser              predicate.Parser
+	IsTopLevelExpressionParser bool
 }
 
 // Case represents a parser test case
@@ -93,6 +94,14 @@ func (suite *Suite) runTestCase(c Case) {
 		}
 		suite.Regexp(c.ErrRegex, err, "Input: %v", input)
 	} else {
+		if !suite.IsTopLevelExpressionParser {
+			// Ignore UnknownTokenError. This is OK since the top-level expression parser
+			// will test its behavior.
+			switch err.(type) {
+			case errz.UnknownTokenError:
+				err = nil
+			}
+		}
 		if suite.NoError(err, "Input: %v", input) {
 			suite.Equal(suite.ToTks(c.RemInput), tokens, "Input: %v", input)
 			falseV, ok := c.SatisfyingValue.(falseV)

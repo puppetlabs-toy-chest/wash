@@ -77,11 +77,11 @@ func (parser *parser) Parse(tokens []string) (predicate.Predicate, []string, err
 	}
 	tokens = tokens[1:]
 	p, tokens, err := primary.Parse(tokens)
-	if err != nil {
+	if errz.IsSyntaxError(err) {
 		return nil, nil, fmt.Errorf("%v: %v", token, err)
 	}
 	parser.SetPrimaries[primary] = true
-	return p, tokens, nil
+	return p, tokens, err
 }
 
 func (parser *parser) add(p *Primary) *Primary {
