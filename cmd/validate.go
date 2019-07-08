@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gammazero/workerpool"
@@ -100,12 +103,20 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 
 	rand.Seed(time.Now().UnixNano())
 	plugin.InitCache()
-	ctx := context.Background()
 
 	pw := progress.NewWriter()
 	pw.SetUpdateFrequency(50 * time.Millisecond)
 	pw.Style().Colors = progress.StyleColorsExample
 	go pw.Render()
+
+	// On Ctrl-C cancel the context to ensure plugin calls have a chance to cleanup.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-sigCh
+		cancel()
+	}()
 
 	// Use list to walk the hierarchy breadth-first. If a schema is present, visit each unique type
 	// at each level once, and stop when we've fully explored the schema. If there are errors, print
@@ -227,7 +238,12 @@ func withTimeout(ctx context.Context, method, name string,
 		cancelFunc()
 		msg := fmt.Sprintf("Error validating %v on %v", strings.Title(method), name)
 		if cancelled {
-			msg = fmt.Sprintf("%v, operation timed out after %v", msg, timeoutDuration)
+			select {
+			case <-ctx.Done():
+				msg += ", shutting down after Ctrl-C"
+			default:
+				msg = fmt.Sprintf("%v, operation timed out after %v", msg, timeoutDuration)
+			}
 		}
 		return nil, nil, formatErr(msg, method, err)
 	}
