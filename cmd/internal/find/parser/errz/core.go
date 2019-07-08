@@ -33,6 +33,18 @@ func (e UnknownTokenError) Error() string {
 	return e.Msg
 }
 
+// IncompleteOperatorError represents an incomplete operator that
+// was found when parsing the expression. The set of possible
+// incomplete operators consists of the parens "()" operator, and
+// the "not" operator.
+type IncompleteOperatorError struct {
+	Reason string
+}
+
+func (e IncompleteOperatorError) Error() string {
+	return e.Reason
+}
+
 // IsSyntaxError returns true if err is a syntax error, false otherwise.
 func IsSyntaxError(err error) bool {
 	if err == nil {
@@ -42,6 +54,8 @@ func IsSyntaxError(err error) bool {
 	case MatchError:
 		return false
 	case UnknownTokenError:
+		return false
+	case IncompleteOperatorError:
 		return false
 	default:
 		return true

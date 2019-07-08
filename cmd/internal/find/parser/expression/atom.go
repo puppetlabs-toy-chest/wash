@@ -23,7 +23,9 @@ func notOpParser(parser Parser) predicate.Parser {
 		p, tokens, err := parser.atom().Parse(tokens)
 		if err != nil {
 			if errz.IsMatchError(err) {
-				err = fmt.Errorf("%v: no following expression", notToken)
+				err = errz.IncompleteOperatorError{
+					Reason: fmt.Sprintf("%v: no following expression", notToken),
+				}
 			}
 		}
 		if p != nil {

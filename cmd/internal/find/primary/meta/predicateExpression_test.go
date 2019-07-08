@@ -133,6 +133,7 @@ func (s *PredicateExpressionTestSuite) TestParensErrors() {
 	s.RETC("(", "(: missing closing ')'")
 	s.RETC("( )", "(): empty inner expression")
 	// Test some more complicated error cases
+	s.RETC("( -not", "-not: no following expression")
 	s.RETC("( -true ) )", "): no beginning '('")
 	s.RETC("( -true ) ( ) -true", "(): empty inner expression")
 	s.RETC("( -true ( -false )", "(: missing closing ')'")

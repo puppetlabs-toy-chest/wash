@@ -98,6 +98,7 @@ func (s *ParseExpressionTestSuite) TestParseExpressionParensErrors() {
 	s.RETC("(", "(: missing closing ')'")
 	s.RETC("( )", "(): empty inner expression")
 	// Test some more complicated error cases
+	s.RETC("( -not", "-not: no following expression")
 	s.RETC("( -true ) )", "): no beginning '('")
 	s.RETC("( -true ) ( ) -true", "(): empty inner expression")
 	s.RETC("( -true ( -false )", "(: missing closing ')'")
@@ -145,6 +146,20 @@ func (s *ParseExpressionTestSuite) TestParseExpressionComplexEval() {
 	s.Suite.RNTC("-m .key foo -a -m .key bar", "", entry)
 	s.Suite.RTC("-m .key foo -name foo", "", entry)
 	s.Suite.RTC("! -m .key -null -name foo", "", entry)
+	// These tests check that the meta primary parser hands back
+	// IncompleteOperatorErrors to the caller. Note that we use
+	// "-name" instead of "-false"/"-true" because the latter
+	// are valid meta primary predicates.
+	//
+	// Note that the corresponding RNTC test case is an extra
+	// sanity check to ensure that we're not getting any false
+	// positives.
+	s.Suite.RTC("( -m .key -exists )", "", entry)
+	s.Suite.RNTC("! ( -m .key -exists )", "", entry)
+	s.Suite.RTC("-m .key -exists -a ! -name goo", "", entry)
+	s.Suite.RNTC("-m .key -exists -a ! -name foo", "", entry)
+	s.Suite.RTC("-m .key -exists -a ! ! foo ! ! -name foo", "", entry)
+	s.Suite.RNTC("-m .key -exists -a ! ! foo ! ! -name goo", "", entry)
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionSchemaPEval() {
