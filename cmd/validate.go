@@ -8,11 +8,9 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/gammazero/workerpool"
 	"github.com/jedib0t/go-pretty/progress"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
@@ -139,7 +137,7 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	// We use a worker pool to limit work-in-progress. Put the plugin on the worker pool.
-	wp := newPool(parallel)
+	wp := cmdutil.NewPool(parallel)
 	for _, e := range entries {
 		wp.Submit(func() { processEntry(ctx, pw, wp, e, all, errs) })
 	}
@@ -157,33 +155,6 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	}
 	cmdutil.Println("Looks good!")
 	return exitCode{0}
-}
-
-// We use a worker pool to limit work-in-progress, and a wait group to know when all queued work
-// is complete. Because the queue is dynamic, we need a wait group to tell us when all potential
-// work is complete before we tell the pool top stop accepting new work and shutdown.
-type pool struct {
-	wp *workerpool.WorkerPool
-	wg *sync.WaitGroup
-}
-
-func newPool(parallel int) pool {
-	return pool{wp: workerpool.New(parallel), wg: &sync.WaitGroup{}}
-}
-
-func (p pool) Submit(f func()) {
-	p.wg.Add(1)
-	p.wp.Submit(f)
-}
-
-func (p pool) Done() {
-	p.wg.Done()
-}
-
-func (p pool) Finish() {
-	// Wait for the workgroup's we've queued to finish, then stop the worker pool.
-	p.wg.Wait()
-	p.wp.StopWait()
 }
 
 type criteria struct {
@@ -250,7 +221,7 @@ func withTimeout(ctx context.Context, method, name string,
 	return obj, cancelFunc, nil
 }
 
-func processEntry(ctx context.Context, pw progress.Writer, wp pool, e plugin.Entry, all bool, errs chan<- error) {
+func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e plugin.Entry, all bool, errs chan<- error) {
 	defer wp.Done()
 	name := plugin.ID(e)
 	crit := newCriteria(e)
