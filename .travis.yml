@@ -12,6 +12,13 @@ env:
 jobs:
   include:
   - name: Test Go stable
+  - name: Test Docker plugin
+    before_script:
+    - go install
+    - docker pull busybox
+    - docker-compose -f examples/swarm/docker-compose.yml up -d
+    script:
+    - wash validate docker
   - name: Lint with golangci-lint
     before_script:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
