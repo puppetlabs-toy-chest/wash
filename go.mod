@@ -25,6 +25,7 @@ require (
 	github.com/ekinanp/go-cache v2.1.0+incompatible
 	github.com/ekinanp/jsonschema v0.0.0-20190624212413-cd4dbe12fbae
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
+	github.com/emirpasic/gods v1.12.0
 	github.com/fatih/color v1.7.0
 	github.com/gammazero/workerpool v0.0.0-20190608213748-0ed5e40ec55e
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a

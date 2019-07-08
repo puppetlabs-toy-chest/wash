@@ -1,27 +1,35 @@
 {
-    "type_id": "A",
-    "children": [
-        {
-            "type_id": "B",
-            "children": [
-                {
-                    "type_id": "D"
-                },
-                {
-                    "type_id": "E"
-                }
-            ]
-        },
-        {
-            "type_id": "C",
-            "children": [
-                {
-                    "type_id": "F"
-                },
-                {
-                    "type_id": "G"
-                }
-            ]
-        }
-    ]
+    "A": {
+        "type_id": "A",
+        "children": [
+            "B",
+            "C"
+        ]
+    },
+    "B": {
+        "type_id": "B",
+        "children": [
+            "D",
+            "E"
+        ]
+    },
+    "C": {
+        "type_id": "C",
+        "children": [
+            "F",
+            "G"
+        ]
+    },
+    "D": {
+        "type_id": "D"
+    },
+    "E": {
+        "type_id": "E"
+    },
+    "F": {
+        "type_id": "F"
+    },
+    "G": {
+        "type_id": "G"
+    }
 }

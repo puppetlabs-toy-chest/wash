@@ -3,7 +3,6 @@ package primary
 import (
 	"testing"
 
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -39,9 +38,7 @@ func TestActionPrimary(t *testing.T) {
 	}
 	s.SchemaPParser = types.EntryPredicateParser(Action.parseFunc).ToSchemaPParser()
 	s.ConstructEntrySchema = func(v interface{}) *types.EntrySchema {
-		s := &types.EntrySchema{
-			EntrySchema: &apitypes.EntrySchema{},
-		}
+		s := &types.EntrySchema{}
 		s.SetActions(v.([]string))
 		return s
 	}

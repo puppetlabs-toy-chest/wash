@@ -42,25 +42,37 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 	}
 	for path, schema := range schemas {
 		stree := treeprint.New()
-		fill(stree, schema)
+		fill(stree, schema, make(map[string]bool))
 		stree.SetValue(path)
 		cmdutil.Print(stree.String())
 	}
 	return exitCode{0}
 }
 
-func fill(stree treeprint.Tree, schema *apitypes.EntrySchema) treeprint.Tree {
+func fill(stree treeprint.Tree, schema *apitypes.EntrySchema, visited map[string]bool) treeprint.Tree {
 	value := schema.Label()
 	if !schema.Singleton() {
 		value = fmt.Sprintf("[%v]", value)
 	}
 	stree.SetValue(value)
+	if visited[schema.TypeID()] {
+		return stree
+	}
+	visited[schema.TypeID()] = true
 	for _, child := range schema.Children() {
 		// treeprint.Tree has no "AddBranch()" method, so we need to
 		// set a stub value. Note that the value will be reset to the
 		// correct value in the recursive call, so this is OK.
 		subtree := stree.AddBranch("foo")
-		fill(subtree, child)
+		fill(subtree, child, visited)
 	}
+	// Delete schema from visited so that stree displays the correct
+	// output for siblings that also use schema. Without this code,
+	// we wouldn't be able to print the same representation for volume
+	// directories in the Kubernetes/Docker/AWS plugins. Instead, only
+	// one of those plugins would show the correct representation of
+	// "volume_dir => volume_dir, volume_file." The others would only
+	// print "volume_dir".
+	delete(visited, schema.TypeID())
 	return stree
 }

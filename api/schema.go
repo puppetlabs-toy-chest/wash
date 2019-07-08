@@ -12,10 +12,7 @@ var schemaHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return errResp
 	}
 	jsonEncoder := json.NewEncoder(w)
-	s := entry.Schema()
-	if s != nil {
-		s.Fill()
-	}
+	s := toAPIEntrySchema(entry.Schema())
 	if err := jsonEncoder.Encode(s); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal schema for %v: %v", path, err))
 	}

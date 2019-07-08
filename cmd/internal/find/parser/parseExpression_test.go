@@ -176,14 +176,15 @@ func (s *ParseExpressionTestSuite) TestParseExpressionSchemaPEval() {
 func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {
 	// The meta primary's schema predicate implements its own Negate method.
 	// These tests make sure that the expression parser is aware of that.
-	schema := &types.EntrySchema{
-		MetadataSchemaPValue: &jsonschema.Schema{
+	schema := &types.EntrySchema{}
+	schema.SetMetadataSchema(
+		&jsonschema.Schema{
 			Type: &jsonschema.Type{
 				Type:                 "object",
 				AdditionalProperties: []byte("false"),
 			},
 		},
-	}
+	)
 
 	s.RSTC("-m -empty", "", schema)
 	s.RSTC("! -m -empty", "", schema)

@@ -1,21 +1,24 @@
 {
-    "type_id": "A",
-    "meta_attribute_schema": {
-        "type": "object",
-        "properties": {
-            "foo": {}
-        }
-    },
-    "metadata_schema": null,
-    "children": [
-        {
-            "type_id": "B",
-            "metadata_schema": {
-                "type": "array"
+    "A": {
+        "type_id": "A",
+        "meta_attribute_schema": {
+            "type": "object",
+            "properties": {
+                "foo": {}
             }
         },
-        {
-            "type_id": "C"
+        "children": [
+            "B",
+            "C"
+        ]
+    },
+    "B": {
+        "type_id": "B",
+        "metadata_schema": {
+            "type": "array"
         }
-    ]
+    },
+    "C": {
+        "type_id": "C"
+    }
 }
