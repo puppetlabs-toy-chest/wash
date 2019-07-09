@@ -279,6 +279,16 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 			// Group children by ones that look "similar", and select one from each group to test.
 			groups := make(map[criteria][]plugin.Entry)
 			for _, entry := range entries {
+				// Skip files that we shouldn't read. This includes character devices, devices, and
+				// those we don't have permission to read.
+				attr := plugin.Attributes(entry)
+				if mode := attr.Mode(); attr.HasMode() &&
+					(mode&os.ModeCharDevice == os.ModeCharDevice ||
+						mode&os.ModeNamedPipe == os.ModeNamedPipe ||
+						mode&os.ModeDevice == os.ModeDevice || mode&0400 == 0) {
+					continue
+				}
+
 				ccrit := newCriteria(entry)
 				// If we have a TypeID, only explore children if they are different from the parent.
 				// This prevents simple recursion like volume directories containing more dirs.
