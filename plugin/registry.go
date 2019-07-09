@@ -62,17 +62,15 @@ func (r *Registry) ChildSchemas() []*EntrySchema {
 		s := root.Schema()
 		if s == nil {
 			// s doesn't have a schema, which means it's an external plugin.
-			//
-			// TODO: This makes it possible for core plugins to return nil
-			// schemas, which shouldn't happen. Find a way to rectify this once
-			// external plugin schemas are supported.
-			continue
+			// Create a schema for s so that `stree <mountpoint>` can still
+			// display it.
+			s = NewEntrySchema(root, CName(root))
 		}
 		s.IsSingleton()
 		if len(s.Label) == 0 {
 			s.SetLabel(CName(root))
 		}
-		childSchemas = append(childSchemas, root.Schema())
+		childSchemas = append(childSchemas, s)
 	}
 	return childSchemas
 }
