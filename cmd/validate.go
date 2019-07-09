@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -123,11 +124,14 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	// with a worker pool.
 	erred := 0
 	errs := make(chan error)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		for err := range errs {
 			erred++
 			cmdutil.ErrPrintf("%v\n", err)
 		}
+		wg.Done()
 	}()
 
 	// Use CachedList on the registry to ensure cache IDs are generated.
@@ -149,6 +153,10 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	time.Sleep(100 * time.Millisecond)
 	pw.Stop()
 
+	// All error generators should be done. Close the channel and wait for the error processing
+	// routine to complete.
+	close(errs)
+	wg.Wait()
 	if erred > 0 {
 		cmdutil.ErrPrintf("Found %v errors.\n", erred)
 		return exitCode{1}
