@@ -42,11 +42,9 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if rawGraph.Size() <= 0 {
-		msg := fmt.Sprintf("s.UnmarshalJSON: expected a non-empty JSON object but got %v instead", string(data))
-		panic(msg)
+		return fmt.Errorf("expected a non-empty JSON object but got %v instead", string(data))
 	}
 	s.graph = linkedhashmap.New()
-	s.children = make(map[string]*EntrySchema)
 
 	// Convert each node in the rawGraph to an *EntrySchema
 	// object
@@ -62,8 +60,7 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 			firstElem = false
 		} else {
 			node = &EntrySchema{
-				graph:    s.graph,
-				children: make(map[string]*EntrySchema),
+				graph: s.graph,
 			}
 		}
 		err = deepcopy.Copy(&node.EntrySchema, value.(map[string]interface{}))
@@ -79,6 +76,7 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 	// Fill-in the children map
 	s.graph.Each(func(key interface{}, value interface{}) {
 		schema := value.(*EntrySchema)
+		schema.children = make(map[string]*EntrySchema)
 		for _, childTypeID := range schema.EntrySchema.Children {
 			rawChild, _ := s.graph.Get(childTypeID)
 			schema.children[childTypeID] = rawChild.(*EntrySchema)

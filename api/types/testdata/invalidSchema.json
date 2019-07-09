@@ -1,0 +1,11 @@
+{
+    "A": {
+        "type_id": 15
+    },
+    "B": {
+        "type_id": "B"
+    },
+    "C": {
+        "type_id": true
+    }
+}
