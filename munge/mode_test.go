@@ -44,6 +44,7 @@ func (suite *ModeTestSuite) TestToFileMode() {
 		// 33188 is 0x81a4 in decimal
 		nTC("0x81a4", toFM(0644)),
 		nTC(float64(33188), toFM(0644)),
+		nTC("0x21b6", toFM(0666|os.ModeCharDevice)),
 	)
 }
 
