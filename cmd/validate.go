@@ -165,17 +165,20 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{0}
 }
 
-// If the entry has a schema providing a TypeID, use it to help further distinguish between
-// different things that behave the same.
+// If the entry has a schema, use it to help further distinguish between different things that
+// behave the same.
 type criteria struct {
-	typeID                   string
+	label, typeID            string
 	list, read, stream, exec bool
+	singleton                bool
 }
 
 func newCriteria(entry plugin.Entry) criteria {
 	var crit criteria
 	if schema := entry.Schema(); schema != nil {
+		crit.label = schema.Label
 		crit.typeID = schema.TypeID
+		crit.singleton = schema.Singleton
 	}
 	crit.list = plugin.ListAction().IsSupportedOn(entry)
 	crit.read = plugin.ReadAction().IsSupportedOn(entry)
@@ -203,8 +206,12 @@ func (c criteria) String() string {
 	}
 
 	result := string(s)
-	if c.typeID != "" {
-		result = fmt.Sprintf("%s %-30s", result, "["+c.typeID+"]")
+	if c.label != "" {
+		label := c.label
+		if !c.singleton {
+			label = "[" + label + "]"
+		}
+		result = fmt.Sprintf("%s %-20s", result, label)
 	}
 	return result
 }
