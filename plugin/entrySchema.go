@@ -171,6 +171,9 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 	// "sParent" is read as "s.parent"
 	sParent := s.entry.(Parent)
 	children := sParent.ChildSchemas()
+	if children == nil {
+		s.fillPanicf("ChildSchemas() returned nil")
+	}
 	for _, child := range children {
 		if child == nil {
 			s.fillPanicf("found a nil child schema")
