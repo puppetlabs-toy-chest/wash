@@ -159,7 +159,7 @@ func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&ec2InstanceConsoleOutput{}).Schema(),
 		(&ec2InstanceMetadataJSON{}).Schema(),
-		(&volume.FS{}).Schema().SetLabel("fs"),
+		(&volume.FS{}).Schema(),
 	}
 }
 
