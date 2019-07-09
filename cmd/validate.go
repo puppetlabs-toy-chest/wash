@@ -102,11 +102,17 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 
 	rand.Seed(time.Now().UnixNano())
 	plugin.InitCache()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
 	pw := progress.NewWriter()
 	pw.SetUpdateFrequency(50 * time.Millisecond)
 	pw.Style().Colors = progress.StyleColorsExample
-	go pw.Render()
+
+	go func() {
+		pw.Render()
+		wg.Done()
+	}()
 
 	// On Ctrl-C cancel the context to ensure plugin calls have a chance to cleanup.
 	sigCh := make(chan os.Signal, 1)
@@ -124,8 +130,6 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	// with a worker pool.
 	erred := 0
 	errs := make(chan error)
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
 		for err := range errs {
 			erred++
