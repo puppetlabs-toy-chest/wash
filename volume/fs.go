@@ -55,7 +55,13 @@ func (e nonZeroError) Error() string {
 }
 
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
-	cmd, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{Elevate: true})
+	// Use Elevate because it's common to login to systems as a non-root user and sudo.
+	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
+	// being logged in as a user. `ls` will report different file types based on whether you're using
+	// it interactively, see character device vs named pipe on /dev/stderr as an example. This also
+	// ensures we cleanup correctly when the context is cancelled.
+	opts := plugin.ExecOptions{Elevate: true, Tty: plugin.IsInteractive()}
+	cmd, err := executor.Exec(ctx, cmdline[0], cmdline[1:], opts)
 	if err != nil {
 		return nil, err
 	}

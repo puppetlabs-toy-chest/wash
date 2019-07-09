@@ -122,7 +122,8 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 	dirmap := DirMap{RootPath: make(Dir)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		if text != "" {
+		// Skip error lines in case we're running in a tty.
+		if text != "" && !strings.HasPrefix(text, "stat:") && !strings.HasPrefix(text, "find:") {
 			attr, fullpath, err := StatParse(text)
 			if err != nil {
 				return nil, err
