@@ -203,7 +203,9 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 		mp["ctime"] = a.Ctime()
 	}
 	if a.HasMode() {
-		mp["mode"] = a.Mode()
+		// The mode string representation is the only portable representation. FileMode uses its own
+		// definitions for type bits, not those in http://man7.org/linux/man-pages/man7/inode.7.html.
+		mp["mode"] = a.Mode().String()
 	}
 	if a.HasSize() {
 		mp["size"] = a.Size()
@@ -219,7 +221,12 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 // when they're referenced as interface{} objects. See
 // https://stackoverflow.com/a/21394657 for more details.
 func (a EntryAttributes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.ToMap(true))
+	m := a.ToMap(true)
+	// Override Mode to use a re-marshalable representation.
+	if a.HasMode() {
+		m["mode"] = a.Mode()
+	}
+	return json.Marshal(m)
 }
 
 // UnmarshalJSON unmarshals the entry's attributes from JSON.
@@ -251,11 +258,13 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 		a.SetCtime(t)
 	}
 	if mode, ok := mp["mode"]; ok {
-		m, err := munge.ToFileMode(mode)
-		if err != nil {
-			return attrMungeError("mode", err)
+		// Even though os.FileModes are uint32 types, json.Unmarshal unmarshals them as float64.
+		// That's ok, because float64 has sufficient precision to represent all uint32 types.
+		if raw, ok := mode.(float64); ok {
+			a.SetMode(os.FileMode(raw))
+		} else {
+			return attrMungeError("mode", fmt.Errorf("mode was unexpected type %T: %v", mode, mode))
 		}
-		a.SetMode(m)
 	}
 	if size, ok := mp["size"]; ok {
 		sz, err := munge.ToSize(size)
