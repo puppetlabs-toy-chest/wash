@@ -69,7 +69,7 @@ func (c *container) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&containerLogFile{}).Schema(),
 		(&containerMetadata{}).Schema(),
-		(&vol.FS{}).Schema().SetLabel("fs"),
+		(&vol.FS{}).Schema(),
 	}
 }
 

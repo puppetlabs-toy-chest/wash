@@ -43,11 +43,11 @@ func (p *entrySchemaPredicate) Negate() predicate.Predicate {
 }
 
 func (p *entrySchemaPredicate) P(s *types.EntrySchema) bool {
-	if s.MetadataSchemaPValue == nil {
+	if s.MetadataSchema() == nil {
 		// Metadata schemas are hard to generate in dynamic languages
 		// like Ruby/Python. Thus, we choose not to require them for
 		// a better UX.
 		return true
 	}
-	return p.p.IsSatisfiedBy(newSchema(s.MetadataSchemaPValue))
+	return p.p.IsSatisfiedBy(newSchema(s.MetadataSchema()))
 }

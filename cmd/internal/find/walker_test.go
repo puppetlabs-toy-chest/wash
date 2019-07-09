@@ -282,9 +282,9 @@ func (s *WalkerTestSuite) TestVisit_FullmetaSet_MetaPrimarySet_HasMetadataSchema
 	})
 
 	e := newMockEntryForVisit()
-	e.SetSchema(&types.EntrySchema{
-		MetadataSchemaPValue: &plugin.JSONSchema{},
-	})
+	schema := &types.EntrySchema{}
+	schema.SetMetadataSchema(&plugin.JSONSchema{})
+	e.SetSchema(schema)
 	s.Client.On("Metadata", e.Path).Return(fullMeta, nil).Once()
 
 	s.walker.visit(e, 0)

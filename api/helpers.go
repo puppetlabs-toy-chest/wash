@@ -23,9 +23,18 @@ func toAPIEntry(e plugin.Entry) apitypes.Entry {
 		Attributes: plugin.Attributes(e),
 	}
 	if s := e.Schema(); s != nil {
-		apiEntry.TypeID = s.TypeID()
+		apiEntry.TypeID = s.TypeID
 	}
 	return apiEntry
+}
+
+func toAPIEntrySchema(s *plugin.EntrySchema) *apitypes.EntrySchema {
+	if s == nil {
+		return nil
+	}
+	return &apitypes.EntrySchema{
+		EntrySchema: (*s),
+	}
 }
 
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {

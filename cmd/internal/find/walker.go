@@ -42,7 +42,7 @@ func (w *walkerImpl) Walk(path string) bool {
 		return false
 	}
 	if s != nil {
-		schema := types.Prune(types.NewEntrySchema(s, w.opts), w.p.SchemaP())
+		schema := types.Prune(s, w.p.SchemaP(), w.opts)
 		e.SetSchema(schema)
 	}
 	return w.walk(e, 0)
@@ -62,7 +62,7 @@ func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 	childDepth := depth + 1
 	if int(childDepth) <= w.opts.Maxdepth && e.Supports(plugin.ListAction()) {
 		if e.SchemaKnown {
-			if e.Schema == nil || len(e.Schema.Children) == 0 {
+			if e.Schema == nil || len(e.Schema.Children()) == 0 {
 				// We've reached the end of our traversal
 				return successful
 			}
@@ -75,7 +75,7 @@ func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 			for _, child := range children {
 				if e.SchemaKnown {
 					// Note that e.Schema != nil here
-					child.SetSchema(e.Schema.Children[child.TypeID])
+					child.SetSchema(e.Schema.Children()[child.TypeID])
 				}
 				check(w.walk(child, childDepth))
 			}
@@ -100,7 +100,7 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 	}
 
 	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
-		fetchFullMetadata := !e.SchemaKnown || e.Schema.MetadataSchemaPValue != nil
+		fetchFullMetadata := !e.SchemaKnown || e.Schema.MetadataSchema() != nil
 		if !fetchFullMetadata {
 			cmdutil.ErrPrintf("%v did not provide a metadata schema so its full metadata will not be fetched", e.NormalizedPath)
 		} else {

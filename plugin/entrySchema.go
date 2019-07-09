@@ -1,22 +1,21 @@
 package plugin
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/ekinanp/jsonschema"
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
 type entrySchema struct {
-	TypeID              string         `json:"type_id"`
-	Label               string         `json:"label"`
-	Singleton           bool           `json:"singleton"`
-	Actions             []string       `json:"actions"`
-	MetaAttributeSchema *JSONSchema    `json:"meta_attribute_schema"`
-	MetadataSchema      *JSONSchema    `json:"metadata_schema"`
-	Children            []*EntrySchema `json:"children"`
+	TypeID              string      `json:"type_id"`
+	Label               string      `json:"label"`
+	Singleton           bool        `json:"singleton"`
+	Actions             []string    `json:"actions"`
+	MetaAttributeSchema *JSONSchema `json:"meta_attribute_schema"`
+	MetadataSchema      *JSONSchema `json:"metadata_schema"`
+	Children            []string    `json:"children"`
 	entry               Entry
 }
 
@@ -67,7 +66,6 @@ type EntrySchema struct {
 	entrySchema
 	metaAttributeSchemaObj interface{}
 	metadataSchemaObj      interface{}
-	partialSchema          bool
 }
 
 // NewEntrySchema returns a new EntrySchema object with the specified label.
@@ -75,9 +73,14 @@ type EntrySchema struct {
 // NOTE: If your entry's a singleton, then the label should match the entry's
 // name, i.e. the name that's passed into plugin.NewEntry.
 func NewEntrySchema(e Entry, label string) *EntrySchema {
+	if len(label) == 0 {
+		panic("plugin.NewEntrySchema called with an empty label")
+	}
+	t := unravelPtr(reflect.TypeOf(e))
 	s := &EntrySchema{
 		entrySchema: entrySchema{
-			TypeID:  strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
+			TypeID:  t.PkgPath() + "/" + t.Name(),
+			Label:   label,
 			Actions: SupportedActionsOf(e),
 			// Store the entry so that when marshalling, we can enumerate
 			// its child schemas.
@@ -85,9 +88,7 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 		},
 		// The meta attribute's empty by default
 		metaAttributeSchemaObj: struct{}{},
-		partialSchema:          true,
 	}
-	s.SetLabel(label)
 	return s
 }
 
@@ -95,84 +96,21 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 // a value receiver so that the entry schema's still marshalled
 // when it's referenced as an interface{} object. See
 // https://stackoverflow.com/a/21394657 for more details.
+//
+// Note that UnmarshalJSON is not implemented since that is not
+// how plugin.EntrySchema objects are meant to be used.
 func (s EntrySchema) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.entrySchema)
-}
-
-// UnmarshalJSON unmarshals the entry's schema from JSON.
-func (s *EntrySchema) UnmarshalJSON(data []byte) error {
-	var es entrySchema
-	if err := json.Unmarshal(data, &es); err != nil {
-		return err
-	}
-	s.entrySchema = es
-	return nil
-}
-
-// TypeID returns the entry's type ID. This should be unique.
-func (s *EntrySchema) TypeID() string {
-	return s.entrySchema.TypeID
-}
-
-// SetTypeID sets the entry's type ID. Only the tests
-// can call this method.
-func (s *EntrySchema) SetTypeID(typeID string) *EntrySchema {
-	if notRunningTests() {
-		panic("s.SetTypeID can only be called by the tests")
-	}
-	s.entrySchema.TypeID = typeID
-	return s
-}
-
-// Label returns the entry's label
-func (s *EntrySchema) Label() string {
-	return s.entrySchema.Label
-}
-
-/*
-SetLabel overrides the entry's label. You should only override the
-label if you are extending a helper type or are using that helper
-type as part of your entry's child schema. See docker.Container#ChildSchema
-for an example of how this is used.
-*/
-func (s *EntrySchema) SetLabel(label string) *EntrySchema {
-	if len(label) == 0 {
-		panic("s.SetLabel called with an empty label")
-	}
-	s.entrySchema.Label = label
-	return s
-}
-
-// Singleton returns true if the entry's a singleton, false otherwise.
-func (s *EntrySchema) Singleton() bool {
-	return s.entrySchema.Singleton
+	// We need to use an ordered map to ensure that the first key
+	// in the marshalled schema corresponds to s.
+	graph := linkedhashmap.New()
+	s.fill(graph)
+	return graph.ToJSON()
 }
 
 // IsSingleton marks the entry as a singleton entry.
 func (s *EntrySchema) IsSingleton() *EntrySchema {
 	s.entrySchema.Singleton = true
 	return s
-}
-
-// Actions returns the entry's supported actions
-func (s *EntrySchema) Actions() []string {
-	return s.entrySchema.Actions
-}
-
-// SetActions sets the entry's supported actions. Only
-// the tests can call this method.
-func (s *EntrySchema) SetActions(actions []string) *EntrySchema {
-	if notRunningTests() {
-		panic("s.SetActions can only be called by the tests")
-	}
-	s.entrySchema.Actions = actions
-	return s
-}
-
-// MetaAttributeSchema returns the entry's meta attribute
-// schema
-func (s *EntrySchema) MetaAttributeSchema() *JSONSchema {
-	return s.entrySchema.MetaAttributeSchema
 }
 
 // SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
@@ -187,20 +125,6 @@ func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
 	return s
 }
 
-// SetTestMetaAttributeSchema sets the entry's meta attribute
-// schema to s. Only the tests can call this method.
-func (s *EntrySchema) SetTestMetaAttributeSchema(schema *JSONSchema) {
-	if notRunningTests() {
-		panic("s.SetTestMetaAttributeSchema can only be called by the tests")
-	}
-	s.entrySchema.MetaAttributeSchema = schema
-}
-
-// MetadataSchema returns the entry's metadata schema
-func (s *EntrySchema) MetadataSchema() *JSONSchema {
-	return s.entrySchema.MetadataSchema
-}
-
 // SetMetadataSchema sets Entry#Metadata's schema. obj is an empty struct that will be
 // marshalled into a JSON schema. SetMetadataSchema will panic if obj is not a struct.
 //
@@ -212,47 +136,8 @@ func (s *EntrySchema) SetMetadataSchema(obj interface{}) *EntrySchema {
 	return s
 }
 
-// SetTestMetadataSchema sets the entry's metadata schema to s. Only the tests can
-// call this method.
-func (s *EntrySchema) SetTestMetadataSchema(schema *JSONSchema) {
-	if notRunningTests() {
-		panic("s.SetTestMetadataSchema can only be called by the tests")
-	}
-	s.entrySchema.MetadataSchema = schema
-}
-
-// Children returns the entry's child schemas
-func (s *EntrySchema) Children() []*EntrySchema {
-	return s.entrySchema.Children
-}
-
-// SetChildren sets the entry's children. Only the tests
-// can call this method.
-func (s *EntrySchema) SetChildren(children []*EntrySchema) *EntrySchema {
-	if notRunningTests() {
-		panic("s.SetChildren can only be called by the tests")
-	}
-	s.entrySchema.Children = children
-	return s
-}
-
-// Fill fills s' children, its meta attribute schema, and its metadata
-// schema. This is needed by the API. Plugin authors should ignore this.
-func (s *EntrySchema) Fill() {
-	if s.partialSchema {
-		s.fill(make(map[string]bool))
-		s.partialSchema = false
-	}
-}
-
-func (s *EntrySchema) fill(visited map[string]bool) {
+func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 	// Fill-in the meta attribute + metadata schemas
-	//
-	// TODO: This causes duplicate metadata schemas to be returned
-	// for nodes that are part of a cycle. We will fix that once we
-	// clean up /fs/schema's response to adopt a representation that's
-	// more idiomatic with graph serialization. For now, we need this
-	// hack for metadata schemas to work correctly in `wash find`.
 	var err error
 	if s.metaAttributeSchemaObj != nil {
 		s.entrySchema.MetaAttributeSchema, err = s.schemaOf(s.metaAttributeSchemaObj)
@@ -266,13 +151,7 @@ func (s *EntrySchema) fill(visited map[string]bool) {
 			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
 		}
 	}
-
-	if visited[s.TypeID()] {
-		// This means that s' children can have s' type, which is
-		// true if s is e.g. a volume directory.
-		return
-	}
-	visited[s.TypeID()] = true
+	graph.Put(s.TypeID, &s.entrySchema)
 
 	// Fill-in the children
 	if !ListAction().IsSupportedOn(s.entry) {
@@ -281,17 +160,20 @@ func (s *EntrySchema) fill(visited map[string]bool) {
 	// "sParent" is read as "s.parent"
 	sParent := s.entry.(Parent)
 	children := sParent.ChildSchemas()
+	if children == nil {
+		s.fillPanicf("ChildSchemas() returned nil")
+	}
 	for _, child := range children {
 		if child == nil {
 			s.fillPanicf("found a nil child schema")
 		}
-		s.entrySchema.Children = append(s.entrySchema.Children, child)
+		s.entrySchema.Children = append(s.Children, child.TypeID)
+		if _, ok := graph.Get(child.TypeID); ok {
+			continue
+		}
 		passAlongWrappedTypes(sParent, child.entry)
-		child.fill(visited)
+		child.fill(graph)
 	}
-	// Delete "s" from visited so that siblings or ancestors that
-	// also use "s" won't be affected.
-	delete(visited, s.TypeID())
 }
 
 // This helper's used by CachedList + EntrySchema#fill(). The reason for
@@ -336,7 +218,14 @@ func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
 // Helper for s.fill(). We make it a separate method to avoid re-creating
 // closures for each recursive s.fill() call.
 func (s *EntrySchema) fillPanicf(format string, a ...interface{}) {
-	formatStr := fmt.Sprintf("s.fill (%v): %v", s.TypeID(), format)
+	formatStr := fmt.Sprintf("s.fill (%v): %v", s.TypeID, format)
 	msg := fmt.Sprintf(formatStr, a...)
 	panic(msg)
+}
+
+func unravelPtr(t reflect.Type) reflect.Type {
+	if t.Kind() == reflect.Ptr {
+		return unravelPtr(t.Elem())
+	}
+	return t
 }

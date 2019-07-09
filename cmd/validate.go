@@ -175,7 +175,7 @@ type criteria struct {
 func newCriteria(entry plugin.Entry) criteria {
 	var crit criteria
 	if schema := entry.Schema(); schema != nil {
-		crit.typeID = schema.TypeID()
+		crit.typeID = schema.TypeID
 	}
 	crit.list = plugin.ListAction().IsSupportedOn(entry)
 	crit.read = plugin.ReadAction().IsSupportedOn(entry)

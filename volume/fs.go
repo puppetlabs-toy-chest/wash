@@ -34,8 +34,7 @@ func (d *FS) ChildSchemas() []*plugin.EntrySchema {
 	return ChildSchemas()
 }
 
-// Schema returns the FS entry's schema. You can override its label with
-// EntrySchema#SetLabel
+// Schema returns the FS entry's schema
 func (d *FS) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(d, "fs")
 }

@@ -1,75 +1,16 @@
 package types
 
 import (
-	"sort"
-
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/plugin"
 )
 
 // EntrySchema is a wrapper to apitypes.EntrySchema
-type EntrySchema struct {
-	// "nil" means an unknown schema
-	*apitypes.EntrySchema
-	// Use a map for faster lookup
-	Children map[string]*EntrySchema
-	// MetadataSchemaPValue is the metadata schema value that
-	// will be passed into the meta primary's schema predicate.
-	// This value will be filled-in by the Walker since it requires
-	// one to know whether the fullmeta option was set.
-	MetadataSchemaPValue *plugin.JSONSchema
-}
-
-// NewEntrySchema returns a new EntrySchema object. The returned
-// object is faithful to s' representation as a graph. This means
-// that all duplicate nodes are filtered out and that cycles are
-// collapsed.
-func NewEntrySchema(s *apitypes.EntrySchema, opts Options) *EntrySchema {
-	nodes := make(map[string]*EntrySchema)
-
-	var gatherNodes func(s *apitypes.EntrySchema)
-	gatherNodes = func(s *apitypes.EntrySchema) {
-		if len(s.TypeID()) == 0 {
-			panic("gatherNodes called with an empty type ID!")
-		}
-		node := nodes[s.TypeID()]
-		if node == nil {
-			node = &EntrySchema{
-				EntrySchema: s,
-				Children:    make(map[string]*EntrySchema),
-			}
-			// Set the metadata schema
-			node.MetadataSchemaPValue = node.EntrySchema.MetaAttributeSchema()
-			if opts.Fullmeta && node.EntrySchema.MetadataSchema() != nil {
-				node.MetadataSchemaPValue = node.EntrySchema.MetadataSchema()
-			}
-			nodes[s.TypeID()] = node
-		}
-		if len(node.Children) > 0 {
-			// We already gathered everything we need to know about this node
-			return
-		}
-		for _, child := range s.Children() {
-			// The node's children will be filled in after all the nodes have been
-			// gathered.
-			node.Children[child.TypeID()] = nil
-			gatherNodes(child)
-		}
-	}
-	gatherNodes(s)
-
-	for _, node := range nodes {
-		for childTypeID := range node.Children {
-			node.Children[childTypeID] = nodes[childTypeID]
-		}
-	}
-	return nodes[s.TypeID()]
-}
+type EntrySchema = apitypes.EntrySchema
 
 // Prune prunes s to contain only nodes that satisfy p. It modifies s'
 // state so it is not an idempotent operation.
-func Prune(s *EntrySchema, p EntrySchemaPredicate) *EntrySchema {
-	keep := evaluateNodesToKeep(s, p)
+func Prune(s *EntrySchema, p EntrySchemaPredicate, opts Options) *EntrySchema {
+	keep := evaluateNodesToKeep(s, p, opts)
 	if !keep[s.TypeID()] {
 		return nil
 	}
@@ -81,9 +22,9 @@ func Prune(s *EntrySchema, p EntrySchemaPredicate) *EntrySchema {
 			return
 		}
 		visited[s.TypeID()] = true
-		for _, child := range s.Children {
+		for _, child := range s.Children() {
 			if !keep[child.TypeID()] {
-				delete(s.Children, child.TypeID())
+				delete(s.Children(), child.TypeID())
 			} else {
 				prune(child)
 			}
@@ -128,7 +69,7 @@ NOTE: The starting state formalizes the first condition for result[N] (and also 
 that if N is a leaf, then result[N] == p(N)). Subsequent iterations check the second
 condition.
 */
-func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool {
+func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate, opts Options) map[string]bool {
 	result := make(map[string]bool)
 	visited := make(map[string]bool)
 
@@ -140,12 +81,18 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 		if _, ok := visited[s.TypeID()]; ok {
 			return
 		}
+		// Set the metadata schema prior to evaluating the predicate
+		metadataSchema := s.MetaAttributeSchema()
+		if opts.Fullmeta && s.MetadataSchema() != nil {
+			metadataSchema = s.MetadataSchema()
+		}
+		s.SetMetadataSchema(metadataSchema)
 		result[s.TypeID()] = p.P(s)
-		if !result[s.TypeID()] && len(s.Children) > 0 {
+		if !result[s.TypeID()] && len(s.Children()) > 0 {
 			delete(result, s.TypeID())
 		}
 		visited[s.TypeID()] = true
-		for _, child := range s.Children {
+		for _, child := range s.Children() {
 			applyPredicate(child)
 		}
 	}
@@ -158,7 +105,7 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 			return
 		}
 		visited[s.TypeID()] = true
-		for _, child := range s.Children {
+		for _, child := range s.Children() {
 			updateResult(child)
 			if result[child.TypeID()] {
 				result[s.TypeID()] = true
@@ -177,24 +124,4 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate) map[string]bool
 			return result
 		}
 	}
-}
-
-// toMap returns a map of <typeID> => <childTypeIDs...> (i.e. its pre-serialized
-// graph representation). It is useful for testing.
-func (s *EntrySchema) toMap() map[string][]string {
-	mp := make(map[string][]string)
-	var visit func(s *EntrySchema)
-	visit = func(s *EntrySchema) {
-		if _, ok := mp[s.TypeID()]; ok {
-			return
-		}
-		mp[s.TypeID()] = []string{}
-		for _, child := range s.Children {
-			mp[s.TypeID()] = append(mp[s.TypeID()], child.TypeID())
-			visit(child)
-		}
-		sort.Strings(mp[s.TypeID()])
-	}
-	visit(s)
-	return mp
 }

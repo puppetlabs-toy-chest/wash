@@ -180,9 +180,8 @@ func TestMetaPrimary(t *testing.T) {
 	if err := json.Unmarshal(rawMetaSchema, &metaSchema); err != nil {
 		t.Fatal(fmt.Sprintf("Failed to unmarshal testdata/metadata.json: %v", err))
 	}
-	s.s = &types.EntrySchema{
-		MetadataSchemaPValue: metaSchema,
-	}
+	s.s = &types.EntrySchema{}
+	s.s.SetMetadataSchema(metaSchema)
 
 	s.Parser = Meta
 	s.ConstructEntry = func(v interface{}) types.Entry {
