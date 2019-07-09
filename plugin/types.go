@@ -68,7 +68,7 @@ For example,
 	return []*plugin.EntrySchema{
 		(&containerLogFile{}).Schema(),
 		(&containerMetadata{}).Schema(),
-		(&vol.FS{}).Schema().SetLabel("fs"),
+		(&vol.FS{}).Schema(),
 	}
 is the implementation of ChildSchemas for a Docker container.
 */

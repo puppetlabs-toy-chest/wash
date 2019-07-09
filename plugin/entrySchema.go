@@ -73,10 +73,14 @@ type EntrySchema struct {
 // NOTE: If your entry's a singleton, then the label should match the entry's
 // name, i.e. the name that's passed into plugin.NewEntry.
 func NewEntrySchema(e Entry, label string) *EntrySchema {
+	if len(label) == 0 {
+		panic("plugin.NewEntrySchema called with an empty label")
+	}
 	t := unravelPtr(reflect.TypeOf(e))
 	s := &EntrySchema{
 		entrySchema: entrySchema{
 			TypeID:  t.PkgPath() + "/" + t.Name(),
+			Label:   label,
 			Actions: SupportedActionsOf(e),
 			// Store the entry so that when marshalling, we can enumerate
 			// its child schemas.
@@ -85,7 +89,6 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 		// The meta attribute's empty by default
 		metaAttributeSchemaObj: struct{}{},
 	}
-	s.SetLabel(label)
 	return s
 }
 
@@ -102,20 +105,6 @@ func (s EntrySchema) MarshalJSON() ([]byte, error) {
 	graph := linkedhashmap.New()
 	s.fill(graph)
 	return graph.ToJSON()
-}
-
-/*
-SetLabel overrides the entry's label. You should only override the
-label if you are extending a helper type or are using that helper
-type as part of your entry's child schema. See docker.Container#ChildSchema
-for an example of how this is used.
-*/
-func (s *EntrySchema) SetLabel(label string) *EntrySchema {
-	if len(label) == 0 {
-		panic("s.SetLabel called with an empty label")
-	}
-	s.entrySchema.Label = label
-	return s
 }
 
 // IsSingleton marks the entry as a singleton entry.

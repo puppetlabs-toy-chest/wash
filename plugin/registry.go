@@ -68,7 +68,7 @@ func (r *Registry) ChildSchemas() []*EntrySchema {
 		}
 		s.IsSingleton()
 		if len(s.Label) == 0 {
-			s.SetLabel(CName(root))
+			s.Label = CName(root)
 		}
 		childSchemas = append(childSchemas, s)
 	}
