@@ -26,7 +26,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 			"init",
 			nil,
 			"null",
-		).Return(stdout, err).Once()
+		).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Init returns its error
@@ -70,7 +70,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithConfig() {
 		"init",
 		nil,
 		`{"key":["value"]}`,
-	).Return([]byte("{}"), nil).Once()
+	).Return(mockInvocation([]byte("{}")), nil).Once()
 
 	suite.NoError(root.Init(map[string]interface{}{"key": []string{"value"}}))
 }

@@ -161,12 +161,12 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 			return nil, fmt.Errorf("implementation of list must conform to %v, not %v", listFormat, impl)
 		}
 	} else {
-		stdout, err := e.script.InvokeAndWait(ctx, "list", e)
+		inv, err := e.script.InvokeAndWait(ctx, "list", e)
 		if err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(stdout, &decodedEntries); err != nil {
-			return nil, newStdoutDecodeErr(ctx, "the entries", err, stdout, listFormat)
+		if err := json.Unmarshal(inv.stdout.Bytes(), &decodedEntries); err != nil {
+			return nil, newStdoutDecodeErr(ctx, "the entries", err, inv, listFormat)
 		}
 	}
 
@@ -191,11 +191,11 @@ func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
 	}
 
-	stdout, err := e.script.InvokeAndWait(ctx, "read", e)
+	inv, err := e.script.InvokeAndWait(ctx, "read", e)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(stdout), nil
+	return bytes.NewReader(inv.stdout.Bytes()), nil
 }
 
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
@@ -204,17 +204,17 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 		// the default
 		return e.EntryBase.Metadata(ctx)
 	}
-	stdout, err := e.script.InvokeAndWait(ctx, "metadata", e)
+	inv, err := e.script.InvokeAndWait(ctx, "metadata", e)
 	if err != nil {
 		return nil, err
 	}
 	var metadata JSONObject
-	if err := json.Unmarshal(stdout, &metadata); err != nil {
+	if err := json.Unmarshal(inv.stdout.Bytes(), &metadata); err != nil {
 		return nil, newStdoutDecodeErr(
 			ctx,
 			"the metadata",
 			err,
-			stdout,
+			inv,
 			"{\"key1\":\"value1\",\"key2\":\"value2\"}",
 		)
 	}
@@ -222,7 +222,8 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 }
 
 func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
-	cmd := e.script.NewInvocation(ctx, "stream", e)
+	inv := e.script.NewInvocation(ctx, "stream", e)
+	cmd := inv.command
 	stdoutR, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -233,7 +234,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 	}
 	activity.Record(ctx, "Starting %v", cmd)
 	if err := cmd.Start(); err != nil {
-		return nil, err
+		return nil, newInvokeError(err.Error(), inv)
 	}
 	// "wait" will be used in Stream's error handlers. It will be wrapped
 	// in a "defer" call to ensure that cmd.Wait()'s called once we've read
@@ -270,11 +271,11 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 		if err != nil {
 			defer wait()
 			// Try to get more context from stderr
-			stderr, readErr := ioutil.ReadAll(stderrR)
-			if readErr == nil && len(stderr) != 0 {
-				err = fmt.Errorf(string(stderr))
+			n, readErr := inv.stderr.ReadFrom(stderrR)
+			if readErr == nil && n > 0 {
+				err = fmt.Errorf(inv.stderr.String())
 			}
-			return nil, fmt.Errorf("failed to read the header: %v", err)
+			return nil, newInvokeError(fmt.Sprintf("failed to read the header: %v", err), inv)
 		}
 		// err == nil, meaning we've received the header. Keep reading from
 		// stderr so that the streaming isn't blocked when its buffer is full.
@@ -287,21 +288,21 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 		// We timed out while waiting for the streaming header to appear.
 		// Return an appropriate error message using whatever was printed
 		// on stderr.
-		errMsgFmt := fmt.Sprintf("did not see the %v header after %v seconds:", header, timeout) + " %v"
-		stderr, err := ioutil.ReadAll(stderrR)
+		errMsgFmt := fmt.Sprintf("did not see the %v header after %v seconds:", header, timeout)
+		n, err := inv.stderr.ReadFrom(stderrR)
 		if err != nil {
-			return nil, fmt.Errorf(
-				errMsgFmt,
+			return nil, newInvokeError(fmt.Sprintf(
+				errMsgFmt+" %v",
 				fmt.Sprintf("cannot report reason: stderr i/o error: %v", err),
-			)
+			), inv)
 		}
-		if len(stderr) == 0 {
-			return nil, fmt.Errorf(
-				errMsgFmt,
+		if n == 0 {
+			return nil, newInvokeError(fmt.Sprintf(
+				errMsgFmt+" %v",
 				fmt.Sprintf("cannot report reason: nothing was printed to stderr"),
-			)
+			), inv)
 		}
-		return nil, fmt.Errorf(errMsgFmt, string(stderr))
+		return nil, newInvokeError(errMsgFmt, inv)
 	}
 }
 
@@ -312,7 +313,8 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 		return nil, fmt.Errorf("could not marshal opts %v into JSON: %v", opts, err)
 	}
 	// Start the command.
-	cmdObj := e.script.NewInvocation(ctx, "exec", e, append([]string{string(optsJSON), cmd}, args...)...)
+	inv := e.script.NewInvocation(ctx, "exec", e, append([]string{string(optsJSON), cmd}, args...)...)
+	cmdObj := inv.command
 	execCmd := NewExecCommand(ctx)
 	cmdObj.SetStdout(execCmd.Stdout())
 	cmdObj.SetStderr(execCmd.Stderr())
@@ -353,13 +355,13 @@ func (s *stdoutStreamer) Close() error {
 	return s.cmd.Wait()
 }
 
-func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, stdout []byte, example string) error {
+func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, inv invocation, example string) error {
 	activity.Record(
 		ctx,
 		"could not decode %v from stdout\nreceived:\n%v\nexpected something like:\n%v",
 		decodedThing,
-		strings.TrimSpace(string(stdout)),
+		strings.TrimSpace(inv.stdout.String()),
 		example,
 	)
-	return fmt.Errorf("could not decode %v from stdout: %v", decodedThing, reason)
+	return newInvokeError(fmt.Sprintf("could not decode %v from stdout: %v", decodedThing, reason), inv)
 }

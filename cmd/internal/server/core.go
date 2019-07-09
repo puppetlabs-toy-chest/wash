@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
-	"strings"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -26,6 +25,27 @@ type Opts struct {
 	PluginConfig map[string]map[string]interface{}
 }
 
+// SetupLogging configures log level and output file according to configured options.
+// If an output file was configured, returns a handle for you to close later.
+func (o Opts) SetupLogging() (*os.File, error) {
+	level, err := log.ParseLevel(o.LogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("%v is not a valid level; use warn, info, debug, trace", o.LogLevel)
+	}
+
+	log.SetLevel(level)
+	if o.LogFile != "" {
+		logFH, err := os.Create(o.LogFile)
+		if err != nil {
+			return nil, err
+		}
+
+		log.SetOutput(logFH)
+		return logFH, nil
+	}
+	return nil, nil
+}
+
 type controlChannels struct {
 	stopCh    chan<- context.Context
 	stoppedCh <-chan struct{}
@@ -42,13 +62,6 @@ type Server struct {
 	plugins    map[string]plugin.Root
 }
 
-var levelMap = map[string]log.Level{
-	"warn":  log.WarnLevel,
-	"info":  log.InfoLevel,
-	"debug": log.DebugLevel,
-	"trace": log.TraceLevel,
-}
-
 // New creates a new Server. Accepts a list of core plugins to load.
 func New(mountpoint string, socket string, plugins map[string]plugin.Root, opts Opts) *Server {
 	return &Server{mountpoint: mountpoint, socket: socket, plugins: plugins, opts: opts}
@@ -56,24 +69,9 @@ func New(mountpoint string, socket string, plugins map[string]plugin.Root, opts 
 
 // Start starts the server. It returns once the server is ready.
 func (s *Server) Start() error {
-	level, ok := levelMap[s.opts.LogLevel]
-	if !ok {
-		allLevels := make([]string, 0, len(levelMap))
-		for level := range levelMap {
-			allLevels = append(allLevels, level)
-		}
-		return fmt.Errorf("%v is not a valid level. Valid levels are %v", s.opts.LogLevel, strings.Join(allLevels, ", "))
-	}
-
-	log.SetLevel(level)
-	if s.opts.LogFile != "" {
-		logFH, err := os.Create(s.opts.LogFile)
-		if err != nil {
-			return err
-		}
-
-		log.SetOutput(logFH)
-		s.logFH = logFH
+	var err error
+	if s.logFH, err = s.opts.SetupLogging(); err != nil {
+		return err
 	}
 
 	registry := plugin.NewRegistry()

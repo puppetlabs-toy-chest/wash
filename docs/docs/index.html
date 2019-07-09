@@ -59,6 +59,7 @@
 <li><a href="#wash-server">wash server</a></li>
 <li><a href="#wash-stree">wash stree</a></li>
 <li><a href="#wash-tail">wash tail</a></li>
+<li><a href="#wash-validate">wash validate</a></li>
 </ul></li>
 <li><a href="#config">Config</a></li>
 <li><a href="#core-plugins">Core Plugins</a>
@@ -137,6 +138,14 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <h3 id="wash-tail">wash tail</h3>
 
 <p>Output any new updates to files and/or resources (that support the stream action). Currently requires the &lsquo;-f&rsquo; option to run. Attempts to mimic the functionality of <code>tail -f</code> for remote logs.</p>
+
+<h3 id="wash-validate">wash validate</h3>
+
+<p>Validates an external plugin, using it&rsquo;s schema to limit exploration. The plugin can be one you&rsquo;ve configured in Wash&rsquo;s config file, or it can be a script to load as an external plugin. Plugin-specific config from Wash&rsquo;s config file will be used. The Wash daemon does not need to be running to use this command.</p>
+
+<p>Validate starts from the plugin root and does a breadth-first traversal of the plugin hierarchy, invoking all supported methods on an example at each level. If the plugin provides a schema, it will be used to explore one example of each type of entry. Exploration can be stopped with Ctrl-C when needed.</p>
+
+<p>Each line represents validation of an entry type. The <code>lrsx</code> fields represent support for <code>list</code>, <code>read</code>, <code>stream</code>, and <code>execute</code> methods respectively, with &lsquo;-&rsquo; representing lack of support for a method.</p>
 
 <h2 id="config">Config</h2>
 

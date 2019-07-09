@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -44,7 +45,15 @@ func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
 	return List(ctx, d)
 }
 
-var errNonZero = fmt.Errorf("Exec exited non-zero")
+type nonZeroError struct {
+	cmdline  []string
+	output   string
+	exitcode int
+}
+
+func (e nonZeroError) Error() string {
+	return fmt.Sprintf("Exec exited non-zero [%v] running %v: %v", e.exitcode, strings.Join(e.cmdline, " "), e.output)
+}
 
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
 	cmd, err := executor.Exec(ctx, cmdline[0], cmdline[1:], plugin.ExecOptions{Elevate: true})
@@ -74,7 +83,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 		return nil, err
 	} else if exitcode != 0 {
 		// Can happen due to permission denied. Leave handling up to the caller.
-		return &buf, errNonZero
+		return &buf, nonZeroError{cmdline: cmdline, output: buf.String(), exitcode: exitcode}
 	}
 	return &buf, nil
 }
@@ -84,7 +93,7 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	cmdline := StatCmd(path, d.maxdepth)
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 	buf, err := exec(ctx, d.executor, cmdline)
-	if err == errNonZero {
+	if _, ok := err.(nonZeroError); ok {
 		// May not have access to some files, but list the rest.
 		activity.Record(ctx, "%v running %v, attempting to parse output", err, cmdline)
 	} else if err != nil {
