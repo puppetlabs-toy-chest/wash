@@ -3,7 +3,6 @@ package plugin
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/ekinanp/jsonschema"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
@@ -74,9 +73,10 @@ type EntrySchema struct {
 // NOTE: If your entry's a singleton, then the label should match the entry's
 // name, i.e. the name that's passed into plugin.NewEntry.
 func NewEntrySchema(e Entry, label string) *EntrySchema {
+	t := unravelPtr(reflect.TypeOf(e))
 	s := &EntrySchema{
 		entrySchema: entrySchema{
-			TypeID:  strings.TrimPrefix(reflect.TypeOf(e).String(), "*"),
+			TypeID:  t.PkgPath() + "/" + t.Name(),
 			Actions: SupportedActionsOf(e),
 			// Store the entry so that when marshalling, we can enumerate
 			// its child schemas.
@@ -232,4 +232,11 @@ func (s *EntrySchema) fillPanicf(format string, a ...interface{}) {
 	formatStr := fmt.Sprintf("s.fill (%v): %v", s.TypeID, format)
 	msg := fmt.Sprintf(formatStr, a...)
 	panic(msg)
+}
+
+func unravelPtr(t reflect.Type) reflect.Type {
+	if t.Kind() == reflect.Ptr {
+		return unravelPtr(t.Elem())
+	}
+	return t
 }
