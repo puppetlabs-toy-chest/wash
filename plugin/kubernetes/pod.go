@@ -5,13 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
@@ -29,23 +27,15 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	pd := &pod{
 		EntryBase: plugin.NewEntry(p.Name),
 	}
-	pd.DisableDefaultCaching()
 	pd.client = client
 	pd.config = config
 	pd.ns = ns
-
-	pdInfo := podInfoResult{
-		Pod:        p,
-		logContent: pd.fetchLogContent(ctx),
-	}
-	pdInfo.LogSize = uint64(len(pdInfo.logContent))
 
 	pd.
 		Attributes().
 		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
-		SetSize(pdInfo.LogSize).
-		SetMeta(plugin.ToJSONObject(pdInfo))
+		SetMeta(plugin.ToJSONObject(p))
 
 	return pd, nil
 }
@@ -53,56 +43,22 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 func (p *pod) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(p, "pod").
-		SetMetaAttributeSchema(podInfoResult{})
+		SetMetaAttributeSchema(corev1.Pod{})
 }
 
-type podInfoResult struct {
-	*corev1.Pod
-	LogSize    uint64 `json:"LogSize"`
-	logContent []byte
-}
-
-func (p *pod) fetchLogContent(ctx context.Context) []byte {
+func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
 	req := p.client.CoreV1().Pods(p.ns).GetLogs(p.Name(), &corev1.PodLogOptions{})
 	rdr, err := req.Stream()
 	if err != nil {
-		return []byte(fmt.Sprintf("unable to access logs: %v", err))
+		return nil, fmt.Errorf("unable to access logs: %v", err)
 	}
 	var buf bytes.Buffer
 	var n int64
 	if n, err = buf.ReadFrom(rdr); err != nil {
-		return []byte(fmt.Sprintf("unable to read logs: %v", err))
+		return nil, fmt.Errorf("unable to read logs: %v", err)
 	}
 	activity.Record(ctx, "Read %v bytes of %v log", n, p.Name())
-	return buf.Bytes()
-}
-
-func (p *pod) cachedPodInfo(ctx context.Context) (podInfoResult, error) {
-	cachedPdInfo, err := plugin.CachedOp(ctx, "PodInfo", p, 15*time.Second, func() (interface{}, error) {
-		result := podInfoResult{}
-		pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
-		if err != nil {
-			return result, err
-		}
-		result.Pod = pd
-		result.logContent = p.fetchLogContent(ctx)
-		result.LogSize = uint64(len(result.logContent))
-		return result, nil
-	})
-	if err != nil {
-		return podInfoResult{}, err
-	}
-
-	return cachedPdInfo.(podInfoResult), nil
-}
-
-func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {
-	pdInfo, err := p.cachedPodInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewReader(pdInfo.logContent), nil
+	return bytes.NewReader(buf.Bytes()), nil
 }
 
 func (p *pod) Stream(ctx context.Context) (io.ReadCloser, error) {
