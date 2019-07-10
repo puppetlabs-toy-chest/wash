@@ -39,6 +39,7 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 		return 0, err
 	}
 	fileMode := os.FileMode(intMode & 0777)
+	// Mapping from http://man7.org/linux/man-pages/man7/inode.7.html for stat output
 	for bits, mod := range map[uint64]os.FileMode{
 		0140000: os.ModeSocket,
 		0120000: os.ModeSymlink,

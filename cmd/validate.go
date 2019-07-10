@@ -102,11 +102,17 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 
 	rand.Seed(time.Now().UnixNano())
 	plugin.InitCache()
+	var wg sync.WaitGroup
+	wg.Add(2)
 
 	pw := progress.NewWriter()
 	pw.SetUpdateFrequency(50 * time.Millisecond)
 	pw.Style().Colors = progress.StyleColorsExample
-	go pw.Render()
+
+	go func() {
+		pw.Render()
+		wg.Done()
+	}()
 
 	// On Ctrl-C cancel the context to ensure plugin calls have a chance to cleanup.
 	sigCh := make(chan os.Signal, 1)
@@ -124,8 +130,6 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	// with a worker pool.
 	erred := 0
 	errs := make(chan error)
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
 		for err := range errs {
 			erred++
@@ -165,17 +169,20 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{0}
 }
 
-// If the entry has a schema providing a TypeID, use it to help further distinguish between
-// different things that behave the same.
+// If the entry has a schema, use it to help further distinguish between different things that
+// behave the same.
 type criteria struct {
-	typeID                   string
+	label, typeID            string
 	list, read, stream, exec bool
+	singleton                bool
 }
 
 func newCriteria(entry plugin.Entry) criteria {
 	var crit criteria
 	if schema := entry.Schema(); schema != nil {
+		crit.label = schema.Label
 		crit.typeID = schema.TypeID
+		crit.singleton = schema.Singleton
 	}
 	crit.list = plugin.ListAction().IsSupportedOn(entry)
 	crit.read = plugin.ReadAction().IsSupportedOn(entry)
@@ -203,8 +210,12 @@ func (c criteria) String() string {
 	}
 
 	result := string(s)
-	if c.typeID != "" {
-		result = fmt.Sprintf("%s %-30s", result, "["+c.typeID+"]")
+	if c.label != "" {
+		label := c.label
+		if !c.singleton {
+			label = "[" + label + "]"
+		}
+		result = fmt.Sprintf("%s %-20s", result, label)
 	}
 	return result
 }
@@ -268,6 +279,16 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 			// Group children by ones that look "similar", and select one from each group to test.
 			groups := make(map[criteria][]plugin.Entry)
 			for _, entry := range entries {
+				// Skip files that we shouldn't read. This includes character devices, devices, and
+				// those we don't have permission to read.
+				attr := plugin.Attributes(entry)
+				if mode := attr.Mode(); attr.HasMode() &&
+					(mode&os.ModeCharDevice == os.ModeCharDevice ||
+						mode&os.ModeNamedPipe == os.ModeNamedPipe ||
+						mode&os.ModeDevice == os.ModeDevice || mode&0400 == 0) {
+					continue
+				}
+
 				ccrit := newCriteria(entry)
 				// If we have a TypeID, only explore children if they are different from the parent.
 				// This prevents simple recursion like volume directories containing more dirs.

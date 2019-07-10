@@ -31,16 +31,16 @@ const fixture = `
 
 func TestStatCmd(t *testing.T) {
 	cmd := StatCmd("", 1)
-	assert.Equal(t, []string{"find", "/", "-mindepth", "1", "-maxdepth", "1",
-		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+	assert.Equal(t, []string{"find", "-L", "/", "-mindepth", "1", "-maxdepth", "1",
+		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 
 	cmd = StatCmd("/", 1)
-	assert.Equal(t, []string{"find", "/", "-mindepth", "1", "-maxdepth", "1",
-		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+	assert.Equal(t, []string{"find", "-L", "/", "-mindepth", "1", "-maxdepth", "1",
+		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 
 	cmd = StatCmd("/var/log", 5)
-	assert.Equal(t, []string{"find", "/var/log", "-mindepth", "1", "-maxdepth", "5",
-		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
+	assert.Equal(t, []string{"find", "-L", "/var/log", "-mindepth", "1", "-maxdepth", "5",
+		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 }
 
 func TestStatParse(t *testing.T) {

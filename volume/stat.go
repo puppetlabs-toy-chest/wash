@@ -27,8 +27,10 @@ func StatCmd(path string, maxdepth int) []string {
 	// %Z - Time of last status change as seconds since Epoch
 	// %f - Raw mode in hex
 	// %n - File name
-	return []string{"find", path, "-mindepth", "1", "-maxdepth", strconv.Itoa(maxdepth),
-		"-exec", "stat", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
+	// TODO: fix as part of https://github.com/puppetlabs/wash/issues/378. We don't currently handle
+	// showing symbolic links, instead representing them as the resolved target.
+	return []string{"find", "-L", path, "-mindepth", "1", "-maxdepth", strconv.Itoa(maxdepth),
+		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
 }
 
 // Keep as its own specialized function as it will be faster than munge.ToTime.
@@ -120,7 +122,8 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 	dirmap := DirMap{RootPath: make(Dir)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
-		if text != "" {
+		// Skip error lines in case we're running in a tty.
+		if text != "" && !strings.HasPrefix(text, "stat:") && !strings.HasPrefix(text, "find:") {
 			attr, fullpath, err := StatParse(text)
 			if err != nil {
 				return nil, err

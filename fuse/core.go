@@ -82,6 +82,11 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 
 	if attr.HasMode() {
 		a.Mode = attr.Mode()
+		// bazil/fuse appears to assume that character device implies device, and requires
+		// device to be flagged to set char device.
+		if a.Mode&os.ModeCharDevice == os.ModeCharDevice {
+			a.Mode |= os.ModeDevice
+		}
 	} else if isdir {
 		a.Mode = os.ModeDir | 0550
 	} else {

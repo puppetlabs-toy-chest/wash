@@ -49,19 +49,19 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	}
 	attr := EntryAttributes{}
 	attr.meta = JSONObject{}
-	expectedMp := make(map[string]interface{})
-	expectedMp["meta"] = JSONObject{}
 	doUnmarshalJSONTests := func() {
-		attrJSON, err := json.Marshal(expectedMp)
-		if err != nil {
-			panic("assertUnmarshalJSON: could not marshal expectedMp, which is a map[string]interface{} object")
-		}
+		attrJSON, err := json.Marshal(attr)
+		suite.NoError(err)
 		unmarshaledAttr := EntryAttributes{}
 		err = json.Unmarshal(attrJSON, &unmarshaledAttr)
 		if suite.NoError(err) {
 			suite.Equal(attr, unmarshaledAttr)
 		}
 	}
+
+	// ToMap - used for listing attributes - and JSON marshaling may have different representations.
+	expectedMp := make(map[string]interface{})
+	expectedMp["meta"] = JSONObject{}
 
 	// Tests for Atime
 	suite.Equal(false, attr.HasAtime())
@@ -99,9 +99,9 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
 	suite.Equal(expectedMp, attr.ToMap(true))
-	m := os.FileMode(0777)
+	m := os.FileMode(0777 | os.ModeCharDevice | os.ModeDir)
 	attr.SetMode(m)
-	expectedMp["mode"] = m
+	expectedMp["mode"] = m.String()
 	suite.Equal(m, attr.Mode())
 	suite.Equal(true, attr.HasMode())
 	suite.Equal(expectedMp, attr.ToMap(true))
