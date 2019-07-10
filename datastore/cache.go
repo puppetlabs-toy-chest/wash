@@ -17,6 +17,7 @@ import (
 // Cache is an interface for a cache.
 type Cache interface {
 	GetOrUpdate(category, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error)
+	Get(category, key string) (interface{}, error)
 	Flush()
 	Delete(matcher *regexp.Regexp) []string
 }
@@ -71,6 +72,25 @@ func (cache *MemCache) Limit(n int) *MemCache {
 	return cache
 }
 
+func formKey(category, key string) string {
+	return category + "::" + key
+}
+
+// Get retrieves the value stored at the given key. If not cached, returns (nil, nil).
+// Even if a nil value is cached, that's unlikely to be a useful value so we don't see
+// a reason to differentiate between absent and nil.
+func (cache *MemCache) Get(category, key string) (interface{}, error) {
+	key = formKey(category, key)
+	value, found := cache.instance.Get(key)
+	if found {
+		if err, ok := value.(error); ok {
+			return nil, err
+		}
+		return value, nil
+	}
+	return nil, nil
+}
+
 // GetOrUpdate attempts to retrieve the value stored at the given key.
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
@@ -85,7 +105,7 @@ func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, rese
 
 	// From here on key is a composition of category and key so we can maintain
 	// a single cache.
-	key = category + "::" + key
+	key = formKey(category, key)
 	value, found := cache.instance.Get(key)
 	if found {
 		log.Tracef("Cache hit on %v", key)

@@ -17,7 +17,6 @@ func newContainerMetadata(container *container) *containerMetadata {
 	cm := &containerMetadata{
 		EntryBase: plugin.NewEntry("metadata.json"),
 	}
-	cm.DisableDefaultCaching()
 	cm.container = container
 	return cm
 }

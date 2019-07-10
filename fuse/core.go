@@ -93,8 +93,13 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 		a.Mode = 0440
 	}
 
+	const blockSize = 4096
 	if attr.HasSize() {
 		a.Size = attr.Size()
+	} else {
+		// Default to the block size to encourage tools to read the file to determine its actual size.
+		// We don't know the size, and cat at least ignores a file with size 0.
+		a.Size = blockSize
 	}
 
 	a.Mtime = startTime
@@ -110,7 +115,7 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 		a.Ctime = attr.Ctime()
 	}
 	a.Crtime = startTime
-	a.BlockSize = 4096
+	a.BlockSize = blockSize
 	a.Uid = uid
 	a.Gid = gid
 }

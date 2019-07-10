@@ -77,18 +77,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: May be worth creating a helper that makes it easy to create
 	// read-only files. Lots of shared code between these two.
 	cm := newContainerMetadata(c)
-	content, err := cm.Open(ctx)
-	if err != nil {
-		return nil, err
-	}
-	cm.Attributes().SetSize(uint64(content.Size()))
-
 	clf := newContainerLogFile(c)
-	content, err = clf.Open(ctx)
-	if err != nil {
-		return nil, err
-	}
-	clf.Attributes().SetSize(uint64(content.Size()))
 
 	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
 	// VMs can have lots of files and Exec is fast.

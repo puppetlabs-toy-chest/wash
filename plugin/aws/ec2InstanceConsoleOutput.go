@@ -3,7 +3,6 @@ package aws
 import (
 	"bytes"
 	"context"
-	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -40,11 +39,6 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		SetSize(uint64(len(output.content)))
 
 	return cl, nil
-}
-
-type consoleOutput struct {
-	mtime   time.Time
-	content []byte
 }
 
 func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {

@@ -68,6 +68,11 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	return ec2Instance
 }
 
+type consoleOutput struct {
+	mtime   time.Time
+	content []byte
+}
+
 func (inst *ec2Instance) cachedConsoleOutput(ctx context.Context, latest bool) (consoleOutput, error) {
 	var opname string
 	if latest {

@@ -99,6 +99,28 @@ func (suite *MemCacheTestSuite) TestGetOrUpdateWithReset() {
 	suite.thing.AssertNumberOfCalls(suite.T(), "update", 2)
 }
 
+func (suite *MemCacheTestSuite) TestGet() {
+	val, err := suite.mem.Get("foo", "bar")
+	suite.Nil(val)
+	suite.Nil(err)
+
+	suite.mem.instance.Set("foo::bar", nil, time.Second)
+	val, err = suite.mem.Get("foo", "bar")
+	suite.Nil(val)
+	suite.Nil(err)
+
+	item := struct{}{}
+	suite.mem.instance.Set("foo::bar", item, time.Second)
+	val, err = suite.mem.Get("foo", "bar")
+	suite.NoError(err)
+	suite.Equal(item, val)
+
+	suite.mem.instance.Set("foo::bar", errors.New("an error"), time.Second)
+	val, err = suite.mem.Get("foo", "bar")
+	suite.Nil(val)
+	suite.EqualError(err, "an error")
+}
+
 func (suite *MemCacheTestSuite) TestFlush() {
 	suite.mem.instance.Set("an entry", struct{}{}, time.Nanosecond)
 	time.Sleep(time.Nanosecond)
