@@ -241,6 +241,8 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 </ul></li>
 </ul>
 
+<p>For entries that can be <code>read</code>, provide the size if you know it; otherwise Wash will provide a functional default and update the size when the entry has been <code>read</code>. Note that <code>find -size</code> will not include files with unknown size.</p>
+
 <p>Actions can be invoked programmatically via the Wash API, or on the CLI via <code>wash</code> commands and filesystem interactions.</p>
 
 <p>For more on implementing plugins, see:</p>

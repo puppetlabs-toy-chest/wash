@@ -161,6 +161,8 @@ Wash entries can support the following actions:
 * `exec` - lets you execute a command against an entry
   - _e.g. run a shell command inside a container, or on an EC2 vm, or on a routerOS device, etc._
 
+For entries that can be `read`, provide the size if you know it; otherwise Wash will provide a functional default and update the size when the entry has been `read`. Note that `find -size` will not include files with unknown size.
+
 Actions can be invoked programmatically via the Wash API, or on the CLI via `wash` commands and filesystem interactions.
 
 For more on implementing plugins, see:

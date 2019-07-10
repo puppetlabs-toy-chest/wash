@@ -16,6 +16,11 @@ type cacheTestsMockCache struct {
 	mock.Mock
 }
 
+func (m *cacheTestsMockCache) Get(cat, key string) (interface{}, error) {
+	args := m.Called(cat, key)
+	return args.Get(0), args.Error(1)
+}
+
 func (m *cacheTestsMockCache) GetOrUpdate(cat, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
 	args := m.Called(cat, key, ttl, resetTTLOnHit, generateValue)
 	return args.Get(0), args.Error(1)
