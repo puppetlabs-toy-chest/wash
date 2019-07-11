@@ -75,9 +75,11 @@ func (r *Registry) ChildSchemas() []*EntrySchema {
 	return childSchemas
 }
 
+const registrySchemaLabel = "mountpoint"
+
 // Schema returns the plugin registry's schema
 func (r *Registry) Schema() *EntrySchema {
-	return NewEntrySchema(r, "mountpoint").IsSingleton()
+	return NewEntrySchema(r, registrySchemaLabel).IsSingleton()
 }
 
 // List all of Wash's loaded plugins

@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
 // externalPluginRoot represents an external plugin's root.
@@ -53,7 +56,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	if decodedRoot.Methods == nil {
 		decodedRoot.Methods = []interface{}{"list"}
 	}
-	entry, err := decodedRoot.toExternalPluginEntry()
+	entry, err := decodedRoot.toExternalPluginEntry(false, true)
 	if err != nil {
 		return err
 	}
@@ -63,6 +66,25 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	script := r.script
 	r.externalPluginEntry = entry
 	r.externalPluginEntry.script = script
+
+	// Fill in the schema graph if provided
+	if rawSchema := r.methods["schema"]; rawSchema != nil {
+		marshalledSchema, err := json.Marshal(rawSchema)
+		if err != nil {
+			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
+		}
+		graph, err := r.unmarshalSchemaGraph(marshalledSchema)
+		if err != nil {
+			return fmt.Errorf(
+				"could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
+				err,
+				strings.TrimSpace(string(marshalledSchema)),
+				schemaFormat,
+			)
+		}
+		r.schemaGraphs = partitionSchemaGraph(graph)
+	}
+
 	return nil
 }
 
@@ -70,4 +92,33 @@ func (r *externalPluginRoot) WrappedTypes() SchemaMap {
 	// This only makes sense for core plugins because it is a Go-specific
 	// limitation.
 	return nil
+}
+
+// partitionSchemaGraph partitions graph into a map of <type_id> => <schema_graph>
+func partitionSchemaGraph(graph *linkedhashmap.Map) map[string]*linkedhashmap.Map {
+	var populate func(*linkedhashmap.Map, entrySchema, map[string]bool)
+	populate = func(g *linkedhashmap.Map, node entrySchema, visited map[string]bool) {
+		if visited[node.TypeID] {
+			return
+		}
+		g.Put(node.TypeID, node)
+		visited[node.TypeID] = true
+		for _, childTypeID := range node.Children {
+			childNode, ok := graph.Get(childTypeID)
+			if !ok {
+				msg := fmt.Sprintf("plugin.partitionSchemaGraph: expected child %v to be present in the graph", childTypeID)
+				panic(msg)
+			}
+			populate(g, childNode.(entrySchema), visited)
+		}
+	}
+
+	schemaGraphs := make(map[string]*linkedhashmap.Map)
+	graph.Each(func(key interface{}, value interface{}) {
+		g := linkedhashmap.New()
+		populate(g, value.(entrySchema), make(map[string]bool))
+		schemaGraphs[key.(string)] = g
+	})
+
+	return schemaGraphs
 }

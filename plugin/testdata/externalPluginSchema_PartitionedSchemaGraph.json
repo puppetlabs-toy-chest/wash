@@ -1,0 +1,1007 @@
+{
+    "aws.Root": {
+        "aws.Root": {
+            "label": "aws",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.profile"
+            ]
+        },
+        "aws.profile": {
+            "label": "profile",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.resourcesDir"
+            ]
+        },
+        "aws.resourcesDir": {
+            "label": "resources",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Dir",
+                "aws.ec2Dir"
+            ]
+        },
+        "aws.s3Dir": {
+            "label": "s3",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Bucket"
+            ]
+        },
+        "aws.s3Bucket": {
+            "label": "bucket",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2Dir": {
+            "label": "ec2",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstancesDir"
+            ]
+        },
+        "aws.ec2InstancesDir": {
+            "label": "instances",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2Instance"
+            ]
+        },
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.ec2Dir": {
+        "aws.ec2Dir": {
+            "label": "ec2",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstancesDir"
+            ]
+        },
+        "aws.ec2InstancesDir": {
+            "label": "instances",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2Instance"
+            ]
+        },
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.ec2Instance": {
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.ec2InstanceConsoleOutput": {
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.ec2InstanceMetadataJSON": {
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.ec2InstancesDir": {
+        "aws.ec2InstancesDir": {
+            "label": "instances",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2Instance"
+            ]
+        },
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.profile": {
+        "aws.profile": {
+            "label": "profile",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.resourcesDir"
+            ]
+        },
+        "aws.resourcesDir": {
+            "label": "resources",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Dir",
+                "aws.ec2Dir"
+            ]
+        },
+        "aws.s3Dir": {
+            "label": "s3",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Bucket"
+            ]
+        },
+        "aws.s3Bucket": {
+            "label": "bucket",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2Dir": {
+            "label": "ec2",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstancesDir"
+            ]
+        },
+        "aws.ec2InstancesDir": {
+            "label": "instances",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2Instance"
+            ]
+        },
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.resourcesDir": {
+        "aws.resourcesDir": {
+            "label": "resources",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Dir",
+                "aws.ec2Dir"
+            ]
+        },
+        "aws.s3Dir": {
+            "label": "s3",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Bucket"
+            ]
+        },
+        "aws.s3Bucket": {
+            "label": "bucket",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2Dir": {
+            "label": "ec2",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstancesDir"
+            ]
+        },
+        "aws.ec2InstancesDir": {
+            "label": "instances",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2Instance"
+            ]
+        },
+        "aws.ec2Instance": {
+            "label": "instance",
+            "singleton": false,
+            "actions": [
+                "list",
+                "exec"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.ec2InstanceConsoleOutput",
+                "aws.ec2InstanceMetadataJSON",
+                "volume.FS"
+            ]
+        },
+        "aws.ec2InstanceConsoleOutput": {
+            "label": "console.out",
+            "singleton": false,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "aws.ec2InstanceMetadataJSON": {
+            "label": "metadata.json",
+            "singleton": true,
+            "actions": [
+                "read"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        },
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.s3Bucket": {
+        "aws.s3Bucket": {
+            "label": "bucket",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.s3Dir": {
+        "aws.s3Dir": {
+            "label": "s3",
+            "singleton": true,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3Bucket"
+            ]
+        },
+        "aws.s3Bucket": {
+            "label": "bucket",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.s3Object": {
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "aws.s3ObjectPrefix": {
+        "aws.s3ObjectPrefix": {
+            "label": "prefix",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "aws.s3ObjectPrefix",
+                "aws.s3Object"
+            ]
+        },
+        "aws.s3Object": {
+            "label": "object",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "volume.FS": {
+        "volume.FS": {
+            "label": "fs",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "volume.dir": {
+        "volume.dir": {
+            "label": "dir",
+            "singleton": false,
+            "actions": [
+                "list"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": [
+                "volume.dir",
+                "volume.file"
+            ]
+        },
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    },
+    "volume.file": {
+        "volume.file": {
+            "label": "file",
+            "singleton": false,
+            "actions": [
+                "read",
+                "stream"
+            ],
+            "meta_attribute_schema": null,
+            "metadata_schema": null,
+            "children": null
+        }
+    }
+}
