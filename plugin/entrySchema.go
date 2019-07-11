@@ -9,7 +9,10 @@ import (
 )
 
 type entrySchema struct {
-	TypeID              string      `json:"type_id"`
+	// EntrySchemas are marshalled as JSON objects with key
+	// <type_id> => <schema>. Thus, there's no need to include
+	// the type_id more than once.
+	TypeID              string      `json:"-"`
 	Label               string      `json:"label"`
 	Singleton           bool        `json:"singleton"`
 	Actions             []string    `json:"actions"`

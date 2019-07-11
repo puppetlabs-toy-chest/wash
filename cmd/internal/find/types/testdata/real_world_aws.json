@@ -1,6 +1,5 @@
 {
     "aws.Root": {
-        "type_id": "aws.Root",
         "label": "aws",
         "singleton": true,
         "actions": [
@@ -23,7 +22,6 @@
         ]
     },
     "aws.profile": {
-        "type_id": "aws.profile",
         "label": "profile",
         "singleton": false,
         "actions": [
@@ -46,7 +44,6 @@
         ]
     },
     "aws.resourcesDir": {
-        "type_id": "aws.resourcesDir",
         "label": "resources",
         "singleton": true,
         "actions": [
@@ -70,7 +67,6 @@
         ]
     },
     "aws.s3Dir": {
-        "type_id": "aws.s3Dir",
         "label": "s3",
         "singleton": true,
         "actions": [
@@ -93,7 +89,6 @@
         ]
     },
     "aws.s3Bucket": {
-        "type_id": "aws.s3Bucket",
         "label": "bucket",
         "singleton": false,
         "actions": [
@@ -160,7 +155,6 @@
         ]
     },
     "aws.s3ObjectPrefix": {
-        "type_id": "aws.s3ObjectPrefix",
         "label": "prefix",
         "singleton": false,
         "actions": [
@@ -184,7 +178,6 @@
         ]
     },
     "aws.s3Object": {
-        "type_id": "aws.s3Object",
         "label": "object",
         "singleton": false,
         "actions": [
@@ -375,7 +368,6 @@
         "children": null
     },
     "aws.ec2Dir": {
-        "type_id": "aws.ec2Dir",
         "label": "ec2",
         "singleton": true,
         "actions": [
@@ -398,7 +390,6 @@
         ]
     },
     "aws.ec2InstancesDir": {
-        "type_id": "aws.ec2InstancesDir",
         "label": "instances",
         "singleton": true,
         "actions": [
@@ -421,7 +412,6 @@
         ]
     },
     "aws.ec2Instance": {
-        "type_id": "aws.ec2Instance",
         "label": "instance",
         "singleton": false,
         "actions": [
@@ -1148,7 +1138,6 @@
         ]
     },
     "aws.ec2InstanceConsoleOutput": {
-        "type_id": "aws.ec2InstanceConsoleOutput",
         "label": "console.out",
         "singleton": false,
         "actions": [
@@ -1169,7 +1158,6 @@
         "children": null
     },
     "aws.ec2InstanceMetadataJSON": {
-        "type_id": "aws.ec2InstanceMetadataJSON",
         "label": "metadata.json",
         "singleton": true,
         "actions": [
@@ -1190,7 +1178,6 @@
         "children": null
     },
     "volume.FS": {
-        "type_id": "volume.FS",
         "label": "fs",
         "singleton": false,
         "actions": [
@@ -1214,7 +1201,6 @@
         ]
     },
     "volume.dir": {
-        "type_id": "volume.dir",
         "label": "dir",
         "singleton": false,
         "actions": [
@@ -1238,7 +1224,6 @@
         ]
     },
     "volume.file": {
-        "type_id": "volume.file",
         "label": "file",
         "singleton": false,
         "actions": [

@@ -1,18 +1,15 @@
 {
     "A": {
-        "type_id": "A",
         "children": [
             "B"
         ]
     },
     "B": {
-        "type_id": "B",
         "children": [
             "C"
         ]
     },
     "C": {
-        "type_id": "C",
         "children": [
             "A"
         ]
