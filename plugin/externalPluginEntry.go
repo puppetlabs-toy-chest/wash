@@ -77,11 +77,8 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRo
 	if len(e.Name) <= 0 {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
-	if len(e.Methods) <= 0 {
+	if e.Methods == nil {
 		return nil, fmt.Errorf("the entry's methods must be provided")
-	}
-	if len(e.TypeID) <= 0 {
-		return nil, fmt.Errorf("the entry's type ID must be provided")
 	}
 
 	methods, err := mungeToMethods(e.Methods)
@@ -96,6 +93,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRo
 	// if the root implements it. It is also reasonable for us to expect (and require)
 	// every entry to _not_ implement schema if the root does not implement it.
 	if result, ok := methods["schema"]; ok {
+		if len(e.TypeID) == 0 {
+			return nil, fmt.Errorf("entry %v implements schema, but no type ID was provided", e.Name)
+		}
 		if !schemaKnown && !isRoot {
 			return nil, fmt.Errorf("entry %v (%v) implements schema, but the plugin root doesn't", e.Name, e.TypeID)
 		}
@@ -290,7 +290,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 	return s, nil
 }
 
-const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"],\"type_id\":\"type1\"},{\"name\":\"entry2\",\"methods\":[\"list\"],\"type_id\":\"type2\"}]"
+const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"entry2\",\"methods\":[\"list\"]}]"
 
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	var decodedEntries []decodedExternalPluginEntry
@@ -562,7 +562,7 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		if len(node.Label) <= 0 {
 			return fmt.Errorf("a label must be provided")
 		}
-		if len(node.Methods) <= 0 {
+		if node.Methods == nil {
 			return fmt.Errorf("the entry's methods must be provided")
 		}
 		isParent := false
