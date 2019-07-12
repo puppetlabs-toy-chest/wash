@@ -2,7 +2,7 @@
     "aws.Root": {
         "label": "aws",
         "singleton": true,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -24,7 +24,7 @@
     "aws.profile": {
         "label": "profile",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -46,7 +46,7 @@
     "aws.resourcesDir": {
         "label": "resources",
         "singleton": true,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -69,7 +69,7 @@
     "aws.s3Dir": {
         "label": "s3",
         "singleton": true,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -91,7 +91,7 @@
     "aws.s3Bucket": {
         "label": "bucket",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -157,7 +157,7 @@
     "aws.s3ObjectPrefix": {
         "label": "prefix",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -180,7 +180,7 @@
     "aws.s3Object": {
         "label": "object",
         "singleton": false,
-        "actions": [
+        "methods": [
             "read",
             "stream"
         ],
@@ -370,7 +370,7 @@
     "aws.ec2Dir": {
         "label": "ec2",
         "singleton": true,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -392,7 +392,7 @@
     "aws.ec2InstancesDir": {
         "label": "instances",
         "singleton": true,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -414,7 +414,7 @@
     "aws.ec2Instance": {
         "label": "instance",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list",
             "exec"
         ],
@@ -1140,7 +1140,7 @@
     "aws.ec2InstanceConsoleOutput": {
         "label": "console.out",
         "singleton": false,
-        "actions": [
+        "methods": [
             "read"
         ],
         "meta_attribute_schema": {
@@ -1160,7 +1160,7 @@
     "aws.ec2InstanceMetadataJSON": {
         "label": "metadata.json",
         "singleton": true,
-        "actions": [
+        "methods": [
             "read"
         ],
         "meta_attribute_schema": {
@@ -1180,7 +1180,7 @@
     "volume.FS": {
         "label": "fs",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -1203,7 +1203,7 @@
     "volume.dir": {
         "label": "dir",
         "singleton": false,
-        "actions": [
+        "methods": [
             "list"
         ],
         "meta_attribute_schema": {
@@ -1226,7 +1226,7 @@
     "volume.file": {
         "label": "file",
         "singleton": false,
-        "actions": [
+        "methods": [
             "read",
             "stream"
         ],

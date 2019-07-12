@@ -1,6 +1,5 @@
 {
     "A": {
-        "type_id": "A",
         "meta_attribute_schema": {
             "type": "object",
             "properties": {
@@ -13,12 +12,9 @@
         ]
     },
     "B": {
-        "type_id": "B",
         "metadata_schema": {
             "type": "array"
         }
     },
-    "C": {
-        "type_id": "C"
-    }
+    "C": {}
 }

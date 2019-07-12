@@ -63,6 +63,7 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 				graph: s.graph,
 			}
 		}
+		node.EntrySchema.TypeID = key.(string)
 		err = deepcopy.Copy(&node.EntrySchema, value.(map[string]interface{}))
 		if err != nil {
 			return

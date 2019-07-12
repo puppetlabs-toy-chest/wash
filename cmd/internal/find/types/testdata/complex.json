@@ -1,36 +1,28 @@
 {
     "A": {
-        "type_id": "A",
         "children": [
             "B",
             "C"
         ]
     },
     "B": {
-        "type_id": "B",
         "children": [
             "D",
             "E"
         ]
     },
     "C": {
-        "type_id": "C",
         "children": [
             "F",
             "C"
         ]
     },
-    "D": {
-        "type_id": "D"
-    },
+    "D": {},
     "E": {
-        "type_id": "E",
         "children": [
             "A",
             "C"
         ]
     },
-    "F": {
-        "type_id": "F"
-    }
+    "F": {}
 }

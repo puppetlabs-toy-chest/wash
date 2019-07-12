@@ -62,9 +62,9 @@ func (s externalPluginScriptImpl) InvokeAndWait(
 		return inv, newInvokeError(err.Error(), inv)
 	}
 
-	activity.Record(ctx, "stdout: %v", inv.stdout)
+	activity.Record(ctx, "stdout: %v", inv.stdout.String())
 	if inv.stderr.Len() != 0 {
-		activity.Record(ctx, "stderr: %v", inv.stderr)
+		activity.Record(ctx, "stderr: %v", inv.stderr.String())
 	}
 	if exitCode != 0 {
 		return inv, newInvokeError(fmt.Sprintf("script returned a non-zero exit code of %v", exitCode), inv)

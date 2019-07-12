@@ -1,0 +1,154 @@
+{
+    "aws.Root": {
+        "label": "aws",
+        "singleton": true,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.profile"
+        ]
+    },
+    "aws.profile": {
+        "label": "profile",
+        "singleton": false,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.resourcesDir"
+        ]
+    },
+    "aws.resourcesDir": {
+        "label": "resources",
+        "singleton": true,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.s3Dir",
+            "aws.ec2Dir"
+        ]
+    },
+    "aws.s3Dir": {
+        "label": "s3",
+        "singleton": true,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.s3Bucket"
+        ]
+    },
+    "aws.s3Bucket": {
+        "label": "bucket",
+        "singleton": false,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.s3ObjectPrefix",
+            "aws.s3Object"
+        ]
+    },
+    "aws.s3ObjectPrefix": {
+        "label": "prefix",
+        "singleton": false,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.s3ObjectPrefix",
+            "aws.s3Object"
+        ]
+    },
+    "aws.s3Object": {
+        "label": "object",
+        "singleton": false,
+        "methods": [
+            "read",
+            "stream"
+        ],
+        "children": null
+    },
+    "aws.ec2Dir": {
+        "label": "ec2",
+        "singleton": true,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.ec2InstancesDir"
+        ]
+    },
+    "aws.ec2InstancesDir": {
+        "label": "instances",
+        "singleton": true,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "aws.ec2Instance"
+        ]
+    },
+    "aws.ec2Instance": {
+        "label": "instance",
+        "singleton": false,
+        "methods": [
+            "list",
+            "exec"
+        ],
+        "children": [
+            "aws.ec2InstanceConsoleOutput",
+            "aws.ec2InstanceMetadataJSON",
+            "volume.FS"
+        ]
+    },
+    "aws.ec2InstanceConsoleOutput": {
+        "label": "console.out",
+        "singleton": false,
+        "methods": [
+            "read"
+        ],
+        "children": null
+    },
+    "aws.ec2InstanceMetadataJSON": {
+        "label": "metadata.json",
+        "singleton": true,
+        "methods": [
+            "read"
+        ],
+        "children": null
+    },
+    "volume.FS": {
+        "label": "fs",
+        "singleton": false,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "volume.dir",
+            "volume.file"
+        ]
+    },
+    "volume.dir": {
+        "label": "dir",
+        "singleton": false,
+        "methods": [
+            "list"
+        ],
+        "children": [
+            "volume.dir",
+            "volume.file"
+        ]
+    },
+    "volume.file": {
+        "label": "file",
+        "singleton": false,
+        "methods": [
+            "read",
+            "stream"
+        ],
+        "children": null
+    }
+}

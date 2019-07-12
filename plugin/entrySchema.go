@@ -8,15 +8,26 @@ import (
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
+// Schema returns the entry's schema. It is needed by the API,
+// so plugin authors should ignore this.
+func Schema(e Entry) (*EntrySchema, error) {
+	if externalPlugin, ok := e.(externalPlugin); ok {
+		return externalPlugin.schema()
+	}
+	return e.Schema(), nil
+}
+
 type entrySchema struct {
-	TypeID              string      `json:"type_id"`
+	// EntrySchemas are marshalled as JSON objects with key
+	// <type_id> => <schema>. Thus, there's no need to include
+	// the type_id more than once.
+	TypeID              string      `json:"-"`
 	Label               string      `json:"label"`
 	Singleton           bool        `json:"singleton"`
 	Actions             []string    `json:"actions"`
 	MetaAttributeSchema *JSONSchema `json:"meta_attribute_schema"`
 	MetadataSchema      *JSONSchema `json:"metadata_schema"`
 	Children            []string    `json:"children"`
-	entry               Entry
 }
 
 // EntrySchema represents an entry's schema. Use plugin.NewEntrySchema
@@ -66,6 +77,9 @@ type EntrySchema struct {
 	entrySchema
 	metaAttributeSchemaObj interface{}
 	metadataSchemaObj      interface{}
+	entry                  Entry
+	// graph is set by external plugins
+	graph *linkedhashmap.Map
 }
 
 // NewEntrySchema returns a new EntrySchema object with the specified label.
@@ -82,12 +96,12 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 			TypeID:  t.PkgPath() + "/" + t.Name(),
 			Label:   label,
 			Actions: SupportedActionsOf(e),
-			// Store the entry so that when marshalling, we can enumerate
-			// its child schemas.
-			entry: e,
 		},
 		// The meta attribute's empty by default
 		metaAttributeSchemaObj: struct{}{},
+		// Store the entry so that when marshalling, we can enumerate
+		// its child schemas (for core plugins only)
+		entry: e,
 	}
 	return s
 }
@@ -100,10 +114,25 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 // Note that UnmarshalJSON is not implemented since that is not
 // how plugin.EntrySchema objects are meant to be used.
 func (s EntrySchema) MarshalJSON() ([]byte, error) {
-	// We need to use an ordered map to ensure that the first key
-	// in the marshalled schema corresponds to s.
-	graph := linkedhashmap.New()
-	s.fill(graph)
+	graph := s.graph
+	if graph == nil {
+		if _, ok := s.entry.(externalPlugin); ok {
+			// We should never hit this code-path because external plugins with
+			// unknown schemas will return a nil schema. Thus, EntrySchema#MarshalJSON
+			// will never be invoked.
+			msg := fmt.Sprintf(
+				"s.MarshalJSON: called with a nil graph for external plugin entry %v (type ID %v)",
+				CName(s.entry),
+				s.TypeID,
+			)
+			panic(msg)
+		}
+		// We're marshalling a core plugin entry's schema. Note that the reason
+		// we use an ordered map is to ensure that the first key in the marshalled
+		// schema corresponds to s.
+		graph = linkedhashmap.New()
+		s.fill(graph)
+	}
 	return graph.ToJSON()
 }
 
@@ -169,6 +198,16 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		}
 		s.entrySchema.Children = append(s.Children, child.TypeID)
 		if _, ok := graph.Get(child.TypeID); ok {
+			continue
+		}
+		if child.graph != nil {
+			if s.Label != registrySchemaLabel {
+				// We should never hit this code-path
+				s.fillPanicf("%v is an external plugin's schema", child)
+			}
+			child.graph.Each(func(key interface{}, value interface{}) {
+				graph.Put(key, value)
+			})
 			continue
 		}
 		passAlongWrappedTypes(sParent, child.entry)
