@@ -77,7 +77,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRo
 	if len(e.Name) <= 0 {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
-	if len(e.Methods) <= 0 {
+	if e.Methods == nil {
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
 
@@ -562,7 +562,7 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		if len(node.Label) <= 0 {
 			return fmt.Errorf("a label must be provided")
 		}
-		if len(node.Methods) <= 0 {
+		if node.Methods == nil {
 			return fmt.Errorf("the entry's methods must be provided")
 		}
 		isParent := false

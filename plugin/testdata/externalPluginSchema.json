@@ -1160,9 +1160,7 @@
     "aws.ec2InstanceMetadataJSON": {
         "label": "metadata.json",
         "singleton": true,
-        "methods": [
-            "read"
-        ],
+        "methods": [],
         "meta_attribute_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,

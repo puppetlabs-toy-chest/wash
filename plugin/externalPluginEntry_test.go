@@ -106,6 +106,18 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_SupportsEmptyMethodsArray() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name:    "decodedEntry",
+		Methods: []interface{}{},
+	}
+
+	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	if suite.NoError(err) {
+		suite.Equal(decodedEntry.Name, entry.name())
+	}
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMethodResults() {
 	childEntry := map[string]interface{}{"name": "foo", "methods": []string{"read"}}
 	decodedEntry := decodedExternalPluginEntry{
