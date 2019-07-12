@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/getlantern/deepcopy"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
@@ -22,6 +20,16 @@ import (
 
 type externalPlugin interface {
 	supportedMethods() []string
+	// Entry#Schema's type-signature only makes sense for core plugins
+	// since core plugin schemas do not require any error-prone API
+	// calls. External plugin schemas can be prefetched (no error)
+	// or obtained by shelling out (error-prone). Since the latter
+	// operation is error prone, the type-signature of external plugin
+	// schemas will include an error object. Since this is something
+	// specific to external plugins, it makes sense to include the
+	// error-prone version of schema here, in the externalPlugin
+	// interface.
+	schema() (*EntrySchema, error)
 }
 
 type decodedCacheTTLs struct {
@@ -187,6 +195,11 @@ func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
 	return []*EntrySchema{}
 }
 
+func (e *externalPluginEntry) Schema() *EntrySchema {
+	// This version of Schema's only meant for core plugins.
+	return nil
+}
+
 const schemaFormat = `{
 	"type_id_one":{
 		"label": "one",
@@ -200,9 +213,9 @@ const schemaFormat = `{
 }
 `
 
-func (e *externalPluginEntry) Schema() *EntrySchema {
+func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 	if !e.implements("schema") {
-		return nil
+		return nil, nil
 	}
 	var graph *linkedhashmap.Map
 	if e.schemaGraphs != nil {
@@ -217,14 +230,14 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 		}
 		graph = g
 		// As a sanity check, ensure that the methods specified in the entry's schema
-		// match the methods specified in the entry instance. Log a warning if there
+		// match the methods specified in the entry instance. Return an error if there
 		// is a mismatch. Hopefully this should never happen.
 		es, _ := graph.Get(e.typeID)
 		schemaMethods := es.(entrySchema).Actions
 		instanceMethods := e.supportedMethods()
 		sort.Strings(schemaMethods)
 		sort.Strings(instanceMethods)
-		mismatchMsg := fmt.Sprintf(
+		mismatchErr := fmt.Errorf(
 			"%v (%v): the schema's supported methods (%v) don't match the instance's supported methods (%v)",
 			ID(e),
 			e.typeID,
@@ -232,13 +245,11 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 			strings.Join(instanceMethods, ", "),
 		)
 		if len(schemaMethods) != len(instanceMethods) {
-			log.Warnf(mismatchMsg)
-		} else {
-			for i := range instanceMethods {
-				if instanceMethods[i] != schemaMethods[i] {
-					log.Warnf(mismatchMsg)
-					break
-				}
+			return nil, mismatchErr
+		}
+		for i := range instanceMethods {
+			if instanceMethods[i] != schemaMethods[i] {
+				return nil, mismatchErr
 			}
 		}
 	} else {
@@ -252,18 +263,17 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 		defer cancelFunc()
 		inv, err := e.script.InvokeAndWait(ctx, "schema", e)
 		if err != nil {
-			msg := fmt.Sprintf(
+			err := fmt.Errorf(
 				"%v (%v): failed to retrieve the entry's schema: %v",
 				ID(e),
-				e.name(),
+				e.typeID,
 				err,
 			)
-			log.Warnf(msg)
-			return nil
+			return nil, err
 		}
 		graph, err = e.unmarshalSchemaGraph(inv.stdout.Bytes())
 		if err != nil {
-			msg := fmt.Sprintf(
+			err := fmt.Errorf(
 				"%v (%v): could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
 				ID(e),
 				e.typeID,
@@ -271,14 +281,13 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 				strings.TrimSpace(inv.stdout.String()),
 				schemaFormat,
 			)
-			log.Warnf(msg)
-			return nil
+			return nil, err
 		}
 	}
 	s := NewEntrySchema(e, "foo")
 	s.TypeID = e.typeID
 	s.graph = graph
-	return s
+	return s, nil
 }
 
 const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"],\"type_id\":\"type1\"},{\"name\":\"entry2\",\"methods\":[\"list\"],\"type_id\":\"type2\"}]"

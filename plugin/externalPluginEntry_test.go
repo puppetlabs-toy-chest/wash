@@ -268,7 +268,10 @@ func mockInvocation(stdout []byte) invocation {
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_DoesNotImplementSchema_ReturnsNil() {
 	entry := &externalPluginEntry{}
-	suite.Nil(entry.Schema())
+	s, err := entry.schema()
+	if suite.NoError(err) {
+		suite.Nil(s)
+	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchemaGraphWasProvided() {
@@ -283,7 +286,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchem
 	entry.SetTestID("/foo")
 
 	suite.Panics(
-		func() { entry.Schema() },
+		func() { _, _ = entry.schema() },
 		"e.Schema(): entry schemas were prefetched, but no schema graph was provided for /foo (type ID fooTypeID)",
 	)
 }
@@ -309,15 +312,15 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 	)
 	entry.schemaGraphs[entry.typeID] = graph
 
-	s := entry.Schema()
-	suite.Equal(entry.schemaGraphs[entry.typeID], s.graph)
-	// Make sure that Wash did not shell out to the plugin script
-	mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
+	s, err := entry.schema()
+	if suite.NoError(err) {
+		suite.Equal(entry.schemaGraphs[entry.typeID], s.graph)
+		// Make sure that Wash did not shell out to the plugin script
+		mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
+	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_LogsWarningIfSchemaAndInstanceMethodsDontMatch() {
-	// Unfortunately there (currently) isn't a framework for asserting log messages, so
-	// this test will be verified by inspection.
+func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfSchemaAndInstanceMethodsDontMatch() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -339,10 +342,11 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_LogsWarningIfSc
 	)
 	entry.schemaGraphs[entry.typeID] = graph
 
-	entry.Schema()
+	_, err := entry.schema()
+	suite.Regexp("schema.*methods.*exec.*list.*instance.*methods.*read.*schema", err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_InvocationErrors_ReturnsNil() {
+func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsErrorIfInvocationFails() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -354,12 +358,13 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_InvocationEr
 	}
 	entry.SetTestID("/foo")
 
-	err := fmt.Errorf("invocation failed")
-	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte{}), err).Once()
-	suite.Nil(entry.Schema())
+	invokeErr := fmt.Errorf("invocation failed")
+	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte{}), invokeErr).Once()
+	_, err := entry.schema()
+	suite.Regexp("foo.*fooTypeID.*invocation.*failed", err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_UnmarshallingErrors_ReturnsNil() {
+func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsErrorIfUnmarshallingFails() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -372,7 +377,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_Unmarshallin
 	entry.SetTestID("/foo")
 
 	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte("\"foo\"")), nil).Once()
-	suite.Nil(entry.Schema())
+	_, err := entry.schema()
+	suite.Regexp("/foo.*fooTypeID", err)
+	suite.Regexp(regexp.QuoteMeta(schemaFormat), err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulInvocation_ReturnsSchema() {
@@ -417,8 +424,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 }
 `
 	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte(stdout)), nil).Once()
-	schema := entry.Schema()
-	if suite.NotNil(schema) {
+	schema, err := entry.schema()
+	if suite.NoError(err) && suite.NotNil(schema) {
 		schemaJSON, err := json.Marshal(schema)
 		if suite.NoError(err) {
 			stdout = strings.ReplaceAll(stdout, "methods", "actions")

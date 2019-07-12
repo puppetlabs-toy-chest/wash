@@ -8,6 +8,15 @@ import (
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
+// Schema returns the entry's schema. It is needed by the API,
+// so plugin authors should ignore this.
+func Schema(e Entry) (*EntrySchema, error) {
+	if externalPlugin, ok := e.(externalPlugin); ok {
+		return externalPlugin.schema()
+	}
+	return e.Schema(), nil
+}
+
 type entrySchema struct {
 	// EntrySchemas are marshalled as JSON objects with key
 	// <type_id> => <schema>. Thus, there's no need to include
