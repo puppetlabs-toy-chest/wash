@@ -45,7 +45,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	suite.Regexp(regexp.MustCompile("stdout"), err)
 
 	// Test that Init properly decodes the root from stdout
-	stdout := "{\"type_id\":\"root\"}"
+	stdout := "{}"
 	mockInvokeAndWait([]byte(stdout), nil)
 	err = root.Init(nil)
 	if suite.NoError(err) {
@@ -54,7 +54,6 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 				EntryBase: NewEntry("foo"),
 				methods:   map[string]interface{}{"list": nil},
 				script:    root.script,
-				typeID:    "root",
 			},
 		}
 
@@ -74,7 +73,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithConfig() {
 		"init",
 		nil,
 		`{"key":["value"]}`,
-	).Return(mockInvocation([]byte("{\"type_id\":\"root\"}")), nil).Once()
+	).Return(mockInvocation([]byte("{}")), nil).Once()
 
 	suite.NoError(root.Init(map[string]interface{}{"key": []string{"value"}}))
 }

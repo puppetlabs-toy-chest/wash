@@ -75,23 +75,17 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 	suite.Regexp("methods", err)
 	decodedEntry.Methods = []interface{}{"list"}
 
-	_, err = decodedEntry.toExternalPluginEntry(false, false)
-	suite.Regexp("type.*ID", err)
-	decodedEntry.TypeID = "foo"
-
 	entry, err := decodedEntry.toExternalPluginEntry(false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(1, len(entry.methods))
 		suite.Contains(entry.methods, "list")
 		suite.Nil(entry.methods["list"])
-		suite.Equal("foo", entry.typeID)
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFields() {
 	decodedEntry := decodedExternalPluginEntry{
-		TypeID:  "foo",
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list", "stream"},
 	}
@@ -115,7 +109,6 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMethodResults() {
 	childEntry := map[string]interface{}{"name": "foo", "methods": []string{"read"}}
 	decodedEntry := decodedExternalPluginEntry{
-		TypeID:  "foo",
 		Name:    "decodedEntry",
 		Methods: []interface{}{[]interface{}{"list", []interface{}{childEntry}}, "read"},
 	}
@@ -133,7 +126,6 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 
 func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 	return decodedExternalPluginEntry{
-		TypeID:  "foo",
 		Name:    name,
 		Methods: []interface{}{"list"},
 	}
@@ -189,12 +181,20 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list"},
-		TypeID:  "foo",
 	}
 	entry, err := decodedEntry.toExternalPluginEntry(false, false)
 	if suite.NoError(err) {
 		suite.False(entry.schemaKnown)
 	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_ImplementsSchema_TypeIDNotIncluded() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name:    "decodedEntry",
+		Methods: []interface{}{"list", "schema"},
+	}
+	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_ImplementsSchema() {
@@ -215,6 +215,15 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 	}
 	_, err := decodedEntry.toExternalPluginEntry(true, false)
 	suite.Regexp("decodedEntry.*foo.*must.*implement.*schema", err)
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_ImplementsSchema_TypeIDNotIncluded() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name:    "decodedEntry",
+		Methods: []interface{}{"list", "schema"},
+	}
+	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_PrefetchesSchema() {
@@ -464,7 +473,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	// Test that List properly decodes the entries from stdout
 	stdout := "[" +
-		"{\"name\":\"foo\",\"methods\":[\"list\"],\"type_id\":\"foo\"}" +
+		"{\"name\":\"foo\",\"methods\":[\"list\"]}" +
 		"]"
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
@@ -475,7 +484,6 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 				EntryBase:    entryBase,
 				methods:      map[string]interface{}{"list": nil},
 				script:       entry.script,
-				typeID:       "foo",
 				schemaGraphs: entry.schemaGraphs,
 			},
 		}
@@ -529,9 +537,9 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 	// Test that List is invoked when
 	stdoutFn := func(content string) []byte {
 		return []byte(`
-[{"name": "foo", "type_id": "bar", "methods": [
+[{"name": "foo", "methods": [
 	["list", [
-		{"name": "bar", "type_id": "baz", "methods": [["read", "` + content + `"]]}
+		{"name": "bar", "methods": [["read", "` + content + `"]]}
 	]]
 ]}]`)
 	}
@@ -576,7 +584,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 	}
 
 	// Test that List is invoked when
-	stdout := `[{"name": "foo", "type_id": "bar", "methods": [
+	stdout := `[{"name": "foo", "methods": [
 								["list", {"name": "bar"}],
 								["read", [1, 2]]
 							]}]`
@@ -590,7 +598,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 
 		_, err = entries[0].(Parent).List(ctx)
 		suite.EqualError(err, `implementation of list must conform to `+
-			`[{"name":"entry1","methods":["list"],"type_id":"type1"},{"name":"entry2","methods":["list"],"type_id":"type2"}], not map[name:bar]`)
+			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
 
 		_, err = entries[0].(Readable).Open(ctx)
 		suite.EqualError(err, "Read method must provide a string, not [1 2]")
