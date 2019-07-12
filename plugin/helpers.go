@@ -13,14 +13,14 @@ var DefaultTimeout = 10 * time.Second
 
 /*
 Name returns the entry's name as it was passed into
-plugin.NewEntryBase. It is meant to be called by other
+plugin.NewEntry. It is meant to be called by other
 Wash packages. Plugin authors should use EntryBase#Name
 when writing their plugins.
 */
 func Name(e Entry) string {
 	// The reason we don't expose EntryBase#Name in the Entry
 	// interface is so plugin authors don't override it. It ensures
-	// that whatever name they pass into plugin.NewEntryBase is the
+	// that whatever name they pass into plugin.NewEntry is the
 	// name received by Wash.
 	return e.name()
 }

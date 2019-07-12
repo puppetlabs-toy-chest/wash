@@ -24,6 +24,7 @@ title= "Wash Documentation"
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
   * [Attributes/Metadata](#attributes/metadata)
+  * [Entry Schemas](#entry-schemas)
   * [➠External plugins]
   * [➠Core Plugins]
   * [➠Server API]
@@ -219,3 +220,41 @@ To make `wash find`'s filtering less tedious and better performing, entries can 
 NOTE: _All_ attributes are optional, so set the ones that you think make sense. For example, if the `mode` or `size` attributes don't make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the `meta` attribute when you can to take advantage of metadata filtering.
 
 NOTE: We plan on adding more attributes depending on user feedback (e.g. like `state` and `labels`). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue so we can consider adding that property as an attribute (and as a corresponding `wash find` primary).
+
+### Entry Schemas
+
+Entry schemas are a type-level overview of your plugin's hierarchy. They enumerate the kinds of things your plugins can contain, including what those things look like. For example, a Docker container's schema would answer questions like:
+
+* Can I create multiple Docker containers?
+* What's in a Docker container's metadata?
+* What Wash actions does a Docker container support?
+* If I `ls` a Docker container, what do I get?
+
+These questions can be generalized to any Wash entry.
+
+Entry schemas are a useful way to document your plugin's hierarchy without having to maintain a README. Users can view your hierarchy via the `stree` command. For example, if you invoke `stree docker` in a Wash shell (try it!), you should see something like
+
+```
+docker
+├── containers
+│   └── [container]
+│       ├── [fs]
+│       │   ├── [file]
+│       │   └── [dir]
+│       │       ├── [dir]
+│       │       └── [file]
+│       ├── log
+│       └── metadata.json
+└── volumes
+    └── [volume]
+        ├── [file]
+        └── [dir]
+            ├── [dir]
+            └── [file]
+```
+
+(Your output may differ depending on the state of the Wash project, but it should be similarly structured).
+
+Every node must have a label. The `[]` are printed for non-singleton nodes; they imply multiple instances of this thing. For example, `[container]` means that there will be multiple `container` instances under the `containers` directory. Similarly, `containers` means that there will be only one `containers` directory (i.e. that `containers` is a singleton). Singleton entries should typically use the entry's name as the label.
+
+Entry schemas are also useful for optimizing `find`, especially when `find` is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like `find aws -meta '.tags[?]' .key termination_date` would cause `find` to recurse into every entry in the `aws` plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, `find` would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.

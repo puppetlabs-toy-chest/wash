@@ -9,6 +9,7 @@ title= "External Plugins"
 - [metadata](#metadata)
 - [stream](#stream)
 - [exec](#exec)
+- [schema](#schema)
 - [Errors](#Errors)
 - [Aside (optional)](#Aside-optional)
 - [Bash Example](#Bash-Example)
@@ -45,7 +46,7 @@ where
 
 The remaining sections describe all the possible Wash methods that can be passed-in, including their calling and error conventions, and the expected results.
 
-NOTE: Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.
+**NOTE:** Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.
 
 ## init
 The `init` method is special. It is invoked as `<plugin_script> init <config>`, and it is invoked only once, when the external plugin is loaded. `<config>` is JSON containing any config supplied to Wash under the plugin's key. Given a Wash config file (`wash.yaml`)
@@ -188,6 +189,8 @@ Below is an example that includes pre-fetched method results for a static direct
 
 `list` adopts the standard error convention described in the [Errors](#errors) section.
 
+**NOTE:** If entry schemas are `on`, then every entry returned by list must also include a `type_id` key.
+
 ## read
 `read` is invoked as `<plugin_script> read <path> <state>`. When `read` is invoked, the script must output the entry's content.
 
@@ -205,7 +208,7 @@ Below is an example that includes pre-fetched method results for a static direct
 
 `metadata` adopts the standard error convention described in the [Errors](#errors) section.
 
-NOTE: Only implement `metadata` if there is additional information about your entry that is not provided by the `meta` attribute.
+**NOTE:** Only implement `metadata` if there is additional information about your entry that is not provided by the `meta` attribute.
 
 ## stream
 `stream` is invoked as `<plugin_script> stream <path> <state>`. When `stream` is invoked, the first line of the script's output must contain the `200` header. This header tells Wash that the entry's data is about to the streamed. After it outputs the header, the script must then stream the entry's data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request.
@@ -218,6 +221,82 @@ NOTE: Only implement `metadata` if there is additional information about your en
 When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
 
 Because `exec` effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
+
+## schema
+**NOTE:** [Entry schemas](/wash/docs/#entry-schemas) are optional. If you are writing a simple plugin with only a few kinds of entries, then please feel free to ignore this section.
+
+`schema` is invoked as `<plugin_script> schema <path> <state>`. When `schema` is invoked, the script must output a JSON object representing the entry's schema. If the entry's a parent (i.e. if it implements `list`), the descendants' schemas must also be included.
+
+The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_id>` is the unique type-identifier of a specific kind of entry (typically the fully-qualified class-name) while `<schema>` is the entry's schema. Below is an example of acceptable `schema` output, including all the possible keys that one can specify for `<schema>`. Note that the schema shown here belongs to a `volume.FS` kind of entry (i.e. an entry that enumerates a VMs' filesystem).
+
+```json
+{
+  "volume.FS": {
+      "label": "fs",
+      "singleton": false,
+      "methods": [
+          "list"
+      ],
+      "meta_attribute_schema": null,
+      "metadata_schema": null,
+      "children": [
+          "volume.dir",
+          "volume.file"
+      ]
+  },
+  "volume.dir": {
+      "label": "dir",
+      "singleton": false,
+      "methods": [
+          "list"
+      ],
+      "meta_attribute_schema": null,
+      "metadata_schema": null,
+      "children": [
+          "volume.dir",
+          "volume.file"
+      ]
+  },
+  "volume.file": {
+      "label": "file",
+      "singleton": false,
+      "methods": [
+          "read",
+          "stream"
+      ],
+      "meta_attribute_schema": null,
+      "metadata_schema": null,
+      "children": null
+  }
+}
+```
+
+Note that `methods` here is strictly an array of strings.
+
+The `meta_attribute_schema`/`metadata_schema` keys accept serialized JSON schemas (which is why they were ommitted for brevity). An example of a valid `meta_attribute_schema`/`metadata_schema` value is shown below:
+
+```
+{
+  "patternProperties": {
+    ".*": {
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
+```
+
+(This JSON schema corresponds to a JSON object that can include any property of any type).
+
+Note that `meta_attribute_schema`/`metadata_schema` must specify a JSON object's schema (because an entry's metadata is a JSON object).
+
+`schema` adopts the standard error convention described in the [Errors](#errors) section.
+
+**NOTE:** Entry schemas are an `on/off` feature. If the plugin root implements `schema`, then entry schemas are `on`. Otherwise, entry schemas are `off`. If entry schemas are `on`, then Wash will require all subsequent entries to implement `schema` and to include a `type_id` key (including the root). Wash will return an error if both these conditions aren't met. If entry schemas are `off`, however, then Wash will return an error if any subsequent entry implements `schema`. The latter restriction's necessary to ensure consistent behavior across your plugin.
+
+**NOTE:** Wash supports entry-schema prefetching. However, only the root is allowed to do this. Thus, if any other entry attempts to prefetch its schema, then Wash will return an error. There are two reasons for this limitation. One, entry schemas are type-level info vs. instance-level info, so they should never change. For example, it would be odd if, in a given Wash session, the AWS plugin's `ec2/instances` directory suddenly included database entries. Two, every `parent` ("listable" entry) includes its descendant's schema. Since everything's a descendant of the root, the root's schema includes the schema of all other entries. Thus, knowledge of the root's schema determines the schema of everything else, so there is no need (and reason) for subsequent entries to prefetch their descendant's schemas.
+
+**NOTE:** Since schemas never change, you might wonder why we support shelling out for an entry's schema. The reason we do is to facilitate external plugin development. Otherwise, an external plugin author would have to restart the Wash server whenever they wanted to test any schema-level changes to their plugin. Shelling out avoids the latter issue because it (should) always return the freshest copy of a given entry's schema. However shelling out can be expensive, especially when your user has multiple external plugins loaded in a single Wash session. Thus, we recommend that you take advantage of entry-schema prefetching once you've finished testing your external plugin.
 
 ## Errors
 All errors are printed to `stderr`. A method invocation is said to have errored when the plugin script returns a non-zero exit code. In that case, Wash wraps all of `stderr` into an error object, then documents that error in the process' activity and the server logs.

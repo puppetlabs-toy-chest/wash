@@ -51,6 +51,7 @@
 <li><a href="#metadata">metadata</a></li>
 <li><a href="#stream">stream</a></li>
 <li><a href="#exec">exec</a></li>
+<li><a href="#schema">schema</a></li>
 <li><a href="#Errors">Errors</a></li>
 <li><a href="#Aside-optional">Aside (optional)</a></li>
 <li><a href="#Bash-Example">Bash Example</a></li>
@@ -102,7 +103,7 @@
 
 <p>The remaining sections describe all the possible Wash methods that can be passed-in, including their calling and error conventions, and the expected results.</p>
 
-<p>NOTE: Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.</p>
+<p><strong>NOTE:</strong> Plugin script invocations run in their own process group (pgrp). Wash will send a SIGTERM signal to the pgrp on a cancelled API/filesystem request. If after five seconds the invocation process has not terminated, then Wash will send a SIGKILL signal.</p>
 
 <h2 id="init">init</h2>
 
@@ -346,6 +347,8 @@ myplugin:
 
 <p><code>list</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
+<p><strong>NOTE:</strong> If entry schemas are <code>on</code>, then every entry returned by list must also include a <code>type_id</code> key.</p>
+
 <h2 id="read">read</h2>
 
 <p><code>read</code> is invoked as <code>&lt;plugin_script&gt; read &lt;path&gt; &lt;state&gt;</code>. When <code>read</code> is invoked, the script must output the entry&rsquo;s content.</p>
@@ -371,7 +374,7 @@ myplugin:
 </div>
 <p><code>metadata</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
-<p>NOTE: Only implement <code>metadata</code> if there is additional information about your entry that is not provided by the <code>meta</code> attribute.</p>
+<p><strong>NOTE:</strong> Only implement <code>metadata</code> if there is additional information about your entry that is not provided by the <code>meta</code> attribute.</p>
 
 <h2 id="stream">stream</h2>
 
@@ -386,6 +389,134 @@ myplugin:
 <p>When <code>exec</code> is invoked, the plugin script&rsquo;s stdout and stderr must be connected to <code>cmd</code>&rsquo;s stdout and stderr, and it must exit the <code>exec</code> invocation with <code>cmd</code>&rsquo;s exit code.</p>
 
 <p>Because <code>exec</code> effectively hijacks <code>&lt;plugin_script&gt; exec</code> with <code>&lt;cmd&gt; &lt;args...&gt;</code>, there is currently no way for external plugins to report any <code>exec</code> errors to Wash. Thus, if <code>&lt;plugin_script&gt; exec</code> fails to exec <code>&lt;cmd&gt; &lt;args...&gt;</code> (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of <code>&lt;cmd&gt; &lt;args...&gt;</code>&rsquo;s output when running <code>wash exec</code>.</p>
+
+<h2 id="schema">schema</h2>
+
+<p><strong>NOTE:</strong> <a href="/wash/docs/#entry-schemas">Entry schemas</a> are optional. If you are writing a simple plugin with only a few kinds of entries, then please feel free to ignore this section.</p>
+
+<p><code>schema</code> is invoked as <code>&lt;plugin_script&gt; schema &lt;path&gt; &lt;state&gt;</code>. When <code>schema</code> is invoked, the script must output a JSON object representing the entry&rsquo;s schema. If the entry&rsquo;s a parent (i.e. if it implements <code>list</code>), the descendants&rsquo; schemas must also be included.</p>
+
+<p>The outputted JSON object is formatted as <code>&lt;type_id&gt; =&gt; &lt;schema&gt;</code>, where <code>&lt;type_id&gt;</code> is the unique type-identifier of a specific kind of entry (typically the fully-qualified class-name) while <code>&lt;schema&gt;</code> is the entry&rsquo;s schema. Below is an example of acceptable <code>schema</code> output, including all the possible keys that one can specify for <code>&lt;schema&gt;</code>. Note that the schema shown here belongs to a <code>volume.FS</code> kind of entry (i.e. an entry that enumerates a VMs&rsquo; filesystem).</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">17
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">18
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">19
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">20
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">21
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">22
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">23
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">24
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">25
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">26
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">27
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">28
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">29
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">30
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">31
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">32
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">33
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">34
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">35
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">36
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">37
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">38
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">39
+</span></code></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-json" data-lang="json">{
+  &#34;volume.FS&#34;: {
+      &#34;label&#34;: <span style="color:#a31515">&#34;fs&#34;</span>,
+      &#34;singleton&#34;: <span style="color:#00f">false</span>,
+      &#34;methods&#34;: [
+          <span style="color:#a31515">&#34;list&#34;</span>
+      ],
+      &#34;meta_attribute_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;metadata_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;children&#34;: [
+          <span style="color:#a31515">&#34;volume.dir&#34;</span>,
+          <span style="color:#a31515">&#34;volume.file&#34;</span>
+      ]
+  },
+  &#34;volume.dir&#34;: {
+      &#34;label&#34;: <span style="color:#a31515">&#34;dir&#34;</span>,
+      &#34;singleton&#34;: <span style="color:#00f">false</span>,
+      &#34;methods&#34;: [
+          <span style="color:#a31515">&#34;list&#34;</span>
+      ],
+      &#34;meta_attribute_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;metadata_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;children&#34;: [
+          <span style="color:#a31515">&#34;volume.dir&#34;</span>,
+          <span style="color:#a31515">&#34;volume.file&#34;</span>
+      ]
+  },
+  &#34;volume.file&#34;: {
+      &#34;label&#34;: <span style="color:#a31515">&#34;file&#34;</span>,
+      &#34;singleton&#34;: <span style="color:#00f">false</span>,
+      &#34;methods&#34;: [
+          <span style="color:#a31515">&#34;read&#34;</span>,
+          <span style="color:#a31515">&#34;stream&#34;</span>
+      ],
+      &#34;meta_attribute_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;metadata_schema&#34;: <span style="color:#00f">null</span>,
+      &#34;children&#34;: <span style="color:#00f">null</span>
+  }
+}</code></pre></td></tr></table>
+</div>
+</div>
+<p>Note that <code>methods</code> here is strictly an array of strings.</p>
+
+<p>The <code>meta_attribute_schema</code>/<code>metadata_schema</code> keys accept serialized JSON schemas (which is why they were ommitted for brevity). An example of a valid <code>meta_attribute_schema</code>/<code>metadata_schema</code> value is shown below:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">8
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">{
+  &#34;patternProperties&#34;: {
+    &#34;.*&#34;: {
+      &#34;type&#34;: &#34;string&#34;
+    }
+  },
+  &#34;type&#34;: &#34;object&#34;
+}</pre></td></tr></table>
+</div>
+</div>
+<p>(This JSON schema corresponds to a JSON object that can include any property of any type).</p>
+
+<p>Note that <code>meta_attribute_schema</code>/<code>metadata_schema</code> must specify a JSON object&rsquo;s schema (because an entry&rsquo;s metadata is a JSON object).</p>
+
+<p><code>schema</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
+
+<p><strong>NOTE:</strong> Entry schemas are an <code>on/off</code> feature. If the plugin root implements <code>schema</code>, then entry schemas are <code>on</code>. Otherwise, entry schemas are <code>off</code>. If entry schemas are <code>on</code>, then Wash will require all subsequent entries to implement <code>schema</code> and to include a <code>type_id</code> key (including the root). Wash will return an error if both these conditions aren&rsquo;t met. If entry schemas are <code>off</code>, however, then Wash will return an error if any subsequent entry implements <code>schema</code>. The latter restriction&rsquo;s necessary to ensure consistent behavior across your plugin.</p>
+
+<p><strong>NOTE:</strong> Wash supports entry-schema prefetching. However, only the root is allowed to do this. Thus, if any other entry attempts to prefetch its schema, then Wash will return an error. There are two reasons for this limitation. One, entry schemas are type-level info vs. instance-level info, so they should never change. For example, it would be odd if, in a given Wash session, the AWS plugin&rsquo;s <code>ec2/instances</code> directory suddenly included database entries. Two, every <code>parent</code> (&ldquo;listable&rdquo; entry) includes its descendant&rsquo;s schema. Since everything&rsquo;s a descendant of the root, the root&rsquo;s schema includes the schema of all other entries. Thus, knowledge of the root&rsquo;s schema determines the schema of everything else, so there is no need (and reason) for subsequent entries to prefetch their descendant&rsquo;s schemas.</p>
+
+<p><strong>NOTE:</strong> Since schemas never change, you might wonder why we support shelling out for an entry&rsquo;s schema. The reason we do is to facilitate external plugin development. Otherwise, an external plugin author would have to restart the Wash server whenever they wanted to test any schema-level changes to their plugin. Shelling out avoids the latter issue because it (should) always return the freshest copy of a given entry&rsquo;s schema. However shelling out can be expensive, especially when your user has multiple external plugins loaded in a single Wash session. Thus, we recommend that you take advantage of entry-schema prefetching once you&rsquo;ve finished testing your external plugin.</p>
 
 <h2 id="errors">Errors</h2>
 

@@ -10,15 +10,16 @@ The [plugin] package defines a set of interfaces that a plugin can implement to 
 - [Streamable](https://godoc.org/github.com/puppetlabs/wash/plugin#Streamable) can provide a stream of updates on an entry. That may be events, log entries, or new writes to a file.
 - [Execable](https://godoc.org/github.com/puppetlabs/wash/plugin#Execable) can execute an arbitrary command on a remote system. This is currently assumed to be a POSIX system, but in the future will be extended to differentiate between systems so we can use different commands as needed.
 
-Each entry must implement [plugin.Entry](https://godoc.org/github.com/puppetlabs/wash/plugin#Entry), which is a sealed interface that can only be satisfied by [plugin.NewEntryBase](https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntryBase).
+Each entry must implement [plugin.Entry](https://godoc.org/github.com/puppetlabs/wash/plugin#Entry), which is a sealed interface that can only be satisfied by [plugin.NewEntry](https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntry).
 
-Each entry that implements the `Parent` interface must provide a schema for its children. This is commonly done by giving each child entry a function that constructs a canonical version of the entry object where only the `EntryBase` field is initialized. Instances of the entry can then build on that canonical version by giving it a name and initializing other fields. If there will only ever be one instance of the entry type - such as a named directory that's a container for a specific type of thing like EC2 instances - then use the [IsSingleton()](https://godoc.org/github.com/puppetlabs/wash/plugin#EntryBase.IsSingleton) method when constructing the schema.
-
-Use [activity.Record](https://godoc.org/github.com/puppetlabs/wash/activity) for all plugin-related logging. Each plugin method that Wash calls is passed a `context.Context` object that is initialized with a Journal ID for use with `activity.Record`.
+Each entry that implements the `Parent` interface must provide a schema for its children. Use [activity.Record](https://godoc.org/github.com/puppetlabs/wash/activity) for all plugin-related logging. Each plugin method that Wash calls is passed a `context.Context` object that is initialized with a Journal ID for use with `activity.Record`.
 
 TIP: The [transport] package contains useful helpers for common methods of executing commands on a remote system. Currently it only supports SSH.
 
 TIP: The [volume] package contains useful helpers that can enumerate a given volume's directories and files.
+
+TIP: If there will only ever be one instance of the entry type - such as a named directory that's a container for a specific type of thing like EC2 instances - then use the [IsSingleton()](https://godoc.org/github.com/puppetlabs/wash/plugin#EntrySchema.IsSingleton) method when constructing the schema.
+
 
 ## How to create a new core plugin
 

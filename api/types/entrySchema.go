@@ -12,6 +12,8 @@ import (
 
 // EntrySchema describes an entry's schema, which
 // is what's returned by the /fs/schema endpoint.
+//
+// swagger:response
 type EntrySchema struct {
 	plugin.EntrySchema
 	children map[string]*EntrySchema

@@ -32,41 +32,6 @@ type entrySchema struct {
 
 // EntrySchema represents an entry's schema. Use plugin.NewEntrySchema
 // to create instances of these objects.
-//
-// EntrySchema's a useful way to document your plugin's hierarchy. Users
-// can view your hierarchy via the stree command. For example, if you
-// invoke `stree docker` in a Wash shell (try it!), you should see something
-// like
-//
-// docker
-// ├── containers
-// │   └── [container]
-// │       ├── log
-// │       ├── metadata.json
-// │       └── fs
-// │           ├── [dir]
-// │           │   ├── [dir]
-// │           │   └── [file]
-// │           └── [file]
-// └── volumes
-//     └── [volume]
-//         ├── [dir]
-//         │   ├── [dir]
-//         │   └── [file]
-// 		└── [file]
-//
-// (Your output may differ depending on the state of the Wash project, but it
-// should be similarly structured).
-//
-// Every node must have a label. The "[]" are printed for non-singleton nodes;
-// they imply multiple instances of this thing. For example, "[container]" means
-// that there will be multiple "container" instances under the "containers" directory
-// ("container" is the label that was passed into NewEntrySchema). Similarly, "containers"
-// means that there will be only one "containers" directory (i.e. that "containers" is a
-// singleton). You can use EntrySchema#IsSingleton() to mark your entry as a singleton.
-//
-// TODO: Talk about how metadata schema's used to optimize `wash find` once that
-// is added.
 type EntrySchema struct {
 	// This pattern's a nice way of making JSON marshalling/unmarshalling
 	// easy without having to export these fields via the godocs. The latter
@@ -83,9 +48,6 @@ type EntrySchema struct {
 }
 
 // NewEntrySchema returns a new EntrySchema object with the specified label.
-//
-// NOTE: If your entry's a singleton, then the label should match the entry's
-// name, i.e. the name that's passed into plugin.NewEntry.
 func NewEntrySchema(e Entry, label string) *EntrySchema {
 	if len(label) == 0 {
 		panic("plugin.NewEntrySchema called with an empty label")
