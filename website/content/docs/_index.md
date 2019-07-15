@@ -238,19 +238,19 @@ Entry schemas are a useful way to document your plugin's hierarchy without havin
 docker
 ├── containers
 │   └── [container]
-│       ├── [fs]
-│       │   ├── [file]
-│       │   └── [dir]
-│       │       ├── [dir]
-│       │       └── [file]
 │       ├── log
-│       └── metadata.json
+│       ├── metadata.json
+│       └── fs
+│           ├── [dir]
+│           │   ├── [dir]
+│           │   └── [file]
+│           └── [file]
 └── volumes
     └── [volume]
-        ├── [file]
-        └── [dir]
-            ├── [dir]
-            └── [file]
+        ├── [dir]
+        │   ├── [dir]
+        │   └── [file]
+        └── [file]
 ```
 
 (Your output may differ depending on the state of the Wash project, but it should be similarly structured).

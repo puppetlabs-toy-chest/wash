@@ -53,7 +53,9 @@
 
 <p>Each entry must implement <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Entry">plugin.Entry</a>, which is a sealed interface that can only be satisfied by <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntry">plugin.NewEntry</a>.</p>
 
-<p>Each entry that implements the <code>Parent</code> interface must provide a schema for its children. Use <a href="https://godoc.org/github.com/puppetlabs/wash/activity">activity.Record</a> for all plugin-related logging. Each plugin method that Wash calls is passed a <code>context.Context</code> object that is initialized with a Journal ID for use with <code>activity.Record</code>.</p>
+<p>Each entry that implements the <code>Parent</code> interface must provide a schema for its children.</p>
+
+<p>Use <a href="https://godoc.org/github.com/puppetlabs/wash/activity">activity.Record</a> for all plugin-related logging. Each plugin method that Wash calls is passed a <code>context.Context</code> object that is initialized with a Journal ID for use with <code>activity.Record</code>.</p>
 
 <p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/transport">transport</a> package contains useful helpers for common methods of executing commands on a remote system. Currently it only supports SSH.</p>
 

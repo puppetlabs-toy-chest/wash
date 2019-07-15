@@ -359,19 +359,19 @@ Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {I
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker
 ├── containers
 │   └── [container]
-│       ├── [fs]
-│       │   ├── [file]
-│       │   └── [dir]
-│       │       ├── [dir]
-│       │       └── [file]
 │       ├── log
-│       └── metadata.json
+│       ├── metadata.json
+│       └── fs
+│           ├── [dir]
+│           │   ├── [dir]
+│           │   └── [file]
+│           └── [file]
 └── volumes
     └── [volume]
-        ├── [file]
-        └── [dir]
-            ├── [dir]
-            └── [file]</pre></td></tr></table>
+        ├── [dir]
+        │   ├── [dir]
+        │   └── [file]
+        └── [file]</pre></td></tr></table>
 </div>
 </div>
 <p>(Your output may differ depending on the state of the Wash project, but it should be similarly structured).</p>
