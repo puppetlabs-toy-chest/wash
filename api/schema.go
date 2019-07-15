@@ -5,9 +5,34 @@ import (
 	"fmt"
 	"net/http"
 
+	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 )
 
+// swagger:response
+//nolint:deadcode,unused
+type schemaResponse struct {
+	// in: body
+	Schemas map[string]apitypes.EntrySchema
+}
+
+// swagger:route GET /fs/schema schema entrySchema
+//
+// Schema for an entry at path
+//
+// Returns a map of Type IDs to EntrySchema objects describing the plugin schema starting at the
+// given path. The first key in the map corresponds to the path's schema.
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http
+//
+//     Responses:
+//       200: schemaResponse
+//       400: errorResp
+//       404: errorResp
+//       500: errorResp
 var schemaHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
