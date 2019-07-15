@@ -583,6 +583,12 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 				requiredTypeIDs[child] = true
 			}
 		}
+		if node.MetaAttributeSchema != nil && node.MetaAttributeSchema.Type.Type != "object" {
+			return fmt.Errorf("invalid value for the meta attribute schema: expected a JSON object schema but got %v", node.MetaAttributeSchema.Type.Type)
+		}
+		if node.MetadataSchema != nil && node.MetadataSchema.Type.Type != "object" {
+			return fmt.Errorf("invalid value for the metadata schema: expected a JSON object schema but got %v", node.MetadataSchema.Type.Type)
+		}
 
 		// All required fields are present, so put node.entrySchema in the graph.
 		// We don't put node itself in because doing so would marshal its "Methods"
