@@ -68,7 +68,7 @@ func (suite *EntrySchemaTestSuite) findNestedChild(s *EntrySchema, segments ...s
 	child := s
 	for _, segment := range segments {
 		visitedSegments = append(visitedSegments, segment)
-		child = child.children[segment]
+		child = child.GetChild(segment)
 		if child == nil {
 			suite.T().Fatal(fmt.Sprintf("Child %v does not exist", strings.Join(visitedSegments, "/")))
 		}

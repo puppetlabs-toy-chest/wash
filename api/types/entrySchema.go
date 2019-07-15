@@ -16,7 +16,7 @@ import (
 // swagger:response
 type EntrySchema struct {
 	plugin.EntrySchema
-	children map[string]*EntrySchema
+	children []*EntrySchema
 	// graph is an ordered map of <TypeID> => <EntrySchema>. We store it to make
 	// MarshalJSON's implementation easier.
 	//
@@ -79,10 +79,9 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 	// Fill-in the children map
 	s.graph.Each(func(key interface{}, value interface{}) {
 		schema := value.(*EntrySchema)
-		schema.children = make(map[string]*EntrySchema)
 		for _, childTypeID := range schema.EntrySchema.Children {
 			rawChild, _ := s.graph.Get(childTypeID)
-			schema.children[childTypeID] = rawChild.(*EntrySchema)
+			schema.children = append(schema.children, rawChild.(*EntrySchema))
 		}
 	})
 
@@ -147,17 +146,24 @@ func (s *EntrySchema) SetMetadataSchema(schema *plugin.JSONSchema) {
 }
 
 // Children returns the entry's child schemas
-func (s *EntrySchema) Children() map[string]*EntrySchema {
+func (s *EntrySchema) Children() []*EntrySchema {
 	return s.children
+}
+
+// GetChild returns the child schema corresponding to typeID
+func (s *EntrySchema) GetChild(typeID string) *EntrySchema {
+	for _, child := range s.Children() {
+		if child.TypeID() == typeID {
+			return child
+		}
+	}
+	return nil
 }
 
 // SetChildren sets the entry's children. This should only be called by
 // the tests.
 func (s *EntrySchema) SetChildren(children []*EntrySchema) *EntrySchema {
-	s.children = make(map[string]*EntrySchema)
-	for _, child := range children {
-		s.children[child.TypeID()] = child
-	}
+	s.children = children
 	return s
 }
 

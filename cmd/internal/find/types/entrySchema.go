@@ -22,13 +22,14 @@ func Prune(s *EntrySchema, p EntrySchemaPredicate, opts Options) *EntrySchema {
 			return
 		}
 		visited[s.TypeID()] = true
+		var childrenToKeep []*EntrySchema
 		for _, child := range s.Children() {
-			if !keep[child.TypeID()] {
-				delete(s.Children(), child.TypeID())
-			} else {
+			if keep[child.TypeID()] {
 				prune(child)
+				childrenToKeep = append(childrenToKeep, child)
 			}
 		}
+		s.SetChildren(childrenToKeep)
 	}
 	prune(s)
 
