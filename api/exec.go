@@ -27,6 +27,20 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 	}
 }
 
+// swagger:parameters executeCommand
+//nolint:deadcode,unused
+type execBody struct {
+	// in: body
+	Body apitypes.ExecBody
+}
+
+// swagger:response
+//nolint:deadcode,unused
+type execResponse struct {
+	// in: body
+	Packets []apitypes.ExecPacket
+}
+
 // swagger:route POST /fs/exec exec executeCommand
 //
 // Execute a command on a remote system
@@ -42,7 +56,7 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 //     Schemes: http
 //
 //     Responses:
-//       200: ExecPacket
+//       200: execResponse
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp

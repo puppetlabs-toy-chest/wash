@@ -50,33 +50,10 @@
         "operationId": "executeCommand",
         "parameters": [
           {
-            "x-go-name": "Cmd",
-            "description": "Name of the executable to invoke",
-            "name": "cmd",
+            "name": "Body",
             "in": "body",
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "x-go-name": "Args",
-            "description": "Array of arguments to the executable",
-            "name": "args",
-            "in": "body",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          },
-          {
-            "x-go-name": "Opts",
-            "description": "Additional execution options",
-            "name": "opts",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/ExecOptions"
+              "$ref": "#/definitions/ExecBody"
             }
           },
           {
@@ -88,7 +65,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/ExecPacket"
+            "$ref": "#/responses/execResponse"
           },
           "400": {
             "$ref": "#/responses/errorResp"
@@ -249,6 +226,36 @@
         }
       }
     },
+    "/fs/schema": {
+      "get": {
+        "description": "Returns a map of Type IDs to EntrySchema objects describing the plugin schema starting at the\ngiven path. The first key in the map corresponds to the path's schema.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "schema"
+        ],
+        "summary": "Schema for an entry at path",
+        "operationId": "entrySchema",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/schemaResponse"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
     "/fs/stream": {
       "get": {
         "description": "Get a stream of new updates to the specified entry.",
@@ -287,7 +294,7 @@
     },
     "/history": {
       "get": {
-        "description": "Get a list of commands that have been run via Wash and when they were run.",
+        "description": "Get a list of commands that have been run via 'wash' and when they were run.",
         "produces": [
           "application/json"
         ],
@@ -325,7 +332,7 @@
     },
     "/history/{id}": {
       "get": {
-        "description": "Get the logs related to a particular command run via Wash, requested by\nindex within its activity history.",
+        "description": "Get the logs related to a particular command run via 'wash', requested by\nindex within its activity history.",
         "produces": [
           "application/json",
           "application/octet-stream"
@@ -366,7 +373,7 @@
   "definitions": {
     "Activity": {
       "type": "object",
-      "title": "Activity describes an activity from Wash's `activity.History`.",
+      "title": "Activity describes an activity from wash's `activity.History`.",
       "properties": {
         "description": {
           "type": "string",
@@ -379,6 +386,15 @@
         }
       },
       "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "Definitions": {
+      "description": "http://json-schema.org/latest/json-schema-validation.html#rfc.section.5.26\nRFC draft-wright-json-schema-validation-00, section 5.26",
+      "type": "object",
+      "title": "Definitions hold schema definitions.",
+      "additionalProperties": {
+        "$ref": "#/definitions/Type"
+      },
+      "x-go-package": "github.com/ekinanp/jsonschema"
     },
     "Entry": {
       "type": "object",
@@ -405,6 +421,10 @@
         "path": {
           "type": "string",
           "x-go-name": "Path"
+        },
+        "type_id": {
+          "type": "string",
+          "x-go-name": "TypeID"
         }
       },
       "x-go-package": "github.com/puppetlabs/wash/api/types"
@@ -412,22 +432,41 @@
     "EntryAttributes": {
       "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCtime(ctime).\nSetMtime(mtime).\nSetMeta(meta)\nentry.SetAttributes(attr)",
       "type": "object",
-      "title": "EntryAttributes represents an entry's attributes. We use a struct\ninstead of a map for efficient memory allocation/deallocation,\nwhich is needed to make Group#List fast.",
+      "title": "EntryAttributes represents an entry's attributes. We use a struct\ninstead of a map for efficient memory allocation/deallocation,\nwhich is needed to make Parent#List fast.",
       "x-go-package": "github.com/puppetlabs/wash/plugin"
     },
-    "JSONObject": {
-      "description": "JSONObject represents the entry's metadata\nas returned by Entry#Metadata.",
+    "EntrySchema": {
+      "description": "EntrySchema describes an entry's schema, which\nis what's returned by the /fs/schema endpoint.",
       "type": "object",
-      "additionalProperties": {
-        "type": "object"
-      },
-      "x-go-package": "github.com/puppetlabs/wash/plugin"
-    },
-    "ErrorFields": {
-      "description": "ErrorFields represents the fields of an ErrorObj",
-      "type": "object",
-      "additionalProperties": {
-        "type": "object"
+      "properties": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Actions"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Children"
+        },
+        "label": {
+          "type": "string",
+          "x-go-name": "Label"
+        },
+        "meta_attribute_schema": {
+          "$ref": "#/definitions/Schema"
+        },
+        "metadata_schema": {
+          "$ref": "#/definitions/Schema"
+        },
+        "singleton": {
+          "type": "boolean",
+          "x-go-name": "Singleton"
+        }
       },
       "x-go-package": "github.com/puppetlabs/wash/api/types"
     },
@@ -436,7 +475,12 @@
       "type": "object",
       "properties": {
         "fields": {
-          "$ref": "#/definitions/ErrorFields"
+          "description": "Additional structured data that may be useful in responding to the error.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Fields"
         },
         "kind": {
           "description": "Identifies the kind of error.",
@@ -447,6 +491,29 @@
           "description": "A description of what failed.",
           "type": "string",
           "x-go-name": "Msg"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "ExecBody": {
+      "description": "ExecBody encapsulates the payload for a call to a plugin's Exec function",
+      "type": "object",
+      "properties": {
+        "args": {
+          "description": "Array of arguments to the executable",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Args"
+        },
+        "cmd": {
+          "description": "Name of the executable to invoke",
+          "type": "string",
+          "x-go-name": "Cmd"
+        },
+        "opts": {
+          "$ref": "#/definitions/ExecOptions"
         }
       },
       "x-go-package": "github.com/puppetlabs/wash/api/types"
@@ -464,16 +531,419 @@
       },
       "x-go-package": "github.com/puppetlabs/wash/api/types"
     },
-    "ExecPacketType": {
-      "type": "string",
-      "title": "ExecPacketType identifies the packet type.",
-      "x-go-package": "github.com/puppetlabs/wash/plugin"
+    "ExecPacket": {
+      "description": "If TypeField is Stdout or Stderr, Data will be a string.\nIf TypeField is Exitcode, Data will be an int (or float64 if deserialized from JSON).",
+      "type": "object",
+      "title": "ExecPacket is a single packet of results from an exec.",
+      "properties": {
+        "data": {
+          "type": "object",
+          "x-go-name": "Data"
+        },
+        "error": {
+          "$ref": "#/definitions/ErrorObj"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Timestamp"
+        },
+        "type": {
+          "type": "string",
+          "x-go-name": "TypeField"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/api/types"
+    },
+    "Map": {
+      "description": "Map holds the elements in a red-black tree",
+      "type": "object",
+      "x-go-package": "github.com/emirpasic/gods/maps/linkedhashmap"
+    },
+    "RawMessage": {
+      "description": "It implements Marshaler and Unmarshaler and can\nbe used to delay JSON decoding or precompute a JSON encoding.",
+      "type": "array",
+      "title": "RawMessage is a raw encoded JSON value.",
+      "items": {
+        "type": "integer",
+        "format": "uint8"
+      },
+      "x-go-package": "encoding/json"
     },
     "Reader": {
       "description": "Read reads up to len(p) bytes into p. It returns the number of bytes\nread (0 \u003c= n \u003c= len(p)) and any error encountered. Even if Read\nreturns n \u003c len(p), it may use all of p as scratch space during the call.\nIf some data is available but not len(p) bytes, Read conventionally\nreturns what is available instead of waiting for more.\n\nWhen Read encounters an error or end-of-file condition after\nsuccessfully reading n \u003e 0 bytes, it returns the number of\nbytes read. It may return the (non-nil) error from the same call\nor return the error (and n == 0) from a subsequent call.\nAn instance of this general case is that a Reader returning\na non-zero number of bytes at the end of the input stream may\nreturn either err == EOF or err == nil. The next Read should\nreturn 0, EOF.\n\nCallers should always process the n \u003e 0 bytes returned before\nconsidering the error err. Doing so correctly handles I/O errors\nthat happen after reading some bytes and also both of the\nallowed EOF behaviors.\n\nImplementations of Read are discouraged from returning a\nzero byte count with a nil error, except when len(p) == 0.\nCallers should treat a return of 0 and nil as indicating that\nnothing happened; in particular it does not indicate EOF.\n\nImplementations must not retain p.",
       "type": "object",
       "title": "Reader is the interface that wraps the basic Read method.",
       "x-go-package": "io"
+    },
+    "Schema": {
+      "description": "RFC draft-wright-json-schema-00, section 4.5",
+      "type": "object",
+      "title": "Schema is the root schema.",
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "x-go-name": "Ref"
+        },
+        "$schema": {
+          "description": "RFC draft-wright-json-schema-00",
+          "type": "string",
+          "x-go-name": "Version"
+        },
+        "additionalItems": {
+          "$ref": "#/definitions/Type"
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/RawMessage"
+        },
+        "allOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "AllOf"
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "AnyOf"
+        },
+        "binaryEncoding": {
+          "type": "string",
+          "x-go-name": "BinaryEncoding"
+        },
+        "default": {
+          "type": "object",
+          "x-go-name": "Default"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions"
+        },
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "Dependencies"
+        },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "x-go-name": "Enum"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "x-go-name": "Examples"
+        },
+        "exclusiveMaximum": {
+          "type": "boolean",
+          "x-go-name": "ExclusiveMaximum"
+        },
+        "exclusiveMinimum": {
+          "type": "boolean",
+          "x-go-name": "ExclusiveMinimum"
+        },
+        "format": {
+          "type": "string",
+          "x-go-name": "Format"
+        },
+        "items": {
+          "$ref": "#/definitions/Type"
+        },
+        "maxItems": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxItems"
+        },
+        "maxLength": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxLength"
+        },
+        "maxProperties": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxProperties"
+        },
+        "maximum": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Maximum"
+        },
+        "media": {
+          "$ref": "#/definitions/Type"
+        },
+        "minItems": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinItems"
+        },
+        "minLength": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinLength"
+        },
+        "minProperties": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinProperties"
+        },
+        "minimum": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Minimum"
+        },
+        "multipleOf": {
+          "description": "RFC draft-wright-json-schema-validation-00, section 5",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MultipleOf"
+        },
+        "not": {
+          "$ref": "#/definitions/Type"
+        },
+        "oneOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "OneOf"
+        },
+        "pattern": {
+          "type": "string",
+          "x-go-name": "Pattern"
+        },
+        "patternProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "PatternProperties"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "Properties"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Required"
+        },
+        "title": {
+          "description": "RFC draft-wright-json-schema-validation-00, section 6, 7",
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "type": {
+          "type": "string",
+          "x-go-name": "Type"
+        },
+        "uniqueItems": {
+          "type": "boolean",
+          "x-go-name": "UniqueItems"
+        }
+      },
+      "x-go-package": "github.com/ekinanp/jsonschema"
+    },
+    "Type": {
+      "type": "object",
+      "title": "Type represents a JSON Schema object type.",
+      "properties": {
+        "$ref": {
+          "type": "string",
+          "x-go-name": "Ref"
+        },
+        "$schema": {
+          "description": "RFC draft-wright-json-schema-00",
+          "type": "string",
+          "x-go-name": "Version"
+        },
+        "additionalItems": {
+          "$ref": "#/definitions/Type"
+        },
+        "additionalProperties": {
+          "$ref": "#/definitions/RawMessage"
+        },
+        "allOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "AllOf"
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "AnyOf"
+        },
+        "binaryEncoding": {
+          "type": "string",
+          "x-go-name": "BinaryEncoding"
+        },
+        "default": {
+          "type": "object",
+          "x-go-name": "Default"
+        },
+        "definitions": {
+          "$ref": "#/definitions/Definitions"
+        },
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "Dependencies"
+        },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "enum": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "x-go-name": "Enum"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "x-go-name": "Examples"
+        },
+        "exclusiveMaximum": {
+          "type": "boolean",
+          "x-go-name": "ExclusiveMaximum"
+        },
+        "exclusiveMinimum": {
+          "type": "boolean",
+          "x-go-name": "ExclusiveMinimum"
+        },
+        "format": {
+          "type": "string",
+          "x-go-name": "Format"
+        },
+        "items": {
+          "$ref": "#/definitions/Type"
+        },
+        "maxItems": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxItems"
+        },
+        "maxLength": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxLength"
+        },
+        "maxProperties": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MaxProperties"
+        },
+        "maximum": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Maximum"
+        },
+        "media": {
+          "$ref": "#/definitions/Type"
+        },
+        "minItems": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinItems"
+        },
+        "minLength": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinLength"
+        },
+        "minProperties": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MinProperties"
+        },
+        "minimum": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "Minimum"
+        },
+        "multipleOf": {
+          "description": "RFC draft-wright-json-schema-validation-00, section 5",
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "MultipleOf"
+        },
+        "not": {
+          "$ref": "#/definitions/Type"
+        },
+        "oneOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "OneOf"
+        },
+        "pattern": {
+          "type": "string",
+          "x-go-name": "Pattern"
+        },
+        "patternProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "PatternProperties"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Type"
+          },
+          "x-go-name": "Properties"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Required"
+        },
+        "title": {
+          "description": "RFC draft-wright-json-schema-validation-00, section 6, 7",
+          "type": "string",
+          "x-go-name": "Title"
+        },
+        "type": {
+          "type": "string",
+          "x-go-name": "Type"
+        },
+        "uniqueItems": {
+          "type": "boolean",
+          "x-go-name": "UniqueItems"
+        }
+      },
+      "x-go-package": "github.com/ekinanp/jsonschema"
     }
   },
   "responses": {
@@ -498,6 +968,45 @@
         },
         "path": {
           "type": "string"
+        },
+        "type_id": {
+          "type": "string"
+        }
+      }
+    },
+    "EntrySchema": {
+      "description": "EntrySchema describes an entry's schema, which\nis what's returned by the /fs/schema endpoint.",
+      "schema": {
+        "type": "object",
+        "$ref": "#/definitions/Map"
+      },
+      "headers": {
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EntrySchema",
+            "type": "string"
+          }
+        },
+        "entry": {},
+        "graph": {
+          "description": "graph is an ordered map of `\u003cTypeID\u003e` =\u003e `\u003cEntrySchema\u003e`. We store it to make\nMarshalJSON's implementation easier.\n\nNOTE: The reason we don't synchronize children with graph is b/c entry\nschemas are immutable. Clients that want to mess with the state (e.g. like\n`wash find`) can do so at their own peril."
+        },
+        "label": {
+          "type": "string"
+        },
+        "metaAttributeSchemaObj": {},
+        "meta_attribute_schema": {},
+        "metadataSchemaObj": {},
+        "metadata_schema": {},
+        "singleton": {
+          "type": "boolean"
         }
       }
     },
@@ -514,7 +1023,9 @@
           "type": "string",
           "format": "date-time"
         },
-        "type": {}
+        "type": {
+          "type": "string"
+        }
       }
     },
     "HistoryResponse": {
@@ -536,7 +1047,10 @@
     },
     "entryMetadata": {
       "schema": {
-        "$ref": "#/definitions/JSONObject"
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        }
       },
       "headers": {
         "JSONObject": {}
@@ -547,7 +1061,12 @@
         "type": "object",
         "properties": {
           "fields": {
-            "$ref": "#/definitions/ErrorFields"
+            "description": "Additional structured data that may be useful in responding to the error.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            },
+            "x-go-name": "Fields"
           },
           "kind": {
             "description": "Identifies the kind of error.",
@@ -565,9 +1084,25 @@
         "Body": {}
       }
     },
+    "execResponse": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/ExecPacket"
+        }
+      }
+    },
     "octetResponse": {
       "schema": {
         "$ref": "#/definitions/Reader"
+      }
+    },
+    "schemaResponse": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/EntrySchema"
+        }
       }
     }
   }

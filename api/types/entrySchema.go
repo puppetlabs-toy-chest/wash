@@ -17,7 +17,7 @@ import (
 type EntrySchema struct {
 	plugin.EntrySchema
 	children []*EntrySchema
-	// graph is an ordered map of <TypeID> => <EntrySchema>. We store it to make
+	// graph is an ordered map of `<TypeID>` => `<EntrySchema>`. We store it to make
 	// MarshalJSON's implementation easier.
 	//
 	// NOTE: The reason we don't synchronize children with graph is b/c entry
