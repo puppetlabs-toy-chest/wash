@@ -42,7 +42,7 @@ Project maintainers are not actively working on all of these things, but any of 
 ### Daemon enhancements
 
 * [ ] rad startup ASCII art logo (<- high priority!)
-* [ ] expose plugin configuration via main config file
+* [X] expose plugin configuration via main config file
 * [ ] expose what API calls are in-flight (to report status on large, distributed calls)
 
 ### CLI tools
