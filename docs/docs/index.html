@@ -74,6 +74,7 @@
 <ul>
 <li><a href="#plugin-debugging">Plugin Debugging</a></li>
 <li><a href="#attributes/metadata">Attributes/Metadata</a></li>
+<li><a href="#entry-schemas">Entry Schemas</a></li>
 <li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
 <li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
 <li><a href="/wash/docs/api">➠Server API</a></li>
@@ -320,6 +321,64 @@ Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {I
 <p>NOTE: <em>All</em> attributes are optional, so set the ones that you think make sense. For example, if the <code>mode</code> or <code>size</code> attributes don&rsquo;t make sense for your entry, then feel free to ignore them. However, we recommend that you try to set the <code>meta</code> attribute when you can to take advantage of metadata filtering.</p>
 
 <p>NOTE: We plan on adding more attributes depending on user feedback (e.g. like <code>state</code> and <code>labels</code>). Thus if you find yourself metadata-filtering on a common property across a bunch of different entries, then please feel free to file an issue so we can consider adding that property as an attribute (and as a corresponding <code>wash find</code> primary).</p>
+
+<h3 id="entry-schemas">Entry Schemas</h3>
+
+<p>Entry schemas are a type-level overview of your plugin&rsquo;s hierarchy. They enumerate the kinds of things your plugins can contain, including what those things look like. For example, a Docker container&rsquo;s schema would answer questions like:</p>
+
+<ul>
+<li>Can I create multiple Docker containers?</li>
+<li>What&rsquo;s in a Docker container&rsquo;s metadata?</li>
+<li>What Wash actions does a Docker container support?</li>
+<li>If I <code>ls</code> a Docker container, what do I get?</li>
+</ul>
+
+<p>These questions can be generalized to any Wash entry.</p>
+
+<p>Entry schemas are a useful way to document your plugin&rsquo;s hierarchy without having to maintain a README. Users can view your hierarchy via the <code>stree</code> command. For example, if you invoke <code>stree docker</code> in a Wash shell (try it!), you should see something like</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 2
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 3
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 4
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 5
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 6
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 7
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 8
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f"> 9
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">10
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">11
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">12
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">13
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">15
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">16
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">docker
+├── containers
+│   └── [container]
+│       ├── log
+│       ├── metadata.json
+│       └── fs
+│           ├── [dir]
+│           │   ├── [dir]
+│           │   └── [file]
+│           └── [file]
+└── volumes
+    └── [volume]
+        ├── [dir]
+        │   ├── [dir]
+        │   └── [file]
+        └── [file]</pre></td></tr></table>
+</div>
+</div>
+<p>(Your output may differ depending on the state of the Wash project, but it should be similarly structured).</p>
+
+<p>Every node must have a label. The <code>[]</code> are printed for non-singleton nodes; they imply multiple instances of this thing. For example, <code>[container]</code> means that there will be multiple <code>container</code> instances under the <code>containers</code> directory. Similarly, <code>containers</code> means that there will be only one <code>containers</code> directory (i.e. that <code>containers</code> is a singleton). Singleton entries should typically use the entry&rsquo;s name as the label.</p>
+
+<p>Entry schemas are also useful for optimizing <code>find</code>, especially when <code>find</code> is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like <code>find aws -meta '.tags[?]' .key termination_date</code> would cause <code>find</code> to recurse into every entry in the <code>aws</code> plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, <code>find</code> would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.</p>
 
 </article>
 

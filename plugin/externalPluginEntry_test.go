@@ -854,6 +854,46 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 	suite.Regexp("associated", err)
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetaAttributeSchema() {
+	entry := &externalPluginEntry{
+		typeID: "foo",
+	}
+
+	stdout := []byte(`
+{
+	"foo":{
+		"label": "fooLabel",
+		"methods": ["read"],
+		"meta_attribute_schema": {
+			"type": "array"
+		}
+	}
+}
+`)
+	_, err := entry.unmarshalSchemaGraph(stdout)
+	suite.Regexp("invalid.*meta.*attribute.*object.*schema.*array", err)
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetadataSchema() {
+	entry := &externalPluginEntry{
+		typeID: "foo",
+	}
+
+	stdout := []byte(`
+{
+	"foo":{
+		"label": "fooLabel",
+		"methods": ["read"],
+		"metadata_schema": {
+			"type": "array"
+		}
+	}
+}
+`)
+	_, err := entry.unmarshalSchemaGraph(stdout)
+	suite.Regexp("invalid.*metadata.*object.*schema.*array", err)
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput() {
 	// This test tests unmarshalSchemaGraph by ensuring that the returned graph
 	// can marshal back into its original form (with the "methods" key replaced

@@ -1,7 +1,7 @@
 package primary
 
 import (
-    "github.com/puppetlabs/wash/cmd/internal/find/primary/meta"
+	"github.com/puppetlabs/wash/cmd/internal/find/primary/meta"
 )
 
 /*
@@ -58,12 +58,12 @@ N                   => \d+ (i.e. some number > 0)
 */
 //nolint
 var Meta = Parser.add(&Primary{
-    Description: "Returns true if the entry's metadata satisfies the expression",
-    DetailedDescription: metaDetailedDescription,
-    name: "meta",
-    args: "<expression>",
-    shortName: "m",
-    parseFunc: meta.Parse,
+	Description:         "Returns true if the entry's metadata satisfies the expression",
+	DetailedDescription: metaDetailedDescription,
+	name:                "meta",
+	args:                "<expression>",
+	shortName:           "m",
+	parseFunc:           meta.Parse,
 })
 
 const metaDetailedDescription = `
@@ -71,7 +71,9 @@ The meta primary constructs a predicate on the entry's metadata. By
 default, this is the meta attribute. If you'd like to construct the
 predicate on the entry's full metadata, then set the "fullmeta" option.
 Be careful when you do this, because find will make O(N) API requests
-to retrieve this information (N = the number of visited entries).
+to retrieve this information (N = the number of visited entries). As a
+precaution, the "fullmeta" option is only supported on entries with
+schemas.
 
 Meta is a specialized filter, so you should only use it if you need to
 filter your entries on a property that isn't captured by the common Wash
@@ -85,15 +87,6 @@ NOTE: If your plugin's API is not subscription based (like AWS) or if
 individual API requests are cheap, then feel free to always set the
 "fullmeta" option for more complete filtering. This is very useful when
 your plugin API's over a Unix socket.
-
-NOTE: Because it is a specialized filter, the meta primary defaults
-maxdepth to 1 if the -maxdepth flag is not provided. This is to avoid
-unnecessary recursion (and API requests), since only entries in the same
-hierarchy are likely to have the same "meta" schema. For example, it
-wouldn't make sense for 'wash find' to recurse into an EC2 instance's
-console output when it is filtering on an EC2 instance's tags.
-
-You can set maxdepth to -1 if you'd like find to always recurse.
 
 NOTE: You can use the meta command to construct meta primary queries.
 Here's how. First, find a representative entry that you'll be filtering.

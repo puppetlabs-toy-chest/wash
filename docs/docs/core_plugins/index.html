@@ -51,15 +51,17 @@
 - <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Streamable">Streamable</a> can provide a stream of updates on an entry. That may be events, log entries, or new writes to a file.
 - <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Execable">Execable</a> can execute an arbitrary command on a remote system. This is currently assumed to be a POSIX system, but in the future will be extended to differentiate between systems so we can use different commands as needed.</p>
 
-<p>Each entry must implement <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Entry">plugin.Entry</a>, which is a sealed interface that can only be satisfied by <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntryBase">plugin.NewEntryBase</a>.</p>
+<p>Each entry must implement <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#Entry">plugin.Entry</a>, which is a sealed interface that can only be satisfied by <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#NewEntry">plugin.NewEntry</a>.</p>
 
-<p>Each entry that implements the <code>Parent</code> interface must provide a schema for its children. This is commonly done by giving each child entry a function that constructs a canonical version of the entry object where only the <code>EntryBase</code> field is initialized. Instances of the entry can then build on that canonical version by giving it a name and initializing other fields. If there will only ever be one instance of the entry type - such as a named directory that&rsquo;s a container for a specific type of thing like EC2 instances - then use the <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#EntryBase.IsSingleton">IsSingleton()</a> method when constructing the schema.</p>
+<p>Each entry that implements the <code>Parent</code> interface must provide a schema for its children.</p>
 
 <p>Use <a href="https://godoc.org/github.com/puppetlabs/wash/activity">activity.Record</a> for all plugin-related logging. Each plugin method that Wash calls is passed a <code>context.Context</code> object that is initialized with a Journal ID for use with <code>activity.Record</code>.</p>
 
 <p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/transport">transport</a> package contains useful helpers for common methods of executing commands on a remote system. Currently it only supports SSH.</p>
 
 <p>TIP: The <a href="https://godoc.org/github.com/puppetlabs/wash/volume">volume</a> package contains useful helpers that can enumerate a given volume&rsquo;s directories and files.</p>
+
+<p>TIP: If there will only ever be one instance of the entry type - such as a named directory that&rsquo;s a container for a specific type of thing like EC2 instances - then use the <a href="https://godoc.org/github.com/puppetlabs/wash/plugin#EntrySchema.IsSingleton">IsSingleton()</a> method when constructing the schema.</p>
 
 <h2 id="how-to-create-a-new-core-plugin">How to create a new core plugin</h2>
 

@@ -75,7 +75,7 @@ func (w *walkerImpl) walk(e types.Entry, depth uint) bool {
 			for _, child := range children {
 				if e.SchemaKnown {
 					// Note that e.Schema != nil here
-					child.SetSchema(e.Schema.Children()[child.TypeID])
+					child.SetSchema(e.Schema.GetChild(child.TypeID))
 				}
 				check(w.walk(child, childDepth))
 			}
