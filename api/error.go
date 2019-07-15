@@ -147,13 +147,11 @@ func invalidBoolParam(name, value string) *errorResponse {
 	)}
 }
 
-func invalidPathsResponse(paths []string) *errorResponse {
+func invalidPathsResponse() *errorResponse {
 	return &errorResponse{http.StatusBadRequest, newErrorObj(
 		apitypes.InvalidPaths,
-		fmt.Sprintf("Request must include one 'path' query parameter, not %v", len(paths)),
-		apitypes.ErrorFields{
-			"paths": paths,
-		},
+		fmt.Sprintf("Request must include one 'path' query parameter"),
+		apitypes.ErrorFields{},
 	)}
 }
 
@@ -175,12 +173,12 @@ func erroredActionResponse(path string, a plugin.Action, reason string) *errorRe
 
 func duplicateCNameResponse(e plugin.DuplicateCNameErr) *errorResponse {
 	fields := apitypes.ErrorFields{
-		"parent_id":                           e.ParentID,
-		"first_child_name":                    e.FirstChildName,
-		"first_child_slash_replacer":          e.FirstChildSlashReplacer,
-		"second_child_name":                   e.SecondChildName,
-		"second_child_slash_replacer":         e.SecondChildSlashReplacer,
-		"cname":                               e.CName,
+		"parent_id":                   e.ParentID,
+		"first_child_name":            e.FirstChildName,
+		"first_child_slash_replacer":  e.FirstChildSlashReplacer,
+		"second_child_name":           e.SecondChildName,
+		"second_child_slash_replacer": e.SecondChildSlashReplacer,
+		"cname":                       e.CName,
 	}
 
 	body := newErrorObj(
