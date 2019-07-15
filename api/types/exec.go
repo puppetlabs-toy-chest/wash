@@ -1,8 +1,9 @@
 package apitypes
 
 import (
-	"github.com/puppetlabs/wash/plugin"
 	"time"
+
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // ExecOptions are options that can be passed as part of an Exec call.
@@ -14,20 +15,12 @@ type ExecOptions struct {
 }
 
 // ExecBody encapsulates the payload for a call to a plugin's Exec function
-//
-// swagger:parameters executeCommand
 type ExecBody struct {
 	// Name of the executable to invoke
-	//
-	// in: body
 	Cmd string `json:"cmd"`
 	// Array of arguments to the executable
-	//
-	// in: body
 	Args []string `json:"args"`
 	// Additional execution options
-	//
-	// in: body
 	Opts ExecOptions `json:"opts"`
 }
 
