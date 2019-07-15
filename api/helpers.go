@@ -52,14 +52,9 @@ func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugi
 
 // Common helper to get path query param from request and validate it.
 func getPathFromRequest(r *http.Request) (string, *errorResponse) {
-	paths := r.URL.Query()["path"]
-	if len(paths) != 1 {
-		return "", invalidPathsResponse(paths)
-	}
-	path := paths[0]
-
+	path := r.URL.Query().Get("path")
 	if path == "" {
-		panic("path should never be empty")
+		return "", invalidPathsResponse()
 	}
 	if !filepath.IsAbs(path) {
 		return "", relativePathResponse(path)
@@ -148,17 +143,8 @@ func getEntryFromRequest(r *http.Request) (plugin.Entry, string, *errorResponse)
 	return entry, path, err
 }
 
-func getScalarParam(u *url.URL, key string) string {
-	vals := u.Query()[key]
-	if len(vals) > 0 {
-		// Take last value
-		return vals[len(vals)-1]
-	}
-	return ""
-}
-
 func getBoolParam(u *url.URL, key string) (bool, *errorResponse) {
-	val := getScalarParam(u, key)
+	val := u.Query().Get(key)
 	if val != "" {
 		b, err := strconv.ParseBool(val)
 		if err != nil {

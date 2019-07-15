@@ -120,17 +120,6 @@ func (suite *HelpersTestSuite) TestGetEntryFromPath() {
 	plug.AssertExpectations(suite.T())
 }
 
-func (suite *HelpersTestSuite) TestGetScalarParam() {
-	var u url.URL
-	suite.Empty(getScalarParam(&u, "param"))
-
-	u.RawQuery = "param=hello"
-	suite.Equal("hello", getScalarParam(&u, "param"))
-
-	u.RawQuery = "param=hello&param=goodbye"
-	suite.Equal("goodbye", getScalarParam(&u, "param"))
-}
-
 func (suite *HelpersTestSuite) TestGetBoolParam() {
 	var u url.URL
 	for query, expect := range map[string]bool{"": false, "param=true": true, "param=false": false} {
