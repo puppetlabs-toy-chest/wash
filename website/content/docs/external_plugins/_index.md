@@ -189,7 +189,7 @@ Below is an example that includes pre-fetched method results for a static direct
 
 `list` adopts the standard error convention described in the [Errors](#errors) section.
 
-**NOTE:** If entry schemas are `on`, then every entry returned by list must also include a `type_id` key.
+**NOTE:** If entry schemas are _on_, then every entry returned by list must also include a `type_id` key.
 
 ## read
 `read` is invoked as `<plugin_script> read <path> <state>`. When `read` is invoked, the script must output the entry's content.
@@ -233,7 +233,7 @@ The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_
 {
   "volume.FS": {
       "label": "fs",
-      "singleton": false,
+      "singleton": true,
       "methods": [
           "list"
       ],
@@ -271,7 +271,7 @@ The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_
 }
 ```
 
-Note that `methods` here is strictly an array of strings.
+`label` and `methods` are required. `label` should be a shortened, human-readable version of the type ID. `methods` is an array of strings that must match the entries' `methods` array. Wash will return an error if neither of these conditions are met.
 
 The `meta_attribute_schema`/`metadata_schema` keys accept serialized JSON schemas (which is why they were ommitted for brevity). An example of a valid `meta_attribute_schema`/`metadata_schema` value is shown below:
 
@@ -292,7 +292,7 @@ Note that `meta_attribute_schema`/`metadata_schema` must specify a JSON object's
 
 `schema` adopts the standard error convention described in the [Errors](#errors) section.
 
-**NOTE:** Entry schemas are an `on/off` feature. If the plugin root implements `schema`, then entry schemas are `on`. Otherwise, entry schemas are `off`. If entry schemas are `on`, then Wash will require all subsequent entries to implement `schema` and to include a `type_id` key (including the root). Wash will return an error if both these conditions aren't met. If entry schemas are `off`, however, then Wash will return an error if any subsequent entry implements `schema`. The latter restriction's necessary to ensure consistent behavior across your plugin.
+**NOTE:** Entry schemas are an _on/off_ feature. If the plugin root implements `schema`, then entry schemas are _on_. Otherwise, entry schemas are _off_. If entry schemas are _on_, then Wash will require all subsequent entries to implement `schema` and to include a `type_id` key (including the root). Wash will return an error if both these conditions aren't met. If entry schemas are _off_, however, then Wash will return an error if any subsequent entry implements `schema`. The latter restriction's necessary to ensure consistent behavior across your plugin.
 
 **NOTE:** Wash supports entry-schema prefetching. However, only the root is allowed to do this. Thus, if any other entry attempts to prefetch its schema, then Wash will return an error. There are two reasons for this limitation. One, entry schemas are type-level info vs. instance-level info, so they should never change. For example, it would be odd if, in a given Wash session, the AWS plugin's `ec2/instances` directory suddenly included database entries. Two, every `parent` ("listable" entry) includes its descendant's schema. Since everything's a descendant of the root, the root's schema includes the schema of all other entries. Thus, knowledge of the root's schema determines the schema of everything else, so there is no need (and reason) for subsequent entries to prefetch their descendant's schemas.
 

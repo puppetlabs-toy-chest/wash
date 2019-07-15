@@ -36,7 +36,7 @@ func (d *FS) ChildSchemas() []*plugin.EntrySchema {
 
 // Schema returns the FS entry's schema
 func (d *FS) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(d, "fs")
+	return plugin.NewEntrySchema(d, "fs").IsSingleton()
 }
 
 // List creates a hierarchy of the filesystem of an Execable resource (the executor).
