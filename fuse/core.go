@@ -156,7 +156,7 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	// parent to ensure it has updated attributes.
 	updatedEntry, err := f.refind(ctx)
 	if err != nil {
-		activity.Record(ctx, "FUSE: Attr errored %v, %v", f, err)
+		activity.Warnf(ctx, "FUSE: Attr errored %v, %v", f, err)
 		return err
 	}
 	attr := plugin.Attributes(updatedEntry)

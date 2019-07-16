@@ -28,7 +28,7 @@ func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 	// Check for an updated entry in case it has static state.
 	updatedEntry, err := d.refind(ctx)
 	if err != nil {
-		activity.Record(ctx, "FUSE: List errored %v, %v", d, err)
+		activity.Warnf(ctx, "FUSE: List errored %v, %v", d, err)
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		activity.Record(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
+		activity.Warnf(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
 		return nil, fuse.ENOENT
 	}
 
@@ -75,7 +75,7 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 
 	entries, err := d.children(ctx)
 	if err != nil {
-		activity.Record(ctx, "FUSE: List %v errored: %v", d, err)
+		activity.Warnf(ctx, "FUSE: List %v errored: %v", d, err)
 		return nil, err
 	}
 

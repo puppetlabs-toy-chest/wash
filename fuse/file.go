@@ -30,7 +30,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Check for an updated entry in case it has static state.
 	updatedEntry, err := f.refind(ctx)
 	if err != nil {
-		activity.Record(ctx, "FUSE: Open errored %v, %v", f, err)
+		activity.Warnf(ctx, "FUSE: Open errored %v, %v", f, err)
 		return nil, err
 	}
 
@@ -38,7 +38,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
 		content, err := plugin.CachedOpen(ctx, updatedEntry.(plugin.Readable))
 		if err != nil {
-			activity.Record(ctx, "FUSE: Open %v errored: %v", f, err)
+			activity.Warnf(ctx, "FUSE: Open %v errored: %v", f, err)
 			return nil, err
 		}
 

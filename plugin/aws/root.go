@@ -157,7 +157,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 		profile, err := newProfile(ctx, name)
 		if err != nil {
-			activity.Record(ctx, err.Error())
+			activity.Warnf(ctx, err.Error())
 			continue
 		}
 

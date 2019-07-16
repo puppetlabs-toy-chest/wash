@@ -57,7 +57,7 @@ func (r *Root) Init(map[string]interface{}) error {
 	for name := range raw.Contexts {
 		ctx, err := createContext(raw, name, config.ConfigAccess())
 		if err != nil {
-			activity.Record(context.Background(), "loading context %v failed: %+v", name, err)
+			activity.Warnf(context.Background(), "loading context %v failed: %+v", name, err)
 			continue
 		}
 		contexts = append(contexts, ctx)
