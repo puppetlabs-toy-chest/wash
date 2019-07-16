@@ -16,5 +16,5 @@ func TestPIDToJournalEntry(t *testing.T) {
 	journal = JournalForPID(os.Getpid())
 	expected := strconv.Itoa(os.Getpid()) + "-activity\\.test-[0-9]+"
 	assert.Regexp(t, expected, journal.ID)
-	assert.Contains(t, journal.Description, "/activity.test -test.testlogfile=")
+	assert.Contains(t, journal.Description, "/activity.test")
 }

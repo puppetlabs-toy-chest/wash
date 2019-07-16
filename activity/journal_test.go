@@ -3,6 +3,7 @@ package activity
 import (
 	"context"
 	"io/ioutil"
+	"regexp"
 	"testing"
 	"time"
 
@@ -46,13 +47,16 @@ func TestHistoryWithJournal(t *testing.T) {
 
 	// Log to a journal
 	journal := Journal{ID: "anything"}
-	Record(context.WithValue(context.Background(), JournalKey, journal), "hello there")
+	ctx := context.WithValue(context.Background(), JournalKey, journal)
+	Record(ctx, "hello there")
+	Warnf(ctx, "not good")
 	rdr, err := journal.Open()
 	if assert.Nil(t, err) {
 		defer rdr.Close()
 		bits, err := ioutil.ReadAll(rdr)
 		if assert.Nil(t, err) {
-			assert.Contains(t, string(bits), "hello there")
+			assert.Regexp(t, regexp.MustCompile("info.*hello there"), string(bits))
+			assert.Regexp(t, regexp.MustCompile("warn.*not good"), string(bits))
 		}
 	}
 }

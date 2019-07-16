@@ -5,7 +5,9 @@
 //
 // Wash plugins should use
 //	activity.Record(ctx context.Context, msg string, a ...interface{})
-// to record entries. The context contains the Journal ID.
+// to record entries, and
+//  activity.Warnf(ctx context.Context, msg string, a ...interface{})
+// to warn about errors. The context contains the Journal ID.
 package activity
 
 import (
@@ -80,6 +82,25 @@ func Record(ctx context.Context, msg string, a ...interface{}) {
 	}
 
 	journal.Record(msg, a...)
+}
+
+// Warnf writes a new entry to the journal identified by the ID at `activity.JournalKey` in the
+// provided context at WARN level. It also writes to the server logs at the same level. Use Warnf
+// in plugin `Init` methods for issues during setup that will result in degraded behavior.
+func Warnf(ctx context.Context, msg string, a ...interface{}) {
+	journal, ok := ctx.Value(JournalKey).(Journal)
+	if !ok {
+		log.Warnf(msg, a...)
+		return
+	}
+
+	if journal.ID == "" {
+		journal = deadLetterOfficeJournal
+	} else {
+		journal.addToHistory()
+	}
+
+	journal.Warnf(msg, a...)
 }
 
 func closeJournal(id string, obj interface{}) {
