@@ -1,2 +1,3 @@
 *         @puppetlabs/wash
-website/* @grimradical
+/docs/    @puppetlabs/wash @grimradical
+/website/ @puppetlabs/wash @grimradical
