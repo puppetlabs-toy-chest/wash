@@ -130,6 +130,18 @@ aws:
 ```
 to Wash's [config file](#config).
 
+#### Exec
+
+The `exec` method for AWS uses SSH. It will look up port, user, and other configuration by exact hostname match from default SSH config files. If present, a local SSH agent will be used for authentication.
+
+Lots of SSH configuration is currently omitted, such as global known hosts files, finding known hosts from the config, identity file from config... pretty much everything but port and user from config as enumerated in https://github.com/kevinburke/ssh_config/blob/0.5/validators.go.
+
+The known hosts file will be ignored if StrictHostKeyChecking=no, such as in
+```
+Host *.compute.amazonaws.com
+  StrictHostKeyChecking no
+```
+
 ### Docker
 
 - containers and volumes
