@@ -165,6 +165,13 @@ We've implemented a number of handy Wash commands ([docs](/wash/docs#wash-comman
 * Wash handles the plugin life-cycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic
 * users interact with external plugins the exact same way as core plugins; they are first-class citizens
 
+Several external plugins have already been created:
+
+* [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once
+* [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves; also structured as an introduction to writing external plugins
+
+If you've created an external plugin, please put up a pull request to add it to this list!
+
 For more information about future direction, see our [Roadmap](https://github.com/puppetlabs/wash#roadmap)!
 
 ## Contributing
