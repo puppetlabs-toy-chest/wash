@@ -192,6 +192,23 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 </div>
 <p>to Wash&rsquo;s <a href="#config">config file</a>.</p>
 
+<h4 id="exec">Exec</h4>
+
+<p>The <code>exec</code> method for AWS uses SSH. It will look up port, user, and other configuration by exact hostname match from default SSH config files. If present, a local SSH agent will be used for authentication.</p>
+
+<p>Lots of SSH configuration is currently omitted, such as global known hosts files, finding known hosts from the config, identity file from config&hellip; pretty much everything but port and user from config as enumerated in <a href="https://github.com/kevinburke/ssh_config/blob/0.5/validators.go">https://github.com/kevinburke/ssh_config/blob/0.5/validators.go</a>.</p>
+
+<p>The known hosts file will be ignored if StrictHostKeyChecking=no, such as in</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">Host *.compute.amazonaws.com
+  StrictHostKeyChecking no</pre></td></tr></table>
+</div>
+</div>
 <h3 id="docker">Docker</h3>
 
 <ul>
