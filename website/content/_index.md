@@ -256,7 +256,7 @@ For more information about future direction, see our [Roadmap](https://github.co
 
 ## Contributing
 
-There are tons of ways to get involved with Wash, whether or not you're a programmer!
+Hello! There are tons of ways to get involved with Wash, whether or not you're a programmer!
 
 - Come and hang out with us on [Slack](https://puppetcommunity.slack.com/app_redirect?channel=wash)! Feel free to ask questions, answer questions from other folks, or just lurk. Come and talk to us about things about modern infra you find [complex or infuriating](https://landscape.cncf.io/), or what your [favorite hacking movie scenes](https://www.youtube.com/watch?v=u1Ds9CeG-VY) are, or the [best monospaced font](https://fonts.google.com/specimen/Inconsolata). 
 
