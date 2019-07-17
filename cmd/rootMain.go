@@ -4,8 +4,10 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
@@ -124,6 +126,13 @@ func runShell(subcommands []*cobra.Command, rundir, mountpath, socketpath, execf
 func rootMain(cmd *cobra.Command, args []string) exitCode {
 	// Configure logrus to emit simple text
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
+
+	// When Wash prompts for input but it doesn't currently control STDIN, it will get SIGTTOU. This
+	// is common when a plugin prompts for input in response to running a command like `ls` or `cat`.
+	// Ignore this signal so we aren't suspended when prompting for input from the background.
+	// We also ignore SIGTTIN because http://curiousthing.org/sigttin-sigttou-deep-dive-linux
+	// suggests that's the signal we should be getting, even though I haven't seen it in testing.
+	signal.Ignore(syscall.SIGTTOU, syscall.SIGTTIN)
 
 	cachedir, err := os.UserCacheDir()
 	if err != nil {

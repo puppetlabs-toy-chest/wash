@@ -14,7 +14,7 @@ Each entry must implement [plugin.Entry](https://godoc.org/github.com/puppetlabs
 
 Each entry that implements the `Parent` interface must provide a schema for its children.
 
-Use [activity.Record](https://godoc.org/github.com/puppetlabs/wash/activity) for all plugin-related logging. Each plugin method that Wash calls is passed a `context.Context` object that is initialized with a Journal ID for use with `activity.Record`.
+Use [activity](https://godoc.org/github.com/puppetlabs/wash/activity) for all plugin-related logging. Each plugin method that Wash calls is passed a `context.Context` object that is initialized with a Journal ID for use with `activity.Record` and `activity.Warnf`.
 
 TIP: The [transport] package contains useful helpers for common methods of executing commands on a remote system. Currently it only supports SSH.
 

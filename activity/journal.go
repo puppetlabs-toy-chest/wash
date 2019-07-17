@@ -63,12 +63,7 @@ func (j Journal) addToHistory() {
 	history.list = append(history.list, j)
 }
 
-// Record writes a new entry to the journal. It creates a new file for the journal if needed, then
-// appends the message to that journal. Journals are stored in the user's cache directory under
-// `wash/activity/ID.log`.
-func (j Journal) Record(msg string, a ...interface{}) {
-	log.Debugf(msg, a...)
-
+func (j Journal) getLogger() (*log.Logger, error) {
 	// This is a single-use cache, so pass in an empty category.
 	obj, err := journalFileCache.GetOrUpdate("", j.ID, expires, true, func() (interface{}, error) {
 		jpath := j.filepath()
@@ -88,11 +83,33 @@ func (j Journal) Record(msg string, a ...interface{}) {
 		}
 		return l, nil
 	})
-	if err != nil {
-		log.Warnf("Error creating journal %v: %v", j.ID, err)
-	}
+	return obj.(*log.Logger), err
+}
 
-	obj.(*log.Logger).Printf(msg, a...)
+// Warnf writes a new entry to the journal at WARN level. It also logs to the shell at the same
+// level. It creates a new file for the journal if needed, then appends the message to that
+// journal. Journals are stored in the user's cache directory under `wash/activity/ID.log`.
+func (j Journal) Warnf(msg string, a ...interface{}) {
+	log.Warnf(msg, a...)
+
+	if logger, err := j.getLogger(); err != nil {
+		log.Warnf("Error creating journal %v: %v", j.ID, err)
+	} else {
+		logger.Warnf(msg, a...)
+	}
+}
+
+// Record writes a new entry to the journal. It creates a new file for the journal if needed, then
+// appends the message to that journal. Journals are stored in the user's cache directory under
+// `wash/activity/ID.log`.
+func (j Journal) Record(msg string, a ...interface{}) {
+	log.Debugf(msg, a...)
+
+	if logger, err := j.getLogger(); err != nil {
+		log.Warnf("Error creating journal %v: %v", j.ID, err)
+	} else {
+		logger.Printf(msg, a...)
+	}
 }
 
 // Open returns a reader to read the journal.

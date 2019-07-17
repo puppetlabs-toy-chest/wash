@@ -50,6 +50,8 @@ At this point, if you haven't already, you should start some resources that Wash
 
 ### Known issues
 
+Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the SHELL environment variable before starting Wash.
+
 #### On macOS
 
 If using iTerm2, we recommend installing [iTerm2's shell integration](https://www.iterm2.com/documentation-shell-integration.html) to avoid [issue#84](https://github.com/puppetlabs/wash/issues/84).
