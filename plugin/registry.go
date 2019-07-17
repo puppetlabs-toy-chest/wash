@@ -55,31 +55,14 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 	return nil
 }
 
-// ChildSchemas returns the child schemas of the plugin registry
+// ChildSchemas only makes sense for core plugin roots
 func (r *Registry) ChildSchemas() []*EntrySchema {
-	var childSchemas []*EntrySchema
-	for _, root := range r.pluginRoots {
-		s := root.Schema()
-		if s == nil {
-			// s doesn't have a schema, which means it's an external plugin.
-			// Create a schema for s so that `stree <mountpoint>` can still
-			// display it.
-			s = NewEntrySchema(root, CName(root))
-		}
-		s.IsSingleton()
-		if len(s.Label) == 0 {
-			s.Label = CName(root)
-		}
-		childSchemas = append(childSchemas, s)
-	}
-	return childSchemas
+	return nil
 }
 
-const registrySchemaLabel = "mountpoint"
-
-// Schema returns the plugin registry's schema
+// Schema only makes sense for core plugin roots
 func (r *Registry) Schema() *EntrySchema {
-	return NewEntrySchema(r, registrySchemaLabel).IsSingleton()
+	return nil
 }
 
 // List all of Wash's loaded plugins
