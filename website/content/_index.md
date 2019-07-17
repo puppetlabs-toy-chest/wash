@@ -52,8 +52,6 @@ At this point, if you haven't already, you should start some resources that Wash
 
 Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the SHELL environment variable before starting Wash.
 
-If Wash appears to hang, there's a good chance it's attempting to prompt for input while another command - such as `ls` - is running. You can usually get out of it by running `fg`, then hitting `<Enter>`. When starting Wash from the `fish` shell in particular, the prompt for input is often hidden.
-
 #### On macOS
 
 If using iTerm2, we recommend installing [iTerm2's shell integration](https://www.iterm2.com/documentation-shell-integration.html) to avoid [issue#84](https://github.com/puppetlabs/wash/issues/84).
