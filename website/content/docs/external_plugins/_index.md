@@ -216,7 +216,7 @@ Below is an example that includes pre-fetched method results for a static direct
 `stream` adopts the standard error convention described in the [Errors](#errors) section.
 
 ## exec
-`exec` is invoked as `<plugin_script> exec <path> <state> <opts> <cmd> <args...>`. If the `input` key is included as part of `opts` in a request to the `exec` endpoint, then its content is passed-in as stdin to the plugin script. `<opts>` is the JSON serialization of the remaining options.
+`exec` is invoked as `<plugin_script> exec <path> <state> <opts> <cmd> <args...>`. If the `input` key is included as part of `opts` in a request to the `exec` endpoint, then its content is passed-in as stdin to the plugin script. Otherwise, the invocation's stdin will be at EOF. Note that `<opts>` is the JSON serialization of the remaining options.
 
 When `exec` is invoked, the plugin script's stdout and stderr must be connected to `cmd`'s stdout and stderr, and it must exit the `exec` invocation with `cmd`'s exit code.
 
