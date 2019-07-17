@@ -8,13 +8,49 @@ import (
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
+const registrySchemaLabel = "mountpoint"
+
 // Schema returns the entry's schema. It is needed by the API,
 // so plugin authors should ignore this.
 func Schema(e Entry) (*EntrySchema, error) {
-	if externalPlugin, ok := e.(externalPlugin); ok {
-		return externalPlugin.schema()
+	switch t := e.(type) {
+	case externalPlugin:
+		return t.schema()
+	case *Registry:
+		// The plugin registry includes external plugins, whose schema call can
+		// error. Thus, it needs to be treated differently from the other core
+		// plugins. Here, the logic is to merge each root's schema graph with the
+		// registry's schema graph.
+		schema := NewEntrySchema(t, registrySchemaLabel).IsSingleton()
+		schema.graph = linkedhashmap.New()
+		schema.graph.Put(schema.TypeID, &schema.entrySchema)
+		for _, root := range t.pluginRoots {
+			childSchema, err := Schema(root)
+			if err != nil {
+				return nil, fmt.Errorf("failed to retrieve the %v plugin's schema: %v", root.name(), err)
+			}
+			if childSchema == nil {
+				// The plugin doesn't have a schema, which means it's an external plugin.
+				// Create a schema for root so that `stree <mountpoint>` can still display
+				// it.
+				childSchema = NewEntrySchema(root, CName(root))
+			}
+			schema.Children = append(schema.Children, childSchema.TypeID)
+			childGraph := childSchema.graph
+			if childGraph == nil {
+				// This is a core-plugin
+				childGraph = linkedhashmap.New()
+				childSchema.fill(childGraph)
+			}
+			childGraph.Each(func(key interface{}, value interface{}) {
+				schema.graph.Put(key, value)
+			})
+		}
+		return schema, nil
+	default:
+		// e is a core-plugin
+		return e.Schema(), nil
 	}
-	return e.Schema(), nil
 }
 
 type entrySchema struct {
@@ -160,16 +196,6 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		}
 		s.entrySchema.Children = append(s.Children, child.TypeID)
 		if _, ok := graph.Get(child.TypeID); ok {
-			continue
-		}
-		if child.graph != nil {
-			if s.Label != registrySchemaLabel {
-				// We should never hit this code-path
-				s.fillPanicf("%v is an external plugin's schema", child)
-			}
-			child.graph.Each(func(key interface{}, value interface{}) {
-				graph.Put(key, value)
-			})
 			continue
 		}
 		passAlongWrappedTypes(sParent, child.entry)
