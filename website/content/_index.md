@@ -115,7 +115,7 @@ Notice that tab-completion makes it easy to find the containers you want to expl
 
 The list earlier also noted that the container "directories" support the *metadata* action. We can get structured metadata in ether YAML or JSON with `wash meta`
 ```
-wash$ meta 382776912d9373e6c4dc1350894b5290b22c36893a8fed08e2ba53fbb680c8a6 -o yaml
+wash$ meta swarm_web_1 -o yaml
 AppArmorProfile: ""
 Args:
 - app.py
