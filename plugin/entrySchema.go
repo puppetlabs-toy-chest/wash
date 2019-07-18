@@ -35,6 +35,7 @@ func Schema(e Entry) (*EntrySchema, error) {
 				// it.
 				childSchema = NewEntrySchema(root, CName(root))
 			}
+			childSchema.IsSingleton()
 			schema.Children = append(schema.Children, childSchema.TypeID)
 			childGraph := childSchema.graph
 			if childGraph == nil {
