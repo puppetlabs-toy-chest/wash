@@ -46,7 +46,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	activity.Record(r.Context(), "API: %v %v", r.Method, r.URL)
 
 	if err := handle(w, r); err != nil {
-		activity.Warnf(r.Context(), "API: %v %v: %v", r.Method, r.URL, err)
+		activity.Record(r.Context(), "API: %v %v: %v", r.Method, r.URL, err)
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
