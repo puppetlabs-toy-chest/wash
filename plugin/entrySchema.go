@@ -34,7 +34,11 @@ func Schema(e Entry) (*EntrySchema, error) {
 				// Create a schema for root so that `stree <mountpoint>` can still display
 				// it.
 				childSchema = NewEntrySchema(root, CName(root))
+				// TODO: Namespace these to something like <root_name>::Root once
+				// https://github.com/puppetlabs/wash/issues/396 is resolved.
+				childSchema.TypeID = "__" + root.name() + "__"
 			}
+			childSchema.IsSingleton()
 			schema.Children = append(schema.Children, childSchema.TypeID)
 			childGraph := childSchema.graph
 			if childGraph == nil {
