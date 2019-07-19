@@ -10,6 +10,19 @@ import (
 
 const registrySchemaLabel = "mountpoint"
 
+// TypeID returns the entry's type ID. It is needed by the API,
+// so plugin authors should ignore this.
+func TypeID(e Entry) string {
+	// Note that this helper's necessary because Schema() can
+	// shell out for external plugins, which is expensive.
+	if ep, ok := e.(externalPlugin); ok {
+		return ep.TypeID()
+	}
+	// e is a core plugin entry
+	t := unravelPtr(reflect.TypeOf(e))
+	return t.PkgPath() + "/" + t.Name()
+}
+
 // Schema returns the entry's schema. It is needed by the API,
 // so plugin authors should ignore this.
 func Schema(e Entry) (*EntrySchema, error) {
@@ -92,10 +105,9 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 	if len(label) == 0 {
 		panic("plugin.NewEntrySchema called with an empty label")
 	}
-	t := unravelPtr(reflect.TypeOf(e))
 	s := &EntrySchema{
 		entrySchema: entrySchema{
-			TypeID:  t.PkgPath() + "/" + t.Name(),
+			TypeID:  TypeID(e),
 			Label:   label,
 			Actions: SupportedActionsOf(e),
 		},

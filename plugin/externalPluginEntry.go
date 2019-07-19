@@ -30,6 +30,8 @@ type externalPlugin interface {
 	// error-prone version of schema here, in the externalPlugin
 	// interface.
 	schema() (*EntrySchema, error)
+	// Capitalize this so it doesn't conflict with the "typeID" field.
+	TypeID() string
 }
 
 type decodedCacheTTLs struct {
@@ -200,6 +202,10 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 	return nil
 }
 
+func (e *externalPluginEntry) TypeID() string {
+	return e.typeID
+}
+
 const schemaFormat = `{
 	"type_id_one":{
 		"label": "one",
@@ -285,7 +291,6 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		}
 	}
 	s := NewEntrySchema(e, "foo")
-	s.TypeID = e.typeID
 	s.graph = graph
 	return s, nil
 }
