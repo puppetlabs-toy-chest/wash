@@ -102,7 +102,7 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
 		fetchFullMetadata := !e.SchemaKnown || e.Schema.MetadataSchema() != nil
 		if !fetchFullMetadata {
-			cmdutil.ErrPrintf("%v did not provide a metadata schema so its full metadata will not be fetched", e.NormalizedPath)
+			cmdutil.ErrPrintf("%v did not provide a metadata schema so its full metadata will not be fetched\n", e.NormalizedPath)
 		} else {
 			// Fetch the entry's full metadata
 			meta, err := w.conn.Metadata(e.Path)

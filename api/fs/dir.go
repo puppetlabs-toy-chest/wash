@@ -38,7 +38,7 @@ func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 func (d *dir) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		d.Schema(),
-		(&file{}).Schema(),
+		(&file{fsnode: &fsnode{}}).Schema(),
 	}
 }
 
