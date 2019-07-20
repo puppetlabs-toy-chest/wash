@@ -101,7 +101,7 @@
         "children": [
             "aws.ec2InstanceConsoleOutput",
             "aws.ec2InstanceMetadataJSON",
-            "volume.FS"
+            "aws.volume.FS"
         ]
     },
     "aws.ec2InstanceConsoleOutput": {
@@ -120,29 +120,29 @@
         ],
         "children": null
     },
-    "volume.FS": {
+    "aws.volume.FS": {
         "label": "fs",
         "singleton": false,
         "methods": [
             "list"
         ],
         "children": [
-            "volume.dir",
-            "volume.file"
+            "aws.volume.dir",
+            "aws.volume.file"
         ]
     },
-    "volume.dir": {
+    "aws.volume.dir": {
         "label": "dir",
         "singleton": false,
         "methods": [
             "list"
         ],
         "children": [
-            "volume.dir",
-            "volume.file"
+            "aws.volume.dir",
+            "aws.volume.file"
         ]
     },
-    "volume.file": {
+    "aws.volume.file": {
         "label": "file",
         "singleton": false,
         "methods": [

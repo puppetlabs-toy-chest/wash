@@ -1,6 +1,6 @@
 {
-    "aws.Root": {
-        "aws.Root": {
+    "fooPlugin::aws.Root": {
+        "fooPlugin::aws.Root": {
             "label": "aws",
             "singleton": true,
             "actions": [
@@ -9,10 +9,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.profile"
+                "fooPlugin::aws.profile"
             ]
         },
-        "aws.profile": {
+        "fooPlugin::aws.profile": {
             "label": "profile",
             "singleton": false,
             "actions": [
@@ -21,10 +21,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.resourcesDir"
+                "fooPlugin::aws.resourcesDir"
             ]
         },
-        "aws.resourcesDir": {
+        "fooPlugin::aws.resourcesDir": {
             "label": "resources",
             "singleton": true,
             "actions": [
@@ -33,11 +33,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Dir",
-                "aws.ec2Dir"
+                "fooPlugin::aws.s3Dir",
+                "fooPlugin::aws.ec2Dir"
             ]
         },
-        "aws.s3Dir": {
+        "fooPlugin::aws.s3Dir": {
             "label": "s3",
             "singleton": true,
             "actions": [
@@ -46,10 +46,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Bucket"
+                "fooPlugin::aws.s3Bucket"
             ]
         },
-        "aws.s3Bucket": {
+        "fooPlugin::aws.s3Bucket": {
             "label": "bucket",
             "singleton": false,
             "actions": [
@@ -58,11 +58,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -71,11 +71,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -86,7 +86,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2Dir": {
+        "fooPlugin::aws.ec2Dir": {
             "label": "ec2",
             "singleton": true,
             "actions": [
@@ -95,10 +95,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstancesDir"
+                "fooPlugin::aws.ec2InstancesDir"
             ]
         },
-        "aws.ec2InstancesDir": {
+        "fooPlugin::aws.ec2InstancesDir": {
             "label": "instances",
             "singleton": true,
             "actions": [
@@ -107,10 +107,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2Instance"
+                "fooPlugin::aws.ec2Instance"
             ]
         },
-        "aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -120,12 +120,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -135,7 +135,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -145,7 +145,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -154,11 +154,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -167,11 +167,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -183,8 +183,8 @@
             "children": null
         }
     },
-    "aws.ec2Dir": {
-        "aws.ec2Dir": {
+    "fooPlugin::aws.ec2Dir": {
+        "fooPlugin::aws.ec2Dir": {
             "label": "ec2",
             "singleton": true,
             "actions": [
@@ -193,10 +193,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstancesDir"
+                "fooPlugin::aws.ec2InstancesDir"
             ]
         },
-        "aws.ec2InstancesDir": {
+        "fooPlugin::aws.ec2InstancesDir": {
             "label": "instances",
             "singleton": true,
             "actions": [
@@ -205,10 +205,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2Instance"
+                "fooPlugin::aws.ec2Instance"
             ]
         },
-        "aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -218,12 +218,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -233,7 +233,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -243,7 +243,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -252,11 +252,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -265,11 +265,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -281,8 +281,8 @@
             "children": null
         }
     },
-    "aws.ec2Instance": {
-        "aws.ec2Instance": {
+    "fooPlugin::aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -292,12 +292,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -307,7 +307,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -317,7 +317,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -326,11 +326,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -339,11 +339,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -355,8 +355,8 @@
             "children": null
         }
     },
-    "aws.ec2InstanceConsoleOutput": {
-        "aws.ec2InstanceConsoleOutput": {
+    "fooPlugin::aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -367,8 +367,8 @@
             "children": null
         }
     },
-    "aws.ec2InstanceMetadataJSON": {
-        "aws.ec2InstanceMetadataJSON": {
+    "fooPlugin::aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -379,8 +379,8 @@
             "children": null
         }
     },
-    "aws.ec2InstancesDir": {
-        "aws.ec2InstancesDir": {
+    "fooPlugin::aws.ec2InstancesDir": {
+        "fooPlugin::aws.ec2InstancesDir": {
             "label": "instances",
             "singleton": true,
             "actions": [
@@ -389,10 +389,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2Instance"
+                "fooPlugin::aws.ec2Instance"
             ]
         },
-        "aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -402,12 +402,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -417,7 +417,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -427,7 +427,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -436,11 +436,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -449,11 +449,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -465,8 +465,8 @@
             "children": null
         }
     },
-    "aws.profile": {
-        "aws.profile": {
+    "fooPlugin::aws.profile": {
+        "fooPlugin::aws.profile": {
             "label": "profile",
             "singleton": false,
             "actions": [
@@ -475,10 +475,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.resourcesDir"
+                "fooPlugin::aws.resourcesDir"
             ]
         },
-        "aws.resourcesDir": {
+        "fooPlugin::aws.resourcesDir": {
             "label": "resources",
             "singleton": true,
             "actions": [
@@ -487,11 +487,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Dir",
-                "aws.ec2Dir"
+                "fooPlugin::aws.s3Dir",
+                "fooPlugin::aws.ec2Dir"
             ]
         },
-        "aws.s3Dir": {
+        "fooPlugin::aws.s3Dir": {
             "label": "s3",
             "singleton": true,
             "actions": [
@@ -500,10 +500,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Bucket"
+                "fooPlugin::aws.s3Bucket"
             ]
         },
-        "aws.s3Bucket": {
+        "fooPlugin::aws.s3Bucket": {
             "label": "bucket",
             "singleton": false,
             "actions": [
@@ -512,11 +512,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -525,11 +525,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -540,7 +540,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2Dir": {
+        "fooPlugin::aws.ec2Dir": {
             "label": "ec2",
             "singleton": true,
             "actions": [
@@ -549,10 +549,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstancesDir"
+                "fooPlugin::aws.ec2InstancesDir"
             ]
         },
-        "aws.ec2InstancesDir": {
+        "fooPlugin::aws.ec2InstancesDir": {
             "label": "instances",
             "singleton": true,
             "actions": [
@@ -561,10 +561,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2Instance"
+                "fooPlugin::aws.ec2Instance"
             ]
         },
-        "aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -574,12 +574,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -589,7 +589,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -599,7 +599,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -608,11 +608,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -621,11 +621,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -637,8 +637,8 @@
             "children": null
         }
     },
-    "aws.resourcesDir": {
-        "aws.resourcesDir": {
+    "fooPlugin::aws.resourcesDir": {
+        "fooPlugin::aws.resourcesDir": {
             "label": "resources",
             "singleton": true,
             "actions": [
@@ -647,11 +647,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Dir",
-                "aws.ec2Dir"
+                "fooPlugin::aws.s3Dir",
+                "fooPlugin::aws.ec2Dir"
             ]
         },
-        "aws.s3Dir": {
+        "fooPlugin::aws.s3Dir": {
             "label": "s3",
             "singleton": true,
             "actions": [
@@ -660,10 +660,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Bucket"
+                "fooPlugin::aws.s3Bucket"
             ]
         },
-        "aws.s3Bucket": {
+        "fooPlugin::aws.s3Bucket": {
             "label": "bucket",
             "singleton": false,
             "actions": [
@@ -672,11 +672,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -685,11 +685,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -700,7 +700,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2Dir": {
+        "fooPlugin::aws.ec2Dir": {
             "label": "ec2",
             "singleton": true,
             "actions": [
@@ -709,10 +709,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstancesDir"
+                "fooPlugin::aws.ec2InstancesDir"
             ]
         },
-        "aws.ec2InstancesDir": {
+        "fooPlugin::aws.ec2InstancesDir": {
             "label": "instances",
             "singleton": true,
             "actions": [
@@ -721,10 +721,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2Instance"
+                "fooPlugin::aws.ec2Instance"
             ]
         },
-        "aws.ec2Instance": {
+        "fooPlugin::aws.ec2Instance": {
             "label": "instance",
             "singleton": false,
             "actions": [
@@ -734,12 +734,12 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.ec2InstanceConsoleOutput",
-                "aws.ec2InstanceMetadataJSON",
-                "volume.FS"
+                "fooPlugin::aws.ec2InstanceConsoleOutput",
+                "fooPlugin::aws.ec2InstanceMetadataJSON",
+                "fooPlugin::aws.volume.FS"
             ]
         },
-        "aws.ec2InstanceConsoleOutput": {
+        "fooPlugin::aws.ec2InstanceConsoleOutput": {
             "label": "console.out",
             "singleton": false,
             "actions": [
@@ -749,7 +749,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "aws.ec2InstanceMetadataJSON": {
+        "fooPlugin::aws.ec2InstanceMetadataJSON": {
             "label": "metadata.json",
             "singleton": true,
             "actions": [
@@ -759,7 +759,7 @@
             "metadata_schema": null,
             "children": null
         },
-        "volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -768,11 +768,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -781,11 +781,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -797,8 +797,8 @@
             "children": null
         }
     },
-    "aws.s3Bucket": {
-        "aws.s3Bucket": {
+    "fooPlugin::aws.s3Bucket": {
+        "fooPlugin::aws.s3Bucket": {
             "label": "bucket",
             "singleton": false,
             "actions": [
@@ -807,11 +807,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -820,11 +820,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -836,8 +836,8 @@
             "children": null
         }
     },
-    "aws.s3Dir": {
-        "aws.s3Dir": {
+    "fooPlugin::aws.s3Dir": {
+        "fooPlugin::aws.s3Dir": {
             "label": "s3",
             "singleton": true,
             "actions": [
@@ -846,10 +846,10 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3Bucket"
+                "fooPlugin::aws.s3Bucket"
             ]
         },
-        "aws.s3Bucket": {
+        "fooPlugin::aws.s3Bucket": {
             "label": "bucket",
             "singleton": false,
             "actions": [
@@ -858,11 +858,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -871,11 +871,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -887,8 +887,8 @@
             "children": null
         }
     },
-    "aws.s3Object": {
-        "aws.s3Object": {
+    "fooPlugin::aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -900,8 +900,8 @@
             "children": null
         }
     },
-    "aws.s3ObjectPrefix": {
-        "aws.s3ObjectPrefix": {
+    "fooPlugin::aws.s3ObjectPrefix": {
+        "fooPlugin::aws.s3ObjectPrefix": {
             "label": "prefix",
             "singleton": false,
             "actions": [
@@ -910,11 +910,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "aws.s3ObjectPrefix",
-                "aws.s3Object"
+                "fooPlugin::aws.s3ObjectPrefix",
+                "fooPlugin::aws.s3Object"
             ]
         },
-        "aws.s3Object": {
+        "fooPlugin::aws.s3Object": {
             "label": "object",
             "singleton": false,
             "actions": [
@@ -926,8 +926,8 @@
             "children": null
         }
     },
-    "volume.FS": {
-        "volume.FS": {
+    "fooPlugin::aws.volume.FS": {
+        "fooPlugin::aws.volume.FS": {
             "label": "fs",
             "singleton": false,
             "actions": [
@@ -936,11 +936,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -949,11 +949,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -965,8 +965,8 @@
             "children": null
         }
     },
-    "volume.dir": {
-        "volume.dir": {
+    "fooPlugin::aws.volume.dir": {
+        "fooPlugin::aws.volume.dir": {
             "label": "dir",
             "singleton": false,
             "actions": [
@@ -975,11 +975,11 @@
             "meta_attribute_schema": null,
             "metadata_schema": null,
             "children": [
-                "volume.dir",
-                "volume.file"
+                "fooPlugin::aws.volume.dir",
+                "fooPlugin::aws.volume.file"
             ]
         },
-        "volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
@@ -991,8 +991,8 @@
             "children": null
         }
     },
-    "volume.file": {
-        "volume.file": {
+    "fooPlugin::aws.volume.file": {
+        "fooPlugin::aws.volume.file": {
             "label": "file",
             "singleton": false,
             "actions": [
