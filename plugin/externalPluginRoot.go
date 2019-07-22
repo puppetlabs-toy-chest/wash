@@ -17,6 +17,9 @@ type externalPluginRoot struct {
 
 // Init initializes the external plugin root
 func (r *externalPluginRoot) Init(cfg map[string]interface{}) error {
+	if cfg == nil {
+		cfg = make(map[string]interface{})
+	}
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("could not marshal plugin config %v into JSON: %v", cfg, err)
