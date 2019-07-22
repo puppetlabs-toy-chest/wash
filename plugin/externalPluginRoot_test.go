@@ -28,7 +28,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 			mock.Anything,
 			"init",
 			nil,
-			"null",
+			"{}",
 		).Return(mockInvocation(stdout), err).Once()
 	}
 
@@ -89,7 +89,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_SetsSchemaKnownVari
 		mock.Anything,
 		"init",
 		nil,
-		"null",
+		"{}",
 	).Return(mockInvocation([]byte("{\"type_id\":\"root\",\"methods\":[\"schema\",\"list\"]}")), nil).Once()
 
 	suite.NoError(root.Init(nil))
@@ -107,7 +107,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Re
 		mock.Anything,
 		"init",
 		nil,
-		"null",
+		"{}",
 	).Return(mockInvocation([]byte("{\"type_id\":\"root\",\"methods\":[[\"schema\", \"foo\"],\"list\"]}")), nil).Once()
 
 	err := root.Init(nil)
@@ -149,7 +149,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Pa
 		mock.Anything,
 		"init",
 		nil,
-		"null",
+		"{}",
 	).Return(mockInvocation(stdout), nil).Once()
 
 	// Perform the test
