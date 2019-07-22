@@ -419,6 +419,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 	select {
 	case err := <-headerRdrCh:
 		if err != nil {
+			cmd.Terminate()
 			defer wait()
 			// Try to get more context from stderr
 			n, readErr := inv.stderr.ReadFrom(stderrR)
@@ -434,6 +435,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 		}()
 		return &stdoutStreamer{cmd, stdoutR}, nil
 	case <-timer:
+		cmd.Terminate()
 		defer wait()
 		// We timed out while waiting for the streaming header to appear.
 		// Return an appropriate error message using whatever was printed
@@ -470,6 +472,10 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj.SetStderr(execCmd.Stderr())
 	if opts.Stdin != nil {
 		cmdObj.SetStdin(opts.Stdin)
+	} else {
+		// Go's exec.Cmd reads from the null device if no stdin is provided. We instead provide
+		// an empty string for input so plugins can test whether there is content to read.
+		cmdObj.SetStdin(strings.NewReader(""))
 	}
 	activity.Record(ctx, "Starting %v", cmdObj)
 	if err := cmdObj.Start(); err != nil {
@@ -502,6 +508,7 @@ func (s *stdoutStreamer) Read(p []byte) (int, error) {
 }
 
 func (s *stdoutStreamer) Close() error {
+	s.cmd.Terminate()
 	return s.cmd.Wait()
 }
 
