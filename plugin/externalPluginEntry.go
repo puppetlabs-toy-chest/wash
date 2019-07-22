@@ -419,6 +419,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 	select {
 	case err := <-headerRdrCh:
 		if err != nil {
+			cmd.Terminate()
 			defer wait()
 			// Try to get more context from stderr
 			n, readErr := inv.stderr.ReadFrom(stderrR)
@@ -434,6 +435,7 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 		}()
 		return &stdoutStreamer{cmd, stdoutR}, nil
 	case <-timer:
+		cmd.Terminate()
 		defer wait()
 		// We timed out while waiting for the streaming header to appear.
 		// Return an appropriate error message using whatever was printed
@@ -506,6 +508,7 @@ func (s *stdoutStreamer) Read(p []byte) (int, error) {
 }
 
 func (s *stdoutStreamer) Close() error {
+	s.cmd.Terminate()
 	return s.cmd.Wait()
 }
 

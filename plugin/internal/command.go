@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/puppetlabs/wash/activity"
 	"github.com/kballard/go-shellquote"
+	"github.com/puppetlabs/wash/activity"
 )
 
 // Command is a wrapper to exec.Cmd. It handles context-cancellation cleanup
@@ -30,12 +30,13 @@ import (
 // it does mean we have to implement our own wrappers. These wrappers are
 // found at the bottom of the file.
 type Command struct {
-	c             *exec.Cmd
-	ctx           context.Context
-	pgid          int
-	waitResult    error
-	waitDoneCh    chan struct{}
-	waitOnce      sync.Once
+	c           *exec.Cmd
+	ctx         context.Context
+	pgid        int
+	terminateCh chan struct{}
+	waitResult  error
+	waitDoneCh  chan struct{}
+	waitOnce    sync.Once
 }
 
 // NewCommand creates a new command object that's tied to the passed-in
@@ -49,10 +50,11 @@ func NewCommand(ctx context.Context, cmd string, args ...string) *Command {
 		panic("plugin.newCommand called with a nil context")
 	}
 	cmdObj := &Command{
-		c:             exec.Command(cmd, args...),
-		ctx:           ctx,
-		pgid:          -1,
-		waitDoneCh:    make(chan struct{}),
+		c:           exec.Command(cmd, args...),
+		ctx:         ctx,
+		pgid:        -1,
+		terminateCh: make(chan struct{}),
+		waitDoneCh:  make(chan struct{}),
 	}
 	cmdObj.c.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
@@ -76,19 +78,22 @@ func (cmd *Command) Start() error {
 	}
 	// Setup the context-cancellation cleanup
 	go func() {
+		var desc string
 		select {
 		case <-cmd.waitDoneCh:
 			return
+		case <-cmd.terminateCh:
+			desc = "Command terminated"
 		case <-cmd.ctx.Done():
-			// Pass-thru
+			desc = "Context cancelled"
 		}
-		activity.Record(cmd.ctx, "%v: Context cancelled. Sending SIGTERM signal", cmd)
+		activity.Record(cmd.ctx, "%v: %s. Sending SIGTERM signal", cmd, desc)
 		if err := cmd.signal(syscall.SIGTERM); err != nil {
 			activity.Record(cmd.ctx, "%v: Failed to send SIGTERM signal: %v", cmd, err)
 		} else {
 			// SIGTERM was sent. Send SIGKILL after five seconds if the command failed
 			// to terminate.
-			time.AfterFunc(5 * time.Second, func() {
+			time.AfterFunc(5*time.Second, func() {
 				select {
 				case <-cmd.waitDoneCh:
 					return
@@ -129,6 +134,18 @@ func (cmd *Command) Run() error {
 		return err
 	}
 	return cmd.Wait()
+}
+
+// Terminate signals the command to stop. It will initiate SIGTERM,
+// followed by SIGKILL if it doesn't shutdown within 5 seconds.
+// Call Wait after to wait for the command to exit.
+func (cmd *Command) Terminate() {
+	select {
+	case <-cmd.terminateCh:
+		return
+	default:
+		close(cmd.terminateCh)
+	}
 }
 
 // Wait is a thread-safe wrapper to exec.Cmd#Wait
