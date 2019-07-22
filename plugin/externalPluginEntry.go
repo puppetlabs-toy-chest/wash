@@ -460,10 +460,19 @@ func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error)
 
 func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	// Serialize opts to JSON
-	optsJSON, err := json.Marshal(opts)
+	type serializedOptions struct {
+		ExecOptions
+		Stdin bool `json:"stdin"`
+	}
+	serializedOpts := serializedOptions{
+		ExecOptions: opts,
+		Stdin:       opts.Stdin != nil,
+	}
+	optsJSON, err := json.Marshal(serializedOpts)
 	if err != nil {
 		return nil, fmt.Errorf("could not marshal opts %v into JSON: %v", opts, err)
 	}
+
 	// Start the command.
 	inv := e.script.NewInvocation(ctx, "exec", e, append([]string{string(optsJSON), cmd}, args...)...)
 	cmdObj := inv.command

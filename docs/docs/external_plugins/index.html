@@ -384,7 +384,7 @@ myplugin:
 
 <h2 id="exec">exec</h2>
 
-<p><code>exec</code> is invoked as <code>&lt;plugin_script&gt; exec &lt;path&gt; &lt;state&gt; &lt;opts&gt; &lt;cmd&gt; &lt;args...&gt;</code>. If the <code>input</code> key is included as part of <code>opts</code> in a request to the <code>exec</code> endpoint, then its content is passed-in as stdin to the plugin script. Otherwise, the invocation&rsquo;s stdin will be at EOF. Note that <code>&lt;opts&gt;</code> is the JSON serialization of the remaining options.</p>
+<p><code>exec</code> is invoked as <code>&lt;plugin_script&gt; exec &lt;path&gt; &lt;state&gt; &lt;opts&gt; &lt;cmd&gt; &lt;args...&gt;</code>, where <code>&lt;opts&gt;</code> is the JSON serialization of the exec options. If the <code>input</code> key is included as part of <code>opts</code> in a request to the <code>exec</code> endpoint, then its content is passed-in as stdin to the plugin script and <code>opts[&quot;stdin&quot;]</code> is set to <code>true</code>. Otherwise, <code>opts[&quot;stdin&quot;]</code> is set to <code>false</code>.</p>
 
 <p>When <code>exec</code> is invoked, the plugin script&rsquo;s stdout and stderr must be connected to <code>cmd</code>&rsquo;s stdout and stderr, and it must exit the <code>exec</code> invocation with <code>cmd</code>&rsquo;s exit code.</p>
 
