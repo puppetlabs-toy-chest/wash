@@ -45,7 +45,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	suite.Regexp(regexp.MustCompile("stdout"), err)
 
 	// Test that Init properly decodes the root from stdout
-	stdout := "{}"
+	stdout := "{\"type_id\":\"foo_type\"}"
 	mockInvokeAndWait([]byte(stdout), nil)
 	err = root.Init(nil)
 	if suite.NoError(err) {
@@ -54,6 +54,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 				EntryBase: NewEntry("foo"),
 				methods:   map[string]interface{}{"list": nil},
 				script:    root.script,
+				typeID:    "foo::foo_type",
 			},
 		}
 
@@ -120,7 +121,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Re
 func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_PartitionsSchemaGraph() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+		EntryBase: NewEntry("fooPlugin"),
 		script:    mockScript,
 	}}
 
@@ -157,11 +158,12 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Pa
 	if err := root.Init(nil); suite.NoError(err) && suite.NotNil(root.schemaGraphs) {
 		// Ensure that the graph of root.schemaGraphs[type_id] has "type_id" as its
 		// first item. We pick an arbitrary type ID here
-		graph := root.schemaGraphs["aws.profile"]
+		typeID := namespace(root.name(), "aws.profile")
+		graph := root.schemaGraphs[typeID]
 		if suite.NotNil(graph) {
 			it := graph.Iterator()
 			it.First()
-			suite.Equal("aws.profile", it.Key())
+			suite.Equal(typeID, it.Key())
 		}
 
 		// Now ensure that the rest of root.schemaGraphs is what we expect. We already

@@ -67,15 +67,15 @@ type ExternalPluginEntryTestSuite struct {
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
 
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry("", false, false)
 	suite.Regexp("name", err)
 	decodedEntry.Name = "decodedEntry"
 
-	_, err = decodedEntry.toExternalPluginEntry(false, false)
+	_, err = decodedEntry.toExternalPluginEntry("", false, false)
 	suite.Regexp("methods", err)
 	decodedEntry.Methods = []interface{}{"list"}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(1, len(entry.methods))
@@ -90,7 +90,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 		Methods: []interface{}{"list", "stream"},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
@@ -112,7 +112,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_Support
 		Methods: []interface{}{},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 	}
@@ -125,7 +125,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 		Methods: []interface{}{[]interface{}{"list", []interface{}{childEntry}}, "read"},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
@@ -146,7 +146,7 @@ func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithState() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.State = "some state"
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.State, entry.state)
 	}
@@ -155,7 +155,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithStat
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCacheTTLs() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		expectedTTLs := NewEntry("foo").ttl
 		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
@@ -167,11 +167,11 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.SlashReplacer = "a string"
 	suite.Panics(
-		func() { _, _ = decodedEntry.toExternalPluginEntry(false, false) },
+		func() { _, _ = decodedEntry.toExternalPluginEntry("", false, false) },
 		"e.SlashReplacer: received string a string instead of a character",
 	)
 	decodedEntry.SlashReplacer = ":"
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.Equal(':', entry.slashReplacer())
 	}
@@ -181,7 +181,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	decodedEntry := newMockDecodedEntry("name")
 	t := time.Now()
 	decodedEntry.Attributes.SetCtime(t)
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		expectedAttr := EntryAttributes{}
 		expectedAttr.SetCtime(t)
@@ -194,7 +194,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list"},
 	}
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry("", false, false)
 	if suite.NoError(err) {
 		suite.False(entry.schemaKnown)
 	}
@@ -205,7 +205,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list", "schema"},
 	}
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry("", false, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
@@ -215,7 +215,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list", "schema"},
 		TypeID:  "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry("", false, false)
 	suite.Regexp("decodedEntry.*foo.*implements.*schema.*root", err)
 }
 
@@ -225,7 +225,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list"},
 		TypeID:  "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry("", true, false)
 	suite.Regexp("decodedEntry.*foo.*must.*implement.*schema", err)
 }
 
@@ -234,7 +234,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list", "schema"},
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry("", true, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
@@ -247,7 +247,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		},
 		TypeID: "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry("", true, false)
 	suite.Regexp("decodedEntry.*foo.*plugin.*roots.*support.*prefetching", err)
 }
 
@@ -257,9 +257,10 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list", "schema"},
 		TypeID:  "foo",
 	}
-	entry, err := decodedEntry.toExternalPluginEntry(true, false)
+	entry, err := decodedEntry.toExternalPluginEntry("fooPlugin", true, false)
 	if suite.NoError(err) {
 		suite.True(entry.schemaKnown)
+		suite.Equal("fooPlugin::foo", entry.typeID)
 	}
 }
 
@@ -298,7 +299,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_DoesNotImplementSchema_Ret
 func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchemaGraphWasProvided() {
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 		},
@@ -316,7 +317,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 		},
@@ -326,16 +327,16 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 	entry.SetTestID("/foo")
 	graph := linkedhashmap.New()
 	graph.Put(
-		entry.typeID,
+		entry.TypeID(),
 		entrySchema{
 			Actions: []string{"schema"},
 		},
 	)
-	entry.schemaGraphs[entry.typeID] = graph
+	entry.schemaGraphs[entry.TypeID()] = graph
 
 	s, err := entry.schema()
 	if suite.NoError(err) {
-		suite.Equal(entry.schemaGraphs[entry.typeID], s.graph)
+		suite.Equal(entry.schemaGraphs[entry.TypeID()], s.graph)
 		// Make sure that Wash did not shell out to the plugin script
 		mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
 	}
@@ -345,7 +346,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfS
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 			"read":   nil,
@@ -356,12 +357,12 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfS
 	entry.SetTestID("/foo")
 	graph := linkedhashmap.New()
 	graph.Put(
-		entry.typeID,
+		entry.TypeID(),
 		entrySchema{
 			Actions: []string{"list", "exec"},
 		},
 	)
-	entry.schemaGraphs[entry.typeID] = graph
+	entry.schemaGraphs[entry.TypeID()] = graph
 
 	_, err := entry.schema()
 	suite.Regexp("schema.*methods.*exec.*list.*instance.*methods.*read.*schema", err)
@@ -371,7 +372,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 		},
@@ -389,7 +390,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 		},
@@ -407,7 +408,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		typeID:    "fooTypeID",
+		typeID:    "fooPlugin::baz.fooTypeID",
 		methods: map[string]interface{}{
 			"schema": nil,
 		},
@@ -417,20 +418,20 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 
 	stdout := `
 {
-	"fooTypeID": {
+	"baz.fooTypeID": {
 		"label": "fooEntry",
 		"methods": ["list"],
-		"children": ["barTypeID"],
+		"children": ["baz.barTypeID"],
 		"singleton": true,
 		"meta_attribute_schema": {
 			"type": "object"
 		},
 		"metadata_schema": null
 	},
-	"barTypeID": {
+	"baz.barTypeID": {
 		"label": "barEntry",
 		"methods": ["list"],
-		"children": ["barTypeID"],
+		"children": ["baz.barTypeID"],
 		"singleton": false,
 		"meta_attribute_schema": {
 			"type": "object",
@@ -450,6 +451,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 		schemaJSON, err := json.Marshal(schema)
 		if suite.NoError(err) {
 			stdout = strings.ReplaceAll(stdout, "methods", "actions")
+			stdout = strings.ReplaceAll(stdout, "baz.", "fooPlugin::baz.")
 			suite.JSONEq(stdout, string(schemaJSON))
 		}
 	}
@@ -463,6 +465,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 		schemaGraphs: map[string]*linkedhashmap.Map{
 			"foo": linkedhashmap.New(),
 		},
+		typeID: "fooPlugin::foo_type",
 	}
 	entry.SetTestID("/foo")
 
@@ -485,7 +488,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 
 	// Test that List properly decodes the entries from stdout
 	stdout := "[" +
-		"{\"name\":\"foo\",\"methods\":[\"list\"]}" +
+		"{\"name\":\"foo\",\"methods\":[\"list\"],\"type_id\":\"bar\"}" +
 		"]"
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
@@ -497,6 +500,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 				methods:      map[string]interface{}{"list": nil},
 				script:       entry.script,
 				schemaGraphs: entry.schemaGraphs,
+				typeID:       "fooPlugin::bar",
 			},
 		}
 
@@ -690,7 +694,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfAnEm
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfTypeIDNotPresent() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 	stdout := []byte(`
 {
@@ -702,7 +706,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfType
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalformedSchema() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	// Error should indicate that foo's schema is not a JSON object.
@@ -742,7 +746,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalf
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfLabelNotProvided() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -756,7 +760,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfLabe
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMethodsNotProvided() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -772,7 +776,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMeth
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotParentAndChildrenProvided() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -790,7 +794,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotP
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfParentAndChildrenNotProvided() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -808,7 +812,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfPare
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMissingChildSchema() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -826,7 +830,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMiss
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSchemaIncludesDanglingTypeIDs() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -856,7 +860,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetaAttributeSchema() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -876,7 +880,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetadataSchema() {
 	entry := &externalPluginEntry{
-		typeID: "foo",
+		typeID: "fooPlugin::foo",
 	}
 
 	stdout := []byte(`
@@ -901,17 +905,18 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput()
 	stdout := readSchemaFixture(suite.Suite, "externalPluginSchema")
 
 	entry := &externalPluginEntry{
-		typeID: "aws.Root",
+		typeID: "fooPlugin::aws.Root",
 	}
 	actualGraph, err := entry.unmarshalSchemaGraph(stdout)
 	if suite.NoError(err) {
 		// Check that the first key is aws.Root
 		it := actualGraph.Iterator()
 		it.First()
-		suite.Equal(it.Key(), entry.typeID)
+		suite.Equal(it.Key(), entry.TypeID())
 
 		// Now check that all of stdout was successfully unmarshalled.
 		stdout = bytes.ReplaceAll(stdout, []byte("methods"), []byte("actions"))
+		stdout = bytes.ReplaceAll(stdout, []byte("aws."), []byte("fooPlugin::aws."))
 		actualGraphJSON, err := actualGraph.ToJSON()
 		if suite.NoError(err) {
 			suite.JSONEq(string(stdout), string(actualGraphJSON))

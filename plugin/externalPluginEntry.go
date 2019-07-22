@@ -30,7 +30,6 @@ type externalPlugin interface {
 	// error-prone version of schema here, in the externalPlugin
 	// interface.
 	schema() (*EntrySchema, error)
-	// Capitalize this so it doesn't conflict with the "typeID" field.
 	TypeID() string
 }
 
@@ -75,7 +74,7 @@ func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
 	return methods, nil
 }
 
-func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRoot bool) (*externalPluginEntry, error) {
+func (e decodedExternalPluginEntry) toExternalPluginEntry(pluginName string, schemaKnown bool, isRoot bool) (*externalPluginEntry, error) {
 	if len(e.Name) <= 0 {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
@@ -128,7 +127,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRo
 		methods:     methods,
 		state:       e.State,
 		schemaKnown: schemaKnown,
-		typeID:      e.TypeID,
+		typeID:      namespace(pluginName, e.TypeID),
 	}
 	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
@@ -225,12 +224,12 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 	}
 	var graph *linkedhashmap.Map
 	if e.schemaGraphs != nil {
-		g, ok := e.schemaGraphs[e.typeID]
+		g, ok := e.schemaGraphs[e.TypeID()]
 		if !ok {
 			msg := fmt.Errorf(
 				"e.Schema(): entry schemas were prefetched, but no schema graph was provided for %v (%v)",
 				ID(e),
-				e.typeID,
+				e.rawTypeID(),
 			)
 			panic(msg)
 		}
@@ -238,7 +237,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		// As a sanity check, ensure that the methods specified in the entry's schema
 		// match the methods specified in the entry instance. Return an error if there
 		// is a mismatch. Hopefully this should never happen.
-		es, _ := graph.Get(e.typeID)
+		es, _ := graph.Get(e.TypeID())
 		schemaMethods := es.(entrySchema).Actions
 		instanceMethods := e.supportedMethods()
 		sort.Strings(schemaMethods)
@@ -246,7 +245,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		mismatchErr := fmt.Errorf(
 			"%v (%v): the schema's supported methods (%v) don't match the instance's supported methods (%v)",
 			ID(e),
-			e.typeID,
+			e.rawTypeID(),
 			strings.Join(schemaMethods, ", "),
 			strings.Join(instanceMethods, ", "),
 		)
@@ -272,7 +271,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 			err := fmt.Errorf(
 				"%v (%v): failed to retrieve the entry's schema: %v",
 				ID(e),
-				e.typeID,
+				e.rawTypeID(),
 				err,
 			)
 			return nil, err
@@ -282,7 +281,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 			err := fmt.Errorf(
 				"%v (%v): could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
 				ID(e),
-				e.typeID,
+				e.rawTypeID(),
 				err,
 				strings.TrimSpace(inv.stdout.String()),
 				schemaFormat,
@@ -319,9 +318,10 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 		}
 	}
 
+	pluginName := e.pluginName()
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
-		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(e.schemaKnown, false)
+		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(pluginName, e.schemaKnown, false)
 		if err != nil {
 			return nil, err
 		}
@@ -516,12 +516,50 @@ func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, 
 	return newInvokeError(fmt.Sprintf("could not decode %v from stdout: %v", decodedThing, reason), inv)
 }
 
+func (e *externalPluginEntry) pluginName() string {
+	pluginName, _ := e.splitTypeID()
+	return pluginName
+}
+
+func (e *externalPluginEntry) rawTypeID() string {
+	_, rawTypeID := e.splitTypeID()
+	return rawTypeID
+}
+
+// splits the type ID into a tuple (<plugin_name>, <raw_type_id>)
+func (e *externalPluginEntry) splitTypeID() (string, string) {
+	substrings := strings.SplitN(e.TypeID(), "::", 2)
+	if len(substrings) < 2 {
+		// We can hit this case if only some of the entries specify type IDs.
+		// This is impossible in the (common) entry schema scenario because
+		// entry schema support always requires type IDs. So, it is not an
+		// error.
+		//
+		// If we hit this case, then the concept of a type ID doesn't make
+		// sense so we return empty here. Note that returning substrings[0]
+		// is not a good idea b/c the plugin author could namespace their
+		// type IDs with "::", so substrings[0] would contain that initial
+		// chunk.
+		return "__unknown__", ""
+	}
+	return substrings[0], substrings[1]
+}
+
+func namespace(pluginName string, typeID string) string {
+	if len(typeID) == 0 {
+		typeID = "unknown"
+	}
+	return pluginName + "::" + typeID
+}
+
 func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashmap.Map, error) {
+	pluginName, rawTypeID := e.splitTypeID()
+
 	// Since we know e's type ID, it is OK if the serialized schema's keys are
 	// out of order. However, the entry schema returned by the Wash API always
 	// ensures that the first key is the entry's type ID. Thus, we unmarshal the
 	// schema as a map[string]interface{} object, then convert it to a linkedhashmap
-	// object so that we ensure the "first key == e.typeID" requirement of the API.
+	// object so that we ensure the "first key == e.TypeID()" requirement of the API.
 	// We'll also validate the unmarshalled schema in the latter conversion.
 	var rawGraph map[string]interface{}
 	if err := json.Unmarshal(stdout, &rawGraph); err != nil {
@@ -530,8 +568,8 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 	if len(rawGraph) <= 0 {
 		return nil, fmt.Errorf("expected a non-empty JSON object")
 	}
-	if rawGraph[e.typeID] == nil {
-		return nil, fmt.Errorf("%v's schema is missing", e.typeID)
+	if rawGraph[rawTypeID] == nil {
+		return nil, fmt.Errorf("%v's schema is missing", rawTypeID)
 	}
 
 	// Convert each node in the rawGraph to an EntrySchema object. This step
@@ -542,7 +580,7 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 	// populatedTypeIDs/requiredTypeIDs variables.
 	populatedTypeIDs := make(map[string]bool)
 	requiredTypeIDs := map[string]bool{
-		e.typeID: true,
+		rawTypeID: true,
 	}
 	type decodedEntrySchema struct {
 		entrySchema
@@ -562,8 +600,8 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		}
 
 		// Ensure that all required fields are present
-		node.TypeID = typeID
-		populatedTypeIDs[node.TypeID] = true
+		populatedTypeIDs[typeID] = true
+		node.TypeID = namespace(pluginName, typeID)
 		if len(node.Label) <= 0 {
 			return fmt.Errorf("a label must be provided")
 		}
@@ -584,9 +622,12 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 			if len(node.Children) <= 0 {
 				return fmt.Errorf("parent entries must specify their children's type IDs")
 			}
+			var namespacedChildren []string
 			for _, child := range node.Children {
 				requiredTypeIDs[child] = true
+				namespacedChildren = append(namespacedChildren, namespace(pluginName, child))
 			}
+			node.Children = namespacedChildren
 		}
 		if node.MetaAttributeSchema != nil && node.MetaAttributeSchema.Type.Type != "object" {
 			return fmt.Errorf("invalid value for the meta attribute schema: expected a JSON object schema but got %v", node.MetaAttributeSchema.Type.Type)
@@ -599,13 +640,13 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		// We don't put node itself in because doing so would marshal its "Methods"
 		// field.
 		node.Actions = node.Methods
-		graph.Put(typeID, node.entrySchema)
+		graph.Put(node.TypeID, node.entrySchema)
 		return nil
 	}
-	if err := putNode(e.typeID, rawGraph[e.typeID]); err != nil {
+	if err := putNode(rawTypeID, rawGraph[rawTypeID]); err != nil {
 		return nil, err
 	}
-	delete(rawGraph, e.typeID)
+	delete(rawGraph, rawTypeID)
 	for typeID, schema := range rawGraph {
 		if err := putNode(typeID, schema); err != nil {
 			return nil, err

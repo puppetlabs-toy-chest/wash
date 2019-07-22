@@ -59,7 +59,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	if decodedRoot.Methods == nil {
 		decodedRoot.Methods = []interface{}{"list"}
 	}
-	entry, err := decodedRoot.toExternalPluginEntry(false, true)
+	entry, err := decodedRoot.toExternalPluginEntry(r.Name(), false, true)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 				schemaFormat,
 			)
 		}
-		r.schemaGraphs = partitionSchemaGraph(graph)
+		r.schemaGraphs = r.partitionSchemaGraph(graph)
 	}
 
 	return nil
@@ -98,7 +98,7 @@ func (r *externalPluginRoot) WrappedTypes() SchemaMap {
 }
 
 // partitionSchemaGraph partitions graph into a map of <type_id> => <schema_graph>
-func partitionSchemaGraph(graph *linkedhashmap.Map) map[string]*linkedhashmap.Map {
+func (r *externalPluginRoot) partitionSchemaGraph(graph *linkedhashmap.Map) map[string]*linkedhashmap.Map {
 	var populate func(*linkedhashmap.Map, entrySchema, map[string]bool)
 	populate = func(g *linkedhashmap.Map, node entrySchema, visited map[string]bool) {
 		if visited[node.TypeID] {
