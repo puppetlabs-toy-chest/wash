@@ -530,6 +530,16 @@ func (e *externalPluginEntry) rawTypeID() string {
 func (e *externalPluginEntry) splitTypeID() (string, string) {
 	substrings := strings.SplitN(e.TypeID(), "::", 2)
 	if len(substrings) < 2 {
+		// We can hit this case if only some of the entries specify type IDs.
+		// This is impossible in the (common) entry schema scenario because
+		// entry schema support always requires type IDs. So, it is not an
+		// error.
+		//
+		// If we hit this case, then the concept of a type ID doesn't make
+		// sense so we return empty here. Note that returning substrings[0]
+		// is not a good idea b/c the plugin author could namespace their
+		// type IDs with "::", so substrings[0] would contain that initial
+		// chunk.
 		return "__unknown__", ""
 	}
 	return substrings[0], substrings[1]
@@ -559,7 +569,7 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		return nil, fmt.Errorf("expected a non-empty JSON object")
 	}
 	if rawGraph[rawTypeID] == nil {
-		return nil, fmt.Errorf("%v's schema is missing", e.rawTypeID())
+		return nil, fmt.Errorf("%v's schema is missing", rawTypeID)
 	}
 
 	// Convert each node in the rawGraph to an EntrySchema object. This step
