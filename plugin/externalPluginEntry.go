@@ -470,6 +470,10 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	cmdObj.SetStderr(execCmd.Stderr())
 	if opts.Stdin != nil {
 		cmdObj.SetStdin(opts.Stdin)
+	} else {
+		// Go's exec.Cmd reads from the null device if no stdin is provided. We instead provide
+		// an empty string for input so plugins can test whether there is content to read.
+		cmdObj.SetStdin(strings.NewReader(""))
 	}
 	activity.Record(ctx, "Starting %v", cmdObj)
 	if err := cmdObj.Start(); err != nil {
