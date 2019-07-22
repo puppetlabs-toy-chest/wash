@@ -179,11 +179,7 @@ type criteria struct {
 
 func newCriteria(entry plugin.Entry) criteria {
 	var crit criteria
-	if schema := entry.Schema(); schema != nil {
-		crit.label = schema.Label
-		crit.typeID = schema.TypeID
-		crit.singleton = schema.Singleton
-	}
+	crit.typeID = plugin.TypeID(entry)
 	crit.list = plugin.ListAction().IsSupportedOn(entry)
 	crit.read = plugin.ReadAction().IsSupportedOn(entry)
 	crit.stream = plugin.StreamAction().IsSupportedOn(entry)
@@ -255,6 +251,23 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 	defer wp.Done()
 	name := plugin.ID(e)
 	crit := newCriteria(e)
+	schema, err := plugin.Schema(e)
+	if err != nil {
+		errs <- err
+		return
+	}
+	if schema != nil {
+		if schema.TypeID != crit.typeID {
+			errs <- fmt.Errorf(
+				"type ID mismatch: schema type ID is %v; entry type ID is %v",
+				schema.TypeID,
+				crit.typeID,
+			)
+			return
+		}
+		crit.label = schema.Label
+		crit.singleton = schema.Singleton
+	}
 	tracker := progress.Tracker{Message: fmt.Sprintf("Testing %s %s", crit, name), Total: 4}
 	pw.AppendTracker(&tracker)
 
@@ -292,7 +305,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 				ccrit := newCriteria(entry)
 				// If we have a TypeID, only explore children if they are different from the parent.
 				// This prevents simple recursion like volume directories containing more dirs.
-				if ccrit.typeID == "" || ccrit != crit {
+				if ccrit.typeID == "" || ccrit.typeID != crit.typeID {
 					groups[ccrit] = append(groups[ccrit], entry)
 				}
 			}
