@@ -30,20 +30,20 @@ type ColumnHeader struct {
 // Table represents a formatted table. Use the NewTable* functions
 // to create your Table objects.
 type Table struct {
-	headers []ColumnHeader
-	rows [][]string
+	headers    []ColumnHeader
+	rows       [][]string
 	numColumns int
 	hasHeaders bool
 }
 
 // NewTable creates a new Table object with the given
 // rows
-func NewTable(rows... []string) *Table {
+func NewTable(rows ...[]string) *Table {
 	if len(rows) == 0 {
-		panic("cmdutil.NewTable called without any rows")
+		rows = [][]string{}
 	}
 	return &Table{
-		rows: rows,
+		rows:       rows,
 		numColumns: len(rows[0]),
 		hasHeaders: false,
 	}
@@ -56,11 +56,11 @@ func NewTableWithHeaders(headers []ColumnHeader, rows [][]string) *Table {
 		panic("cmdutil.NewTableWithHeaders called without any headers")
 	}
 	if len(rows) == 0 {
-		panic("cmdutil.NewTableWithHeaders called without any rows")
+		rows = [][]string{}
 	}
 	return &Table{
-		headers: headers,
-		rows: rows,
+		headers:    headers,
+		rows:       rows,
 		numColumns: len(headers),
 		hasHeaders: true,
 	}
