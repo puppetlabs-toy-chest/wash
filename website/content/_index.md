@@ -251,6 +251,7 @@ Several external plugins have already been created:
 
 * [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once
 * [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves; also structured as an introduction to writing external plugins
+* [Puppetwash](https://github.com/timidri/puppetwash) - view your Puppet (Enterprise) instances and information about the managed nodes
 
 If you've created an external plugin, please put up a pull request to add it to this list!
 
