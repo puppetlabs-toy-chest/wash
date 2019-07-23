@@ -376,6 +376,8 @@ myplugin:
 
 <p><strong>NOTE:</strong> Only implement <code>metadata</code> if there is additional information about your entry that is not provided by the <code>meta</code> attribute.</p>
 
+<p><strong>NOTE:</strong> Check out the <a href="https://github.com/puppetlabs/wash-ruby">wash</a> gem. It provides a framework for implementing external plugins in Ruby.</p>
+
 <h2 id="stream">stream</h2>
 
 <p><code>stream</code> is invoked as <code>&lt;plugin_script&gt; stream &lt;path&gt; &lt;state&gt;</code>. When <code>stream</code> is invoked, the first line of the script&rsquo;s output must contain the <code>200</code> header. This header tells Wash that the entry&rsquo;s data is about to the streamed. After it outputs the header, the script must then stream the entry&rsquo;s data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request.</p>
