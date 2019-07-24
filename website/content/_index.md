@@ -240,7 +240,7 @@ We've implemented a number of handy Wash commands ([docs](/wash/docs#wash-comman
 * [docker](/wash/docs#docker): containers and volumes
 * [kubernetes](/wash/docs#kubernetes): pods, containers, and persistent volume claims
 * [aws](/wash/docs#aws): EC2 and S3
-* [gcp](/wash/docs#gcp)
+* [gcp](/wash/docs#gcp): Compute Engine
 
 [External plugins](/wash/docs/external_plugins):
 
