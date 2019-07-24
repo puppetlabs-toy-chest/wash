@@ -20,6 +20,7 @@ title= "Wash Documentation"
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
   * [Docker](#docker)
+  * [GCP](#gcp)
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
@@ -147,6 +148,18 @@ Host *.compute.amazonaws.com
 - containers and volumes
 - found from the local socket or via `DOCKER` environment variables
 - supports streaming, and remote command execution
+
+### GCP
+
+The GCP plugin follows https://cloud.google.com/docs/authentication/production to find your credentials:
+- it will try `GOOGLE_APPLICATION_CREDENTIALS` as a service account file
+- use your credentials in `$HOME/.config/gcloud/application_default_credentials.json`
+
+The simplest way to set this up is with
+```
+gcloud init
+gcloud auth application-default login
+```
 
 ### Kubernetes
 

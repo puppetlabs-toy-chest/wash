@@ -78,6 +78,7 @@ if (!doNotTrack) {
 <ul>
 <li><a href="#aws">AWS</a></li>
 <li><a href="#docker">Docker</a></li>
+<li><a href="#gcp">GCP</a></li>
 <li><a href="#kubernetes">Kubernetes</a></li>
 </ul></li>
 <li><a href="#plugin-concepts">Plugin Concepts</a>
@@ -228,6 +229,23 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <li>supports streaming, and remote command execution</li>
 </ul>
 
+<h3 id="gcp">GCP</h3>
+
+<p>The GCP plugin follows <a href="https://cloud.google.com/docs/authentication/production">https://cloud.google.com/docs/authentication/production</a> to find your credentials:
+- it will try <code>GOOGLE_APPLICATION_CREDENTIALS</code> as a service account file
+- use your credentials in <code>$HOME/.config/gcloud/application_default_credentials.json</code></p>
+
+<p>The simplest way to set this up is with</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">gcloud init
+gcloud auth application-default login</pre></td></tr></table>
+</div>
+</div>
 <h3 id="kubernetes">Kubernetes</h3>
 
 <ul>
