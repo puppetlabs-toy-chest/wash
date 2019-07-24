@@ -19,6 +19,9 @@ type Root struct {
 	oauthClient *http.Client
 }
 
+// serviceScopes lists all scopes used by this module.
+var serviceScopes = []string{crm.CloudPlatformScope, computeScope}
+
 // Init for root
 func (r *Root) Init(cfg map[string]interface{}) error {
 	r.EntryBase = plugin.NewEntry("gcp")
@@ -26,7 +29,7 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 
 	// We use the auto-generated SDK because it's the only one that allows us to list
 	// projects for the current credentials.
-	oauthClient, err := google.DefaultClient(context.Background(), crm.CloudPlatformScope)
+	oauthClient, err := google.DefaultClient(context.Background(), serviceScopes...)
 	r.oauthClient = oauthClient
 	return err
 }
@@ -59,7 +62,7 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	projects := make([]plugin.Entry, len(listResponse.Projects))
 	for i, proj := range listResponse.Projects {
-		projects[i] = newProject(proj)
+		projects[i] = newProject(proj, r.oauthClient)
 	}
 	return projects, nil
 }
