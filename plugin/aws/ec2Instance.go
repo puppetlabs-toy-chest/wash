@@ -258,16 +258,16 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		return nil, err
 	}
 	var hostname string
-	if name, ok := meta["PublicDnsName"]; ok {
+	if name, ok := meta["PublicDnsName"]; ok && name != nil {
 		hostname = name.(string)
-	} else if ipaddr, ok := meta["PublicIpAddress"]; ok {
+	} else if ipaddr, ok := meta["PublicIpAddress"]; ok && ipaddr != nil {
 		hostname = ipaddr.(string)
 	} else {
 		return nil, fmt.Errorf("No public interface found for %v", inst)
 	}
 
 	var identityfile string
-	if keyname, ok := meta["KeyName"]; ok {
+	if keyname, ok := meta["KeyName"]; ok && keyname != nil {
 		if homedir, err := os.UserHomeDir(); err != nil {
 			activity.Record(ctx, "Cannot determine home directory for location of key file. But key name is "+keyname.(string)+" %v", err)
 		} else {
