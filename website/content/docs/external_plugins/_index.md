@@ -210,6 +210,8 @@ Below is an example that includes pre-fetched method results for a static direct
 
 **NOTE:** Only implement `metadata` if there is additional information about your entry that is not provided by the `meta` attribute.
 
+**NOTE:** Check out the [wash](https://github.com/puppetlabs/wash-ruby) gem. It provides a framework for implementing external plugins in Ruby.
+
 ## stream
 `stream` is invoked as `<plugin_script> stream <path> <state>`. When `stream` is invoked, the first line of the script's output must contain the `200` header. This header tells Wash that the entry's data is about to the streamed. After it outputs the header, the script must then stream the entry's data. Wash will continue to poll stdout for any updates until either the streaming process exits, or the user cancels the request.
 
