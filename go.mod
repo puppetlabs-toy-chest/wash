@@ -49,7 +49,7 @@ require (
 	github.com/jedib0t/go-pretty v4.2.1+incompatible
 	github.com/json-iterator/go v1.1.6 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/kevinburke/ssh_config v0.0.0-20180830205328-81db2a75821e
+	github.com/kevinburke/ssh_config v0.0.0-20190724205821-6cfae18c12b8
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
 	github.com/mattn/go-colorable v0.1.1 // indirect
@@ -59,7 +59,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
-	github.com/pelletier/go-buffruneio v0.2.0 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/shirou/gopsutil v2.18.12+incompatible
