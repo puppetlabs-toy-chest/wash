@@ -20,7 +20,7 @@ import (
 // Root of the AWS plugin
 type Root struct {
 	plugin.EntryBase
-	profs []string
+	profs map[string]struct{}
 }
 
 func awsCredentialsFile() (string, error) {
@@ -70,13 +70,14 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 		if !ok {
 			return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profsI)
 		}
-		r.profs = make([]string, len(profs))
-		for i, elem := range profs {
+
+		r.profs = make(map[string]struct{})
+		for _, elem := range profs {
 			prof, ok := elem.(string)
 			if !ok {
 				return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profs)
 			}
-			r.profs[i] = prof
+			r.profs[prof] = struct{}{}
 		}
 	}
 
@@ -140,18 +141,13 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		names[strings.TrimPrefix(section.Name(), "profile ")] = struct{}{}
 	}
 
-	profs := make(map[string]struct{})
-	for _, p := range r.profs {
-		profs[p] = struct{}{}
-	}
-
-	var profiles []plugin.Entry
+	profiles := make([]plugin.Entry, 0, len(names))
 	for name := range names {
 		if name == "DEFAULT" {
 			continue
 		}
 
-		if _, ok := profs[name]; len(profs) > 0 && !ok {
+		if _, ok := r.profs[name]; len(r.profs) > 0 && !ok {
 			continue
 		}
 
