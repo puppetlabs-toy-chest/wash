@@ -7,6 +7,7 @@ replace github.com/aws/aws-sdk-go => github.com/MikaelSmith/aws-sdk-go v1.15.31-
 
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
+	cloud.google.com/go v0.38.0
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Benchkram/errz v0.0.0-20180520163740-571a80a661f2
 	github.com/InVisionApp/tabular v0.3.0

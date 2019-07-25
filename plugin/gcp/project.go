@@ -31,7 +31,13 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []plugin.Entry{comp}, nil
+
+	stor, err := newStorageDir(p.client, p.id)
+	if err != nil {
+		return nil, err
+	}
+
+	return []plugin.Entry{comp, stor}, nil
 }
 
 func (p *project) Schema() *plugin.EntrySchema {
@@ -43,5 +49,6 @@ func (p *project) Schema() *plugin.EntrySchema {
 func (p *project) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&computeDir{}).Schema(),
+		(&storageDir{}).Schema(),
 	}
 }

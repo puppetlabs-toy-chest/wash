@@ -22,7 +22,7 @@ type Root struct {
 }
 
 // serviceScopes lists all scopes used by this module.
-var serviceScopes = []string{crm.CloudPlatformScope, computeScope}
+var serviceScopes = []string{crm.CloudPlatformScope, computeScope, storageScope}
 
 // Init for root
 func (r *Root) Init(cfg map[string]interface{}) error {
