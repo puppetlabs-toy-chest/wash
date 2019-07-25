@@ -3,6 +3,7 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 type Root struct {
 	plugin.EntryBase
 	oauthClient *http.Client
+	projects    map[string]struct{}
 }
 
 // serviceScopes lists all scopes used by this module.
@@ -31,6 +33,22 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 	// projects for the current credentials.
 	oauthClient, err := google.DefaultClient(context.Background(), serviceScopes...)
 	r.oauthClient = oauthClient
+
+	if projsI, ok := cfg["projects"]; ok {
+		projs, ok := projsI.([]interface{})
+		if !ok {
+			return fmt.Errorf("gcp.projects config must be an array of strings, not %s", projsI)
+		}
+		r.projects = make(map[string]struct{})
+		for _, elem := range projs {
+			proj, ok := elem.(string)
+			if !ok {
+				return fmt.Errorf("gcp.projects config must be an array of strings, not %s", projs)
+			}
+			r.projects[proj] = struct{}{}
+		}
+	}
+
 	return err
 }
 
@@ -60,9 +78,16 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	projects := make([]plugin.Entry, len(listResponse.Projects))
-	for i, proj := range listResponse.Projects {
-		projects[i] = newProject(proj, r.oauthClient)
+	projects := make([]plugin.Entry, 0, len(listResponse.Projects))
+	for _, proj := range listResponse.Projects {
+		if _, ok := r.projects[proj.Name]; len(r.projects) > 0 && !ok {
+			if _, ok := r.projects[proj.ProjectId]; !ok {
+				// If a list of enabled projects is provided and both name and project ID are not in it,
+				// omit this project.
+				continue
+			}
+		}
+		projects = append(projects, newProject(proj, r.oauthClient))
 	}
 	return projects, nil
 }

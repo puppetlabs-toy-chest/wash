@@ -161,6 +161,13 @@ gcloud init
 gcloud auth application-default login
 ```
 
+The GCP plugin will list all projects you have access to. The projects it lists can be limited by adding
+```
+gcp:
+  projects: [project-1, project-2]
+```
+to Wash's [config file](#config). Project can be referenced either by name or project ID.
+
 ### Kubernetes
 
 - pods, containers, and persistent volume claims

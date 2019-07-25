@@ -246,6 +246,19 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 gcloud auth application-default login</pre></td></tr></table>
 </div>
 </div>
+<p>The GCP plugin will list all projects you have access to. The projects it lists can be limited by adding</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">gcp:
+  projects: [project-1, project-2]</pre></td></tr></table>
+</div>
+</div>
+<p>to Wash&rsquo;s <a href="#config">config file</a>. Project can be referenced either by name or project ID.</p>
+
 <h3 id="kubernetes">Kubernetes</h3>
 
 <ul>
