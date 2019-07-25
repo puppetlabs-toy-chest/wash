@@ -68,7 +68,7 @@ func (r *Root) Init(cfg map[string]interface{}) error {
 	if profsI, ok := cfg["profiles"]; ok {
 		profs, ok := profsI.([]interface{})
 		if !ok {
-			return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profs)
+			return fmt.Errorf("aws.profiles config must be an array of strings, not %s", profsI)
 		}
 		r.profs = make([]string, len(profs))
 		for i, elem := range profs {
