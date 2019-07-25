@@ -110,7 +110,7 @@ if (!doNotTrack) {
 <li><code>&lt;args...&gt;</code> are the method&rsquo;s arguments.</li>
 </ul>
 
-<p><code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> can be a bit confusing. To understand them, we recommend reading the <a href="#aside">Aside</a>, and to look at the provided <a href="#bash-example">Bash</a> + Ruby external plugin examples to see how they&rsquo;re used. <strong>TODO: Link a Ruby example</strong></p>
+<p><code>&lt;path&gt;</code> and <code>&lt;state&gt;</code> can be a bit confusing. To understand them, we recommend reading the <a href="#aside">Aside</a>, and to look at the provided <a href="#bash-example">Bash</a> example + the <a href="https://github.com/puppetlabs/wash-ruby">wash</a> gem to see how they are used. Note that the latter provides a framework for implementing external plugins in Ruby.</p>
 
 <p>The remaining sections describe all the possible Wash methods that can be passed-in, including their calling and error conventions, and the expected results.</p>
 
@@ -386,8 +386,6 @@ myplugin:
 <p><code>metadata</code> adopts the standard error convention described in the <a href="#errors">Errors</a> section.</p>
 
 <p><strong>NOTE:</strong> Only implement <code>metadata</code> if there is additional information about your entry that is not provided by the <code>meta</code> attribute.</p>
-
-<p><strong>NOTE:</strong> Check out the <a href="https://github.com/puppetlabs/wash-ruby">wash</a> gem. It provides a framework for implementing external plugins in Ruby.</p>
 
 <h2 id="stream">stream</h2>
 
