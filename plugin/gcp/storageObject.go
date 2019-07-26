@@ -7,12 +7,12 @@ import (
 
 type storageObject struct {
 	plugin.EntryBase
-	storageProjectClient
+	*storage.ObjectHandle
 }
 
-func newStorageObject(client storageProjectClient, object *storage.ObjectAttrs) *storageObject {
-	obj := &storageObject{EntryBase: plugin.NewEntry(object.Name), storageProjectClient: client}
-	obj.Attributes().SetMeta(object)
+func newStorageObject(name string, object *storage.ObjectHandle, attrs *storage.ObjectAttrs) *storageObject {
+	obj := &storageObject{EntryBase: plugin.NewEntry(name), ObjectHandle: object}
+	obj.Attributes().SetMtime(attrs.Updated).SetSize(uint64(attrs.Size)).SetMeta(attrs)
 	return obj
 }
 
