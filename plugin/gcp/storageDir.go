@@ -45,7 +45,7 @@ func (s *storageDir) List(ctx context.Context) ([]plugin.Entry, error) {
 		if err != nil {
 			return nil, err
 		}
-		entries = append(entries, newStorageBucket(bucketAttrs))
+		entries = append(entries, newStorageBucket(s.storageProjectClient, bucketAttrs))
 	}
 	return entries, nil
 }
