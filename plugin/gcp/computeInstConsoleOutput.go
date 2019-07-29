@@ -28,10 +28,7 @@ func (cl *computeInstanceConsoleOutput) Schema() *plugin.EntrySchema {
 }
 
 func (cl *computeInstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
-	// Zone is given as a URL on the Instance type.
-	zoneSlice := strings.Split(cl.instance.Zone, "/")
-	zone := zoneSlice[len(zoneSlice)-1]
-
+	zone := getZone(cl.instance)
 	activity.Record(ctx,
 		"Getting output for instance %v in project %v, zone %v", cl.instance.Name, cl.service.projectID, zone)
 	outputCall := cl.service.Instances.GetSerialPortOutput(cl.service.projectID, zone, cl.instance.Name)

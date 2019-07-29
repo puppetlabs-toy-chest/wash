@@ -259,6 +259,10 @@ gcloud auth application-default login</pre></td></tr></table>
 </div>
 <p>to Wash&rsquo;s <a href="#config">config file</a>. Project can be referenced either by name or project ID.</p>
 
+<h4 id="exec-1">Exec</h4>
+
+<p>The Exec method mirrors running <a href="https://cloud.google.com/sdk/gcloud/reference/compute/ssh"><code>gcloud compute ssh</code></a>. If not already present, it will generate a Google Compute-specific SSH key pair and known hosts file in your <code>~/.ssh</code> directory and ensure they&rsquo;re present on the machine you&rsquo;re trying to connect to. Your current <code>$USER</code> name will be used as the login user.</p>
+
 <h3 id="kubernetes">Kubernetes</h3>
 
 <ul>

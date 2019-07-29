@@ -15,6 +15,7 @@ require (
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/araddon/dateparse v0.0.0-20190329160016-74dc0e29b01f
+	github.com/avast/retry-go v2.4.1+incompatible
 	github.com/aws/aws-sdk-go v1.19.7
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1

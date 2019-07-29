@@ -168,6 +168,10 @@ gcp:
 ```
 to Wash's [config file](#config). Project can be referenced either by name or project ID.
 
+#### Exec
+
+The Exec method mirrors running [`gcloud compute ssh`](https://cloud.google.com/sdk/gcloud/reference/compute/ssh). If not already present, it will generate a Google Compute-specific SSH key pair and known hosts file in your `~/.ssh` directory and ensure they're present on the machine you're trying to connect to. Your current `$USER` name will be used as the login user.
+
 ### Kubernetes
 
 - pods, containers, and persistent volume claims
