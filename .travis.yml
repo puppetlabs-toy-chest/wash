@@ -24,7 +24,7 @@ jobs:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
     script: golangci-lint run -v
   - name: Test website updated
-    install: curl -sfL https://github.com/gohugoio/hugo/releases/download/v0.55.6/hugo_0.55.6_Linux-64bit.tar.gz | tar -xzC $(go env GOPATH)/bin
+    install: curl -sfL https://github.com/gohugoio/hugo/releases/download/v0.56.1/hugo_0.56.1_Linux-64bit.tar.gz | tar -xzC $(go env GOPATH)/bin
     script: rm -r docs && hugo -s website && test -z "$(git status --porcelain)"
   - stage: deploy
     name: Deploy to GitHub Releases
