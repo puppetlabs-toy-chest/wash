@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"strconv"
-	"time"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -26,7 +25,6 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	s3Obj := &s3Object{
 		EntryBase: plugin.NewEntry(name),
 	}
-	s3Obj.DisableCachingFor(plugin.MetadataOp)
 	s3Obj.bucket = bucket
 	s3Obj.key = key
 	s3Obj.client = client
@@ -50,23 +48,6 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	return s3Obj
 }
 
-func (o *s3Object) cachedHeadObject(ctx context.Context) (*s3Client.HeadObjectOutput, error) {
-	resp, err := plugin.CachedOp(ctx, "HeadObject", o, 15*time.Second, func() (interface{}, error) {
-		request := &s3Client.HeadObjectInput{
-			Bucket: awsSDK.String(o.bucket),
-			Key:    awsSDK.String(o.key),
-		}
-
-		return o.client.HeadObjectWithContext(ctx, request)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return resp.(*s3Client.HeadObjectOutput), nil
-}
-
 func (o *s3Object) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(o, "object").
@@ -75,9 +56,14 @@ func (o *s3Object) Schema() *plugin.EntrySchema {
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {
-	metadata, err := o.cachedHeadObject(ctx)
+	request := &s3Client.HeadObjectInput{
+		Bucket: awsSDK.String(o.bucket),
+		Key:    awsSDK.String(o.key),
+	}
+
+	metadata, err := o.client.HeadObjectWithContext(ctx, request)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return plugin.ToJSONObject(metadata), nil
