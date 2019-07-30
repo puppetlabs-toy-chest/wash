@@ -103,7 +103,7 @@ func (j Journal) Warnf(msg string, a ...interface{}) {
 // appends the message to that journal. Journals are stored in the user's cache directory under
 // `wash/activity/ID.log`.
 func (j Journal) Record(msg string, a ...interface{}) {
-	log.Debugf(msg, a...)
+	log.Printf(msg, a...)
 
 	if logger, err := j.getLogger(); err != nil {
 		log.Warnf("Error creating journal %v: %v", j.ID, err)
