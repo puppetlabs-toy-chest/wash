@@ -280,11 +280,12 @@ func pluginName(e Entry) string {
 			// it is enough to return "__apifs__" here because this is an unlikely
 			// edge case.
 			//
-			// TODO: Panic here once apifs is removed.
+			// TODO: Panic here once https://github.com/puppetlabs/wash/issues/438
+			// is resolved.
 			return "__apifs__"
 		}
 	}
-	segments := strings.Split(trimmedID, "/")
+	segments := strings.SplitN(trimmedID, "/", 2)
 	return segments[0]
 }
 
