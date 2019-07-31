@@ -3,6 +3,7 @@ package plugin
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/ekinanp/jsonschema"
 	"github.com/emirpasic/gods/maps/linkedhashmap"
@@ -13,14 +14,13 @@ const registrySchemaLabel = "mountpoint"
 // TypeID returns the entry's type ID. It is needed by the API,
 // so plugin authors should ignore this.
 func TypeID(e Entry) string {
-	// Note that this helper's necessary because Schema() can
-	// shell out for external plugins, which is expensive.
-	if ep, ok := e.(externalPlugin); ok {
-		return ep.TypeID()
+	pluginName := pluginName(e)
+	rawTypeID := rawTypeID(e)
+	if pluginName == "" {
+		// e is the plugin registry
+		return rawTypeID
 	}
-	// e is a core plugin entry
-	t := unravelPtr(reflect.TypeOf(e))
-	return t.PkgPath() + "/" + t.Name()
+	return namespace(pluginName, rawTypeID)
 }
 
 // Schema returns the entry's schema. It is needed by the API,
@@ -36,7 +36,7 @@ func Schema(e Entry) (*EntrySchema, error) {
 		// registry's schema graph.
 		schema := NewEntrySchema(t, registrySchemaLabel).IsSingleton()
 		schema.graph = linkedhashmap.New()
-		schema.graph.Put(schema.TypeID, &schema.entrySchema)
+		schema.graph.Put(TypeID(t), &schema.entrySchema)
 		for _, root := range t.pluginRoots {
 			childSchema, err := Schema(root)
 			if err != nil {
@@ -47,10 +47,9 @@ func Schema(e Entry) (*EntrySchema, error) {
 				// Create a schema for root so that `stree <mountpoint>` can still display
 				// it.
 				childSchema = NewEntrySchema(root, CName(root))
-				childSchema.TypeID = namespace(root.name(), "Root")
 			}
 			childSchema.IsSingleton()
-			schema.Children = append(schema.Children, childSchema.TypeID)
+			schema.Children = append(schema.Children, TypeID(childSchema.entry))
 			childGraph := childSchema.graph
 			if childGraph == nil {
 				// This is a core-plugin
@@ -69,10 +68,6 @@ func Schema(e Entry) (*EntrySchema, error) {
 }
 
 type entrySchema struct {
-	// EntrySchemas are marshalled as JSON objects with key
-	// <type_id> => <schema>. Thus, there's no need to include
-	// the type_id more than once.
-	TypeID              string      `json:"-"`
 	Label               string      `json:"label"`
 	Singleton           bool        `json:"singleton"`
 	Actions             []string    `json:"actions"`
@@ -93,7 +88,10 @@ type EntrySchema struct {
 	entrySchema
 	metaAttributeSchemaObj interface{}
 	metadataSchemaObj      interface{}
-	entry                  Entry
+	// Store the entry so that we can compute its type ID and, if the entry's
+	// a core plugin entry, enumerate its child schemas when marshaling its
+	// schema.
+	entry Entry
 	// graph is set by external plugins
 	graph *linkedhashmap.Map
 }
@@ -105,15 +103,12 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 	}
 	s := &EntrySchema{
 		entrySchema: entrySchema{
-			TypeID:  TypeID(e),
 			Label:   label,
 			Actions: SupportedActionsOf(e),
 		},
 		// The meta attribute's empty by default
 		metaAttributeSchemaObj: struct{}{},
-		// Store the entry so that when marshalling, we can enumerate
-		// its child schemas (for core plugins only)
-		entry: e,
+		entry:                  e,
 	}
 	return s
 }
@@ -135,7 +130,7 @@ func (s EntrySchema) MarshalJSON() ([]byte, error) {
 			msg := fmt.Sprintf(
 				"s.MarshalJSON: called with a nil graph for external plugin entry %v (type ID %v)",
 				CName(s.entry),
-				s.TypeID,
+				TypeID(s.entry),
 			)
 			panic(msg)
 		}
@@ -192,7 +187,7 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
 		}
 	}
-	graph.Put(s.TypeID, &s.entrySchema)
+	graph.Put(TypeID(s.entry), &s.entrySchema)
 
 	// Fill-in the children
 	if !ListAction().IsSupportedOn(s.entry) {
@@ -208,8 +203,12 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		if child == nil {
 			s.fillPanicf("found a nil child schema")
 		}
-		s.entrySchema.Children = append(s.Children, child.TypeID)
-		if _, ok := graph.Get(child.TypeID); ok {
+		// The ID here is meaningless. We only set it so that TypeID can get the
+		// plugin name
+		child.entry.setID(s.entry.id())
+		childTypeID := TypeID(child.entry)
+		s.entrySchema.Children = append(s.Children, childTypeID)
+		if _, ok := graph.Get(childTypeID); ok {
 			continue
 		}
 		passAlongWrappedTypes(sParent, child.entry)
@@ -259,9 +258,54 @@ func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
 // Helper for s.fill(). We make it a separate method to avoid re-creating
 // closures for each recursive s.fill() call.
 func (s *EntrySchema) fillPanicf(format string, a ...interface{}) {
-	formatStr := fmt.Sprintf("s.fill (%v): %v", s.TypeID, format)
+	formatStr := fmt.Sprintf("s.fill (%v): %v", TypeID(s.entry), format)
 	msg := fmt.Sprintf(formatStr, a...)
 	panic(msg)
+}
+
+func pluginName(e Entry) string {
+	// Using ID(e) will panic if e.id() is empty. The latter's possible
+	// via something like "Schema(registry) => TypeID(Root)", where
+	// CachedList(registry) was not yet called. This can happen if, for
+	// example, the user starts the Wash shell and runs `stree`.
+	trimmedID := strings.Trim(e.id(), "/")
+	if trimmedID == "" {
+		switch e.(type) {
+		case Root:
+			return CName(e)
+		case *Registry:
+			return ""
+		default:
+			// e has no ID. This is possible if e's from the apifs package. For now,
+			// it is enough to return "__apifs__" here because this is an unlikely
+			// edge case.
+			//
+			// TODO: Panic here once https://github.com/puppetlabs/wash/issues/438
+			// is resolved.
+			return "__apifs__"
+		}
+	}
+	segments := strings.SplitN(trimmedID, "/", 2)
+	return segments[0]
+}
+
+func rawTypeID(e Entry) string {
+	switch t := e.(type) {
+	case externalPlugin:
+		rawTypeID := t.RawTypeID()
+		if rawTypeID == "" {
+			rawTypeID = "unknown"
+		}
+		return rawTypeID
+	default:
+		// e is either a core plugin entry or the plugin registry itself
+		reflectType := unravelPtr(reflect.TypeOf(e))
+		return reflectType.PkgPath() + "/" + reflectType.Name()
+	}
+}
+
+func namespace(pluginName string, rawTypeID string) string {
+	return pluginName + "::" + rawTypeID
 }
 
 func unravelPtr(t reflect.Type) reflect.Type {

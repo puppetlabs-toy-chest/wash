@@ -19,6 +19,7 @@ import (
 )
 
 type externalPlugin interface {
+	Entry
 	supportedMethods() []string
 	// Entry#Schema's type-signature only makes sense for core plugins
 	// since core plugin schemas do not require any error-prone API
@@ -30,7 +31,7 @@ type externalPlugin interface {
 	// error-prone version of schema here, in the externalPlugin
 	// interface.
 	schema() (*EntrySchema, error)
-	TypeID() string
+	RawTypeID() string
 }
 
 type decodedCacheTTLs struct {
@@ -74,7 +75,7 @@ func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
 	return methods, nil
 }
 
-func (e decodedExternalPluginEntry) toExternalPluginEntry(pluginName string, schemaKnown bool, isRoot bool) (*externalPluginEntry, error) {
+func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRoot bool) (*externalPluginEntry, error) {
 	if len(e.Name) <= 0 {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
@@ -127,7 +128,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(pluginName string, sch
 		methods:     methods,
 		state:       e.State,
 		schemaKnown: schemaKnown,
-		typeID:      namespace(pluginName, e.TypeID),
+		rawTypeID:   e.TypeID,
 	}
 	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
@@ -151,10 +152,10 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(pluginName string, sch
 // externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
-	script  externalPluginScript
-	methods map[string]interface{}
-	state   string
-	typeID  string
+	script    externalPluginScript
+	methods   map[string]interface{}
+	state     string
+	rawTypeID string
 	// schemaKnown is set by the root. We use it to enforce the invariant
 	// "If the root implements schema, all entries must implement schema"
 	// when decoding external plugin entries.
@@ -201,8 +202,8 @@ func (e *externalPluginEntry) Schema() *EntrySchema {
 	return nil
 }
 
-func (e *externalPluginEntry) TypeID() string {
-	return e.typeID
+func (e *externalPluginEntry) RawTypeID() string {
+	return e.rawTypeID
 }
 
 const schemaFormat = `{
@@ -224,12 +225,12 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 	}
 	var graph *linkedhashmap.Map
 	if e.schemaGraphs != nil {
-		g, ok := e.schemaGraphs[e.TypeID()]
+		g, ok := e.schemaGraphs[TypeID(e)]
 		if !ok {
 			msg := fmt.Errorf(
 				"e.Schema(): entry schemas were prefetched, but no schema graph was provided for %v (%v)",
 				ID(e),
-				e.rawTypeID(),
+				rawTypeID(e),
 			)
 			panic(msg)
 		}
@@ -237,7 +238,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		// As a sanity check, ensure that the methods specified in the entry's schema
 		// match the methods specified in the entry instance. Return an error if there
 		// is a mismatch. Hopefully this should never happen.
-		es, _ := graph.Get(e.TypeID())
+		es, _ := graph.Get(TypeID(e))
 		schemaMethods := es.(entrySchema).Actions
 		instanceMethods := e.supportedMethods()
 		sort.Strings(schemaMethods)
@@ -245,7 +246,7 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		mismatchErr := fmt.Errorf(
 			"%v (%v): the schema's supported methods (%v) don't match the instance's supported methods (%v)",
 			ID(e),
-			e.rawTypeID(),
+			rawTypeID(e),
 			strings.Join(schemaMethods, ", "),
 			strings.Join(instanceMethods, ", "),
 		)
@@ -271,17 +272,17 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 			err := fmt.Errorf(
 				"%v (%v): failed to retrieve the entry's schema: %v",
 				ID(e),
-				e.rawTypeID(),
+				rawTypeID(e),
 				err,
 			)
 			return nil, err
 		}
-		graph, err = e.unmarshalSchemaGraph(inv.stdout.Bytes())
+		graph, err = unmarshalSchemaGraph(e, inv.stdout.Bytes())
 		if err != nil {
 			err := fmt.Errorf(
 				"%v (%v): could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
 				ID(e),
-				e.rawTypeID(),
+				rawTypeID(e),
 				err,
 				strings.TrimSpace(inv.stdout.String()),
 				schemaFormat,
@@ -318,10 +319,9 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 		}
 	}
 
-	pluginName := e.pluginName()
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
-		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(pluginName, e.schemaKnown, false)
+		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(e.schemaKnown, false)
 		if err != nil {
 			return nil, err
 		}
@@ -532,44 +532,8 @@ func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, 
 	return newInvokeError(fmt.Sprintf("could not decode %v from stdout: %v", decodedThing, reason), inv)
 }
 
-func (e *externalPluginEntry) pluginName() string {
-	pluginName, _ := e.splitTypeID()
-	return pluginName
-}
-
-func (e *externalPluginEntry) rawTypeID() string {
-	_, rawTypeID := e.splitTypeID()
-	return rawTypeID
-}
-
-// splits the type ID into a tuple (<plugin_name>, <raw_type_id>)
-func (e *externalPluginEntry) splitTypeID() (string, string) {
-	substrings := strings.SplitN(e.TypeID(), "::", 2)
-	if len(substrings) < 2 {
-		// We can hit this case if only some of the entries specify type IDs.
-		// This is impossible in the (common) entry schema scenario because
-		// entry schema support always requires type IDs. So, it is not an
-		// error.
-		//
-		// If we hit this case, then the concept of a type ID doesn't make
-		// sense so we return empty here. Note that returning substrings[0]
-		// is not a good idea b/c the plugin author could namespace their
-		// type IDs with "::", so substrings[0] would contain that initial
-		// chunk.
-		return "__unknown__", ""
-	}
-	return substrings[0], substrings[1]
-}
-
-func namespace(pluginName string, typeID string) string {
-	if len(typeID) == 0 {
-		typeID = "unknown"
-	}
-	return pluginName + "::" + typeID
-}
-
-func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashmap.Map, error) {
-	pluginName, rawTypeID := e.splitTypeID()
+func unmarshalSchemaGraph(e externalPlugin, stdout []byte) (*linkedhashmap.Map, error) {
+	pluginName, rawTypeID := pluginName(e), rawTypeID(e)
 
 	// Since we know e's type ID, it is OK if the serialized schema's keys are
 	// out of order. However, the entry schema returned by the Wash API always
@@ -603,11 +567,11 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		Methods []string `json:"methods"`
 	}
 	graph := linkedhashmap.New()
-	putNode := func(typeID string, rawSchema interface{}) error {
+	putNode := func(rawTypeID string, rawSchema interface{}) error {
 		// Deep-copy the value into the decodedEntrySchema object
 		schema, ok := rawSchema.(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("expected a JSON object for %v's schema but got %v", typeID, rawSchema)
+			return fmt.Errorf("expected a JSON object for %v's schema but got %v", rawTypeID, rawSchema)
 		}
 		var node decodedEntrySchema
 		err := deepcopy.Copy(&node, schema)
@@ -616,8 +580,8 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		}
 
 		// Ensure that all required fields are present
-		populatedTypeIDs[typeID] = true
-		node.TypeID = namespace(pluginName, typeID)
+		populatedTypeIDs[rawTypeID] = true
+		typeID := namespace(pluginName, rawTypeID)
 		if len(node.Label) <= 0 {
 			return fmt.Errorf("a label must be provided")
 		}
@@ -656,15 +620,15 @@ func (e *externalPluginEntry) unmarshalSchemaGraph(stdout []byte) (*linkedhashma
 		// We don't put node itself in because doing so would marshal its "Methods"
 		// field.
 		node.Actions = node.Methods
-		graph.Put(node.TypeID, node.entrySchema)
+		graph.Put(typeID, node.entrySchema)
 		return nil
 	}
 	if err := putNode(rawTypeID, rawGraph[rawTypeID]); err != nil {
 		return nil, err
 	}
 	delete(rawGraph, rawTypeID)
-	for typeID, schema := range rawGraph {
-		if err := putNode(typeID, schema); err != nil {
+	for rawTypeID, schema := range rawGraph {
+		if err := putNode(rawTypeID, schema); err != nil {
 			return nil, err
 		}
 	}

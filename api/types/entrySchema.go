@@ -16,6 +16,7 @@ import (
 // swagger:response
 type EntrySchema struct {
 	plugin.EntrySchema
+	typeID   string
 	children []*EntrySchema
 	// graph is an ordered map of `<TypeID>` => `<EntrySchema>`. We store it to make
 	// MarshalJSON's implementation easier.
@@ -65,7 +66,7 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 				graph: s.graph,
 			}
 		}
-		node.EntrySchema.TypeID = key.(string)
+		node.typeID = key.(string)
 		err = deepcopy.Copy(&node.EntrySchema, value.(map[string]interface{}))
 		if err != nil {
 			return
@@ -90,13 +91,13 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 
 // TypeID returns the entry's type ID. This should be unique.
 func (s *EntrySchema) TypeID() string {
-	return s.EntrySchema.TypeID
+	return s.typeID
 }
 
 // SetTypeID sets the entry's type ID. This should only be called
 // by the tests.
 func (s *EntrySchema) SetTypeID(typeID string) *EntrySchema {
-	s.EntrySchema.TypeID = typeID
+	s.typeID = typeID
 	return s
 }
 
