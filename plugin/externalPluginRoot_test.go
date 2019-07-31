@@ -54,7 +54,7 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 				EntryBase: NewEntry("foo"),
 				methods:   map[string]interface{}{"list": nil},
 				script:    root.script,
-				typeID:    "foo::foo_type",
+				rawTypeID: "foo_type",
 			},
 		}
 

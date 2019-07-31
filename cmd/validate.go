@@ -257,14 +257,6 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 		return
 	}
 	if schema != nil {
-		if schema.TypeID != crit.typeID {
-			errs <- fmt.Errorf(
-				"type ID mismatch: schema type ID is %v; entry type ID is %v",
-				schema.TypeID,
-				crit.typeID,
-			)
-			return
-		}
 		crit.label = schema.Label
 		crit.singleton = schema.Singleton
 	}

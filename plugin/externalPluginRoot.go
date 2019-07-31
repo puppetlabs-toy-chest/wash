@@ -59,7 +59,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	if decodedRoot.Methods == nil {
 		decodedRoot.Methods = []interface{}{"list"}
 	}
-	entry, err := decodedRoot.toExternalPluginEntry(r.Name(), false, true)
+	entry, err := decodedRoot.toExternalPluginEntry(false, true)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 		if err != nil {
 			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
 		}
-		graph, err := r.unmarshalSchemaGraph(marshalledSchema)
+		graph, err := unmarshalSchemaGraph(r, marshalledSchema)
 		if err != nil {
 			return fmt.Errorf(
 				"could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
@@ -99,27 +99,27 @@ func (r *externalPluginRoot) WrappedTypes() SchemaMap {
 
 // partitionSchemaGraph partitions graph into a map of <type_id> => <schema_graph>
 func (r *externalPluginRoot) partitionSchemaGraph(graph *linkedhashmap.Map) map[string]*linkedhashmap.Map {
-	var populate func(*linkedhashmap.Map, entrySchema, map[string]bool)
-	populate = func(g *linkedhashmap.Map, node entrySchema, visited map[string]bool) {
-		if visited[node.TypeID] {
+	var populate func(*linkedhashmap.Map, string, entrySchema, map[string]bool)
+	populate = func(g *linkedhashmap.Map, typeID string, node entrySchema, visited map[string]bool) {
+		if visited[typeID] {
 			return
 		}
-		g.Put(node.TypeID, node)
-		visited[node.TypeID] = true
+		g.Put(typeID, node)
+		visited[typeID] = true
 		for _, childTypeID := range node.Children {
 			childNode, ok := graph.Get(childTypeID)
 			if !ok {
 				msg := fmt.Sprintf("plugin.partitionSchemaGraph: expected child %v to be present in the graph", childTypeID)
 				panic(msg)
 			}
-			populate(g, childNode.(entrySchema), visited)
+			populate(g, childTypeID, childNode.(entrySchema), visited)
 		}
 	}
 
 	schemaGraphs := make(map[string]*linkedhashmap.Map)
 	graph.Each(func(key interface{}, value interface{}) {
 		g := linkedhashmap.New()
-		populate(g, value.(entrySchema), make(map[string]bool))
+		populate(g, key.(string), value.(entrySchema), make(map[string]bool))
 		schemaGraphs[key.(string)] = g
 	})
 
