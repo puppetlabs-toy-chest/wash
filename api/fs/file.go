@@ -28,5 +28,5 @@ func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {
 }
 
 func (f *file) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(f, "file")
+	return nil
 }

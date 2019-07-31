@@ -36,12 +36,11 @@ func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (d *dir) ChildSchemas() []*plugin.EntrySchema {
-	return []*plugin.EntrySchema{
-		d.Schema(),
-		(&file{fsnode: &fsnode{}}).Schema(),
-	}
+	return nil
 }
 
 func (d *dir) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(d, "dir")
+	// Schema only makes sense for core plugins. apifs isn't a core
+	// plugin.
+	return nil
 }
