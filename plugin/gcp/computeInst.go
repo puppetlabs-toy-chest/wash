@@ -16,6 +16,7 @@ import (
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/transport"
+	"github.com/puppetlabs/wash/volume"
 	"golang.org/x/crypto/ssh"
 	compute "google.golang.org/api/compute/v1"
 )
@@ -37,7 +38,12 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 }
 
 func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
-	return []plugin.Entry{newComputeInstanceConsoleOutput(c.instance, c.service)}, nil
+	return []plugin.Entry{
+		newComputeInstanceConsoleOutput(c.instance, c.service),
+		// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
+		// VMs can have lots of files and SSH is fast.
+		volume.NewFS("fs", c, 3),
+	}, nil
 }
 
 func (c *computeInstance) Schema() *plugin.EntrySchema {
@@ -47,6 +53,7 @@ func (c *computeInstance) Schema() *plugin.EntrySchema {
 func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&computeInstanceConsoleOutput{}).Schema(),
+		(&volume.FS{}).Schema(),
 	}
 }
 
