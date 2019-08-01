@@ -7,15 +7,15 @@ replace github.com/aws/aws-sdk-go => github.com/MikaelSmith/aws-sdk-go v1.15.31-
 
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
-	cloud.google.com/go v0.34.0 // indirect
+	cloud.google.com/go v0.38.0
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Benchkram/errz v0.0.0-20180520163740-571a80a661f2
-	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.12 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
 	github.com/araddon/dateparse v0.0.0-20190329160016-74dc0e29b01f
+	github.com/avast/retry-go v2.4.1+incompatible
 	github.com/aws/aws-sdk-go v1.19.7
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -35,8 +35,6 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
-	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
-	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -73,15 +71,11 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.1.0
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
-	golang.org/x/net v0.0.0-20190110200230-915654e7eabc // indirect
-	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
-	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
+	go.opencensus.io v0.22.0 // indirect
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190712062909-fae7ac547cb7
-	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
-	google.golang.org/appengine v1.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20181219182458-5a97ab628bfb // indirect
-	google.golang.org/grpc v1.17.0 // indirect
+	google.golang.org/api v0.7.0
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect

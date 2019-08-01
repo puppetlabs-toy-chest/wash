@@ -68,7 +68,7 @@ func (c *container) Schema() *plugin.EntrySchema {
 func (c *container) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&containerLogFile{}).Schema(),
-		(&containerMetadata{}).Schema(),
+		(&plugin.MetadataJSONFile{}).Schema(),
 		(&vol.FS{}).Schema(),
 	}
 }
@@ -76,12 +76,15 @@ func (c *container) ChildSchemas() []*plugin.EntrySchema {
 func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: May be worth creating a helper that makes it easy to create
 	// read-only files. Lots of shared code between these two.
-	cm := newContainerMetadata(c)
+	cm, err := plugin.NewMetadataJSONFile(ctx, c)
+	if err != nil {
+		return nil, err
+	}
 	clf := newContainerLogFile(c)
 
 	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
 	// VMs can have lots of files and Exec is fast.
-	return []plugin.Entry{cm, clf, vol.NewFS("fs", c, 3)}, nil
+	return []plugin.Entry{clf, cm, vol.NewFS("fs", c, 3)}, nil
 }
 
 func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {

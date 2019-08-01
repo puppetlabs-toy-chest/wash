@@ -15,6 +15,7 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/plugin/aws"
 	"github.com/puppetlabs/wash/plugin/docker"
+	"github.com/puppetlabs/wash/plugin/gcp"
 	"github.com/puppetlabs/wash/plugin/kubernetes"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +27,7 @@ import (
 var internalPlugins = map[string]plugin.Root{
 	"aws":        &aws.Root{},
 	"docker":     &docker.Root{},
+	"gcp":        &gcp.Root{},
 	"kubernetes": &kubernetes.Root{},
 }
 

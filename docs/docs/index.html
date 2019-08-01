@@ -78,6 +78,7 @@ if (!doNotTrack) {
 <ul>
 <li><a href="#aws">AWS</a></li>
 <li><a href="#docker">Docker</a></li>
+<li><a href="#gcp">GCP</a></li>
 <li><a href="#kubernetes">Kubernetes</a></li>
 </ul></li>
 <li><a href="#plugin-concepts">Plugin Concepts</a>
@@ -227,6 +228,40 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <li>found from the local socket or via <code>DOCKER</code> environment variables</li>
 <li>supports streaming, and remote command execution</li>
 </ul>
+
+<h3 id="gcp">GCP</h3>
+
+<p>The GCP plugin follows <a href="https://cloud.google.com/docs/authentication/production">https://cloud.google.com/docs/authentication/production</a> to find your credentials:
+- it will try <code>GOOGLE_APPLICATION_CREDENTIALS</code> as a service account file
+- use your credentials in <code>$HOME/.config/gcloud/application_default_credentials.json</code></p>
+
+<p>The simplest way to set this up is with</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">gcloud init
+gcloud auth application-default login</pre></td></tr></table>
+</div>
+</div>
+<p>The GCP plugin will list all projects you have access to. The projects it lists can be limited by adding</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">gcp:
+  projects: [project-1, project-2]</pre></td></tr></table>
+</div>
+</div>
+<p>to Wash&rsquo;s <a href="#config">config file</a>. Project can be referenced either by name or project ID.</p>
+
+<h4 id="exec-1">Exec</h4>
+
+<p>The Exec method mirrors running <a href="https://cloud.google.com/sdk/gcloud/reference/compute/ssh"><code>gcloud compute ssh</code></a>. If not already present, it will generate a Google Compute-specific SSH key pair and known hosts file in your <code>~/.ssh</code> directory and ensure they&rsquo;re present on the machine you&rsquo;re trying to connect to. Your current <code>$USER</code> name will be used as the login user.</p>
 
 <h3 id="kubernetes">Kubernetes</h3>
 

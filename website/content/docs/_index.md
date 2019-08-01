@@ -20,6 +20,7 @@ title= "Wash Documentation"
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
   * [Docker](#docker)
+  * [GCP](#gcp)
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
@@ -147,6 +148,29 @@ Host *.compute.amazonaws.com
 - containers and volumes
 - found from the local socket or via `DOCKER` environment variables
 - supports streaming, and remote command execution
+
+### GCP
+
+The GCP plugin follows https://cloud.google.com/docs/authentication/production to find your credentials:
+- it will try `GOOGLE_APPLICATION_CREDENTIALS` as a service account file
+- use your credentials in `$HOME/.config/gcloud/application_default_credentials.json`
+
+The simplest way to set this up is with
+```
+gcloud init
+gcloud auth application-default login
+```
+
+The GCP plugin will list all projects you have access to. The projects it lists can be limited by adding
+```
+gcp:
+  projects: [project-1, project-2]
+```
+to Wash's [config file](#config). Project can be referenced either by name or project ID.
+
+#### Exec
+
+The Exec method mirrors running [`gcloud compute ssh`](https://cloud.google.com/sdk/gcloud/reference/compute/ssh). If not already present, it will generate a Google Compute-specific SSH key pair and known hosts file in your `~/.ssh` directory and ensure they're present on the machine you're trying to connect to. Your current `$USER` name will be used as the login user.
 
 ### Kubernetes
 

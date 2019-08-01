@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/kballard/go-shellquote"
 	"github.com/kevinburke/ssh_config"
 	"github.com/puppetlabs/wash/activity"
@@ -39,17 +40,100 @@ func newAgent() (ssh.AuthMethod, error) {
 	return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers), nil
 }
 
-func getHostKeyCallback() (ssh.HostKeyCallback, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-
-	return knownhosts.New(filepath.Join(homedir, ".ssh", "known_hosts"))
+type sshConfig struct {
+	host, port, user string
+	identityFiles    []string
+	hostKeyCallback  ssh.HostKeyCallback
 }
 
-func sshConnect(ctx context.Context, host, port, user string, identityfile string, strictHostKeyChecking bool) (*ssh.Client, error) {
-	connID := user + "@" + host + ":" + port
+func getConnInfo(ctx context.Context, id Identity) (conf sshConfig, err error) {
+	if conf.host, err = ssh_config.GetStrict(id.Host, "HostName"); err != nil {
+		return
+	}
+	if conf.host == "" {
+		conf.host = id.Host
+	}
+
+	// ssh_config provides a default of port 22.
+	if conf.port, err = ssh_config.GetStrict(id.Host, "Port"); err != nil {
+		return
+	}
+
+	conf.user = id.User
+	if conf.user == "" {
+		if conf.user, err = ssh_config.GetStrict(id.Host, "User"); err != nil {
+			return
+		}
+	}
+	if conf.user == "" {
+		conf.user = id.FallbackUser
+	}
+	if conf.user == "" {
+		conf.user = "root"
+	}
+
+	// Try the requested identity file first. Include any in SSH config as well just-in-case.
+	conf.identityFiles = make([]string, 0)
+	if id.IdentityFile != "" {
+		conf.identityFiles = append(conf.identityFiles, id.IdentityFile)
+	}
+	if id.IdentityFile, err = ssh_config.GetStrict(id.Host, "IdentityFile"); err != nil {
+		return
+	}
+	if id.IdentityFile != "" {
+		conf.identityFiles = append(conf.identityFiles, id.IdentityFile)
+	}
+	// We later provide a fallback to ssh-agent if none of the provided identity files work.
+
+	// Implement permissive and accept-new host key checking. Also account for HostKeyAlias.
+	// Defaults to accepting new hosts.
+	var hostKeyChecking string
+	if hostKeyChecking, err = ssh_config.GetStrict(id.Host, "StrictHostKeyChecking"); err != nil {
+		return
+	}
+	conf.hostKeyCallback = ssh.InsecureIgnoreHostKey()
+	if hostKeyChecking == "no" {
+		// Return early. This must be the last field configured.
+		return
+	}
+
+	if id.KnownHosts == "" {
+		var homedir string
+		if homedir, err = os.UserHomeDir(); err != nil {
+			return
+		}
+
+		id.KnownHosts = filepath.Join(homedir, ".ssh", "known_hosts")
+	}
+	// The known hosts file must exist before we try to use it.
+	var f *os.File
+	if f, err = os.OpenFile(id.KnownHosts, os.O_RDONLY|os.O_CREATE, 0644); err != nil {
+		return
+	}
+	f.Close()
+
+	conf.hostKeyCallback, err = knownhosts.New(id.KnownHosts)
+	if err != nil {
+		err = fmt.Errorf("Loading SSH known hosts file: %v", err)
+		return
+	}
+	conf.hostKeyCallback = acceptNewCallback(ctx, conf.hostKeyCallback, id.KnownHosts)
+
+	// Lookup host key alias for use in key checking. This should be the last wrapped so that
+	// other callbacks use the alias.
+	if id.HostKeyAlias == "" {
+		if id.HostKeyAlias, err = ssh_config.GetStrict(id.Host, "HostKeyAlias"); err != nil {
+			return
+		}
+	}
+	if id.HostKeyAlias != "" {
+		conf.hostKeyCallback = hostAliasCallback(conf.hostKeyCallback, id.HostKeyAlias)
+	}
+	return
+}
+
+func sshConnect(ctx context.Context, conf sshConfig, retries uint) (*ssh.Client, error) {
+	connID := conf.user + "@" + conf.host + ":" + conf.port
 	// This is a single-use cache, so pass in an empty category.
 	obj, err := connectionCache.GetOrUpdate("", connID, expires, true, func() (interface{}, error) {
 		agent, err := newAgent()
@@ -57,33 +141,37 @@ func sshConnect(ctx context.Context, host, port, user string, identityfile strin
 			return nil, fmt.Errorf("Failed to find config from SSH_AUTH_SOCK: %v", err)
 		}
 
-		hostKeyCallback := ssh.InsecureIgnoreHostKey()
-		if strictHostKeyChecking {
-			hostKeyCallback, err = getHostKeyCallback()
-			if err != nil {
-				return nil, fmt.Errorf("Loading SSH known hosts file: %v", err)
-			}
-		}
-
 		var authmethod []ssh.AuthMethod
-		if key, err := ioutil.ReadFile(identityfile); err != nil {
-			activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
-		} else {
-			if signer, err := ssh.ParsePrivateKey(key); err != nil {
-				activity.Record(ctx, "Unable to parse private key, falling back to SSH agent: %v", err)
+		for _, identityFile := range conf.identityFiles {
+			if key, err := ioutil.ReadFile(identityFile); err != nil {
+				activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
 			} else {
-				authmethod = append(authmethod, ssh.PublicKeys(signer))
+				if signer, err := ssh.ParsePrivateKey(key); err != nil {
+					activity.Record(ctx, "Unable to parse private key, falling back to SSH agent: %v", err)
+				} else {
+					authmethod = append(authmethod, ssh.PublicKeys(signer))
+				}
 			}
 		}
 		// Append agent now so that it comes last in case we find another method to try.
 		authmethod = append(authmethod, agent)
 		sshConfig := &ssh.ClientConfig{
-			User:            user,
+			User:            conf.user,
 			Auth:            authmethod,
-			HostKeyCallback: hostKeyCallback,
+			HostKeyCallback: conf.hostKeyCallback,
 		}
 
-		return ssh.Dial("tcp", host+":"+port, sshConfig)
+		// Try until we've retried desired number of times or connection is established.
+		var cli *ssh.Client
+		err = retry.Do(
+			func() error {
+				cli, err = ssh.Dial("tcp", conf.host+":"+conf.port, sshConfig)
+				return err
+			},
+			retry.Attempts(retries+1),
+			retry.Delay(500*time.Millisecond),
+		)
+		return cli, err
 	})
 
 	if err != nil {
@@ -94,7 +182,9 @@ func sshConnect(ctx context.Context, host, port, user string, identityfile strin
 
 // Identity identifies how to connect to a target.
 type Identity struct {
-	Host, User, FallbackUser, IdentityFile string
+	Host, User, FallbackUser, IdentityFile, KnownHosts, HostKeyAlias string
+	// Retries can be set to a non-zero value to retry every 500ms for that many times.
+	Retries uint
 }
 
 // ExecSSH executes against a target via SSH. It will look up port, user, and other configuration
@@ -114,31 +204,13 @@ type Identity struct {
 // ```
 func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	// find port, username, etc from .ssh/config
-	port, err := ssh_config.GetStrict(id.Host, "Port")
+	conf, err := getConnInfo(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to get connection info: %s", err)
 	}
+	activity.Record(ctx, "Found connection info %+v", conf)
 
-	user := id.User
-	if user == "" {
-		if user, err = ssh_config.GetStrict(id.Host, "User"); err != nil {
-			return nil, err
-		}
-	}
-
-	if user == "" {
-		user = id.FallbackUser
-	}
-
-	if user == "" {
-		user = "root"
-	}
-	strictHostKeyChecking, err := ssh_config.GetStrict(id.Host, "StrictHostKeyChecking")
-	if err != nil {
-		return nil, err
-	}
-
-	connection, err := sshConnect(ctx, id.Host, port, user, id.IdentityFile, strictHostKeyChecking != "no")
+	connection, err := sshConnect(ctx, conf, id.Retries)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to connect: %s", err)
 	}
@@ -192,4 +264,45 @@ func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOpt
 		}
 	}()
 	return execCmd, nil
+}
+
+func hostAliasCallback(cb ssh.HostKeyCallback, hostKeyAlias string) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		_, port, err := net.SplitHostPort(hostname)
+		if err != nil {
+			return err
+		}
+
+		return cb(net.JoinHostPort(hostKeyAlias, port), remote, key)
+	}
+}
+
+func acceptNewCallback(ctx context.Context, cb ssh.HostKeyCallback, knownHosts string) ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		err := cb(hostname, remote, key)
+		if err != nil {
+			// If the error occurred because no entry was found, add it to known hosts and succeed.
+			if kerr, ok := err.(*knownhosts.KeyError); ok && len(kerr.Want) == 0 {
+				line := knownhosts.Line([]string{hostname}, key)
+				if err := appendToKnownHosts(ctx, knownHosts, line); err != nil {
+					activity.Warnf(ctx, "Unable to update %v with new host %v: %v", knownHosts, hostname, err)
+				}
+				return nil
+			}
+		}
+		return err
+	}
+}
+
+func appendToKnownHosts(ctx context.Context, knownHosts, line string) error {
+	f, err := os.OpenFile(knownHosts, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.WriteString(line + "\n"); err != nil {
+		return err
+	}
+	return nil
 }
