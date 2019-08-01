@@ -63,6 +63,7 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	ec2Instance.client = client
 	ec2Instance.
 		SetTTLOf(plugin.ListOp, 30*time.Second).
+		DisableCachingFor(plugin.MetadataOp).
 		SetAttributes(getAttributes(inst))
 
 	return ec2Instance
@@ -163,7 +164,7 @@ func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&ec2InstanceConsoleOutput{}).Schema(),
-		(&ec2InstanceMetadataJSON{}).Schema(),
+		(&plugin.MetadataJSONFile{}).Schema(),
 		(&volume.FS{}).Schema(),
 	}
 }
@@ -177,7 +178,7 @@ func (inst *ec2Instance) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := []plugin.Entry{}
 
-	metadataJSON, err := newEC2InstanceMetadataJSON(ctx, inst)
+	metadataJSON, err := plugin.NewMetadataJSONFile(ctx, inst)
 	if err != nil {
 		return nil, err
 	}

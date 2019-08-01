@@ -95,6 +95,8 @@ func (cache *MemCache) Get(category, key string) (interface{}, error) {
 // If the value does not exist, then it generates the value using
 // the generateValue function and stores it with the specified ttl.
 // If resetTTLOnHit is true, will reset the cache expiration for the entry.
+// A ttl of -1 means the item never expires, and a ttl of 0 uses the cache
+// default of 1 minute.
 func (cache *MemCache) GetOrUpdate(category, key string, ttl time.Duration, resetTTLOnHit bool, generateValue func() (interface{}, error)) (interface{}, error) {
 	cache.mux.RLock()
 	defer cache.mux.RUnlock()

@@ -33,13 +33,21 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 		instance:  inst,
 		service:   c,
 	}
-	comp.Attributes().SetMeta(inst)
+	comp.
+		DisableCachingFor(plugin.MetadataOp).
+		Attributes().SetMeta(inst)
 	return comp
 }
 
 func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
+	metadataJSONFile, err := plugin.NewMetadataJSONFile(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
 	return []plugin.Entry{
 		newComputeInstanceConsoleOutput(c.instance, c.service),
+		metadataJSONFile,
 		// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
 		// VMs can have lots of files and SSH is fast.
 		volume.NewFS("fs", c, 3),
@@ -53,6 +61,7 @@ func (c *computeInstance) Schema() *plugin.EntrySchema {
 func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&computeInstanceConsoleOutput{}).Schema(),
+		(&plugin.MetadataJSONFile{}).Schema(),
 		(&volume.FS{}).Schema(),
 	}
 }
