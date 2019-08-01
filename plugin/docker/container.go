@@ -62,7 +62,8 @@ func (c *container) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "container").
 		SetMetaAttributeSchema(types.Container{}).
-		SetMetadataSchema(types.ContainerJSON{})
+		SetMetadataSchema(types.ContainerJSON{}).
+		SetEntryType("container")
 }
 
 func (c *container) ChildSchemas() []*plugin.EntrySchema {

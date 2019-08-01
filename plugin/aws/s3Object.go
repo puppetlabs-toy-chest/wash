@@ -52,7 +52,8 @@ func (o *s3Object) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(o, "object").
 		SetMetaAttributeSchema(s3Client.Object{}).
-		SetMetadataSchema(s3Client.HeadObjectOutput{})
+		SetMetadataSchema(s3Client.HeadObjectOutput{}).
+		SetEntryType("s3Object")
 }
 
 func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {

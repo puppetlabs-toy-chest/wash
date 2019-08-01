@@ -35,7 +35,7 @@ func NewMetadataJSONFile(ctx context.Context, other Entry) (*MetadataJSONFile, e
 
 // Schema defines the schema of a metadata.json file.
 func (m *MetadataJSONFile) Schema() *EntrySchema {
-	return NewEntrySchema(m, "metadata.json").IsSingleton()
+	return NewEntrySchema(m, "metadata.json").IsSingleton().SetEntryType("metadata.json")
 }
 
 // Open returns the metadata of the `other` entry as its content.

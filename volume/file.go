@@ -29,7 +29,7 @@ func newFile(name string, attr plugin.EntryAttributes, impl Interface, path stri
 }
 
 func (v *file) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(v, "file")
+	return plugin.NewEntrySchema(v, "file").SetEntryType("volumeFile")
 }
 
 // Open returns the content of the file as a SizedReader.

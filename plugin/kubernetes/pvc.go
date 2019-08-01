@@ -48,7 +48,8 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 func (v *pvc) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(v, "persistentvolumeclaim").
-		SetMetaAttributeSchema(corev1.PersistentVolumeClaim{})
+		SetMetaAttributeSchema(corev1.PersistentVolumeClaim{}).
+		SetEntryType("persistentvolumeclaim")
 }
 
 func (v *pvc) ChildSchemas() []*plugin.EntrySchema {

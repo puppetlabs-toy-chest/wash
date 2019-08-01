@@ -55,7 +55,9 @@ func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (c *computeInstance) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(c, "instance").SetMetaAttributeSchema(compute.Instance{})
+	return plugin.NewEntrySchema(c, "instance").
+		SetMetaAttributeSchema(compute.Instance{}).
+		SetEntryType("computeInstance")
 }
 
 func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {

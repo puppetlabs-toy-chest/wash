@@ -20,7 +20,9 @@ func newStorageObject(name string, object *storage.ObjectHandle, attrs *storage.
 }
 
 func (s *storageObject) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "object").SetMetaAttributeSchema(storage.ObjectAttrs{})
+	return plugin.NewEntrySchema(s, "object").
+		SetMetaAttributeSchema(storage.ObjectAttrs{}).
+		SetEntryType("storageObject")
 }
 
 func (s *storageObject) Open(ctx context.Context) (plugin.SizedReader, error) {

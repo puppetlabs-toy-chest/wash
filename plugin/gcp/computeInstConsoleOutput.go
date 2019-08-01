@@ -24,7 +24,9 @@ func newComputeInstanceConsoleOutput(inst *compute.Instance, c computeProjectSer
 }
 
 func (cl *computeInstanceConsoleOutput) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(cl, "console.out").IsSingleton()
+	return plugin.NewEntrySchema(cl, "console.out").
+		IsSingleton().
+		SetEntryType("computeInstanceConsoleOutput")
 }
 
 func (cl *computeInstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {

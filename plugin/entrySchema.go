@@ -88,6 +88,8 @@ type EntrySchema struct {
 	entrySchema
 	metaAttributeSchemaObj interface{}
 	metadataSchemaObj      interface{}
+	// entryType is for core plugins only. It is needed by analytics.
+	entryType string
 	// Store the entry so that we can compute its type ID and, if the entry's
 	// a core plugin entry, enumerate its child schemas when marshaling its
 	// schema.
@@ -169,6 +171,44 @@ func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
 func (s *EntrySchema) SetMetadataSchema(obj interface{}) *EntrySchema {
 	// See the comments in SetMetaAttributeSchema to understand why this line's necessary
 	s.metadataSchemaObj = obj
+	return s
+}
+
+// EntryType returns the entry's type
+func (s *EntrySchema) EntryType() string {
+	return s.entryType
+}
+
+// SetEntryType sets the entry's type. This should typically be the entry's class name.
+// Note that entry type is optional. It should only be set when you want analytics to
+// collect data on that entry.
+func (s *EntrySchema) SetEntryType(entryType string) *EntrySchema {
+	// We could try to get this information from the type ID; however, it is difficult
+	// to correctly do this. For example, if a core plugin splits its implementation
+	// into multiple internal packages, then we'd need some additional code to figure
+	// out that something like aws::ec2Instance or ec2.Instance both represent an
+	// "ec2_instance" entry type (i.e. massive plugin refactors could mess up analytics).
+	// Furthermore, we'd need even more complicated code to figure out that
+	// aws.ec2InstanceMetadataJSON, docker.containerMetadata entries are
+	// ec2Instance/dockerContainer metadata.json files (i.e. complicated class names could
+	// make it hard to parse out the resource type).
+	//
+	// We could get the entry type by concatenating a bunch of labels together. However,
+	// that makes the entry type dependent on the plugin's hierarchy, which is fragile. For
+	// example, there is no reason why one cannot organize ec2/instances/<instance> as
+	// ec2/instances/<state>/<instance>, whereby the latter organization would make it that
+	// much more difficult to figure out that <instance> entries are really ec2_instance
+	// entries. Thus, it is easiest to just have plugin authors tell us the entry type via
+	// the SetEntryType setter.
+	//
+	// Note that even if there were an easy way to retrieve the entry type, we still need some
+	// kind of setter that plugin authors can use to tell us when they want to collect analytics
+	// for an entry. Otherwise, we'd be collecting analytics for every entry, which doesn't make
+	// sense when that entry's a plugin root or a "docker/containers"-like directory.
+	if len(entryType) <= 0 {
+		panic("s.SetEntryType: called with an empty entry type")
+	}
+	s.entryType = entryType
 	return s
 }
 

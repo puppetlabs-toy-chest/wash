@@ -43,7 +43,8 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 func (p *pod) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(p, "pod").
-		SetMetaAttributeSchema(corev1.Pod{})
+		SetMetaAttributeSchema(corev1.Pod{}).
+		SetEntryType("pod")
 }
 
 func (p *pod) Open(ctx context.Context) (plugin.SizedReader, error) {

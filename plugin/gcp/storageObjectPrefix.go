@@ -34,7 +34,9 @@ func (s *storageObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) 
 }
 
 func (s *storageObjectPrefix) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "prefix").SetMetaAttributeSchema(storage.ObjectAttrs{})
+	return plugin.NewEntrySchema(s, "prefix").
+		SetMetaAttributeSchema(storage.ObjectAttrs{}).
+		SetEntryType("storageObjectPrefix")
 }
 
 func (s *storageObjectPrefix) ChildSchemas() []*plugin.EntrySchema {

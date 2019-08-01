@@ -28,7 +28,9 @@ func (s *storageBucket) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (s *storageBucket) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "bucket").SetMetaAttributeSchema(storage.BucketAttrs{})
+	return plugin.NewEntrySchema(s, "bucket").
+		SetMetaAttributeSchema(storage.BucketAttrs{}).
+		SetEntryType("storageBucket")
 }
 
 func (s *storageBucket) ChildSchemas() []*plugin.EntrySchema {

@@ -170,7 +170,8 @@ func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Buck
 func (b *s3Bucket) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(b, "bucket").
-		SetMetadataSchema(bucketMetadata{})
+		SetMetadataSchema(bucketMetadata{}).
+		SetEntryType("s3Bucket")
 }
 
 func (b *s3Bucket) ChildSchemas() []*plugin.EntrySchema {
