@@ -9,6 +9,7 @@ import (
 
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
+	"github.com/puppetlabs/wash/analytics"
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
@@ -53,13 +54,14 @@ type controlChannels struct {
 
 // Server encapsulates a running wash server with both Socket and FUSE servers.
 type Server struct {
-	mountpoint string
-	socket     string
-	opts       Opts
-	logFH      *os.File
-	api        controlChannels
-	fuse       controlChannels
-	plugins    map[string]plugin.Root
+	mountpoint      string
+	socket          string
+	opts            Opts
+	logFH           *os.File
+	api             controlChannels
+	fuse            controlChannels
+	plugins         map[string]plugin.Root
+	analyticsClient analytics.Client
 }
 
 // New creates a new Server. Accepts a list of core plugins to load.
@@ -82,13 +84,28 @@ func (s *Server) Start() error {
 
 	plugin.InitCache()
 
-	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(registry, s.mountpoint, s.socket)
+	analyticsConfig, err := analytics.GetConfig()
+	if err != nil {
+		return err
+	}
+	s.analyticsClient = analytics.NewClient(analyticsConfig)
+
+	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(
+		registry,
+		s.mountpoint,
+		s.socket,
+		s.analyticsClient,
+	)
 	if err != nil {
 		return err
 	}
 	s.api = controlChannels{stopCh: apiServerStopCh, stoppedCh: apiServerStoppedCh}
 
-	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(registry, s.mountpoint)
+	fuseServerStopCh, fuseServerStoppedCh, err := fuse.ServeFuseFS(
+		registry,
+		s.mountpoint,
+		s.analyticsClient,
+	)
 	if err != nil {
 		s.stopAPIServer()
 		return err
@@ -128,6 +145,14 @@ func (s *Server) shutdown() {
 
 	// Close any open journals on shutdown to ensure remaining entries are flushed to disk.
 	activity.CloseAll()
+
+	// Flush any outstanding analytics hits
+	ticker := time.NewTicker(analytics.FlushDuration)
+	defer ticker.Stop()
+	go func() {
+		s.analyticsClient.Flush()
+	}()
+	<-ticker.C
 
 	if s.logFH != nil {
 		s.logFH.Close()

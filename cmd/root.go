@@ -2,6 +2,10 @@
 package cmd
 
 import (
+	"time"
+
+	"github.com/puppetlabs/wash/analytics"
+	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
@@ -33,6 +37,76 @@ func toRunE(main commandMain) runE {
 	}
 }
 
+// GA => Google Analytics
+func registerInvocationToGA(cmd *cobra.Command, socketPath string) {
+	go func() {
+		// Errors are reported in the server logs, so no need to expose them
+		// to the user
+		name := cmd.Name()
+		if name == "server" {
+			name = "wash"
+		}
+		// We use client.ForUNIXSocket instead of cmdutil.NewClient because the socketPath
+		// could change. The latter's possible if cmd.Name() == "wash", i.e. the root
+		// command.
+		_ = client.ForUNIXSocket(socketPath).Screenview(name, analytics.Params{})
+	}()
+}
+
+// GA => Google Analytics
+func waitForGARegistration() {
+	time.Sleep(analytics.FlushDuration)
+}
+
+func ensureGARegistration(cmd *cobra.Command) *cobra.Command {
+	// Wrap flagErrorFunc
+	flagErrorFunc := cmd.FlagErrorFunc()
+	cmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		registerInvocationToGA(cmd, config.Socket)
+		waitForGARegistration()
+		return flagErrorFunc(cmd, err)
+	})
+
+	// Wrap helpFunc
+	helpFunc := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		registerInvocationToGA(cmd, config.Socket)
+		helpFunc(cmd, args)
+		waitForGARegistration()
+	})
+
+	// Wrap Args
+	argsFunc := cmd.Args
+	if argsFunc != nil {
+		cmd.Args = func(cmd *cobra.Command, args []string) error {
+			err := argsFunc(cmd, args)
+			if err != nil {
+				registerInvocationToGA(cmd, config.Socket)
+				waitForGARegistration()
+				return err
+			}
+			return nil
+		}
+	}
+
+	// Wrap RunE
+	runE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		registerInvocationToGA(cmd, config.Socket)
+		exitCode := runE(cmd, args)
+		waitForGARegistration()
+		return exitCode
+	}
+
+	return cmd
+}
+
+// Use addCommand instead of rootCmd.AddCommand to ensure that cmd's
+// invocation is registered to GA
+func addCommand(rootCmd *cobra.Command, cmd *cobra.Command) {
+	rootCmd.AddCommand(ensureGARegistration(cmd))
+}
+
 func rootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:    "wash [<script>]",
@@ -59,26 +133,27 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	} else {
 		// Omit server from embedded cases because a daemon is already running.
 		addServerArgs(rootCmd, "warn")
-		rootCmd.AddCommand(serverCommand())
+		addCommand(rootCmd, serverCommand())
 		// rootCommandFlag is used in rootMain.go.
 		rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
 
 		// Omit validate because it's meant to be run independently to test a plugin and should not be
 		// part of normal shell interaction.
-		rootCmd.AddCommand(validateCommand())
+		addCommand(rootCmd, validateCommand())
 	}
+	rootCmd = ensureGARegistration(rootCmd)
 
-	rootCmd.AddCommand(versionCommand())
-	rootCmd.AddCommand(metaCommand())
-	rootCmd.AddCommand(listCommand())
-	rootCmd.AddCommand(execCommand())
-	rootCmd.AddCommand(psCommand())
-	rootCmd.AddCommand(findCommand())
-	rootCmd.AddCommand(clearCommand())
-	rootCmd.AddCommand(tailCommand())
-	rootCmd.AddCommand(historyCommand())
-	rootCmd.AddCommand(infoCommand())
-	rootCmd.AddCommand(streeCommand())
+	addCommand(rootCmd, versionCommand())
+	addCommand(rootCmd, metaCommand())
+	addCommand(rootCmd, listCommand())
+	addCommand(rootCmd, execCommand())
+	addCommand(rootCmd, psCommand())
+	addCommand(rootCmd, findCommand())
+	addCommand(rootCmd, clearCommand())
+	addCommand(rootCmd, tailCommand())
+	addCommand(rootCmd, historyCommand())
+	addCommand(rootCmd, infoCommand())
+	addCommand(rootCmd, streeCommand())
 
 	return rootCmd
 }

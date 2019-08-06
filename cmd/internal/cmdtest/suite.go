@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/puppetlabs/wash/api/client"
-	"github.com/puppetlabs/wash/cmd/util"
+	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/stretchr/testify/suite"
 )
 

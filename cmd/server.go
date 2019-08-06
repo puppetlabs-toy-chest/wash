@@ -74,6 +74,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		log.Warn(err)
 		return exitCode{1}
 	}
+	registerInvocationToGA(cmd, config.Socket)
 	srv.Wait(sigCh)
 	return exitCode{0}
 }
