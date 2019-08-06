@@ -11,6 +11,7 @@ import (
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
 	"github.com/puppetlabs/wash/activity"
+	"github.com/puppetlabs/wash/analytics"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 )
@@ -177,7 +178,11 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 //   2. A read-only channel that signals whether the server was shutdown
 //
 //   3. An error object
-func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- context.Context, <-chan struct{}, error) {
+func ServeFuseFS(
+	filesys *plugin.Registry,
+	mountpoint string,
+	analyticsClient analytics.Client,
+) (chan<- context.Context, <-chan struct{}, error) {
 	fuse.Debug = func(msg interface{}) {
 		log.Tracef("FUSE: %v", msg)
 	}
@@ -196,7 +201,9 @@ func ServeFuseFS(filesys *plugin.Registry, mountpoint string) (chan<- context.Co
 		serverConfig := &fs.Config{
 			WithContext: func(ctx context.Context, req fuse.Request) context.Context {
 				pid := int(req.Hdr().Pid)
-				return context.WithValue(ctx, activity.JournalKey, activity.JournalForPID(pid))
+				newctx := context.WithValue(ctx, activity.JournalKey, activity.JournalForPID(pid))
+				newctx = context.WithValue(newctx, analytics.ClientKey, analyticsClient)
+				return newctx
 			},
 		}
 		server := fs.New(fuseConn, serverConfig)

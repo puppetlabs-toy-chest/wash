@@ -34,7 +34,7 @@ func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
 
 	// Cache List requests. FUSE often lists the contents then immediately calls find on individual entries.
 	if plugin.ListAction().IsSupportedOn(updatedEntry) {
-		return plugin.CachedList(ctx, updatedEntry.(plugin.Parent))
+		return plugin.List(ctx, updatedEntry.(plugin.Parent))
 	}
 
 	return nil, fuse.ENOENT
