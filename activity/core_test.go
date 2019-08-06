@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/Benchkram/errz"
+	"github.com/puppetlabs/wash/analytics"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestRecord(t *testing.T) {
@@ -78,6 +80,45 @@ func TestLogging(t *testing.T) {
 	}
 }
 
+func TestSubmitMethodInvocation_NewMethodInvocation_SubmitsToGA(t *testing.T) {
+	// Setup the mocks
+	ctx := context.Background()
+	journal := Journal{
+		ID: "foo",
+	}
+	ctx = context.WithValue(ctx, JournalKey, journal)
+	analyticsClient := &mockAnalyticsClient{}
+	analyticsClient.On("Event", "Invocation", "Method", analytics.Params{
+		"Label":      "List",
+		"Plugin":     "foo",
+		"Entry Type": "foo::file",
+	}).Return(nil)
+	ctx = context.WithValue(ctx, analytics.ClientKey, analyticsClient)
+
+	// Perform the test
+	SubmitMethodInvocation(ctx, "foo", "foo::file", "List")
+	assert.True(t, journal.recorder().methodInvoked("foo::file", "List"))
+	analyticsClient.AssertExpectations(t)
+}
+
+func TestSubmitMethodInvocation_SubmittedMethodInvocation_DoesNotSubmitToGA(t *testing.T) {
+	// Setup the mocks
+	ctx := context.Background()
+	journal := Journal{
+		// Use a different journal ID so that we get a different recorder
+		ID: "bar",
+	}
+	journal.recorder().recordMethodInvocation("foo::file", "List")
+	ctx = context.WithValue(ctx, JournalKey, journal)
+	analyticsClient := &mockAnalyticsClient{}
+	analyticsClient.On("Event", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	ctx = context.WithValue(ctx, analytics.ClientKey, analyticsClient)
+
+	// Perform the test
+	SubmitMethodInvocation(ctx, "foo", "foo::file", "List")
+	analyticsClient.AssertNotCalled(t, "Event", mock.Anything, mock.Anything, mock.Anything)
+}
+
 func TestMain(m *testing.M) {
 	dir, err := ioutil.TempDir("", "journal_tests")
 	if err != nil {
@@ -89,4 +130,21 @@ func TestMain(m *testing.M) {
 
 	errz.Log(os.RemoveAll(dir))
 	os.Exit(exitcode)
+}
+
+type mockAnalyticsClient struct {
+	mock.Mock
+}
+
+func (c *mockAnalyticsClient) Screenview(name string, params analytics.Params) error {
+	args := c.Called(name, params)
+	return args.Error(0)
+}
+
+func (c *mockAnalyticsClient) Event(category string, action string, params analytics.Params) error {
+	args := c.Called(category, action, params)
+	return args.Error(0)
+}
+
+func (c *mockAnalyticsClient) Flush() {
 }
