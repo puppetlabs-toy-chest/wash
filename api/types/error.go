@@ -32,6 +32,7 @@ const (
 	StreamingError     = "puppetlabs.wash/streaming-error"
 	EntryNotFound      = "puppetlabs.wash/entry-not-found"
 	PluginDoesNotExist = "puppetlabs.wash/plugin-does-not-exist"
+	BadRequest         = "puppetlabs.wash/bad-request"
 	BadActionRequest   = "puppetlabs.wash/bad-action-request"
 	JournalUnavailable = "puppetlabs.wash/journal-unavailable"
 	ErroredAction      = "puppetlabs.wash/errored-action"

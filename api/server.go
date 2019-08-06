@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
+	"github.com/puppetlabs/wash/analytics"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/puppetlabs/wash/plugin"
 
@@ -70,7 +71,12 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //   2. A read-only channel that signals whether the server was shutdown.
 //
 //   3. An error object
-func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (chan<- context.Context, <-chan struct{}, error) {
+func StartAPI(
+	registry *plugin.Registry,
+	mountpoint string,
+	socketPath string,
+	analyticsClient analytics.Client,
+) (chan<- context.Context, <-chan struct{}, error) {
 	log.Infof("API: Listening at %s", socketPath)
 
 	if _, err := os.Stat(socketPath); err == nil {
@@ -100,6 +106,7 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 				r.Header.Get(apitypes.JournalDescHeader),
 			)
 			newctx = context.WithValue(newctx, activity.JournalKey, journal)
+			newctx = context.WithValue(newctx, analytics.ClientKey, analyticsClient)
 
 			// Call the next handler, which can be another middleware in the chain, or the final handler.
 			next.ServeHTTP(w, r.WithContext(newctx))
@@ -108,6 +115,7 @@ func StartAPI(registry *plugin.Registry, mountpoint string, socketPath string) (
 
 	r := mux.NewRouter()
 
+	r.Handle("/analytics/screenview", screenviewHandler).Methods(http.MethodPost)
 	r.Handle("/fs/info", infoHandler).Methods(http.MethodGet)
 	r.Handle("/fs/list", listHandler).Methods(http.MethodGet)
 	r.Handle("/fs/metadata", metadataHandler).Methods(http.MethodGet)

@@ -22,6 +22,7 @@ import (
 
 	"github.com/Benchkram/errz"
 	"github.com/puppetlabs/wash/activity"
+	"github.com/puppetlabs/wash/analytics"
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
@@ -37,6 +38,7 @@ type Client interface {
 	Clear(path string) ([]string, error)
 	// A "nil" schema means that the schema's unknown.
 	Schema(path string) (*apitypes.EntrySchema, error)
+	Screenview(name string, params analytics.Params) error
 }
 
 // A domainSocketClient is a wash API client.
@@ -275,4 +277,18 @@ func (c *domainSocketClient) Schema(path string) (*apitypes.EntrySchema, error) 
 		return schema, err
 	}
 	return schema, nil
+}
+
+// Screenview submits a screenview to Google Analytics
+func (c *domainSocketClient) Screenview(name string, params analytics.Params) error {
+	payload := apitypes.ScreenviewBody{
+		Name:   name,
+		Params: params,
+	}
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = c.doRequest(http.MethodPost, "/analytics/screenview", url.Values{}, bytes.NewReader(jsonBody))
+	return err
 }
