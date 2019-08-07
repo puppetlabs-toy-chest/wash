@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudfoundry-attic/jibber_jabber"
 	"github.com/google/uuid"
+	"github.com/puppetlabs/wash/cmd/version"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -151,9 +152,7 @@ func (c *client) baseParams() Params {
 		// an => Application Name
 		"an": "Wash",
 		// av => Application Version
-		//
-		// TODO: Fill this in with a proper value
-		"av": "1.0",
+		"av": version.BuildVersion,
 		// aip => Anonymize IPs
 		"aip": "true",
 		// cd1 => Custom Dimension 1 (Architecture)

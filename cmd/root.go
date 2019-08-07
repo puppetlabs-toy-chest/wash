@@ -7,6 +7,7 @@ import (
 	"github.com/puppetlabs/wash/analytics"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
+	"github.com/puppetlabs/wash/cmd/version"
 	"github.com/spf13/cobra"
 )
 
@@ -128,7 +129,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.MaximumNArgs(1),
-		Version:       version,
+		Version:       version.BuildVersion,
 	}
 
 	if config.Embedded {
