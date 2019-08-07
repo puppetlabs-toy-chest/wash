@@ -146,9 +146,7 @@ func (c *client) baseParams() Params {
 		// cid => Client ID
 		"cid": c.userID.String(),
 		// tid => Tracking ID
-		//
-		// TODO: Set this to the main Wash GA account's tracking ID.
-		"tid": "UA-144659575-2",
+		"tid": "UA-144580607-1",
 		// an => Application Name
 		"an": "Wash",
 		// av => Application Version

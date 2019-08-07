@@ -244,7 +244,7 @@ func (s *ClientTestSuite) TestBaseParams() {
 	constantBaseParams := Params{
 		"v":   "1",
 		"cid": s.c.userID.String(),
-		"tid": "UA-144659575-2",
+		"tid": "UA-144580607-1",
 		"an":  "Wash",
 		"aip": "true",
 		"cd1": runtime.GOARCH,
