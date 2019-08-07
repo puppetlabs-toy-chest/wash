@@ -30,7 +30,7 @@ func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Clie
 }
 
 func (d *s3ObjectPrefix) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(d, "prefix").SetEntryType("s3ObjectPrefix")
+	return plugin.NewEntrySchema(d, "prefix")
 }
 
 func (d *s3ObjectPrefix) ChildSchemas() []*plugin.EntrySchema {

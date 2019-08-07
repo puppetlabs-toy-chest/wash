@@ -28,7 +28,7 @@ func newK8Context(name string, client *k8s.Clientset, config *rest.Config, defau
 }
 
 func (c *k8context) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(c, "context").SetEntryType("context")
+	return plugin.NewEntrySchema(c, "context")
 }
 
 func (c *k8context) ChildSchemas() []*plugin.EntrySchema {

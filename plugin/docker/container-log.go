@@ -38,7 +38,7 @@ func (clf *containerLogFile) isTty(ctx context.Context) bool {
 }
 
 func (clf *containerLogFile) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(clf, "log").IsSingleton().SetEntryType("containerLogFile")
+	return plugin.NewEntrySchema(clf, "log").IsSingleton()
 }
 
 func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {

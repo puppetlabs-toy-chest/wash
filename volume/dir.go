@@ -32,7 +32,7 @@ func (v *dir) ChildSchemas() []*plugin.EntrySchema {
 }
 
 func (v *dir) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(v, "dir").SetEntryType("volumeDir")
+	return plugin.NewEntrySchema(v, "dir")
 }
 
 // Generate children using the provided DirMap. The dir may not have a dirmap

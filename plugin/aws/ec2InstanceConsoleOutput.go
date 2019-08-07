@@ -42,7 +42,7 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 }
 
 func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(cl, "console.out").SetEntryType("ec2InstanceConsoleOutput")
+	return plugin.NewEntrySchema(cl, "console.out")
 }
 
 func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {

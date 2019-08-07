@@ -34,8 +34,7 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 func (n *namespace) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(n, "namespace").
-		SetMetaAttributeSchema(corev1.Namespace{}).
-		SetEntryType("namespace")
+		SetMetaAttributeSchema(corev1.Namespace{})
 }
 
 func (n *namespace) ChildSchemas() []*plugin.EntrySchema {

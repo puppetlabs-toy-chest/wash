@@ -49,8 +49,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 func (v *volume) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(v, "volume").
-		SetMetaAttributeSchema(types.Volume{}).
-		SetEntryType("volume")
+		SetMetaAttributeSchema(types.Volume{})
 }
 
 func (v *volume) ChildSchemas() []*plugin.EntrySchema {

@@ -158,8 +158,7 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(inst, "instance").
-		SetMetaAttributeSchema(ec2InstanceMetadata{}).
-		SetEntryType("ec2Instance")
+		SetMetaAttributeSchema(ec2InstanceMetadata{})
 }
 
 func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {

@@ -63,7 +63,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 }
 
 func (p *profile) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(p, "profile").SetEntryType("profile")
+	return plugin.NewEntrySchema(p, "profile")
 }
 
 func (p *profile) ChildSchemas() []*plugin.EntrySchema {

@@ -43,7 +43,6 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 func (p *project) Schema() *plugin.EntrySchema {
 	schema := plugin.NewEntrySchema(p, "project")
 	schema.SetMetaAttributeSchema(crm.Project{})
-	schema.SetEntryType("project")
 	return schema
 }
 
