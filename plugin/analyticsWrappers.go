@@ -36,14 +36,8 @@ func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecO
 }
 
 func submitMethodInvocation(ctx context.Context, e Entry, method string) {
-	schema := e.Schema()
-	if schema == nil {
-		// This is possible if e is the plugin registry or an external plugin
-		return
-	}
-	entryType := schema.entryType
-	if len(entryType) <= 0 {
-		// We are not collecting analytics for this entry
+	isCorePluginEntry := e.Schema() != nil
+	if !isCorePluginEntry {
 		return
 	}
 	plugin := pluginName(e)
@@ -52,7 +46,7 @@ func submitMethodInvocation(ctx context.Context, e Entry, method string) {
 	go activity.SubmitMethodInvocation(
 		ctx,
 		plugin,
-		namespace(plugin, entryType),
+		TypeID(e),
 		method,
 	)
 }

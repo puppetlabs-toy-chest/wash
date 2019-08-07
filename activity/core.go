@@ -107,6 +107,8 @@ func Warnf(ctx context.Context, msg string, a ...interface{}) {
 // SubmitMethodInvocation submits a method invocation event to Google Analytics.
 // It then records the invocation to the journal identified by the ID at `activity.JournalKey`
 // in the provided context.
+//
+// Note that entryType will typically be the type ID.
 func SubmitMethodInvocation(ctx context.Context, plugin string, entryType string, method string) {
 	// Note that we could move this over to the plugin package. Doing so would shorten
 	// the type-signature to (ctx, entry, method), but it would also require us to export
@@ -145,13 +147,13 @@ func SubmitMethodInvocation(ctx context.Context, plugin string, entryType string
 		recorder.mIMux.RUnlock()
 		return
 	}
+	log.Debugf("Submitting %v method invocation for entry instance %v", method, entryType)
 	err := analytics.GetClient(ctx).Event(
 		"Invocation",
 		"Method",
 		analytics.Params{
-			"Label":      method,
-			"Plugin":     plugin,
-			"Entry Type": entryType,
+			"Label":  method,
+			"Plugin": plugin,
 		},
 	)
 	if err != nil {

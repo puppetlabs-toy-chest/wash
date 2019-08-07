@@ -96,8 +96,7 @@ func (s *ClientTestSuite) TestEvent_InvalidCustomDimension_ReturnsError() {
 
 func (s *ClientTestSuite) TestEvent_ValidInput_EnqueuesHit() {
 	err := s.c.Event("Invocation", "Method", Params{
-		"Plugin":     "aws",
-		"Entry Type": "aws::ec2Instance",
+		"Plugin": "aws",
 	})
 	if s.NoError(err) {
 		s.assertHits(Params{
@@ -105,16 +104,14 @@ func (s *ClientTestSuite) TestEvent_ValidInput_EnqueuesHit() {
 			"ec":  "Invocation",
 			"ea":  "Method",
 			"cd2": "aws",
-			"cd3": "aws::ec2Instance",
 		})
 	}
 }
 
 func (s *ClientTestSuite) TestEvent_ValidInput_WithLabel_EnqueuesHit() {
 	err := s.c.Event("Invocation", "Method", Params{
-		"Label":      "List",
-		"Plugin":     "aws",
-		"Entry Type": "aws::ec2Instance",
+		"Label":  "List",
+		"Plugin": "aws",
 	})
 	if s.NoError(err) {
 		s.assertHits(Params{
@@ -123,16 +120,14 @@ func (s *ClientTestSuite) TestEvent_ValidInput_WithLabel_EnqueuesHit() {
 			"ea":  "Method",
 			"el":  "List",
 			"cd2": "aws",
-			"cd3": "aws::ec2Instance",
 		})
 	}
 }
 
 func (s *ClientTestSuite) TestEvent_ValidInput_WithValue_EnqueuesHit() {
 	err := s.c.Event("Invocation", "Method", Params{
-		"Value":      "27",
-		"Plugin":     "aws",
-		"Entry Type": "aws::ec2Instance",
+		"Value":  "27",
+		"Plugin": "aws",
 	})
 	if s.NoError(err) {
 		s.assertHits(Params{
@@ -141,7 +136,6 @@ func (s *ClientTestSuite) TestEvent_ValidInput_WithValue_EnqueuesHit() {
 			"ea":  "Method",
 			"ev":  "27",
 			"cd2": "aws",
-			"cd3": "aws::ec2Instance",
 		})
 	}
 }
@@ -158,8 +152,7 @@ func (s *ClientTestSuite) TestFlush_QueuedHits() {
 		s.FailNowf("Received unexpected error: %v", err.Error())
 	}
 	err = s.c.Event("Invocation", "Method", Params{
-		"Plugin":     "aws",
-		"Entry Type": "aws::ec2Instance",
+		"Plugin": "aws",
 	})
 	if err != nil {
 		s.FailNowf("Received unexpected error: %v", err.Error())
@@ -179,7 +172,6 @@ func (s *ClientTestSuite) TestFlush_QueuedHits() {
 			"ec":  "Invocation",
 			"ea":  "Method",
 			"cd2": "aws",
-			"cd3": "aws::ec2Instance",
 		},
 		Params{
 			"t":  "screenview",

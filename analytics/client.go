@@ -170,8 +170,7 @@ func (c *client) baseParams() Params {
 }
 
 var settableCustomDimensions = map[string]string{
-	"Plugin":     "cd2",
-	"Entry Type": "cd3",
+	"Plugin": "cd2",
 }
 
 func mungeCustomDimensions(customDimensions Params) (Params, error) {

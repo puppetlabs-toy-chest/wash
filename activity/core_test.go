@@ -91,7 +91,6 @@ func TestSubmitMethodInvocation_NewMethodInvocation_SubmitsToGA(t *testing.T) {
 	analyticsClient.On("Event", "Invocation", "Method", analytics.Params{
 		"Label":      "List",
 		"Plugin":     "foo",
-		"Entry Type": "foo::file",
 	}).Return(nil)
 	ctx = context.WithValue(ctx, analytics.ClientKey, analyticsClient)
 
