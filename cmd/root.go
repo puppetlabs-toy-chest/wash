@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/analytics"
-	"github.com/puppetlabs/wash/api/client"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
@@ -38,41 +37,49 @@ func toRunE(main commandMain) runE {
 }
 
 // GA => Google Analytics
-func registerInvocationToGA(cmd *cobra.Command, socketPath string) {
+func registerInvocationToGA(cmd *cobra.Command, socketPath string) <-chan struct{} {
+	doneCh := make(chan struct{})
 	go func() {
-		// Errors are reported in the server logs, so no need to expose them
-		// to the user
+		defer close(doneCh)
 		name := cmd.Name()
-		if name == "server" {
-			name = "wash"
+		if name == "wash" || name == "server" {
+			// Analytics for these is sent by the server during its startup.
+			return
 		}
-		// We use client.ForUNIXSocket instead of cmdutil.NewClient because the socketPath
-		// could change. The latter's possible if cmd.Name() == "wash", i.e. the root
-		// command.
-		_ = client.ForUNIXSocket(socketPath).Screenview(name, analytics.Params{})
+		// Errors are reported in the server logs so no need to expose them
+		// to the user
+		_ = cmdutil.NewClient().Screenview(name, analytics.Params{})
 	}()
+	return doneCh
 }
 
 // GA => Google Analytics
-func waitForGARegistration() {
-	time.Sleep(analytics.FlushDuration)
+func waitForGARegistration(doneCh <-chan struct{}) {
+	ticker := time.NewTicker(analytics.FlushDuration)
+	defer ticker.Stop()
+	select {
+	case <-doneCh:
+		// Pass-thru
+	case <-ticker.C:
+		// Pass-thru
+	}
 }
 
 func ensureGARegistration(cmd *cobra.Command) *cobra.Command {
 	// Wrap flagErrorFunc
 	flagErrorFunc := cmd.FlagErrorFunc()
 	cmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
-		registerInvocationToGA(cmd, config.Socket)
-		waitForGARegistration()
+		doneCh := registerInvocationToGA(cmd, config.Socket)
+		waitForGARegistration(doneCh)
 		return flagErrorFunc(cmd, err)
 	})
 
 	// Wrap helpFunc
 	helpFunc := cmd.HelpFunc()
 	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		registerInvocationToGA(cmd, config.Socket)
+		doneCh := registerInvocationToGA(cmd, config.Socket)
 		helpFunc(cmd, args)
-		waitForGARegistration()
+		waitForGARegistration(doneCh)
 	})
 
 	// Wrap Args
@@ -81,8 +88,8 @@ func ensureGARegistration(cmd *cobra.Command) *cobra.Command {
 		cmd.Args = func(cmd *cobra.Command, args []string) error {
 			err := argsFunc(cmd, args)
 			if err != nil {
-				registerInvocationToGA(cmd, config.Socket)
-				waitForGARegistration()
+				doneCh := registerInvocationToGA(cmd, config.Socket)
+				waitForGARegistration(doneCh)
 				return err
 			}
 			return nil
@@ -92,9 +99,9 @@ func ensureGARegistration(cmd *cobra.Command) *cobra.Command {
 	// Wrap RunE
 	runE := cmd.RunE
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		registerInvocationToGA(cmd, config.Socket)
+		doneCh := registerInvocationToGA(cmd, config.Socket)
 		exitCode := runE(cmd, args)
-		waitForGARegistration()
+		waitForGARegistration(doneCh)
 		return exitCode
 	}
 

@@ -146,13 +146,22 @@ func (s *Server) shutdown() {
 	// Close any open journals on shutdown to ensure remaining entries are flushed to disk.
 	activity.CloseAll()
 
-	// Flush any outstanding analytics hits
+	// Flush any outstanding analytics hits. We do this asynchronously
+	// so that the server process isn't blocked on its cleanup (in case
+	// the network is slow).
+	doneCh := make(chan struct{})
 	ticker := time.NewTicker(analytics.FlushDuration)
 	defer ticker.Stop()
 	go func() {
 		s.analyticsClient.Flush()
+		close(doneCh)
 	}()
-	<-ticker.C
+	select {
+	case <-doneCh:
+		// Pass-thru
+	case <-ticker.C:
+		// Pass-thru
+	}
 
 	if s.logFH != nil {
 		s.logFH.Close()
