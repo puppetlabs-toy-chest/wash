@@ -119,6 +119,14 @@ func (s *Server) Start() error {
 		}
 		errz.Fatal(pprof.StartCPUProfile(f))
 	}
+
+	// Submit the initial start-up ping to GA. It's OK to do this synchronously
+	// because this is the first hit so the analytics client will not send it
+	// over the network.
+	if err := s.analyticsClient.Screenview("wash", analytics.Params{}); err != nil {
+		log.Infof("Failed to submit the initial start-up ping: %v", err)
+	}
+
 	return nil
 }
 

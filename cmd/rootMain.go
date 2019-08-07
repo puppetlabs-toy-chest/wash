@@ -187,7 +187,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}
 	}
-	registerInvocationToGA(cmd, socketpath)
 
 	if plugin.IsInteractive() {
 		cmdutil.Println(`Welcome to Wash!
