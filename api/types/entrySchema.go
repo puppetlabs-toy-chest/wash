@@ -10,12 +10,13 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// EntrySchema describes an entry's schema, which
-// is what's returned by the /fs/schema endpoint.
+// EntrySchema describes an entry's schema, which is what's returned by
+// the /fs/schema endpoint.
 //
 // swagger:response
 type EntrySchema struct {
 	plugin.EntrySchema
+	path     string
 	typeID   string
 	children []*EntrySchema
 	// graph is an ordered map of `<TypeID>` => `<EntrySchema>`. We store it to make
@@ -38,7 +39,59 @@ func (s EntrySchema) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.EntrySchema)
 }
 
-// UnmarshalJSON unmarshals the entry's schema from JSON.
+// UnmarshalJSON unmarshals the entry's schema from JSON. EntrySchemas
+// are unmarshalled into their stree representation. Specifically, given
+// stree output like
+//
+// docker
+// ├── containers
+// │   └── [container]
+// │       ├── log
+// │       ├── metadata.json
+// │       └── fs
+// │           ├── [dir]
+// │           │   ├── [dir]
+// │           │   └── [file]
+// │           └── [file]
+// └── volumes
+//     └── [volume]
+//         ├── [dir]
+//         │   ├── [dir]
+//         │   └── [file]
+//         └── [file]
+//
+// The unmarshalled graph will have nodes "containers", "container", "log",
+// "metadata.json", "fs", "dir", "file", "file" to mirror the first half
+// of the tree (the second "file" node represents "fs"' "file" child while
+// the first "file" node represents "dir"'s "file" child). The second half
+// of the tree is captured by nodes "volumes", "volume", "dir", "file", "file"
+// (here, the second "file" node represents "volume"'s "file" child while
+// the first "file" node represents "dir"'s "file" child). The stree's root
+// is the "docker" node.
+//
+// Unmarshalling the graph this way makes things symmetric with what a user
+// sees via stree. It also simplifies the implementation of some `wash find`
+// primaries.
+//
+// NOTE: One way to think about this representation is as follows. Consider a
+// node A. Let R-B-A and R-C-D-A be two possible paths from the stree root R to
+// A. Then the unmarshalled graph will have two different "A" nodes -- one for
+// the path "R-B-A", and another for the path "R-C-D-A". Thus, the unmarshalled
+// graph represents all possible paths from the stree root R (the starting entry)
+// to its descendants (the other nodes). This is the precise definition of an
+// entry's stree.
+//
+// NOTE: The type ID uniquely identifies a specific class of entries. The path
+// identifies a specific kind of entries. For example in the above stree output,
+// docker/containers/container/fs/dir and docker/volumes/volume/dir both share a
+// common "volumeDir" class. However, the former represents entries that are
+// directories in a Docker container's enumerated filesystem while the latter
+// represents entries that are directories inside a Docker volume.
+//
+// NOTE: The above "path" => "kind" analogy is not always correct. For example,
+// "docker/containers/container/fs/file" and "docker/containers/container/fs/dir/file"
+// represent the same kind of entry (a file inside a Docker container). However,
+// the analogy is good enough for most cases.
 func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 	rawGraph := linkedhashmap.New()
 	if err := rawGraph.FromJSON(data); err != nil {
@@ -47,49 +100,80 @@ func (s *EntrySchema) UnmarshalJSON(data []byte) error {
 	if rawGraph.Size() <= 0 {
 		return fmt.Errorf("expected a non-empty JSON object but got %v instead", string(data))
 	}
-	s.graph = linkedhashmap.New()
+	graph := linkedhashmap.New()
 
-	// Convert each node in the rawGraph to an *EntrySchema
-	// object
+	// Convert each node in the rawGraph to a plugin.EntrySchema
+	// object. This is also where we validate the data.
 	var err error
-	firstElem := true
 	rawGraph.Each(func(key interface{}, value interface{}) {
 		if err != nil {
 			return
 		}
-		var node *EntrySchema
-		if firstElem {
-			node = s
-			firstElem = false
-		} else {
-			node = &EntrySchema{
-				graph: s.graph,
-			}
-		}
-		node.typeID = key.(string)
-		err = deepcopy.Copy(&node.EntrySchema, value.(map[string]interface{}))
+		var schema plugin.EntrySchema
+		err = deepcopy.Copy(&schema, value.(map[string]interface{}))
 		if err != nil {
 			return
 		}
-		s.graph.Put(key, node)
+		if len(schema.Label) <= 0 {
+			err = fmt.Errorf("label for %v was not provided", key.(string))
+			return
+		}
+		graph.Put(key, schema)
 	})
 	if err != nil {
 		return err
 	}
 
-	// Fill-in the children map
-	s.graph.Each(func(key interface{}, value interface{}) {
-		schema := value.(*EntrySchema)
-		for _, childTypeID := range schema.EntrySchema.Children {
-			rawChild, _ := s.graph.Get(childTypeID)
-			schema.children = append(schema.children, rawChild.(*EntrySchema))
+	// Now fill-in the stree.
+	var fillStree func(string, string, map[string]*EntrySchema) *EntrySchema
+	fillStree = func(path string, typeID string, visited map[string]*EntrySchema) *EntrySchema {
+		if node, ok := visited[typeID]; ok {
+			return node
 		}
-	})
+		schema, _ := graph.Get(typeID)
+		node := &EntrySchema{
+			EntrySchema: schema.(plugin.EntrySchema),
+			typeID:      typeID,
+			path:        path,
+		}
+		if len(path) <= 0 {
+			// This is the root
+			node.path = node.Label()
+		} else {
+			// This is some intermediate node
+			node.path = path + "/" + node.Label()
+		}
+		visited[typeID] = node
+		for _, childTypeID := range node.EntrySchema.Children {
+			node.children = append(node.children, fillStree(node.path, childTypeID, visited))
+		}
+		delete(visited, typeID)
+		return node
+	}
+	it := graph.Iterator()
+	it.First()
+	root := fillStree("", it.Key().(string), make(map[string]*EntrySchema))
+	(*s) = (*root)
+	s.graph = graph
 
 	return nil
 }
 
-// TypeID returns the entry's type ID. This should be unique.
+// Path returns the unique path to this specific entry's schema
+// (relative to the stree root). The path consists of
+//    <root_label>/<parent1_label>/.../<label>
+func (s *EntrySchema) Path() string {
+	return s.path
+}
+
+// SetPath sets the entry's schema path. This should only be called
+// by the tests.
+func (s *EntrySchema) SetPath(path string) *EntrySchema {
+	s.path = path
+	return s
+}
+
+// TypeID returns the entry's type ID.
 func (s *EntrySchema) TypeID() string {
 	return s.typeID
 }
@@ -168,21 +252,20 @@ func (s *EntrySchema) SetChildren(children []*EntrySchema) *EntrySchema {
 	return s
 }
 
-// ToMap returns a map of <typeID> => <childTypeIDs...> (i.e. its pre-serialized
-// graph representation). It is useful for testing.
+// ToMap returns a map of <path> => <childPaths...>. It is useful for testing.
 func (s *EntrySchema) ToMap() map[string][]string {
 	mp := make(map[string][]string)
 	var visit func(s *EntrySchema)
 	visit = func(s *EntrySchema) {
-		if _, ok := mp[s.TypeID()]; ok {
+		if _, ok := mp[s.Path()]; ok {
 			return
 		}
-		mp[s.TypeID()] = []string{}
+		mp[s.Path()] = []string{}
 		for _, child := range s.Children() {
-			mp[s.TypeID()] = append(mp[s.TypeID()], child.TypeID())
+			mp[s.Path()] = append(mp[s.Path()], child.Path())
 			visit(child)
 		}
-		sort.Strings(mp[s.TypeID()])
+		sort.Strings(mp[s.Path()])
 	}
 	visit(s)
 	return mp

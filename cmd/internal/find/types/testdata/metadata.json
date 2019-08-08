@@ -1,5 +1,6 @@
 {
     "A": {
+        "label": "A",
         "meta_attribute_schema": {
             "type": "object",
             "properties": {
@@ -12,9 +13,12 @@
         ]
     },
     "B": {
+        "label": "B",
         "metadata_schema": {
             "type": "array"
         }
     },
-    "C": {}
+    "C": {
+        "label": "C"
+    }
 }

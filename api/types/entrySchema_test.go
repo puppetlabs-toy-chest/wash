@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -33,22 +32,16 @@ func (suite *EntrySchemaTestSuite) TestUnmarshalJSON_KnownSchema_ValidSchema() {
 	s, err := suite.readFixture("validSchema")
 	if suite.NoError(err) {
 		expected := map[string][]string{
-			"A": []string{"B", "C"},
-			"B": []string{"D", "E"},
-			"C": []string{"C", "F"},
-			"D": []string{},
-			"E": []string{"A", "C"},
-			"F": []string{},
+			"A":         []string{"A/B", "A/C"},
+			"A/B":       []string{"A/B/D", "A/B/E"},
+			"A/C":       []string{"A/C", "A/C/F"},
+			"A/B/D":     []string{},
+			"A/B/E":     []string{"A", "A/B/E/C"},
+			"A/C/F":     []string{},
+			"A/B/E/C":   []string{"A/B/E/C", "A/B/E/C/F"},
+			"A/B/E/C/F": []string{},
 		}
 		suite.Equal(expected, s.ToMap())
-
-		// Ensure that duplicates are properly handled
-		ABEC := suite.findNestedChild(s, "B", "E", "C")
-		AC := suite.findNestedChild(s, "C")
-		suite.True(ABEC == AC, "ABEC != AC")
-		A := suite.findNestedChild(s)
-		ABEA := suite.findNestedChild(A, "B", "E", "A")
-		suite.True(A == ABEA, "A != ABEA")
 	}
 }
 
@@ -60,20 +53,6 @@ func (suite *EntrySchemaTestSuite) TestUnmarshalJSON_KnownSchema_InvalidSchema()
 
 func TestEntrySchema(t *testing.T) {
 	suite.Run(t, new(EntrySchemaTestSuite))
-}
-
-// This should be called after suite.schema.FillChildren() is called
-func (suite *EntrySchemaTestSuite) findNestedChild(s *EntrySchema, segments ...string) *EntrySchema {
-	var visitedSegments []string
-	child := s
-	for _, segment := range segments {
-		visitedSegments = append(visitedSegments, segment)
-		child = child.GetChild(segment)
-		if child == nil {
-			suite.T().Fatal(fmt.Sprintf("Child %v does not exist", strings.Join(visitedSegments, "/")))
-		}
-	}
-	return child
 }
 
 func (suite *EntrySchemaTestSuite) readFixture(name string) (*EntrySchema, error) {

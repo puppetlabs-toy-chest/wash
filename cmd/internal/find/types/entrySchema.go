@@ -11,20 +11,20 @@ type EntrySchema = apitypes.EntrySchema
 // state so it is not an idempotent operation.
 func Prune(s *EntrySchema, p EntrySchemaPredicate, opts Options) *EntrySchema {
 	keep := evaluateNodesToKeep(s, p, opts)
-	if !keep[s.TypeID()] {
+	if !keep[s.Path()] {
 		return nil
 	}
 
 	visited := make(map[string]bool)
 	var prune func(s *EntrySchema)
 	prune = func(s *EntrySchema) {
-		if visited[s.TypeID()] {
+		if visited[s.Path()] {
 			return
 		}
-		visited[s.TypeID()] = true
+		visited[s.Path()] = true
 		var childrenToKeep []*EntrySchema
 		for _, child := range s.Children() {
-			if keep[child.TypeID()] {
+			if keep[child.Path()] {
 				prune(child)
 				childrenToKeep = append(childrenToKeep, child)
 			}
@@ -79,7 +79,7 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate, opts Options) m
 	// children.
 	var applyPredicate func(s *EntrySchema)
 	applyPredicate = func(s *EntrySchema) {
-		if _, ok := visited[s.TypeID()]; ok {
+		if _, ok := visited[s.Path()]; ok {
 			return
 		}
 		// Set the metadata schema prior to evaluating the predicate
@@ -88,11 +88,11 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate, opts Options) m
 			metadataSchema = s.MetadataSchema()
 		}
 		s.SetMetadataSchema(metadataSchema)
-		result[s.TypeID()] = p.P(s)
-		if !result[s.TypeID()] && len(s.Children()) > 0 {
-			delete(result, s.TypeID())
+		result[s.Path()] = p.P(s)
+		if !result[s.Path()] && len(s.Children()) > 0 {
+			delete(result, s.Path())
 		}
-		visited[s.TypeID()] = true
+		visited[s.Path()] = true
 		for _, child := range s.Children() {
 			applyPredicate(child)
 		}
@@ -102,14 +102,14 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate, opts Options) m
 	// Now we iteratively update "result".
 	var updateResult func(s *EntrySchema)
 	updateResult = func(s *EntrySchema) {
-		if _, ok := visited[s.TypeID()]; ok {
+		if _, ok := visited[s.Path()]; ok {
 			return
 		}
-		visited[s.TypeID()] = true
+		visited[s.Path()] = true
 		for _, child := range s.Children() {
 			updateResult(child)
-			if result[child.TypeID()] {
-				result[s.TypeID()] = true
+			if result[child.Path()] {
+				result[s.Path()] = true
 			}
 		}
 	}
