@@ -29,6 +29,10 @@ title= "Wash Documentation"
   * [➠External plugins]
   * [➠Core Plugins]
   * [➠Server API]
+* [Analytics](#analytics)
+  * [What data does Wash collect?](#what-data-does-wash-collect)
+  * [Why does Wash collect data?](#why-does-wash-collect-data)
+  * [How can I opt out of Wash data collection?](#how-can-i-opt-out-of-wash-data-collection)
 
 ## Wash Commands
 
@@ -294,3 +298,29 @@ docker
 Every node must have a label. The `[]` are printed for non-singleton nodes; they imply multiple instances of this thing. For example, `[container]` means that there will be multiple `container` instances under the `containers` directory. Similarly, `containers` means that there will be only one `containers` directory (i.e. that `containers` is a singleton). Singleton entries should typically use the entry's name as the label.
 
 Entry schemas are also useful for optimizing `find`, especially when `find` is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like `find aws -meta '.tags[?]' .key termination_date` would cause `find` to recurse into every entry in the `aws` plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, `find` would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.
+
+## Analytics
+
+Wash collects anonymous data about how you use it. You can opt out of providing this data.
+
+### What data does Wash collect?
+* Version of Wash
+* User locale
+* Architecture
+* Method invocations (for core plugin entries only)
+  * This includes any invocation of the `List`, `Exec`, `Read`, and `Stream` primitives
+  * Also includes the entry's plugin
+
+This data is associated with Bolt analytics' UUID (if available); otherwise, the data is associated with a random, non-identifiable user UUID.
+
+### Why does Wash collect data?
+Wash collects data to help us understand how it's being used and make decisions about how to improve it.
+
+### How can I opt out of Wash data collection?
+To disable the collection of analytics data add the following line to `~/.puppetlabs/wash/analytics.yaml`:
+
+```
+disabled: true
+```
+
+You can also disable the collection of analytics data by setting the `WASH_DISABLE_ANALYTICS` environment variable to `true` before starting up the Wash daemon.
