@@ -29,7 +29,7 @@ jobs:
   - stage: deploy
     name: Deploy to GitHub Releases
     if: tag IS present
-    env: LINKFLAGS="-w -s -X github.com/puppetlabs/wash/cmd.version=${TRAVIS_TAG}" CGO_ENABLED=0
+    env: LINKFLAGS="-w -s -X github.com/puppetlabs/wash/cmd/version.BuildVersion=${TRAVIS_TAG}" CGO_ENABLED=0
     script:
     - GOOS=darwin GOARCH=amd64 go build -ldflags="$LINKFLAGS"
     - tar czf ${PROJECT_NAME}-${TRAVIS_TAG}-x86_64-apple-darwin.tgz wash

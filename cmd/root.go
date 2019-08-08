@@ -2,8 +2,12 @@
 package cmd
 
 import (
+	"time"
+
+	"github.com/puppetlabs/wash/analytics"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
+	"github.com/puppetlabs/wash/cmd/version"
 	"github.com/spf13/cobra"
 )
 
@@ -33,6 +37,84 @@ func toRunE(main commandMain) runE {
 	}
 }
 
+// GA => Google Analytics
+func registerInvocationToGA(cmd *cobra.Command, socketPath string) <-chan struct{} {
+	doneCh := make(chan struct{})
+	go func() {
+		defer close(doneCh)
+		name := cmd.Name()
+		if name == "wash" || name == "server" {
+			// Analytics for these is sent by the server during its startup.
+			return
+		}
+		// Errors are reported in the server logs so no need to expose them
+		// to the user
+		_ = cmdutil.NewClient().Screenview(name, analytics.Params{})
+	}()
+	return doneCh
+}
+
+// GA => Google Analytics
+func waitForGARegistration(doneCh <-chan struct{}) {
+	ticker := time.NewTicker(analytics.FlushDuration)
+	defer ticker.Stop()
+	select {
+	case <-doneCh:
+		// Pass-thru
+	case <-ticker.C:
+		// Pass-thru
+	}
+}
+
+func ensureGARegistration(cmd *cobra.Command) *cobra.Command {
+	// Wrap flagErrorFunc
+	flagErrorFunc := cmd.FlagErrorFunc()
+	cmd.SetFlagErrorFunc(func(cmd *cobra.Command, err error) error {
+		doneCh := registerInvocationToGA(cmd, config.Socket)
+		waitForGARegistration(doneCh)
+		return flagErrorFunc(cmd, err)
+	})
+
+	// Wrap helpFunc
+	helpFunc := cmd.HelpFunc()
+	cmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		doneCh := registerInvocationToGA(cmd, config.Socket)
+		helpFunc(cmd, args)
+		waitForGARegistration(doneCh)
+	})
+
+	// Wrap Args
+	argsFunc := cmd.Args
+	if argsFunc != nil {
+		cmd.Args = func(cmd *cobra.Command, args []string) error {
+			err := argsFunc(cmd, args)
+			if err != nil {
+				doneCh := registerInvocationToGA(cmd, config.Socket)
+				waitForGARegistration(doneCh)
+				return err
+			}
+			return nil
+		}
+	}
+
+	// Wrap RunE
+	runE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		doneCh := registerInvocationToGA(cmd, config.Socket)
+		exitCode := runE(cmd, args)
+		waitForGARegistration(doneCh)
+		return exitCode
+	}
+
+	return cmd
+}
+
+// Use addCommand instead of rootCmd.AddCommand to ensure that cmd's
+// invocation is registered to GA
+func addCommand(rootCmd *cobra.Command, cmd *cobra.Command) {
+	rootCmd.AddCommand(ensureGARegistration(cmd))
+}
+
 func rootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:    "wash [<script>]",
@@ -47,7 +129,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.MaximumNArgs(1),
-		Version:       version,
+		Version:       version.BuildVersion,
 	}
 
 	if config.Embedded {
@@ -59,26 +141,27 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	} else {
 		// Omit server from embedded cases because a daemon is already running.
 		addServerArgs(rootCmd, "warn")
-		rootCmd.AddCommand(serverCommand())
+		addCommand(rootCmd, serverCommand())
 		// rootCommandFlag is used in rootMain.go.
 		rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
 
 		// Omit validate because it's meant to be run independently to test a plugin and should not be
 		// part of normal shell interaction.
-		rootCmd.AddCommand(validateCommand())
+		addCommand(rootCmd, validateCommand())
 	}
+	rootCmd = ensureGARegistration(rootCmd)
 
-	rootCmd.AddCommand(versionCommand())
-	rootCmd.AddCommand(metaCommand())
-	rootCmd.AddCommand(listCommand())
-	rootCmd.AddCommand(execCommand())
-	rootCmd.AddCommand(psCommand())
-	rootCmd.AddCommand(findCommand())
-	rootCmd.AddCommand(clearCommand())
-	rootCmd.AddCommand(tailCommand())
-	rootCmd.AddCommand(historyCommand())
-	rootCmd.AddCommand(infoCommand())
-	rootCmd.AddCommand(streeCommand())
+	addCommand(rootCmd, versionCommand())
+	addCommand(rootCmd, metaCommand())
+	addCommand(rootCmd, listCommand())
+	addCommand(rootCmd, execCommand())
+	addCommand(rootCmd, psCommand())
+	addCommand(rootCmd, findCommand())
+	addCommand(rootCmd, clearCommand())
+	addCommand(rootCmd, tailCommand())
+	addCommand(rootCmd, historyCommand())
+	addCommand(rootCmd, infoCommand())
+	addCommand(rootCmd, streeCommand())
 
 	return rootCmd
 }

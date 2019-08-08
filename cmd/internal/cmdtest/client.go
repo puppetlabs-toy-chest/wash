@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	"github.com/puppetlabs/wash/analytics"
 	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
@@ -65,4 +66,10 @@ func (c *MockClient) Clear(path string) ([]string, error) {
 func (c *MockClient) Schema(path string) (*apitypes.EntrySchema, error) {
 	args := c.Called(path)
 	return args.Get(0).(*apitypes.EntrySchema), args.Error(1)
+}
+
+// Screenview mocks Client#Screenview
+func (c *MockClient) Screenview(name string, params analytics.Params) error {
+	args := c.Called(name, params)
+	return args.Error(1)
 }

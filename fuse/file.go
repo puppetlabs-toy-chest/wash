@@ -36,7 +36,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 	// Initiate content request and return a channel providing the results.
 	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
-		content, err := plugin.CachedOpen(ctx, updatedEntry.(plugin.Readable))
+		content, err := plugin.Open(ctx, updatedEntry.(plugin.Readable))
 		if err != nil {
 			activity.Warnf(ctx, "FUSE: Open %v errored: %v", f, err)
 			return nil, err

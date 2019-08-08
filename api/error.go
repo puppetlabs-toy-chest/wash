@@ -108,6 +108,16 @@ func unsupportedActionResponse(path string, a plugin.Action) *errorResponse {
 	return &errorResponse{statusCode, body}
 }
 
+func badRequestResponse(reason string) *errorResponse {
+	fields := apitypes.ErrorFields{}
+	body := newErrorObj(
+		apitypes.BadRequest,
+		fmt.Sprintf("Bad request: %v", reason),
+		fields,
+	)
+	return &errorResponse{http.StatusBadRequest, body}
+}
+
 func badActionRequestResponse(path string, a plugin.Action, reason string) *errorResponse {
 	fields := apitypes.ErrorFields{
 		"path":   path,

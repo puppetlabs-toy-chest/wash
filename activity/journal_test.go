@@ -60,3 +60,16 @@ func TestHistoryWithJournal(t *testing.T) {
 		}
 	}
 }
+
+func TestRecorder_CanRecordMethodInvocations(t *testing.T) {
+	recorder := newRecorder()
+
+	assert.False(t, recorder.methodInvoked("foo", "List"))
+	recorder.recordMethodInvocation("foo", "List")
+	assert.True(t, recorder.methodInvoked("foo", "List"))
+
+	// Test a different method
+	assert.False(t, recorder.methodInvoked("foo", "Exec"))
+	recorder.recordMethodInvocation("foo", "Exec")
+	assert.True(t, recorder.methodInvoked("foo", "Exec"))
+}

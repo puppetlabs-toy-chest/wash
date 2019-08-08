@@ -41,7 +41,7 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	}
 
 	ctx := r.Context()
-	rdr, err := entry.(plugin.Streamable).Stream(ctx)
+	rdr, err := plugin.Stream(ctx, entry.(plugin.Streamable))
 
 	if err != nil {
 		return erroredActionResponse(path, plugin.StreamAction(), err.Error())
