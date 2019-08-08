@@ -16,7 +16,7 @@ Wash helps you deal with all your remote or cloud-native infrastructure using th
     •
 </div>
 
-<script id="asciicast-248077" src="https://asciinema.org/a/248077.js" async></script>
+<script id="asciicast-pTl39ujtBBkIYOZMZSWuE8WRN" src="https://asciinema.org/a/pTl39ujtBBkIYOZMZSWuE8WRN.js" async></script>
 
 ## Introduction
 
