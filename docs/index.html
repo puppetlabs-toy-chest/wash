@@ -102,6 +102,8 @@ if (!doNotTrack) {
 
 <p>At this point, if you haven&rsquo;t already, you should start some resources that Wash can actually introspect. Otherwise, as Han Solo would say, &ldquo;this is going to be a real short trip&rdquo;. So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. We&rsquo;ve also provided a <a href="#wash-by-example">guided tour</a> that includes a Docker application.</p>
 
+<p><strong>NOTE:</strong> Wash collects anonymous data about how you use it. See the <a href="/wash/docs#analytics">analytics docs</a> for more details.</p>
+
 <h3 id="known-issues">Known issues</h3>
 
 <p>Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to <code>/bin/sh</code>, so if you&rsquo;d like to specify a particular shell set the SHELL environment variable before starting Wash.</p>

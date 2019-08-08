@@ -91,6 +91,13 @@ if (!doNotTrack) {
 <li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
 <li><a href="/wash/docs/api">➠Server API</a></li>
 </ul></li>
+<li><a href="#analytics">Analytics</a>
+
+<ul>
+<li><a href="#what-data-does-wash-collect">What data does Wash collect?</a></li>
+<li><a href="#why-does-wash-collect-data">Why does Wash collect data?</a></li>
+<li><a href="#how-can-i-opt-out-of-wash-data-collection">How can I opt out of Wash data collection?</a></li>
+</ul></li>
 </ul>
 
 <h2 id="wash-commands">Wash Commands</h2>
@@ -442,6 +449,43 @@ Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {I
 <p>Every node must have a label. The <code>[]</code> are printed for non-singleton nodes; they imply multiple instances of this thing. For example, <code>[container]</code> means that there will be multiple <code>container</code> instances under the <code>containers</code> directory. Similarly, <code>containers</code> means that there will be only one <code>containers</code> directory (i.e. that <code>containers</code> is a singleton). Singleton entries should typically use the entry&rsquo;s name as the label.</p>
 
 <p>Entry schemas are also useful for optimizing <code>find</code>, especially when <code>find</code> is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like <code>find aws -meta '.tags[?]' .key termination_date</code> would cause <code>find</code> to recurse into every entry in the <code>aws</code> plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, <code>find</code> would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.</p>
+
+<h2 id="analytics">Analytics</h2>
+
+<p>Wash collects anonymous data about how you use it. You can opt out of providing this data.</p>
+
+<h3 id="what-data-does-wash-collect">What data does Wash collect?</h3>
+
+<ul>
+<li>Version of Wash</li>
+<li>User locale</li>
+<li>Architecture</li>
+<li>Method invocations (for core plugin entries only)
+
+<ul>
+<li>This includes any invocation of the <code>List</code>, <code>Exec</code>, <code>Read</code>, and <code>Stream</code> primitives</li>
+<li>Also includes the entry&rsquo;s plugin</li>
+</ul></li>
+</ul>
+
+<p>This data is associated with Bolt analytics&rsquo; UUID (if available); otherwise, the data is associated with a random, non-identifiable user UUID.</p>
+
+<h3 id="why-does-wash-collect-data">Why does Wash collect data?</h3>
+
+<p>Wash collects data to help us understand how it&rsquo;s being used and make decisions about how to improve it.</p>
+
+<h3 id="how-can-i-opt-out-of-wash-data-collection">How can I opt out of Wash data collection?</h3>
+
+<p>To disable the collection of analytics data add the following line to <code>~/.puppetlabs/wash/analytics.yaml</code>:</p>
+<div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
+<table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
+</span></pre></td>
+<td style="vertical-align:top;padding:0;margin:0;border:0;">
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">disabled: true</pre></td></tr></table>
+</div>
+</div>
+<p>You can also disable the collection of analytics data by setting the <code>WASH_DISABLE_ANALYTICS</code> environment variable to <code>true</code> before starting up the Wash daemon.</p>
 
 </article>
 
