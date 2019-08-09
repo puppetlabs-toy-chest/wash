@@ -26,7 +26,7 @@ tail gcp/Wash/compute/instance-1/fs/var/log/messages
 wexec gcp/Wash/compute/instance-1 uname -a
 
 echo Wash builds more powerful capabilities on the ability to execute commands.
-wash ps docker/containers/* gcp/Wash/compute/instance-1
+wps docker/containers/* gcp/Wash/compute/instance-1 | head
 
 echo Wash find supports powerful queries on resource metadata.
 jq .status gcp/Wash/compute/instance-1/metadata.json
@@ -34,4 +34,5 @@ echo "Let's find all running instances."
 find gcp/Wash -meta .status RUNNING
 
 exit
+# edit wash.cast to have width=100, height=20
 # upload as wash-integrations@puppet.com
