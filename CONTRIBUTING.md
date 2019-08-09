@@ -18,14 +18,6 @@ Open a "[Feature request](https://github.com/puppetlabs/wash/issues/new?template
 
 ## Development Environment
 
-### Requirements
-
-* Golang 1.11
-
-### Building
-
-You can build a native binary with `go build`. The resulting `wash` binary will be placed in the current directory.
-
 ### Updating Dependencies
 
 Versioning for the kubernetes and docker projects don't work well with Go modules. The best way to update dependencies is to update specific packages to a specific version using `go get <mod>@<tag>`.
