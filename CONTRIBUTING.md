@@ -45,3 +45,11 @@ For example, the Docker plugin has multiple files implenting components of a con
 - container-log.go
 - container-metadata.go
 - container.go
+
+### Releases
+
+Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). Assets are automatically built. https://github.com/puppetlabs/homebrew-puppet needs to be manually updated to use the new release (in the future we hope to automate this with GitHub Actions).
+
+Release announcements are:
+- posted in [Slack #puppet](https://puppetcommunity.slack.com/app_redirect?channel=puppet); ask a moderator to re-post into #announcements
+- Puppet internal [release announcement process](https://confluence.puppetlabs.com/display/PM/Sending+Product+Release+Announcements)
