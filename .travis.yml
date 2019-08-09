@@ -9,6 +9,7 @@ env:
   global:
   - GO111MODULE=on
   - PROJECT_NAME=wash
+  - WASH_DISABLE_ANALYTICS=true
 jobs:
   include:
   - name: Test Go stable
