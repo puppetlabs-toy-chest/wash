@@ -50,6 +50,10 @@ At this point, if you haven't already, you should start some resources that Wash
 
 **NOTE:** Wash collects anonymous data about how you use it. See the [analytics docs](/wash/docs#analytics) for more details.
 
+### Release announcements
+
+You can watch for new releases of Wash on [Slack #announcements](https://puppetcommunity.slack.com/app_redirect?channel=announcements), the [puppet-announce](https://groups.google.com/forum/#!forum/puppet-announce) mailing list, or by subscribing to new releases on [GitHub](https://github.com/puppetlabs/wash).
+
 ### Known issues
 
 Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the SHELL environment variable before starting Wash.
