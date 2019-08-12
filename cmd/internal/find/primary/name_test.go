@@ -13,7 +13,7 @@ type NamePrimaryTestSuite struct {
 
 func (s *NamePrimaryTestSuite) TestErrors() {
 	s.RETC("", "requires additional arguments")
-	s.RETC("[a", "invalid glob: unexpected end of input")
+	s.RETC("[a", "invalid pattern: unexpected end of input")
 }
 
 func (s *NamePrimaryTestSuite) TestValidInput() {
