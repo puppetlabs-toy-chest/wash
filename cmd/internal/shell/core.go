@@ -28,6 +28,8 @@ type Shell interface {
 // Get returns an implementation for the shell described by the SHELL environment variable.
 func Get() Shell {
 	switch sh := os.Getenv("SHELL"); filepath.Base(sh) {
+	case "bash":
+		return bash{sh: sh}
 	case "zsh":
 		return zsh{sh: sh}
 	default:

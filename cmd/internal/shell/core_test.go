@@ -22,4 +22,12 @@ func TestGet(t *testing.T) {
 	os.Setenv("SHELL", "/bin/zsh")
 	sh = Get()
 	assert.IsType(t, zsh{}, sh)
+
+	os.Setenv("SHELL", "bash")
+	sh = Get()
+	assert.IsType(t, bash{}, sh)
+
+	os.Setenv("SHELL", "/usr/local/bin/bash")
+	sh = Get()
+	assert.IsType(t, bash{}, sh)
 }
