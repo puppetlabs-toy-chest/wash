@@ -192,6 +192,38 @@ func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {
 	s.RNSTC("! -m .key 1", "", schema)
 }
 
+func (s *ParseExpressionTestSuite) TestParseExpressionDeMorgansLaw() {
+	s.RTC("! ( -true -a -true )", false)
+	s.RTC("! ( -true -o -false )", false)
+	// Include some nested expressions
+	s.RTC("! ( ( -true -a -true ) -a -false )", true)
+	s.RTC("! ( ( -false -o -false ) -o -false )", true)
+
+	// Now re-run the same tests, except with schema predicates.
+	schema := &types.EntrySchema{}
+	s.Suite.RNSTC("! ( -true -a -true )", "", schema)
+	s.Suite.RNSTC("! ( -true -o -false )", "", schema)
+	s.Suite.RSTC("! ( ( -true -a -true ) -a -false )", "", schema)
+	s.Suite.RSTC("! ( ( -false -o -false ) -o -false )", "", schema)
+}
+
+func (s *ParseExpressionTestSuite) TestParseExpression_SchemaRequired() {
+	schema := &types.EntrySchema{}
+	schema.SetPath("foo/bar")
+	entryWithSchema := types.Entry{}
+	entryWithSchema.SetSchema(schema)
+
+	schemalessEntry := types.Entry{}
+
+	// Entry schema is required
+	s.Suite.RTC("-kind bar -a -true", "", entryWithSchema)
+	s.Suite.RNTC("-kind bar -a -true", "", schemalessEntry)
+
+	// Entry schema is not required
+	s.Suite.RTC("-kind bar -o -true", "", entryWithSchema)
+	s.Suite.RTC("-kind bar -o -true", "", schemalessEntry)
+}
+
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
 	s.IsTopLevelExpressionParser = true

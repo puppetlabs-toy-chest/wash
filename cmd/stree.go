@@ -55,10 +55,10 @@ func fill(stree treeprint.Tree, schema *apitypes.EntrySchema, visited map[string
 		value = fmt.Sprintf("[%v]", value)
 	}
 	stree.SetValue(value)
-	if visited[schema.TypeID()] {
+	if visited[schema.Path()] {
 		return stree
 	}
-	visited[schema.TypeID()] = true
+	visited[schema.Path()] = true
 	for _, child := range schema.Children() {
 		// treeprint.Tree has no "AddBranch()" method, so we need to
 		// set a stub value. Note that the value will be reset to the
@@ -66,13 +66,5 @@ func fill(stree treeprint.Tree, schema *apitypes.EntrySchema, visited map[string
 		subtree := stree.AddBranch("foo")
 		fill(subtree, child, visited)
 	}
-	// Delete schema from visited so that stree displays the correct
-	// output for siblings that also use schema. Without this code,
-	// we wouldn't be able to print the same representation for volume
-	// directories in the Kubernetes/Docker/AWS plugins. Instead, only
-	// one of those plugins would show the correct representation of
-	// "volume_dir => volume_dir, volume_file." The others would only
-	// print "volume_dir".
-	delete(visited, schema.TypeID())
 	return stree
 }

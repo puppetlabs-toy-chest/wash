@@ -1,24 +1,35 @@
 {
     "A": {
+        "label": "A",
         "children": [
             "B",
             "C"
         ]
     },
     "B": {
+        "label": "B",
         "children": [
             "D",
             "E"
         ]
     },
     "C": {
+        "label": "C",
         "children": [
             "F",
             "G"
         ]
     },
-    "D": {},
-    "E": {},
-    "F": {},
-    "G": {}
+    "D": {
+        "label": "D"
+    },
+    "E": {
+        "label": "E"
+    },
+    "F": {
+        "label": "F"
+    },
+    "G": {
+        "label": "G"
+    }
 }

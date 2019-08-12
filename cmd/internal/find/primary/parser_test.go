@@ -2,8 +2,9 @@ package primary
 
 import (
 	"testing"
-	"github.com/puppetlabs/wash/cmd/internal/find/types"
+
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/parsertest"
+	"github.com/puppetlabs/wash/cmd/internal/find/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -23,19 +24,22 @@ func (s *ParserTestSuite) TestRegisteredPrimaries() {
 		Ctime,
 		Mtime,
 		Atime,
+		Kind,
 	}
 	expectedMp := map[string]*Primary{
 		"-action": Action,
-		"-true": True,
-		"-false": False,
-		"-meta": Meta,
-		"-m": Meta,
-		"-name": Name,
-		"-path": Path,
-		"-size": Size,
-		"-ctime": Ctime,
-		"-mtime": Mtime,
-		"-atime": Atime,
+		"-true":   True,
+		"-false":  False,
+		"-meta":   Meta,
+		"-m":      Meta,
+		"-name":   Name,
+		"-path":   Path,
+		"-size":   Size,
+		"-ctime":  Ctime,
+		"-mtime":  Mtime,
+		"-atime":  Atime,
+		"-kind":   Kind,
+		"-k":      Kind,
 	}
 
 	s.ElementsMatch(expectedList, Parser.primaries)

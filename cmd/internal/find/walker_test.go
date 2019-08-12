@@ -3,6 +3,7 @@ package find
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -55,6 +56,15 @@ func (s *WalkerTestSuite) TestWalk_SchemaErrors() {
 	s.Regexp(err.Error(), s.Stderr())
 }
 
+func (s *WalkerTestSuite) TestWalk_SchemaRequired_UnknownSchema() {
+	s.walker.p.RequireSchema()
+	s.setupDefaultMocksForWalk()
+	s.True(s.walker.Walk("."))
+	s.Empty(s.Stdout())
+	s.Empty(s.Stderr())
+	s.Client.AssertNotCalled(s.T(), "List", ".")
+}
+
 func (s *WalkerTestSuite) TestWalk_HappyCase() {
 	s.setupDefaultMocksForWalk()
 	s.True(s.walker.Walk("."))
@@ -70,17 +80,18 @@ func (s *WalkerTestSuite) TestWalk_HappyCase() {
 
 func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
 	// Set-up the mocks
-	fileSchema := func(typeID string) *apitypes.EntrySchema {
-		return (&apitypes.EntrySchema{}).SetTypeID(typeID)
+	fileSchema := func(path string, typeID string) *apitypes.EntrySchema {
+		return (&apitypes.EntrySchema{}).SetPath(path).SetTypeID(typeID)
 	}
-	dirSchema := func(typeID string, children ...*apitypes.EntrySchema) *apitypes.EntrySchema {
-		return (&apitypes.EntrySchema{}).SetTypeID(typeID).SetChildren(children)
+	dirSchema := func(path string, typeID string, children ...*apitypes.EntrySchema) *apitypes.EntrySchema {
+		return (&apitypes.EntrySchema{}).SetPath(path).SetTypeID(typeID).SetChildren(children)
 	}
 	schema := dirSchema(
 		".",
-		dirSchema("foo", fileSchema("file")),
-		dirSchema("bar", fileSchema("no_file")),
-		dirSchema("baz", fileSchema("file")),
+		"root",
+		dirSchema("./foo", "foo", fileSchema("./foo/file", "file")),
+		dirSchema("./bar", "bar", fileSchema("./bar/no_file", "no_file")),
+		dirSchema("./baz", "baz", fileSchema("./baz/file", "file")),
 	)
 	s.setupMocksForWalk(schema, map[string][]apitypes.Entry{
 		".": []apitypes.Entry{
@@ -103,7 +114,8 @@ func (s *WalkerTestSuite) TestWalk_WithSchema_HappyCase() {
 
 	s.walker.p.SetSchemaP(types.ToEntrySchemaP(func(s *types.EntrySchema) bool {
 		// Print only "foo" or "file"s. Ignore everything else.
-		return s.TypeID() == "foo" || s.TypeID() == "file"
+		rx := regexp.MustCompile(`(^\./foo)|(/file$)`)
+		return rx.MatchString(s.Path())
 	}))
 
 	s.True(s.walker.Walk("."))
