@@ -44,6 +44,11 @@ func (w *walkerImpl) Walk(path string) bool {
 	if s != nil {
 		schema := types.Prune(s, w.p.SchemaP(), w.opts)
 		e.SetSchema(schema)
+	} else if w.p.SchemaRequired() {
+		// s == nil, but p only makes sense for entries with schemas.
+		// Thus, no further work needs to be done so we can return
+		// true here.
+		return true
 	}
 	return w.walk(e, 0)
 }

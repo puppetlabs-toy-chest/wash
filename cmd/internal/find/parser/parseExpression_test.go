@@ -207,6 +207,23 @@ func (s *ParseExpressionTestSuite) TestParseExpressionDeMorgansLaw() {
 	s.Suite.RSTC("! ( ( -false -o -false ) -o -false )", "", schema)
 }
 
+func (s *ParseExpressionTestSuite) TestParseExpression_SchemaRequired() {
+	schema := &types.EntrySchema{}
+	schema.SetPath("foo/bar")
+	entryWithSchema := types.Entry{}
+	entryWithSchema.SetSchema(schema)
+
+	schemalessEntry := types.Entry{}
+
+	// Entry schema is required
+	s.Suite.RTC("-kind bar -a -true", "", entryWithSchema)
+	s.Suite.RNTC("-kind bar -a -true", "", schemalessEntry)
+
+	// Entry schema is not required
+	s.Suite.RTC("-kind bar -o -true", "", entryWithSchema)
+	s.Suite.RTC("-kind bar -o -true", "", schemalessEntry)
+}
+
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
 	s.IsTopLevelExpressionParser = true

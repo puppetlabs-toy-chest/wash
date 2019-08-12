@@ -56,6 +56,15 @@ func (s *WalkerTestSuite) TestWalk_SchemaErrors() {
 	s.Regexp(err.Error(), s.Stderr())
 }
 
+func (s *WalkerTestSuite) TestWalk_SchemaRequired_UnknownSchema() {
+	s.walker.p.RequireSchema()
+	s.setupDefaultMocksForWalk()
+	s.True(s.walker.Walk("."))
+	s.Empty(s.Stdout())
+	s.Empty(s.Stderr())
+	s.Client.AssertNotCalled(s.T(), "List", ".")
+}
+
 func (s *WalkerTestSuite) TestWalk_HappyCase() {
 	s.setupDefaultMocksForWalk()
 	s.True(s.walker.Walk("."))
