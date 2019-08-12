@@ -3,6 +3,7 @@ package shell
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 // Shell provides setup for a specific shell, such as bash or zsh.
@@ -11,16 +12,30 @@ type Shell interface {
 	// shell environment as `env WASH_EMBEDDED=1 wash <subcommand>`. Rundir is a temporary directory
 	// that will be added to PATH when the command is invoked; you can use it to add new executables
 	// or store other temporary files.
+	//
+	// Implementations should support their native interactive and non-interactive config, as well as
+	// Wash's (.washrc and .washenv, respectively). They should:
+	//   1. if ~/.washenv does not exist, load the shell's default non-interactive config
+	//   1. configure subcommand aliases
+	//   1. if ~/.washenv exists, load it
+	// Additionally for interactive invocations they should:
+	//   1. if ~/.washrc does not exist, load the shell's default interactive config
+	//   1. configure the prompt
+	//   1. if ~/.washrc exists, load it
 	Command(subcommands []string, rundir string) (*exec.Cmd, error)
 }
 
 // Get returns an implementation for the shell described by the SHELL environment variable.
 func Get() Shell {
-	// Run the default system shell.
-	sh := os.Getenv("SHELL")
-	if sh == "" {
-		sh = "/bin/sh"
+	switch sh := os.Getenv("SHELL"); filepath.Base(sh) {
+	case "zsh":
+		return zsh{sh: sh}
+	default:
+		// Basic is a fallback that doesn't fully implement the Shell semantics. It provides the common
+		// subset we can expect from a Bourne Shell.
+		if sh == "" {
+			sh = "/bin/sh"
+		}
+		return basic{sh: sh}
 	}
-
-	return basic{sh: sh}
 }
