@@ -84,6 +84,8 @@ func (p1 *entryPredicate) IsSatisfiedBy(v interface{}) bool {
 // EntryPredicateAnd represents an And operation on Entry predicates
 type EntryPredicateAnd struct {
 	*entryPredicate
+	p1 EntryPredicate
+	p2 EntryPredicate
 }
 
 // Combine implements predicate.BinaryOp#Combine
@@ -92,17 +94,33 @@ func (op *EntryPredicateAnd) Combine(p1 predicate.Predicate, p2 predicate.Predic
 	ep2 := p2.(EntryPredicate)
 	return &EntryPredicateAnd{
 		entryPredicate: &entryPredicate{
-			p: func(e Entry) bool {
-				return ep1.P(e) && ep2.P(e)
-			},
 			schemaP: newEntrySchemaPredicateAnd(ep1.SchemaP(), ep2.SchemaP()),
 		},
+		p1: ep1,
+		p2: ep2,
 	}
+}
+
+// P returns true if e satisfies the predicate, false otherwise
+func (op *EntryPredicateAnd) P(e Entry) bool {
+	return op.p1.P(e) && op.p2.P(e)
+}
+
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (op *EntryPredicateAnd) IsSatisfiedBy(v interface{}) bool {
+	return op.p1.IsSatisfiedBy(v) && op.p2.IsSatisfiedBy(v)
+}
+
+// Negate returns Not(op)
+func (op *EntryPredicateAnd) Negate() predicate.Predicate {
+	return (&EntryPredicateOr{}).Combine(op.p1.Negate(), op.p2.Negate())
 }
 
 // EntryPredicateOr represents an Or operation on Entry predicates
 type EntryPredicateOr struct {
 	*entryPredicate
+	p1 EntryPredicate
+	p2 EntryPredicate
 }
 
 // Combine implements predicate.BinaryOp#Combine
@@ -111,10 +129,24 @@ func (op *EntryPredicateOr) Combine(p1 predicate.Predicate, p2 predicate.Predica
 	ep2 := p2.(EntryPredicate)
 	return &EntryPredicateOr{
 		entryPredicate: &entryPredicate{
-			p: func(e Entry) bool {
-				return ep1.P(e) || ep2.P(e)
-			},
 			schemaP: newEntrySchemaPredicateOr(ep1.SchemaP(), ep2.SchemaP()),
 		},
+		p1: ep1,
+		p2: ep2,
 	}
+}
+
+// P returns true if e satisfies the predicate, false otherwise
+func (op *EntryPredicateOr) P(e Entry) bool {
+	return op.p1.P(e) || op.p2.P(e)
+}
+
+// IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
+func (op *EntryPredicateOr) IsSatisfiedBy(v interface{}) bool {
+	return op.p1.IsSatisfiedBy(v) || op.p2.IsSatisfiedBy(v)
+}
+
+// Negate returns Not(op)
+func (op *EntryPredicateOr) Negate() predicate.Predicate {
+	return (&EntryPredicateAnd{}).Combine(op.p1.Negate(), op.p2.Negate())
 }

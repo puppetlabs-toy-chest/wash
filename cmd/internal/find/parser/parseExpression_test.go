@@ -192,6 +192,21 @@ func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {
 	s.RNSTC("! -m .key 1", "", schema)
 }
 
+func (s *ParseExpressionTestSuite) TestParseExpressionDeMorgansLaw() {
+	s.RTC("! ( -true -a -true )", false)
+	s.RTC("! ( -true -o -false )", false)
+	// Include some nested expressions
+	s.RTC("! ( ( -true -a -true ) -a -false )", true)
+	s.RTC("! ( ( -false -o -false ) -o -false )", true)
+
+	// Now re-run the same tests, except with schema predicates.
+	schema := &types.EntrySchema{}
+	s.Suite.RNSTC("! ( -true -a -true )", "", schema)
+	s.Suite.RNSTC("! ( -true -o -false )", "", schema)
+	s.Suite.RSTC("! ( ( -true -a -true ) -a -false )", "", schema)
+	s.Suite.RSTC("! ( ( -false -o -false ) -o -false )", "", schema)
+}
+
 func TestParseExpression(t *testing.T) {
 	s := new(ParseExpressionTestSuite)
 	s.IsTopLevelExpressionParser = true
