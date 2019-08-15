@@ -201,7 +201,7 @@ EOF
 
 Wash also includes support for AWS. If you have your own and you've configured the AWS CLI on your workstation, you'll be able to use Wash to explore EC2 instances and S3 buckets.
 
-As an example, you might want to periodically check how many EC2 instances are running (and display that via [BitBar](https://getbitbar.com/)):
+As an example, you might want to periodically check how many execable instances are running in the AWS plugin (and display that via [BitBar](https://getbitbar.com/)):
 ```
 running=`find aws -action exec -meta .State.Name running 2>/dev/null | wc -l | xargs`
 total=`find aws -action exec -meta .State.Name -exists 2>/dev/null | wc -l | xargs`
@@ -210,7 +210,7 @@ echo EC2 $running / $total
 
 Or count the number of S3 buckets that have been created:
 ```
-buckets=`find aws -maxdepth 4 -path '*/resources/s3/*' 2>/dev/null | wc -l | xargs`
+buckets=`find aws -k '*s3*bucket' 2>/dev/null | wc -l | xargs`
 echo S3 $buckets
 ```
 

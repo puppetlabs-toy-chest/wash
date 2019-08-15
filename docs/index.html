@@ -365,7 +365,7 @@ EOF</pre></td></tr></table>
 
 <p>Wash also includes support for AWS. If you have your own and you&rsquo;ve configured the AWS CLI on your workstation, you&rsquo;ll be able to use Wash to explore EC2 instances and S3 buckets.</p>
 
-<p>As an example, you might want to periodically check how many EC2 instances are running (and display that via <a href="https://getbitbar.com/">BitBar</a>):</p>
+<p>As an example, you might want to periodically check how many execable instances are running in the AWS plugin (and display that via <a href="https://getbitbar.com/">BitBar</a>):</p>
 <div class="highlight"><div style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">
 <table style="border-spacing:0;padding:0;margin:0;border:0;width:auto;overflow:auto;display:block;"><tr><td style="vertical-align:top;padding:0;margin:0;border:0;">
 <pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">1
@@ -385,7 +385,7 @@ echo EC2 $running / $total</pre></td></tr></table>
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">buckets=`find aws -maxdepth 4 -path &#39;*/resources/s3/*&#39; 2&gt;/dev/null | wc -l | xargs`
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">buckets=`find aws -k &#39;*s3*bucket&#39; 2&gt;/dev/null | wc -l | xargs`
 echo S3 $buckets</pre></td></tr></table>
 </div>
 </div>
