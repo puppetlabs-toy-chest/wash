@@ -86,13 +86,13 @@ Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'
-wash$ cd docker/containers
-wash$ list
+wash . ❯ cd docker/containers
+wash docker/containers ❯ list
 NAME             MODIFIED              ACTIONS
 ./               <unknown>             list
 swarm_redis_1/   03 Jul 19 07:57 PDT   list, exec
 swarm_web_1/     03 Jul 19 07:57 PDT   list, exec
-wash$ list swarm_web_1
+wash docker/containers ❯ list swarm_web_1
 NAME            MODIFIED              ACTIONS
 ./              03 Jul 19 07:57 PDT   list, exec
 fs/             <unknown>             list
@@ -102,7 +102,7 @@ metadata.json   <unknown>             read
 
 Those containers are displayed as a directory, and provide access to their logs and metadata as files. Recent output from both can be accessed with common tools.
 ```
-wash$ tail */log
+wash docker/containers ❯ tail */log
 ==> swarm_web_1/log <==
  * Serving Flask app "app" (lazy loading)
  * Environment: production
@@ -122,7 +122,7 @@ Notice that tab-completion makes it easy to find the containers you want to expl
 
 The list earlier also noted that the container "directories" support the *metadata* action. We can get structured metadata in ether YAML or JSON with `wash meta`
 ```
-wash$ meta swarm_web_1 -o yaml
+wash docker/containers ❯ meta swarm_web_1 -o yaml
 AppArmorProfile: ""
 Args:
 - app.py
@@ -132,7 +132,7 @@ Config:
 
 We can interrogate the container more closely with `wexec`
 ```
-wash$ wexec swarm_web_1 whoami
+wash docker/containers ❯ wexec swarm_web_1 whoami
 root
 ```
 

@@ -170,13 +170,13 @@ Welcome to Wash!
   Wash includes several built-in commands: wexec, find, list, meta, tail.
   See commands run with wash via &#39;whistory&#39;, and logs with &#39;whistory &lt;id&gt;&#39;.
 Try &#39;help&#39;
-wash$ cd docker/containers
-wash$ list
+wash . ❯ cd docker/containers
+wash docker/containers ❯ list
 NAME             MODIFIED              ACTIONS
 ./               &lt;unknown&gt;             list
 swarm_redis_1/   03 Jul 19 07:57 PDT   list, exec
 swarm_web_1/     03 Jul 19 07:57 PDT   list, exec
-wash$ list swarm_web_1
+wash docker/containers ❯ list swarm_web_1
 NAME            MODIFIED              ACTIONS
 ./              03 Jul 19 07:57 PDT   list, exec
 fs/             &lt;unknown&gt;             list
@@ -203,7 +203,7 @@ metadata.json   &lt;unknown&gt;             read</pre></td></tr></table>
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">14
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash$ tail */log
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash docker/containers ❯ tail */log
 ==&gt; swarm_web_1/log &lt;==
  * Serving Flask app &#34;app&#34; (lazy loading)
  * Environment: production
@@ -232,7 +232,7 @@ metadata.json   &lt;unknown&gt;             read</pre></td></tr></table>
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">6
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash$ meta swarm_web_1 -o yaml
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash docker/containers ❯ meta swarm_web_1 -o yaml
 AppArmorProfile: &#34;&#34;
 Args:
 - app.py
@@ -247,7 +247,7 @@ Config:
 </span><span style="margin-right:0.4em;padding:0 0.4em 0 0.4em;color:#7f7f7f">2
 </span></pre></td>
 <td style="vertical-align:top;padding:0;margin:0;border:0;">
-<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash$ wexec swarm_web_1 whoami
+<pre style="background-color:#fff;-moz-tab-size:4;-o-tab-size:4;tab-size:4">wash docker/containers ❯ wexec swarm_web_1 whoami
 root</pre></td></tr></table>
 </div>
 </div>
