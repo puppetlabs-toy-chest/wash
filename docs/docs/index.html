@@ -64,7 +64,7 @@ if (!doNotTrack) {
 <li><a href="#wash-find">wash find</a></li>
 <li><a href="#wash-history">wash history</a></li>
 <li><a href="#wash-info">wash info</a></li>
-<li><a href="#wash-list-ls">wash list</a></li>
+<li><a href="#wash-listls">wash list/ls</a></li>
 <li><a href="#wash-meta">wash meta</a></li>
 <li><a href="#wash-ps">wash ps</a></li>
 <li><a href="#wash-server">wash server</a></li>
@@ -72,7 +72,12 @@ if (!doNotTrack) {
 <li><a href="#wash-tail">wash tail</a></li>
 <li><a href="#wash-validate">wash validate</a></li>
 </ul></li>
-<li><a href="#config">Config</a></li>
+<li><a href="#config">Config</a>
+
+<ul>
+<li><a href="#washyaml">wash.yaml</a></li>
+<li><a href="#wash-shell">wash shell</a></li>
+</ul></li>
 <li><a href="#core-plugins">Core Plugins</a>
 
 <ul>
@@ -85,7 +90,7 @@ if (!doNotTrack) {
 
 <ul>
 <li><a href="#plugin-debugging">Plugin Debugging</a></li>
-<li><a href="#attributes/metadata">Attributes/Metadata</a></li>
+<li><a href="#attributesmetadata">Attributes/Metadata</a></li>
 <li><a href="#entry-schemas">Entry Schemas</a></li>
 <li><a href="/wash/docs/external_plugins">➠External plugins</a></li>
 <li><a href="/wash/docs/core_plugins">➠Core Plugins</a></li>
@@ -169,6 +174,8 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 
 <h2 id="config">Config</h2>
 
+<h3 id="wash-yaml">wash.yaml</h3>
+
 <p>The Wash config file is located at <code>~/.puppetlabs/wash/wash.yaml</code>, and can be used to configure the <a href="#wash-server"><code>wash-server</code></a>. You can override this location via the <code>config-file</code> flag.</p>
 
 <p>Below are all the configurable options.</p>
@@ -185,6 +192,31 @@ to display running processes on all listed nodes. Errors on paths that don&rsquo
 <p>All options except for <code>external-plugins</code> can be overridden by setting the <code>WASH_&lt;option&gt;</code> environment variable with option converted to ALL CAPS.</p>
 
 <p>NOTE: Do not override <code>socket</code> in a config file. Instead, override it via the <code>WASH_SOCKET</code> environment variable. Otherwise, Wash&rsquo;s commands will not be able to interact with the server because they cannot access the socket.</p>
+
+<h3 id="wash-shell">wash shell</h3>
+
+<p>Wash uses your system shell to provide the shell environment. It determines this using the <code>SHELL</code> environment variable or falls back to <code>/bin/sh</code>, so if you&rsquo;d like to specify a particular shell set the <code>SHELL</code> environment variable before starting Wash.</p>
+
+<p>For some shells, Wash provides a customized environment. Please <a href="https://github.com/puppetlabs/wash/issues/new?assignees=&amp;labels=Feature&amp;template=feature-request.md">file an issue</a> if you&rsquo;d like to add support for new shells.</p>
+
+<p>Wash currently provides a customized environment for
+- <code>bash</code>
+- <code>zsh</code></p>
+
+<p>Customized environments alias Wash subcommands to save typing out <code>wash &lt;subcommand&gt;</code> so they feel like shell builtins. If you want to use an executable or builtin Wash has overridden, please use its full path or the <code>builtin</code> command.</p>
+
+<p>Customized environments also supports reading <code>~/.washenv</code> and <code>~/.washrc</code> files. These files are loaded as follows:
+1. If running Wash non-interactively (by piping <code>stdin</code> or passing the <code>-c</code> option)
+   1. If <code>~/.washenv</code> does not exist, load the shell&rsquo;s default non-interactive config (such as <code>.zshenv</code> or from <code>BASH_ENV</code>)
+   2. Configure subcommand aliases
+   3. If <code>~/.washenv</code> exists, load it
+2. If running Wash interactively
+   1. Do all non-interactive config above
+   2. If <code>~/.washrc</code> does not exist, load the shell&rsquo;s default interactive config (such as <code>.bash_profile</code> or <code>.zshrc</code>)
+   3. Configure the command prompt
+   4. If <code>~/.washrc</code> exists, load it</p>
+
+<p>For other shells, Wash creates executables for subcommands and does no other customization.</p>
 
 <h2 id="core-plugins">Core Plugins</h2>
 
@@ -493,7 +525,28 @@ Jun 20 13:47:09.886 FUSE: Listed in /goodreads: [{Inode:0 Type:dir Name:read} {I
 
 <ul>
     
+    <li>
+        <a href="/wash/docs/core_plugins/">Core Plugins
+        </a>
+        
+
+<div class="post-meta">
+    
+</div>
+    </li>
+    
+    <li>
+        <a href="/wash/docs/external_plugins/">External Plugins
+        </a>
+        
+
+<div class="post-meta">
+    
+</div>
+    </li>
+    
 </ul>
+
 
 
 

@@ -9,14 +9,16 @@ title= "Wash Documentation"
   * [wash find](#wash-find)
   * [wash history](#wash-history)
   * [wash info](#wash-info)
-  * [wash list](#wash-list-ls)
+  * [wash list/ls](#wash-listls)
   * [wash meta](#wash-meta)
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
   * [wash stree](#wash-stree)
   * [wash tail](#wash-tail)
   * [wash validate](#wash-validate)
-* [Config] (#config)
+* [Config](#config)
+  * [wash.yaml](#washyaml)
+  * [wash shell](#wash-shell)
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
   * [Docker](#docker)
@@ -24,7 +26,7 @@ title= "Wash Documentation"
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
-  * [Attributes/Metadata](#attributes/metadata)
+  * [Attributes/Metadata](#attributesmetadata)
   * [Entry Schemas](#entry-schemas)
   * [➠External plugins]
   * [➠Core Plugins]
@@ -103,6 +105,8 @@ Each line represents validation of an entry type. The `lrsx` fields represent su
 
 ## Config
 
+### wash.yaml
+
 The Wash config file is located at `~/.puppetlabs/wash/wash.yaml`, and can be used to configure the [`wash-server`](#wash-server). You can override this location via the `config-file` flag.
 
 Below are all the configurable options.
@@ -117,6 +121,31 @@ Below are all the configurable options.
 All options except for `external-plugins` can be overridden by setting the `WASH_<option>` environment variable with option converted to ALL CAPS.
 
 NOTE: Do not override `socket` in a config file. Instead, override it via the `WASH_SOCKET` environment variable. Otherwise, Wash's commands will not be able to interact with the server because they cannot access the socket.
+
+### wash shell
+
+Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the `SHELL` environment variable before starting Wash.
+
+For some shells, Wash provides a customized environment. Please [file an issue](https://github.com/puppetlabs/wash/issues/new?assignees=&labels=Feature&template=feature-request.md) if you'd like to add support for new shells.
+
+Wash currently provides a customized environment for
+- `bash`
+- `zsh`
+
+Customized environments alias Wash subcommands to save typing out `wash <subcommand>` so they feel like shell builtins. If you want to use an executable or builtin Wash has overridden, please use its full path or the `builtin` command.
+
+Customized environments also supports reading `~/.washenv` and `~/.washrc` files. These files are loaded as follows:
+1. If running Wash non-interactively (by piping `stdin` or passing the `-c` option)
+   1. If `~/.washenv` does not exist, load the shell's default non-interactive config (such as `.zshenv` or from `BASH_ENV`)
+   2. Configure subcommand aliases
+   3. If `~/.washenv` exists, load it
+2. If running Wash interactively
+   1. Do all non-interactive config above
+   2. If `~/.washrc` does not exist, load the shell's default interactive config (such as `.bash_profile` or `.zshrc`)
+   3. Configure the command prompt
+   4. If `~/.washrc` exists, load it
+
+For other shells, Wash creates executables for subcommands and does no other customization.
 
 ## Core Plugins
 

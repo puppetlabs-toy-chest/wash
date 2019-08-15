@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta name="generator" content="Hugo 0.56.1" />
+	<meta name="generator" content="Hugo 0.57.1" />
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -100,6 +100,10 @@ if (!doNotTrack) {
 </ul></li>
 </ol>
 
+<blockquote>
+<p>Wash uses your system shell to provide the shell environment. It determines this using the <code>SHELL</code> environment variable or falls back to <code>/bin/sh</code>. See <a href="/wash/docs#wash-shell">wash shell</a> on customizing your shell environment.</p>
+</blockquote>
+
 <p>At this point, if you haven&rsquo;t already, you should start some resources that Wash can actually introspect. Otherwise, as Han Solo would say, &ldquo;this is going to be a real short trip&rdquo;. So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. We&rsquo;ve also provided a <a href="#wash-by-example">guided tour</a> that includes a Docker application.</p>
 
 <p><strong>NOTE:</strong> Wash collects anonymous data about how you use it. See the <a href="/wash/docs#analytics">analytics docs</a> for more details.</p>
@@ -109,8 +113,6 @@ if (!doNotTrack) {
 <p>You can watch for new releases of Wash on <a href="https://puppetcommunity.slack.com/app_redirect?channel=announcements">Slack #announcements</a>, the <a href="https://groups.google.com/forum/#!forum/puppet-announce">puppet-announce</a> mailing list, or by subscribing to new releases on <a href="https://github.com/puppetlabs/wash">GitHub</a>.</p>
 
 <h3 id="known-issues">Known issues</h3>
-
-<p>Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to <code>/bin/sh</code>, so if you&rsquo;d like to specify a particular shell set the SHELL environment variable before starting Wash.</p>
 
 <h4 id="on-macos">On macOS</h4>
 
