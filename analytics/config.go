@@ -70,6 +70,11 @@ func GetConfig() (Config, error) {
 		// This should never happen
 		return config, fmt.Errorf("could not marshal the analytics config: %v", err)
 	}
+	// Make sure that the ~/.puppetlabs/wash directory exists. Otherwise, ioutil.WriteFile
+	// will return an error.
+	if err := os.MkdirAll(filepath.Dir(analyticsConfigFile), 0750); err != nil {
+		return config, err
+	}
 	return config, ioutil.WriteFile(analyticsConfigFile, bytes, 0644)
 }
 
