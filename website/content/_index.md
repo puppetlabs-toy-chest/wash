@@ -46,6 +46,9 @@ Wash is distributed as a single binary, and the only prerequisite is [`libfuse`]
 3. Start Wash
    * `./wash`
 
+
+> Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`. See [wash shell](/wash/docs#wash-shell) on customizing your shell environment.
+
 At this point, if you haven't already, you should start some resources that Wash can actually introspect. Otherwise, as Han Solo would say, "this is going to be a real short trip". So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. We've also provided a [guided tour](#wash-by-example) that includes a Docker application.
 
 **NOTE:** Wash collects anonymous data about how you use it. See the [analytics docs](/wash/docs#analytics) for more details.
@@ -55,8 +58,6 @@ At this point, if you haven't already, you should start some resources that Wash
 You can watch for new releases of Wash on [Slack #announcements](https://puppetcommunity.slack.com/app_redirect?channel=announcements), the [puppet-announce](https://groups.google.com/forum/#!forum/puppet-announce) mailing list, or by subscribing to new releases on [GitHub](https://github.com/puppetlabs/wash).
 
 ### Known issues
-
-Wash uses your system shell to provide the shell environment. It determines this using the SHELL environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the SHELL environment variable before starting Wash.
 
 #### On macOS
 
