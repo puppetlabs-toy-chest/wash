@@ -14,19 +14,16 @@ jobs:
       with:
         args: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Build release website
-      needs: Checkout latest tag
       uses: peaceiris/actions-hugo@v0.57.1
       with:
         args: -s website -d public --gc -b https://puppetlabs.github.io/wash --minify --cleanDestinationDir
     - name: Checkout push
       uses: actions/checkout@master
     - name: Add dev website
-      needs: Checkout push
       uses: peaceiris/actions-hugo@v0.57.1
       with:
         args: -s website -d public/dev --gc -b https://puppetlabs.github.io/wash/dev --minify --cleanDestinationDir
     - name: Deploy
-      needs: [Build dev website, Build release website]
       uses: peaceiris/actions-gh-pages@v1.1.0
       if: contains(github.ref, 'master')
       env:
