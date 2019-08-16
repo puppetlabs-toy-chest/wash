@@ -1,5 +1,3 @@
-publishDir = "../docs"
-baseurl = "https://puppetlabs.github.io/wash"
 title = "home"
 languageCode = "en-us"
 

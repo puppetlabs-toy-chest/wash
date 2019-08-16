@@ -9,7 +9,7 @@ title= "Wash Documentation"
   * [wash find](#wash-find)
   * [wash history](#wash-history)
   * [wash info](#wash-info)
-  * [wash list/ls](#wash-listls)
+  * [wash list/ls](#wash-list-ls)
   * [wash meta](#wash-meta)
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
@@ -26,7 +26,7 @@ title= "Wash Documentation"
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
-  * [Attributes/Metadata](#attributesmetadata)
+  * [Attributes/Metadata](#attributes-metadata)
   * [Entry Schemas](#entry-schemas)
   * [➠External plugins]
   * [➠Core Plugins]
@@ -85,7 +85,7 @@ to display running processes on all listed nodes. Errors on paths that don't imp
 
 Initializes all of the plugins, then sets up the Wash daemon (its API and [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) servers). To stop it, make sure you're not using the filesystem at the specified mountpoint, then enter Ctrl-C.
 
-Server API docs can be found [here](/wash/docs/api). The server config is described in the [`config`](#config) section.
+Server API docs can be found [here](api). The server config is described in the [`config`](#config) section.
 
 ### wash stree
 
@@ -241,9 +241,9 @@ For more on implementing plugins, see:
 * [➠Core Plugins]
 * [➠Server API]
 
-[➠External plugins]: /wash/docs/external_plugins
-[➠Core plugins]: /wash/docs/core_plugins
-[➠Server API]: /wash/docs/api
+[➠External plugins]: external_plugins
+[➠Core plugins]: core_plugins
+[➠Server API]: api
 
 NOTE: We recommend that you read the [Attributes/Metadata](#attributes/metadata) section before reading the plugin tutorials to take full advantage of Wash's capabilities, especially that of `wash find`'s.
 
