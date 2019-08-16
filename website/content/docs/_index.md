@@ -9,7 +9,7 @@ title= "Wash Documentation"
   * [wash find](#wash-find)
   * [wash history](#wash-history)
   * [wash info](#wash-info)
-  * [wash list/ls](#wash-listls)
+  * [wash list/ls](#wash-list-ls)
   * [wash meta](#wash-meta)
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
@@ -26,7 +26,7 @@ title= "Wash Documentation"
   * [Kubernetes](#kubernetes)
 * [Plugin Concepts](#plugin-concepts)
   * [Plugin Debugging](#plugin-debugging)
-  * [Attributes/Metadata](#attributesmetadata)
+  * [Attributes/Metadata](#attributes-metadata)
   * [Entry Schemas](#entry-schemas)
   * [➠External plugins]
   * [➠Core Plugins]
