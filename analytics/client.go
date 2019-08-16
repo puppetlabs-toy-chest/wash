@@ -41,16 +41,9 @@ type Client interface {
 // NewClient returns a new Google Analytics client for submitting Wash analytics.
 func NewClient(config Config) Client {
 	if config.Disabled {
-		log.Debug("Analytics opt-out is set, analytics will be disabled")
+		log.Debugf("Analytics opt-out is set, analytics will be disabled")
 		return &noopClient{}
 	}
-
-	// Don't submit analytics for untagged builds
-	if version.BuildVersion == "unknown" {
-		log.Debug("Analytics disabled for unreleased version")
-		return &noopClient{}
-	}
-
 	client := &client{
 		userID: config.UserID,
 	}
