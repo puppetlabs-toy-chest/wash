@@ -11,26 +11,16 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v1
-    - name: Dump GitHub context
-      env:
-        GITHUB_CONTEXT: ${{ toJson(github) }}
-      run: echo "$GITHUB_CONTEXT"
-    - name: Test git version
-      run: git version
     - name: Checkout latest tag
-      uses: srt32/git-actions@v0.0.3
-      with:
-        args: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
+      run: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Build release website
       uses: docker://peaceiris/hugo:v0.57.1
       with:
         args: -s website -d public --gc -b https://puppetlabs.github.io/wash --minify --cleanDestinationDir
     - name: Checkout master
-      uses: srt32/git-actions@v0.0.3
+      run: git checkout $GITHUB_SHA
       env:
         GITHUB_SHA: ${{ github.sha }}
-      with:
-        args: git checkout $GITHUB_SHA
     - name: Add dev website
       uses: docker://peaceiris/hugo:v0.57.1
       with:
