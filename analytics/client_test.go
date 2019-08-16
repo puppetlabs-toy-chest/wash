@@ -255,7 +255,7 @@ func (s *ClientTestSuite) TestBaseParams() {
 		"tid": "UA-144580607-1",
 		"an":  "Wash",
 		"aip": "true",
-		"cd1": runtime.GOARCH,
+		"cd1": runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	for param, value := range constantBaseParams {
 		if s.Contains(baseParams, param) {

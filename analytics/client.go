@@ -161,7 +161,7 @@ func (c *client) baseParams() Params {
 		// aip => Anonymize IPs
 		"aip": "true",
 		// cd1 => Custom Dimension 1 (Architecture)
-		"cd1": runtime.GOARCH,
+		"cd1": runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	locale, err := jibber_jabber.DetectIETF()
 	if err != nil {
