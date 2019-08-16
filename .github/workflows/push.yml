@@ -1,0 +1,34 @@
+name: Update website on push
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout latest tag
+      uses: srt32/git-actions@v0.0.3
+      args: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
+    - name: Build release website
+      needs: Checkout latest tag
+      uses: peaceiris/actions-hugo@v0.57.1
+      with:
+        args: -s website -d public --gc -b https://puppetlabs.github.io/wash --minify --cleanDestinationDir
+    - name: Checkout push
+      uses: actions/checkout@master
+    - name: Add dev website
+      needs: Checkout push
+      uses: peaceiris/actions-hugo@v0.57.1
+      with:
+        args: -s website -d public/dev --gc -b https://puppetlabs.github.io/wash/dev --minify --cleanDestinationDir
+    - name: Deploy
+      needs: [Build dev website, Build release website]
+      uses: peaceiris/actions-gh-pages@v1.1.0
+      if: contains(github.ref, 'master')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: ./website/public
