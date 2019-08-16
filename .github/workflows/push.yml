@@ -11,7 +11,8 @@ jobs:
     steps:
     - name: Checkout latest tag
       uses: srt32/git-actions@v0.0.3
-      args: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
+      with:
+        args: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Build release website
       needs: Checkout latest tag
       uses: peaceiris/actions-hugo@v0.57.1
