@@ -1,0 +1,36 @@
+name: Update Homebrew tap on tag
+
+on:
+  push:
+    tags:
+    - *
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Update version and SHA
+      run: |
+        git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet
+        cd homebrew-puppet
+        tag=${GITHUB_REF}
+
+        curl -OL https://github.com/puppetlabs/wash/archive/${tag}.tar.gz
+        sha=$(sha256sum ${tag}.tar.gz | cut -f1 -d' ')
+        sed -e "s/version = \".*\"/version = \"${tag}\"/g" -i ./Formula/wash.rb
+        sed -e "s/sha256 \".*\"/sha256 \"${sha}\"/g" -i ./Formula/wash.rb
+
+        git config user.name "${GITHUB_ACTOR}"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        publish_branch="wash-${tag}"
+        git checkout -b ${publish_branch}
+        commit_message="Update Wash to ${tag}"
+        git commit -am "${commit_message}"
+        git push origin ${publish_branch}
+
+        PULLS_URI="https://api.github.com/repos/puppetlabs/homebrew-puppet/pulls"
+        AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
+        new_pr_resp=$(curl --data "{\"title\": \"${commit_message}\", \"head\": \"${publish_branch}\", \"base\": \"master\"}" -X POST -s -H "${AUTH_HEADER}" ${PULLS_URI})
+        echo "$new_pr_resp"
+      env:
+        GITHUB_TOKEN: ${{ secrets.HOMEBREW_DEPLOY_TOKEN }}
