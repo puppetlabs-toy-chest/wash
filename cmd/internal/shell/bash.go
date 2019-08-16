@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,36 +23,19 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	cmd := exec.Command(b.sh, "--rcfile", rcpath)
 	cmd.Env = append(os.Environ(), "BASH_ENV="+envpath)
 
-	bashenv, err := os.Create(envpath)
-	if err != nil {
-		return nil, err
-	}
-	defer bashenv.Close()
-
+	var content string
 	if env := os.Getenv("BASH_ENV"); env != "" {
-		_, err = bashenv.WriteString("[[ -s '~/" + env + "' && ! -s ~/.washenv ]] && source '" + env + "'\n")
-		if err != nil {
-			return nil, err
-		}
+		content += "[[ -s '~/" + env + "' && ! -s ~/.washenv ]] && source '" + env + "'\n"
 	}
 	for _, alias := range subcommands {
-		_, err = bashenv.WriteString("alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n")
-		if err != nil {
-			return nil, err
-		}
+		content += "alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n"
 	}
-	_, err = bashenv.WriteString("[[ -s ~/.washenv ]] && source ~/.washenv\n")
-	if err != nil {
+	content += "[[ -s ~/.washenv ]] && source ~/.washenv\n"
+	if err := ioutil.WriteFile(envpath, []byte(content), 0644); err != nil {
 		return nil, err
 	}
 
-	bashrc, err := os.Create(rcpath)
-	if err != nil {
-		return nil, err
-	}
-	defer bashrc.Close()
-
-	_, err = bashrc.WriteString(`source ` + envpath + `
+	content = `source ` + envpath + `
 [[ -s ~/.bashrc && ! -s ~/.washrc ]] && source ~/.bashrc
 
 WASH_BASE=$(pwd)
@@ -61,6 +45,9 @@ function prompter() {
 export PROMPT_COMMAND=prompter
 
 [[ -s ~/.washrc ]] && source ~/.washrc
-`)
-	return cmd, err
+`
+	if err := ioutil.WriteFile(rcpath, []byte(content), 0644); err != nil {
+		return nil, err
+	}
+	return cmd, nil
 }
