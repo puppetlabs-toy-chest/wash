@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/puppetlabs/wash/cmd/version"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -20,7 +18,6 @@ type ClientTestSuite struct {
 	oldHTTPClient  httpClientI
 	mockHTTPClient *mockHTTPClient
 	c              *client
-	savedVersion   string
 }
 
 type mockHTTPClient struct {
@@ -40,16 +37,11 @@ func (s *ClientTestSuite) SetupTest() {
 		Disabled: false,
 		UserID:   uuid.New(),
 	}
-
-	// Set version to a valid version so we get a real client
-	s.savedVersion = version.BuildVersion
-	version.BuildVersion = "1.0.0"
 	s.c = NewClient(config).(*client)
 }
 
 func (s *ClientTestSuite) TearDownTest() {
 	httpClient = s.oldHTTPClient
-	version.BuildVersion = s.savedVersion
 }
 
 func (s *ClientTestSuite) TestNewClient_AnalyticsDisabled_ReturnsNoopClient() {
@@ -255,7 +247,7 @@ func (s *ClientTestSuite) TestBaseParams() {
 		"tid": "UA-144580607-1",
 		"an":  "Wash",
 		"aip": "true",
-		"cd1": runtime.GOARCH,
+		"cd1": runtime.GOOS + "/" + runtime.GOARCH,
 	}
 	for param, value := range constantBaseParams {
 		if s.Contains(baseParams, param) {
@@ -270,16 +262,6 @@ func (s *ClientTestSuite) TestBaseParams() {
 	for _, param := range variableBaseParams {
 		s.Contains(baseParams, param)
 	}
-}
-
-func TestNewClient_UnknownVersion_ReturnsNoopClient(t *testing.T) {
-	config := Config{
-		Disabled: false,
-		UserID:   uuid.New(),
-	}
-	c := NewClient(config)
-	_, ok := c.(*noopClient)
-	assert.True(t, ok, "NewClient does not return a noopClient when version is unknown")
 }
 
 func TestClient(t *testing.T) {
