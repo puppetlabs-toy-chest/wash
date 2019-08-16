@@ -72,7 +72,7 @@ You can include additional (optional) keys in the printed JSON object. These key
 
 * `methods`. This is an array specifying the list of methods, enumerated below, that can be called directly on the plugin entry. The plugin root must always include and implement the `list` method.
 * `cache_ttls`. This specifies how many seconds each method's result should be cached (`ttl` is short for time to live). Currently, Wash caches the result of `list`, `read`, and `metadata`.
-* `attributes`. This represents the entry's attributes (see the [`Attributes/Metadata`](/wash/docs#attributes-metadata) section). Time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
+* `attributes`. This represents the entry's attributes (see the [`Attributes/Metadata`](../docs#attributes-metadata) section). Time attributes are specified in Unix seconds. Octal modes must be prefixed with the `0` delimiter (e.g. like `0777`). Hexadecimal modes must be prefixed with the `0x` delimiter (e.g. like `0xabcd`).
 * `slash_replacer`. This overrides the default slash replacer `#`.
 * `state`. This corresponds to the `<state>` parameter in the plugin script's usage.
 
@@ -223,7 +223,7 @@ When `exec` is invoked, the plugin script's stdout and stderr must be connected 
 Because `exec` effectively hijacks `<plugin_script> exec` with `<cmd> <args...>`, there is currently no way for external plugins to report any `exec` errors to Wash. Thus, if `<plugin_script> exec` fails to exec `<cmd> <args...>` (e.g. due to a failed API call to trigger the exec), then that error output will be included as part of `<cmd> <args...>`'s output when running `wash exec`.
 
 ## schema
-**NOTE:** [Entry schemas](/wash/docs/#entry-schemas) are optional. If you are writing a simple plugin with only a few kinds of entries, then please feel free to ignore this section.
+**NOTE:** [Entry schemas](../docs/#entry-schemas) are optional. If you are writing a simple plugin with only a few kinds of entries, then please feel free to ignore this section.
 
 `schema` is invoked as `<plugin_script> schema <path> <state>`. When `schema` is invoked, the script must output a JSON object representing the entry's schema. If the entry's a parent (i.e. if it implements `list`), the descendants' schemas must also be included.
 

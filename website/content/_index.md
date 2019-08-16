@@ -47,11 +47,11 @@ Wash is distributed as a single binary, and the only prerequisite is [`libfuse`]
    * `./wash`
 
 
-> Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`. See [wash shell](/wash/docs#wash-shell) on customizing your shell environment.
+> Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`. See [wash shell](docs#wash-shell) on customizing your shell environment.
 
 At this point, if you haven't already, you should start some resources that Wash can actually introspect. Otherwise, as Han Solo would say, "this is going to be a real short trip". So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. We've also provided a [guided tour](#wash-by-example) that includes a Docker application.
 
-**NOTE:** Wash collects anonymous data about how you use it. See the [analytics docs](/wash/docs#analytics) for more details.
+**NOTE:** Wash collects anonymous data about how you use it. See the [analytics docs](docs#analytics) for more details.
 
 ### Release announcements
 
@@ -230,7 +230,7 @@ Wash does a lot already, with [more to come](https://github.com/puppetlabs/wash#
 * serves up an HTTP API for everything
 * caches information, for better performance
 
-We've implemented a number of handy Wash commands ([docs](/wash/docs#wash-commands)):
+We've implemented a number of handy Wash commands ([docs](docs#wash-commands)):
 
 * `wash ls` - a version of `ls` that uses our API to enhance directory listings with Wash-specific info
   - _e.g. show you what primitives are supported for each resource_
@@ -242,14 +242,14 @@ We've implemented a number of handy Wash commands ([docs](/wash/docs#wash-comman
 * `wash history` - lists all activity through Wash; `wash history <id>` can be used to view logs for a specific activity
 * `wash clear` - clears cached data for a sub-hierarchy rooted at the supplied path so Wash will re-request it
 
-[Core plugins](/wash/docs#core-plugins) (and we're [adding more all the time](https://github.com/puppetlabs/wash#roadmap), see our [docs](/wash/docs#plugin-concepts) for how to help):
+[Core plugins](docs#core-plugins) (and we're [adding more all the time](https://github.com/puppetlabs/wash#roadmap), see our [docs](docs#plugin-concepts) for how to help):
 
-* [docker](/wash/docs#docker): containers and volumes
-* [kubernetes](/wash/docs#kubernetes): pods, containers, and persistent volume claims
-* [aws](/wash/docs#aws): EC2 and S3
-* [gcp](/wash/docs#gcp): Compute Engine and Storage
+* [docker](docs#docker): containers and volumes
+* [kubernetes](docs#kubernetes): pods, containers, and persistent volume claims
+* [aws](docs#aws): EC2 and S3
+* [gcp](docs#gcp): Compute Engine and Storage
 
-[External plugins](/wash/docs/external_plugins):
+[External plugins](docs/external_plugins):
 
 * Wash allows for easy creation of out-of-process plugins using any language you want, from `bash` to `go` or anything in-between!
 * Wash handles the plugin life-cycle. it invokes your plugin with a certain calling convention; all you have to do is supply the business logic
