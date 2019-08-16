@@ -9,7 +9,7 @@ paginate = 100
 paginatePath = "page"
 
 # Google analytics
-googleAnalytics = "UA-144580607-1"
+googleAnalytics = "UA-144580607-2"
 
 # Copyright
 copyright = "© 2019 — the wash maintainers"
