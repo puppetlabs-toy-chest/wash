@@ -3,7 +3,7 @@ name: Update Homebrew tap on tag
 on:
   push:
     tags:
-    - *
+    - "*"
 
 jobs:
   build-deploy:
