@@ -1,15 +1,13 @@
-name: Update Homebrew tap on tag
+name: Update Homebrew tap on release
 
-on:
-  push:
-    tags:
-    - "*"
+on: release
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Update version and SHA
+      if: github.event.action == 'published'
       run: |
         git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet
         cd homebrew-puppet
