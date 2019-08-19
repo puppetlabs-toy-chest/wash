@@ -29,12 +29,12 @@ pygmentsStyle = "vs"
 [menu]
   # Header
   [[menu.main]]
-    url = "docs"
-    name = "docs"
+    url = "posts"
+    name = "news"
     weight = 1
   [[menu.main]]
-    url = "#"
-    name = "news"
+    url = "docs"
+    name = "docs"
     weight = 4
   [[menu.main]]
     url = "https://github.com/puppetlabs/wash"
