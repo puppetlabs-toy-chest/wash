@@ -53,19 +53,25 @@ func printJournalEntry(index string, follow bool) error {
 	// Jun 13 15:44:04.433 stdout: 4096 1559079604 1557434981 1559079604 41ed /lib
 	//                     2597536 1552660099 1552660099 1559079604 81ed /lib/libcrypto.so.1.1
 	scanner := bufio.NewScanner(rdr)
-	var line logFmtLine
 	for scanner.Scan() {
+		var line, empty logFmtLine
 		if err := logfmt.Unmarshal(scanner.Bytes(), &line); err != nil {
 			cmdutil.ErrPrintf("Error parsing %v: %v\n", line, err)
 			continue
 		}
 
-		lines := strings.Split(line.Msg, "\n")
+		if line == empty {
+			// Parser ignored incomplete line rather than erroring. Skip it.
+			continue
+		}
+
 		// TODO: add option to print the original longer time format.
 		t, err := time.Parse(time.RFC3339Nano, line.Time)
 		if err != nil {
 			panic(fmt.Sprintf("Unexpected time format %s", line.Time))
 		}
+
+		lines := strings.Split(line.Msg, "\n")
 		timeStr := t.Format(time.StampMilli)
 		fmt.Println(timeStr, lines[0])
 		if len(lines) > 1 {
