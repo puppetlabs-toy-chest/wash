@@ -127,9 +127,8 @@ find . -path "docker*containers*" \( -name "*c" -o -name "*d" \) -mtime -1h
     have been parsed as '-name "*c" OR ( -name "*d" AND -mtime -1h)',
     which is a completely different predicate.
 
-find kubernetes -maxdepth -1 -daystart -m .status.startTime -{1d}
-    Print out all the Kubernetes pods that started today. Note that the "maxdepth -1"
-    option tells find to recurse (the meta primary turns this off by default).
+find kubernetes -daystart -k '*pod' -m .status.startTime -{1d}
+    Print out all the Kubernetes pods that started today.
 
 find docker/containers -daystart -fullmeta -m .state.startedAt -{1d}
     Prints out all the Docker containers that were started today. Note that the
