@@ -107,6 +107,11 @@ func (w *walkerImpl) visit(e types.Entry, depth uint) bool {
 	if primary.IsSet(primary.Meta) && w.opts.Fullmeta {
 		fetchFullMetadata := !e.SchemaKnown || e.Schema.MetadataSchema() != nil
 		if !fetchFullMetadata {
+			// Note that the user could use the kind primary to avoid unnecessary full metadata
+			// queries. However, that would still result in unnecessary fetches if the user e.g.
+			// mistypes a full metadata key. The latter could lead to a bad UX for subscription
+			// based APIs. Thus, it is safer to just require metadata schemas if the fullmeta
+			// option is set, which is what this code is doing.
 			cmdutil.ErrPrintf("%v did not provide a metadata schema so its full metadata will not be fetched\n", e.NormalizedPath)
 		} else {
 			// Fetch the entry's full metadata
