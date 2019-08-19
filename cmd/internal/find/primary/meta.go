@@ -83,6 +83,14 @@ with a specified label. In general, the meta primary can be used to filter
 on any property that's specified in the entry's meta attribute. See the
 EXAMPLES section for some interesting real-world examples.
 
+NOTE: The meta primary should be used in conjunction with the kind primary.
+The latter's useful for explicitly specifying the kind of entries you're
+filtering on, which enables find to take full advantage of entry schema
+optimizations. This is especially useful when the entry's schema doesn't
+include metadata schemas (possible for external plugins). The kind primary's
+also useful for making meta queries more expressive. See the EXAMPLES section
+for more details on what this looks like.
+
 NOTE: If your plugin's API is not subscription based (like AWS) or if
 individual API requests are cheap, then feel free to always set the
 "fullmeta" option for more complete filtering. This is very useful when
@@ -511,31 +519,43 @@ In these examples, let "m" be the value of the entry's 'meta' attribute.
 -meta '.tags[?]' .key termination_date -a .value +0h
 -m '.tags[?]' .key termination_date -a .value +0h
     Returns true if m['tags'] has at least one object o s.t. o['key'] == termination_date
-    and o['value'] has expired. In the real world, this example filters out all EC2
-    instances whose termination_date tag expired.
+    and o['value'] has expired. In the real world, this example could be combined with the
+    kind primary to filter out all EC2 instances whose termination_date tag expired. The
+    expression would look something like
+        find aws -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value +0h
 
 -m '.tags[?]' .key termination_date -a .value -{1w}
     Same as the previous example, except this returns true if o['value'] will expire within
-    the current week. In the real world, this example filters out all EC2 instances whose
-    termination_date tag will expire within the current week.
+    the current week. In the real world, this example could be combined with the kind primary
+    to filter out all EC2 instances whose termination_date tag will expire within the current
+    week. The expression would look something like
+        find aws -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value -{1w}
 
 -m '.tags[?]' .key \( sales -o product \)
     Returns true if m['tags'] has at least one object o s.t. o['key'] == sales OR product.
-    In the real world, this example filters out all EC2 instances that have a "sales" or
-    "product" tag.
+    In the real world, this example could be combined with the kind primary to filter out all
+    EC2 instances that have a "sales" or "product" tag. The expression would look something
+    like
+        find aws -k '*ec2*instance' -m '.tags[?]' .key \( sales -o product \)
 
 -m .state.name pending -o running
     Returns true if m['state']['name'] == pending OR running. In the real world, this
-    example filters out pending/running EC2 instances.
+    example could be combined with the kind primary to filter out pending/running EC2 instances.
+    The expression would look something like
+        find aws -k '*ec2*instance' -m .state.name pending -o running
 
 -m .vpcid vpc-0eb70f7f626d3db84
     Returns true if m['vpcid'] == vpc-0eb70f7f626d3db84. In the real world, this example
-    filters out EC2 instances attached to the VPC with ID vpc-0eb70f7f626d3db84.
+    could be combined with the kind primary to filter out EC2 instances attached to the VPC with ID
+    vpc-0eb70f7f626d3db84. The expression would look something like
+        find aws -k '*ec2*instance' -m .vpcid vpc-0eb70f7f626d3db84
 
     NOTE: With regex/glob support, this example could be shortened to something like
     "-m .vpcid vpc-0eb.*"
 
 -m '.mounts[?]' .type tmpfs
     Returns true if m['mounts'] has at least one object o s.t. o['type'] == tmpfs. In the
-    real world, this example filters out all Docker containers that have tmpfs mounts.
+    real world, this example could be combined with the kind primary to filter out all Docker
+    containers that have tmpfs mounts. The expression would look something like
+        find docker -k '*container' -m '.mounts[?]' .type tmpfs
 `

@@ -119,7 +119,17 @@ find aws -k '*s3*bucket'
 
 find docker -kind '*volumes*dir'
 find docker -k '*volumes*dir'
-    This prints out all Docker volume directories.
+	This prints out all Docker volume directories.
+
+find docker -kind '*container' -mtime -1h
+find docker -k '*container' -mtime -1h
+	This prints out all Docker containers that were modified within the last hour. Note that
+	without the kind primary, find would have visited all entries in the Docker plugin.
+
+find -kind 'docker/*container' -o -k 'aws/*ec2*instance' -mtime -1h
+find -k 'docker/*container' -o -k 'aws/*ec2*instance' -mtime -1h
+	This prints out all Docker containers and EC2 instances that were modified within the
+	last hour.
 
 NOTE: You can use 'stree <path>' to determine an entry's kind. For example, if <path>
 is "docker", then
