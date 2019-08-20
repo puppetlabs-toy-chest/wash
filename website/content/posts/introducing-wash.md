@@ -45,9 +45,9 @@ Google Compute instance   | `gcloud compute instances list --filter=”labels.ow
 
 From Table 1, we see that you need to use different commands to List/Read/Exec/Find different things. Furthermore, these commands require you to install different applications that each come with their own set of (possibly conflicting) dependencies, and their own calling conventions. For example, to complete all the Find tasks specified in the table, you need to:
 
-* Use the aws ec2 describe-instances, docker ps, kubectl get pods, gcloud compute instances list commands (4 different commands).
+* Use the `aws ec2 describe-instances`, `docker ps`, `kubectl get pods`, `gcloud compute instances list` commands (4 different commands).
 
-* Install the aws, docker, kubectl and gcloud applications (4 different applications). Note that aws and gcloud are Python applications, so you must also install Python. Also, gcloud only works with Python 2 so if you just have Python 3 installed on your machine, you must now get and install Python 2 and do the installation in such a way that it is easy for you to switch-back to using Python 3 for some of your other applications. This is not an easy thing to do, especially if you are not familiar with the Python ecosystem.
+* Install the `aws`, `docker`, `kubectl` and `gcloud` applications (4 different applications). Note that `aws` and `gcloud` are Python applications, so you must also install Python. Also, `gcloud` only works with Python 2 so if you just have Python 3 installed on your machine, you must now get and install Python 2 and do the installation in such a way that it is easy for you to switch-back to using Python 3 for some of your other applications. This is not an easy thing to do, especially if you are not familiar with the Python ecosystem.
 
 * Learn four different-but-similar DSLs for filtering stuff, which effectively means four different-but-similar ways of constructing and combining predicates on structured data (e.g. GCP's filter expressions, Kubernetes' field selectors, Kubernetes' label selectors, aws' describe-instances' --filters option, docker ps filtering, etc.).
 
@@ -85,7 +85,7 @@ Google Compute instance | `find gcp -k '*compute*instance' -meta '.labels.owner'
 
 Comparing Tables 1 and 2, we immediately see that using Wash means:
 
-* You no longer have to learn different commands to execute a task across different things. All you need is one command (find for List/Find; cat for Read; and wexec for Exec).
+* You no longer have to learn different commands to execute a task across different things. All you need is one command (`find` for List/Find; `cat` for Read; and `wexec` for Exec).
 
 * You no longer have to install a bunch of different tools. All you need to install is the Wash binary.
 
@@ -93,9 +93,9 @@ Comparing Tables 1 and 2, we immediately see that using Wash means:
 
 In fact, Wash is not just a centralization of basic and fundamental commands. It is a shell. It is a shell layered on top of an existing shell like Bash or ZSH. This means that:
 
-* Everything is a file. Thus, interacting with a specific kind of thing like a Docker container is as easy as cd'ing into its containing “directory” and running a bunch of commands on the things in that “directory”. For example, something like `cd docker/containers` lets you follow-up with commands like `ls` (list all containers), `wexec foo uname` (execute the uname command on the foo container), or `tail foo/fs/var/log/messages` (tail the foo container's `/var/log/messages` file for updates).
+* Everything is a file. Thus, interacting with a specific kind of thing like a Docker container is as easy as cd'ing into its containing “directory” and running a bunch of commands on the things in that “directory”. For example, something like `cd docker/containers` lets you follow-up with commands like `ls` (list all containers), `wexec foo uname` (execute the `uname` command on the foo container), or `tail foo/fs/var/log/messages` (tail the foo container's `/var/log/messages` file for updates).
 
-* You can tab-complete and glob stuff (if your shell supports those features). For example, assuming you're in the docker/containers directory, typing in `ls f` then tab will work just the way you'd expect it to work if you were in a standard directory like `/var/log` (where f would be a regular file or directory). Similarly, `tail */fs/var/log/messages` will tail every container's `/var/log/messages` file for updates.[^1]
+* You can tab-complete and glob stuff (if your shell supports those features). For example, assuming you're in the `docker/containers` directory, typing in `ls f` then tab will work just the way you'd expect it to work if you were in a standard directory like `/var/log` (where f would be a regular file or directory). Similarly, `tail */fs/var/log/messages` will tail every container's `/var/log/messages` file for updates.[^1]
 
 Furthermore, Wash is built on a plugin architecture. It ships with some default plugins for Docker, AWS, Kubernetes, and GCP, but you can easily extend it with your own plugin via the external plugin interface (and you can write that plugin in any language you want, including Bash). People have written external plugins for all sorts of things such as IoT devices, Goodreads, GitHub, PuppetDB, and even Spotify.
 
