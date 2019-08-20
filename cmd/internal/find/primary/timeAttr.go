@@ -22,6 +22,8 @@ func getTimeAttrValue(name string, e types.Entry) (time.Time, bool) {
 		return e.Attributes.Mtime(), e.Attributes.HasMtime()
 	case "atime":
 		return e.Attributes.Atime(), e.Attributes.HasAtime()
+	case "crtime":
+		return e.Attributes.Crtime(), e.Attributes.HasCrtime()
 	default:
 		panic(fmt.Sprintf("cmdfind.getTimeAttrValue called with nonexistent time attribute %v", name))
 	}
@@ -120,3 +122,8 @@ var Mtime = newTimeAttrPrimary("mtime")
 //
 //nolint
 var Atime = newTimeAttrPrimary("atime")
+
+// Crtime is the crtime primary
+//
+//nolint
+var Crtime = newTimeAttrPrimary("crtime")

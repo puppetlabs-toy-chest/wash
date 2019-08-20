@@ -48,6 +48,16 @@ func (s *TimeAttrPrimaryTestSuite) TestGetTimeAttrValue() {
 	if s.True(ok) {
 		s.Equal(expected, actual)
 	}
+
+	// Test crtime
+	_, ok = getTimeAttrValue("crtime", e)
+	s.False(ok)
+	expected = time.Now()
+	e.Attributes.SetCrtime(expected)
+	actual, ok = getTimeAttrValue("crtime", e)
+	if s.True(ok) {
+		s.Equal(expected, actual)
+	}
 }
 
 // These tests use the ctimePrimary as the representative test case
@@ -70,15 +80,15 @@ func (s *TimeAttrPrimaryTestSuite) TestErrors() {
 
 func (s *TimeAttrPrimaryTestSuite) TestValidInput() {
 	// We set trueCtime to 1.5 days in order to test roundDiff
-	s.RTC("2", "", 1*numeric.DurationOf('d') + 12*numeric.DurationOf('h'), 1 * numeric.DurationOf('d'))
+	s.RTC("2", "", 1*numeric.DurationOf('d')+12*numeric.DurationOf('h'), 1*numeric.DurationOf('d'))
 	// +1 means p will return true if diff > 1 day
-	s.RTC("+1", "", 2 * numeric.DurationOf('d'), 0 * numeric.DurationOf('d'))
+	s.RTC("+1", "", 2*numeric.DurationOf('d'), 0*numeric.DurationOf('d'))
 	// -2 means p will return true if diff < 2 days
-	s.RTC("-2", "", 1 * numeric.DurationOf('d'), 3 * numeric.DurationOf('d'))
+	s.RTC("-2", "", 1*numeric.DurationOf('d'), 3*numeric.DurationOf('d'))
 	// time.Time has nanosecond precision so units like "1h30m" aren't really
 	// useful unless they're used with the +/- modifiers.
-	s.RTC("+1h", "", 2 * numeric.DurationOf('h'), 1 * numeric.DurationOf('m'))
-	s.RTC("-1h", "", 1 * numeric.DurationOf('m'), 1 * numeric.DurationOf('h'))
+	s.RTC("+1h", "", 2*numeric.DurationOf('h'), 1*numeric.DurationOf('m'))
+	s.RTC("-1h", "", 1*numeric.DurationOf('m'), 1*numeric.DurationOf('h'))
 }
 
 func TestTimeAttrPrimary(t *testing.T) {

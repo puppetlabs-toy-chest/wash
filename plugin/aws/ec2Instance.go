@@ -121,19 +121,19 @@ type ec2InstanceMetadata struct {
 func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 	attr := plugin.EntryAttributes{}
 
-	// AWS does not include the EC2 instance's ctime in its
+	// AWS does not include the EC2 instance's crtime in its
 	// metadata. It also does not include the EC2 instance's
 	// last state transition time (mtime). Thus, we try to "guess"
-	// reasonable values for ctime and mtime by looping over each
+	// reasonable values for crtime and mtime by looping over each
 	// block device's attachment time and the instance's launch time.
-	// The oldest of these times is the ctime; the newest is the mtime.
-	ctime := awsSDK.TimeValue(inst.LaunchTime)
-	mtime := ctime
+	// The oldest of these times is the crtime; the newest is the mtime.
+	crtime := awsSDK.TimeValue(inst.LaunchTime)
+	mtime := crtime
 	for _, mapping := range inst.BlockDeviceMappings {
 		attachTime := awsSDK.TimeValue(mapping.Ebs.AttachTime)
 
-		if attachTime.Before(ctime) {
-			ctime = attachTime
+		if attachTime.Before(crtime) {
+			crtime = attachTime
 		}
 
 		if attachTime.After(mtime) {
@@ -143,12 +143,12 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 
 	meta := plugin.ToJSONObject(ec2InstanceMetadata{
 		Instance:         inst,
-		CreationTime:     ctime,
+		CreationTime:     crtime,
 		LastModifiedTime: mtime,
 	})
 
 	attr.
-		SetCtime(ctime).
+		SetCrtime(crtime).
 		SetMtime(mtime).
 		SetMeta(meta)
 

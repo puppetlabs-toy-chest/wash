@@ -30,7 +30,7 @@ to do something like
 	e.
 		DisableCachingFor(plugin.ListOp).
 		Attributes().
-		SetCtime(ctime).
+		SetCrtime(crtime).
 		SetMtime(mtime).
 		SetMeta(meta)
 */

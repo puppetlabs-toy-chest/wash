@@ -46,7 +46,7 @@ to do something like
 
 	attr := plugin.EntryAttributes{}
 	attr.
-		SetCtime(ctime).
+		SetCrtime(crtime).
 		SetMtime(mtime).
 		SetMeta(meta)
 	entry.SetAttributes(attr)
@@ -55,6 +55,7 @@ type EntryAttributes struct {
 	atime   time.Time
 	mtime   time.Time
 	ctime   time.Time
+	crtime  time.Time
 	mode    os.FileMode
 	hasMode bool
 	size    uint64
@@ -112,19 +113,35 @@ func (a *EntryAttributes) SetMtime(mtime time.Time) *EntryAttributes {
 	return a
 }
 
-// HasCtime returns true if the entry has a creation time
+// HasCtime returns true if the entry has a change time
 func (a *EntryAttributes) HasCtime() bool {
 	return !a.ctime.IsZero()
 }
 
-// Ctime returns the entry's creation time
+// Ctime returns the entry's change time
 func (a *EntryAttributes) Ctime() time.Time {
 	return a.ctime
 }
 
-// SetCtime sets the entry's creation time
+// SetCtime sets the entry's change time
 func (a *EntryAttributes) SetCtime(ctime time.Time) *EntryAttributes {
 	a.ctime = ctime
+	return a
+}
+
+// HasCrtime returns true if the entry has a creation time
+func (a *EntryAttributes) HasCrtime() bool {
+	return !a.crtime.IsZero()
+}
+
+// Crtime returns the entry's creation time
+func (a *EntryAttributes) Crtime() time.Time {
+	return a.crtime
+}
+
+// SetCrtime sets the entry's creation time
+func (a *EntryAttributes) SetCrtime(crtime time.Time) *EntryAttributes {
+	a.crtime = crtime
 	return a
 }
 
@@ -202,6 +219,9 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 	if a.HasCtime() {
 		mp["ctime"] = a.Ctime()
 	}
+	if a.HasCrtime() {
+		mp["crtime"] = a.Crtime()
+	}
 	if a.HasMode() {
 		// The mode string representation is the only portable representation. FileMode uses its own
 		// definitions for type bits, not those in http://man7.org/linux/man-pages/man7/inode.7.html.
@@ -256,6 +276,13 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 			return attrMungeError("ctime", err)
 		}
 		a.SetCtime(t)
+	}
+	if crtime, ok := mp["crtime"]; ok {
+		t, err := munge.ToTime(crtime)
+		if err != nil {
+			return attrMungeError("crtime", err)
+		}
+		a.SetCrtime(t)
 	}
 	if mode, ok := mp["mode"]; ok {
 		// Even though os.FileModes are uint32 types, json.Unmarshal unmarshals them as float64.

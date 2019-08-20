@@ -146,23 +146,24 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
-	ctime   time.Time
+	crtime  time.Time
 	client  *s3Client.S3
 	session *session.Session
 }
 
-func newS3Bucket(name string, ctime time.Time, session *session.Session) *s3Bucket {
+func newS3Bucket(name string, crtime time.Time, session *session.Session) *s3Bucket {
 	bucket := &s3Bucket{
 		EntryBase: plugin.NewEntry(name),
 	}
-	bucket.ctime = ctime
+	bucket.crtime = crtime
 	bucket.client = s3Client.New(session)
 	bucket.session = session
 	bucket.
 		Attributes().
-		SetCtime(bucket.ctime).
-		SetMtime(bucket.ctime).
-		SetAtime(bucket.ctime)
+		SetCrtime(bucket.crtime).
+		SetMtime(bucket.crtime).
+		SetCtime(bucket.crtime).
+		SetAtime(bucket.crtime)
 
 	return bucket
 }
@@ -187,7 +188,7 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 type bucketMetadata struct {
 	TagSet []*s3Client.Tag
 	Region string
-	Ctime  time.Time
+	Crtime time.Time
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
@@ -222,7 +223,7 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 		return nil, err
 	}
 	metadata.Region = region
-	metadata.Ctime = b.ctime
+	metadata.Crtime = b.crtime
 
 	return plugin.ToJSONObject(metadata), nil
 }
