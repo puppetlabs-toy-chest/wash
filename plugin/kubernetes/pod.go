@@ -33,7 +33,7 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 
 	pd.
 		Attributes().
-		SetCtime(p.CreationTimestamp.Time).
+		SetCrtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
 		SetMeta(plugin.ToJSONObject(p))
 

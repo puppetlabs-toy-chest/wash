@@ -37,8 +37,9 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 
 	vol.
 		Attributes().
-		SetCtime(p.CreationTimestamp.Time).
+		SetCrtime(p.CreationTimestamp.Time).
 		SetMtime(p.CreationTimestamp.Time).
+		SetCtime(p.CreationTimestamp.Time).
 		SetAtime(p.CreationTimestamp.Time).
 		SetMeta(p)
 

@@ -38,8 +38,9 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	vol.client = c
 	vol.
 		Attributes().
-		SetCtime(startTime).
+		SetCrtime(startTime).
 		SetMtime(startTime).
+		SetCtime(startTime).
 		SetAtime(startTime).
 		SetMeta(v)
 

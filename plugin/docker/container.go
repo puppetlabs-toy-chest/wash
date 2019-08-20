@@ -40,8 +40,9 @@ func newContainer(inst types.Container, client *client.Client) *container {
 	startTime := time.Unix(inst.Created, 0)
 	cont.
 		Attributes().
-		SetCtime(startTime).
+		SetCrtime(startTime).
 		SetMtime(startTime).
+		SetCtime(startTime).
 		SetAtime(startTime).
 		SetMeta(inst)
 
