@@ -116,6 +116,9 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 		a.Ctime = attr.Ctime()
 	}
 	a.Crtime = startTime
+	if attr.HasCrtime() {
+		a.Crtime = attr.Crtime()
+	}
 	a.BlockSize = blockSize
 	a.Uid = uid
 	a.Gid = gid

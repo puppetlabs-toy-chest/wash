@@ -96,6 +96,17 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	suite.Equal(expectedMp, attr.ToMap(true))
 	doUnmarshalJSONTests()
 
+	// Tests for Crtime
+	suite.Equal(false, attr.HasCrtime())
+	suite.Equal(expectedMp, attr.ToMap(true))
+	t = timeNow()
+	attr.SetCrtime(t)
+	expectedMp["crtime"] = t
+	suite.Equal(t, attr.Crtime())
+	suite.Equal(true, attr.HasCrtime())
+	suite.Equal(expectedMp, attr.ToMap(true))
+	doUnmarshalJSONTests()
+
 	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
 	suite.Equal(expectedMp, attr.ToMap(true))
