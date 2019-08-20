@@ -24,6 +24,7 @@ func (s *ParserTestSuite) TestRegisteredPrimaries() {
 		Ctime,
 		Mtime,
 		Atime,
+		Crtime,
 		Kind,
 	}
 	expectedMp := map[string]*Primary{
@@ -38,6 +39,7 @@ func (s *ParserTestSuite) TestRegisteredPrimaries() {
 		"-ctime":  Ctime,
 		"-mtime":  Mtime,
 		"-atime":  Atime,
+		"-crtime": Crtime,
 		"-kind":   Kind,
 		"-k":      Kind,
 	}
