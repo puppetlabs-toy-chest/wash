@@ -144,7 +144,6 @@ func SubmitMethodInvocation(ctx context.Context, plugin string, entryType string
 
 	// Check the invocations again in case someone beat us to it
 	if recorder.methodInvoked(entryType, method) {
-		recorder.mIMux.RUnlock()
 		return
 	}
 	log.Debugf("Submitting %v method invocation for entry instance %v", method, entryType)
