@@ -3,9 +3,7 @@
 <div class="post-meta">
     {{/* Display the date if set */}}
     {{- if not .Date.IsZero -}}
-    Date &#x5b;
-    <time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format $dateFormat }}</time>
-    &#x5d;
+    <time font-style="italic" datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format $dateFormat }}</time>
     {{- end -}}
 
     {{/* Display taxonomies */}}
