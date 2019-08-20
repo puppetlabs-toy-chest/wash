@@ -198,6 +198,8 @@ spec:
 EOF
 ```
 
+**NOTE:** `find \( -k 'docker/*container' -o -k 'kubernetes/*pod' \) -crtime -1d` is an easier (and more expressive) way to solve this problem. This example's only here to introduce the meta primary.
+
 ### Listing AWS resources
 
 Wash also includes support for AWS. If you have your own and you've configured the AWS CLI on your workstation, you'll be able to use Wash to explore EC2 instances and S3 buckets.
