@@ -5,7 +5,7 @@ description = ""
 draft= false
 +++
 
-Wash helps you deal with all your remote or cloud-native infrastructure using the UNIX-y patterns and tools you already know and love.
+Wash helps you manage your remote infrastructure using well-established UNIX-y patterns and tools to free you from having to remember multiple ways of doing the same thing.
 
 <div id="horizontalmenu">
     • <a href="#introduction">introduction</a>
@@ -16,22 +16,86 @@ Wash helps you deal with all your remote or cloud-native infrastructure using th
     •
 </div>
 
-<script id="asciicast-mX8Mwa75rr1bJePLi3OnIOkJK" src="https://asciinema.org/a/mX8Mwa75rr1bJePLi3OnIOkJK.js" async></script>
-
 ## Introduction
 
-Exploring, understanding, and inspecting modern infrastructure should be simple and straightforward. Whether it's containers, VMs, network devices, IoT stuff, or anything in between...they all have different ways of enumerating what you have, getting a stream of output, running commands, etc. Every vendor has its own tools and APIs that expose these features, each one different, each one bespoke. Thus, they are difficult to compose together to solve higher-level problems. And that's no fun at all!
+Have you ever had to:
 
-[UNIX's philosophy](https://en.wikipedia.org/wiki/Unix_philosophy#Origin) and abstractions have worked for decades. They're pretty good, and more importantly, they're _familiar_ to millions of people. Wash intends to apply those same philosophies and abstractions to modern, distributed infrastructure.
+* List all your AWS EC2 instances or Kubernetes pods?
+* Read/cat a GCP Compute instance's console output, or an AWS S3 object's content?
+* Exec a command on a Kubernetes pod or GCP Compute Instance?
+* Find all AWS EC2 instances with a particular tag, or Docker containers/Kubernetes pods/GCP Compute instances with a specific label?
 
-Wash aims to:
+If so, then some parts of the following tables might look familiar to you. If not, then here's how AWS/Docker/Kubernetes/GCP recommends that you do some of these tasks.
 
-* help you keep track of what systems you're running
-* make scripting across your new-fangled infrastructure as easy as writing a local shell script
-* provide easy access to files, logs, metadata, and any other activity for viewing, editing, and UNIXy slicing-and-dicing
-* help you build better tools that work across a variety of cloud APIs
-* let you easily build your own integrations in whatever language you want
-* be extremely simple to get up-and-running; if it takes you more than a few minutes, let us know!
+<div style="width:200px">List all</div> | 
+----------------------|--------------------------------------------------
+AWS EC2 instances     | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --output text`
+Docker containers     | `docker ps --all`
+Kubernetes pods       | `kubectl get pods --all-namespaces`
+GCP Compute instances | `gcloud compute instances list`
+
+<div style="width:200px">Read</div>         | 
+--------------------------------------------|---
+Console output of an EC2 instance           | `aws ec2 get-console-output --profile foo --instance-id bar`
+Console output of a Google compute instance | `gcloud compute instances get-serial-port-output foo`
+An S3 object's content                      | `aws s3api get-object content.txt --profile foo --bucket bar --key baz && cat content.txt && rm content.txt`
+A GCP Storage object's content              | `gsutil cat gs://foo/bar`
+
+<div style="width:200px">Exec `uname` on</div> | 
+-----------------------------|---
+An EC2 instance              | `ssh -i /path/my-key-pair.pem ec2-user@195.70.57.35 uname`
+An a Docker container        | `docker exec foo uname`
+Exec on a Kubernetes pod     | `kubectl exec foo uname`
+On a Google Compute instance | `gcloud compute ssh foo --command uname`
+
+<div style="width:200px">Find by 'owner' tag/label</div> | 
+--------------------------|---
+EC2 instances             | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --filters Name=tag-key,Values=owner --output text`
+Docker containers         | `docker ps --filter “label=owner”`
+Kubernetes pods           | `kubectl get pods --all-namespaces --selector=owner`
+Google Compute instance   | `gcloud compute instances list --filter=”labels.owner:*”`
+
+That’s a lot of commands you have to use, applications you need to install, and DSLs you have to learn just to do some very fundamental and basic tasks. Now take a look at how you’d perform those same tasks with Wash:
+
+<div style="width:200px">List all</div> | 
+----------------------|---
+AWS EC2 instances     | `find aws/foo -k '*ec2*instance'`
+Docker containers     | `find docker -k '*container' `
+Kubernetes pods       | `find kubernetes -k '*pod'`
+GCP Compute instances | `find gcp -k '*compute*instance'`
+
+<div style="width:200px">Read</div>         | 
+--------------------------------------------|---
+Console output of an EC2 instance           | `cat aws/foo/resources/ec2/instances/bar/console.out`
+Console output of a Google compute instance | `cat gcp/<project>/compute/foo/console.out`
+An S3 object's content                      | `cat aws/foo/resources/s3/bar/baz`
+A GCP Storage object's content              | `cat gcp/<project>/storage/foo/bar`
+
+<div style="width:200px">Exec `uname` on </div> | 
+-----------------------------|---
+An EC2 instance              | `wexec aws/foo/resources/ec2/instances/bar uname`
+An a Docker container        | `wexec docker/containers/foo uname`
+Exec on a Kubernetes pod     | `wexec kubernetes/<context>/<namespace>/pods/foo uname`
+On a Google Compute instance | `wexec gcp/<project>/compute/foo uname`
+
+<div style="width:200px">Find by 'owner' tag/label</div> | 
+------------------------|---
+EC2 instances           | `find aws/foo -k '*ec2*instance' -meta '.tags[?].key' owner`
+Docker containers       | `find docker -k '*container' -meta '.labels.owner' -exists`
+Kubernetes pods         | `find kubernetes -k '*pod' -meta '.metadata.labels.owner' -exists`
+Google Compute instance | `find gcp -k '*compute*instance' -meta '.labels.owner' -exists`
+
+From the table, we see that using Wash means:
+
+* You no longer have to learn different commands to execute a task across different things. All you need is one command (`find` for List/Find; `cat` for Read; and `wexec` for Exec).
+
+* You no longer have to install a bunch of different tools. All you need to install is the Wash binary.
+
+* You no longer have to learn different DSLs for filtering stuff. All you need to learn is find's expression syntax and its individual primaries. Once you do that, you can filter on almost any conceivable property of your specific thing.
+
+And this is only scratching the surface of Wash's capabilities. Checkout the screencast below to see some more (and to see Wash in action):
+
+<script id="asciicast-mX8Mwa75rr1bJePLi3OnIOkJK" src="https://asciinema.org/a/mX8Mwa75rr1bJePLi3OnIOkJK.js" async></script>
 
 ## Getting started
 
