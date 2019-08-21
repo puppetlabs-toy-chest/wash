@@ -10,11 +10,11 @@ jobs:
       if: github.event.action == 'published'
       run: |
         git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet
-        cd homebrew-puppet
         tag=${GITHUB_REF#refs/tags/}
-
         curl -OL https://github.com/puppetlabs/wash/archive/${tag}.tar.gz
         sha=$(sha256sum ${tag}.tar.gz | cut -f1 -d' ')
+
+        cd homebrew-puppet
         sed -e "s/version = \".*\"/version = \"${tag}\"/g" -i ./Formula/wash.rb
         sed -e "s/sha256 \".*\"/sha256 \"${sha}\"/g" -i ./Formula/wash.rb
 
