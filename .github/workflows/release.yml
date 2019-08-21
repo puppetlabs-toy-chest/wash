@@ -11,7 +11,7 @@ jobs:
       run: |
         git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet
         cd homebrew-puppet
-        tag=${GITHUB_REF}
+        tag=${GITHUB_REF#refs/tags/}
 
         curl -OL https://github.com/puppetlabs/wash/archive/${tag}.tar.gz
         sha=$(sha256sum ${tag}.tar.gz | cut -f1 -d' ')
