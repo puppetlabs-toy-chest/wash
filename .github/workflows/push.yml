@@ -19,8 +19,6 @@ jobs:
         args: -s website -d public --gc -b https://puppetlabs.github.io/wash --minify --cleanDestinationDir
     - name: Checkout master
       run: git checkout $GITHUB_SHA
-    - name: Add nojekyll file
-      run: touch ./website/public/.nojekyll
     - name: Add dev website
       uses: docker://peaceiris/hugo:v0.57.1
       with:
