@@ -27,7 +27,6 @@ jobs:
         args: -s website -d public/dev --gc -b https://puppetlabs.github.io/wash/dev --minify --cleanDestinationDir
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v1.1.0
-      if: contains(github.ref, 'master')
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         PUBLISH_BRANCH: gh-pages
