@@ -111,7 +111,7 @@ Wash is distributed as a single binary, and the only prerequisite is [`libfuse`]
    * `./wash`
 
 
-> Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`. See [wash shell](docs#wash-shell) on customizing your shell environment.
+**NOTE:** Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`. See [wash shell](docs#wash-shell) on customizing your shell environment.
 
 At this point, if you haven't already, you should start some resources that Wash can actually introspect. Otherwise, as Han Solo would say, "this is going to be a real short trip". So fire up some Docker containers, create some EC2 instances, toss some files into S3, launch a Kubernetes pod, etc. We've also provided a [guided tour](#wash-by-example) that includes a Docker application.
 
