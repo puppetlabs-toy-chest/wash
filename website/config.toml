@@ -33,6 +33,10 @@ pygmentsStyle = "vs"
     name = "news"
     weight = 1
   [[menu.main]]
+    url = "tutorial"
+    name = "tutorial"
+    weight = 2
+  [[menu.main]]
     url = "docs"
     name = "docs"
     weight = 4
