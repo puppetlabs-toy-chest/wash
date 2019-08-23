@@ -15,7 +15,7 @@ func infoCommand() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE:    toRunE(infoMain),
 	}
-	infoCmd.Flags().StringP("output", "o", "json", "Set the output format (json or yaml)")
+	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json or yaml)")
 	return infoCmd
 }
 
