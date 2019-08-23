@@ -89,10 +89,6 @@ func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
 	return &s3ObjectReader{o: o}, nil
 }
 
-func (o *s3Object) Stream(context.Context) (io.ReadCloser, error) {
-	return o.fetchContent(0)
-}
-
 // TODO: Optimize this class later. For now, the simple implementation is
 // enough to get `cat` working for small objects and, for large objects, enough
 // to get it to print something to stdout without having to wait for the entire
