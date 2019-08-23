@@ -10,8 +10,9 @@ import (
 type Shell interface {
 	// Command constructs the command to invoke the shell. Subcommands should be made available in the
 	// shell environment as `env WASH_EMBEDDED=1 wash <subcommand>`. Rundir is a temporary directory
-	// that will be added to PATH when the command is invoked; you can use it to add new executables
-	// or store other temporary files.
+	// that will be added to `PATH` when the command is invoked; you can use it to add new executables
+	// or store other temporary files. A `W` environment will also be set to the path where the shell
+	// starts.
 	//
 	// Implementations should support their native interactive and non-interactive config, as well as
 	// Wash's (.washrc and .washenv, respectively). They should:

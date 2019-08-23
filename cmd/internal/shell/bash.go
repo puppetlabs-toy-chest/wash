@@ -38,9 +38,8 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	content = `source ` + envpath + `
 [[ -s ~/.bashrc && ! -s ~/.washrc ]] && source ~/.bashrc
 
-WASH_BASE=$(pwd)
 function prompter() {
-	export PS1="\e[0;36mwash $(realpath --relative-to=$WASH_BASE $(pwd))\e[0;32m ❯\e[m "
+	export PS1="\e[0;36mwash $(realpath --relative-to=$W $(pwd))\e[0;32m ❯\e[m "
 }
 export PROMPT_COMMAND=prompter
 
