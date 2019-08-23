@@ -161,5 +161,3 @@ echo S3 $buckets
 ## Record of activity
 
 All operations have their activity recorded to journals. You can see a record of activity with `whistory`, and look at logs of individual entries with `whistory <id>`.
-
-Journals are stored in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory is `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.

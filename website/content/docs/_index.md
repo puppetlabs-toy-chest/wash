@@ -64,6 +64,8 @@ Recursively descends the directory tree of the specified paths, evaluating an `e
 
 Wash maintains a history of commands executed through it. Print that command history, or specify an `id` to print a log of activity related to a particular command.
 
+Journals are stored in `wash/activity` under your user cache directory, identified by process ID and executable name. The user cache directory is `$XDG_CACHE_HOME` or `$HOME/.cache` on Unix systems, `$HOME/Library/Caches` on macOS, and `%LocalAppData%` on Windows.
+
 ### wash info
 
 Print all info Wash has about the specified path, including filesystem attributes and metadata.
