@@ -117,6 +117,7 @@ Try 'help'`)
 	}
 	comm.Env = append(comm.Env,
 		"WASH_SOCKET="+socketpath,
+		"W="+mountpath,
 		"PATH="+rundir+string(os.PathListSeparator)+os.Getenv("PATH"),
 	)
 	comm.Dir = mountpath

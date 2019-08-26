@@ -47,9 +47,8 @@ fi
   if [[ -s "${ZDOTDIR:-$HOME}/.zshrc" ]]; then source "${ZDOTDIR:-$HOME}/.zshrc"; fi
 fi
 
-WASH_BASE=$(pwd)
 function prompter() {
-  PROMPT="%F{cyan}wash $(realpath --relative-to=$WASH_BASE $(pwd))%F{green} ❯%f "
+  PROMPT="%F{cyan}wash $(realpath --relative-to=$W $(pwd))%F{green} ❯%f "
 }
 
 autoload -Uz add-zsh-hook
