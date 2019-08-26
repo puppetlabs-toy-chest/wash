@@ -17,7 +17,7 @@ title= "Wash Documentation"
   * [wash tail](#wash-tail)
   * [wash validate](#wash-validate)
 * [Config](#config)
-  * [wash.yaml](#washyaml)
+  * [wash.yaml](#wash-yaml)
   * [wash shell](#wash-shell)
 * [Core Plugins](#core-plugins)
   * [AWS](#aws)
