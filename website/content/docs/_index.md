@@ -128,6 +128,11 @@ NOTE: Do not override `socket` in a config file. Instead, override it via the `W
 
 Wash uses your system shell to provide the shell environment. It determines this using the `SHELL` environment variable or falls back to `/bin/sh`, so if you'd like to specify a particular shell set the `SHELL` environment variable before starting Wash.
 
+Wash uses the following environment variables
+- `WASH_SOCKET` determines how to communicate with the Wash daemon
+- `W` describes the path to Wash's starting directory on the host filesystem; use `cd $W` to return to the start or `ls $W/...` to list things relative to Wash's root
+- `PATH` is prefixed with the location of the Wash binary and any other executables it creates
+
 For some shells, Wash provides a customized environment. Please [file an issue](https://github.com/puppetlabs/wash/issues/new?assignees=&labels=Feature&template=feature-request.md) if you'd like to add support for new shells.
 
 Wash currently provides a customized environment for
