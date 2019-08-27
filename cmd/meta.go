@@ -15,7 +15,7 @@ metadata endpoint. Specify the --attribute flag to instead print the meta attrib
 		Args: cobra.ExactArgs(1),
 		RunE: toRunE(metaMain),
 	}
-	metaCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json or yaml)")
+	metaCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
 	metaCmd.Flags().BoolP("attribute", "a", false, "Print the meta attribute instead of the full metadata")
 	return metaCmd
 }
