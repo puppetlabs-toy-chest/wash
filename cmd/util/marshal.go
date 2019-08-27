@@ -3,6 +3,9 @@ package cmdutil
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -12,6 +15,8 @@ const (
 	JSON = "json"
 	// YAML represents the YAML marshaller
 	YAML = "yaml"
+	// TEXT represents an easily greppable text format
+	TEXT = "text"
 )
 
 // Marshaller is a type that marshals a given value
@@ -36,6 +41,8 @@ func NewMarshaller(format string) (Marshaller, error) {
 			}
 			return yaml.JSONToYAML(jsonBytes)
 		}), nil
+	case TEXT:
+		return Marshaller(toText), nil
 	default:
 		return nil, fmt.Errorf("the %v format is not supported. Supported formats are 'json' or 'yaml'", format)
 	}
@@ -48,4 +55,63 @@ func (m Marshaller) Marshal(v interface{}) (string, error) {
 		return "", err
 	}
 	return string(bytes), nil
+}
+
+// toText generates a textual representation of structured data that prefixes each line with the
+// entire key path (using .KEY for map indexing and .N for array indexing) to make it more
+// greppable. Uses textBuilder to recursively construct the output.
+//
+// Sample output:
+//     AppArmorProfile:
+//     Args.0: redis-server
+//     Config.AttachStdout: false
+//     Config.Cmd.0: redis-server
+func toText(v interface{}) ([]byte, error) {
+	s, e := textBuilder(v, "")
+	return []byte(s), e
+}
+
+type keyValue struct {
+	key   string
+	value interface{}
+}
+
+func textBuilder(v interface{}, prefix string) (string, error) {
+	// See https://golang.org/pkg/encoding/json/#Unmarshal for expected types.
+	switch val := v.(type) {
+	case map[string]interface{}:
+		if prefix != "" {
+			prefix += "."
+		}
+		ordered := make([]keyValue, 0, len(val))
+		for k, v := range val {
+			ordered = append(ordered, keyValue{k, v})
+		}
+		sort.Slice(ordered, func(i, j int) bool { return ordered[i].key < ordered[j].key })
+
+		parts := make([]string, len(ordered))
+		for i, kv := range ordered {
+			more, err := textBuilder(kv.value, prefix+kv.key)
+			if err != nil {
+				return "", err
+			}
+			parts[i] = more
+		}
+		return strings.Join(parts, "\n"), nil
+	case []interface{}:
+		if prefix != "" {
+			prefix += "."
+		}
+		parts := make([]string, len(val))
+		for i, v := range val {
+			more, err := textBuilder(v, prefix+strconv.Itoa(i))
+			if err != nil {
+				return "", err
+			}
+			parts[i] = more
+		}
+		return strings.Join(parts, "\n"), nil
+	default:
+		return fmt.Sprintf(prefix+": %v", val), nil
+	}
 }
