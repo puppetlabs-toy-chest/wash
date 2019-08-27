@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
+	goyaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -33,13 +34,13 @@ func NewMarshaller(format string) (Marshaller, error) {
 		}), nil
 	case YAML:
 		return Marshaller(func(v interface{}) ([]byte, error) {
-			// Use a JSONToYAML style encoding so that objects do not
-			// have to implement multiple Marshal* interfaces.
-			jsonBytes, err := json.Marshal(v)
-			if err != nil {
-				return nil, err
+			switch t := v.(type) {
+			case goyaml.Marshaler:
+				return goyaml.Marshal(t)
+			default:
+				// yaml.Marshal marshals v to JSON then converts that JSON to YAML.
+				return yaml.Marshal(v)
 			}
-			return yaml.JSONToYAML(jsonBytes)
 		}), nil
 	case TEXT:
 		return Marshaller(toText), nil
