@@ -203,12 +203,18 @@ func (s *Server) Stop() {
 
 func (s *Server) loadPlugins(registry *plugin.Registry) {
 	log.Debug("Loading plugins")
+	anyFailed := false
 	for name, root := range s.plugins {
 		log.Infof("Loading %v", name)
 		if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
 			// %+v is a convention used by some errors to print additional context such as a stack trace
 			log.Warnf("%v failed to load: %+v", name, err)
+			anyFailed = true
 		}
+	}
+
+	if anyFailed {
+		log.Warnf("Plugins you haven't configured can be disabled by adding a 'plugins' entry to wash.yaml.\nSee https://puppetlabs.github.io/wash/docs/#wash-yaml for details.")
 	}
 	log.Debug("Finished loading plugins")
 }

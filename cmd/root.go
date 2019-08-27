@@ -135,7 +135,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	if config.Embedded {
 		rootCmd.Use = ""
 		rootCmd.PreRun = nil
-		rootCmd.Long = ""
+		rootCmd.Long = "Wash sets the 'W' environment variable to it's starting point. Use $W to return to it."
 		// Augment the usage template to minimize usage when set to empty.
 		rootCmd.SetUsageTemplate(embeddedUsageTemplate)
 	} else {
