@@ -38,7 +38,10 @@ func (r *Root) Init(map[string]interface{}) error {
 
 // Schema returns the root's schema
 func (r *Root) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(r, "docker").IsSingleton()
+	return plugin.
+		NewEntrySchema(r, "docker").
+		SetDescription(rootDescription).
+		IsSingleton()
 }
 
 // ChildSchemas returns the root's child schema
@@ -53,3 +56,9 @@ func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	return r.resources, nil
 }
+
+const rootDescription = `
+This is the Docker plugin root. It lets you interact with Docker resources
+like containers and volumes. These resources are found from the Docker socket
+or via the DOCKER environment variables.
+`

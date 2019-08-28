@@ -16,6 +16,7 @@ title= "Wash Documentation"
   * [wash stree](#wash-stree)
   * [wash tail](#wash-tail)
   * [wash validate](#wash-validate)
+  * [wash describe](#wash-describe)
 * [Config](#config)
   * [wash.yaml](#wash-yaml)
   * [wash shell](#wash-shell)
@@ -104,6 +105,10 @@ Validates an external plugin, using it's schema to limit exploration. The plugin
 Validate starts from the plugin root and does a breadth-first traversal of the plugin hierarchy, invoking all supported methods on an example at each level. If the plugin provides a schema, it will be used to explore one example of each type of entry. Exploration can be stopped with Ctrl-C when needed.
 
 Each line represents validation of an entry type. The `lrsx` fields represent support for `list`, `read`, `stream`, and `execute` methods respectively, with '-' representing lack of support for a method.
+
+### wash describe
+
+Displays the entry's description (if it has one). An entry will have a description if what it is is not obvious from its path, or if there are any subtleties involved when invoking one of its supported actions (like e.g. additional configuration). If the entry's a plugin root, then the entry's description is the plugin's documentation.
 
 ## Config
 
@@ -334,7 +339,11 @@ docker
 
 Every node must have a label. The `[]` are printed for non-singleton nodes; they imply multiple instances of this thing. For example, `[container]` means that there will be multiple `container` instances under the `containers` directory. Similarly, `containers` means that there will be only one `containers` directory (i.e. that `containers` is a singleton). Singleton entries should typically use the entry's name as the label.
 
-Entry schemas are also useful for optimizing `find`, especially when `find` is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like `find aws -meta '.tags[?]' .key termination_date` would cause `find` to recurse into every entry in the `aws` plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, `find` would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.
+Entry schemas are a useful way to document your plugin's entries. You can do this by setting a description for that entry. Descriptions are optional. They should only be set if there are any subtleties associated with that entry. For example, you should set a description if it is likely that your users will not know what that entry is or what it is used for from its path alone. You should also set a description if your entry performs some expensive operations when a user invokes an action on it (like e.g. if it creates a temporary container to read a volume file). And you should definitely set a description if invoking an action on the given entry could result in side-effects on the user's machine (like if invoking Exec could modify an SSH config file).
+
+Note that you should always set a description for plugin roots. That description should be the plugin's documentation. Plugin documentation should contain just enough details for a user to get your plugin working. It should also contain any known issues related to your plugin. Plugin documentation (generally) shouldn't include entry-specific stuff. That type of documentation should be left to the individual entries and their descriptions.
+
+Finally, entry schemas are also useful for optimizing `find`, especially when `find` is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like `find aws -meta '.tags[?]' .key termination_date` would cause `find` to recurse into every entry in the `aws` plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, `find` would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.
 
 ## Analytics
 

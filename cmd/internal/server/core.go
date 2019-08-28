@@ -214,7 +214,7 @@ func (s *Server) loadPlugins(registry *plugin.Registry) {
 	}
 
 	if anyFailed {
-		log.Warnf("Plugins you haven't configured can be disabled by adding a 'plugins' entry to wash.yaml.\nSee https://puppetlabs.github.io/wash/docs/#wash-yaml for details.")
+		log.Warnf("Plugins you haven't configured can be disabled by adding a 'plugins' entry to wash.yaml.\nSee https://puppetlabs.github.io/wash/docs/#wash-yaml for details.\nWash will still expose a 'stub' plugin root so that you can view its documentation via 'describe <plugin>' (for core plugins only). However, you'll need to restart the Wash daemon in order to properly reload a failed plugin.\n")
 	}
 	log.Debug("Finished loading plugins")
 }

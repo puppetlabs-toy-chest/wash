@@ -233,6 +233,7 @@ The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_
 {
   "volume.FS": {
       "label": "fs",
+      "description": "This is the root of a container/VM's filesystem.",
       "singleton": true,
       "methods": [
           "list"
@@ -246,6 +247,7 @@ The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_
   },
   "volume.dir": {
       "label": "dir",
+      "description": "This is a volume dir.",
       "singleton": false,
       "methods": [
           "list"
@@ -259,6 +261,7 @@ The outputted JSON object is formatted as `<type_id> => <schema>`, where `<type_
   },
   "volume.file": {
       "label": "file",
+      "description": "This is a volume file.",
       "singleton": false,
       "methods": [
           "read",

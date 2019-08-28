@@ -35,7 +35,9 @@ func NewMetadataJSONFile(ctx context.Context, other Entry) (*MetadataJSONFile, e
 
 // Schema defines the schema of a metadata.json file.
 func (m *MetadataJSONFile) Schema() *EntrySchema {
-	return NewEntrySchema(m, "metadata.json").IsSingleton()
+	return NewEntrySchema(m, "metadata.json").
+		SetDescription(metadataJSONDescription).
+		IsSingleton()
 }
 
 // Open returns the metadata of the `other` entry as its content.
@@ -52,3 +54,8 @@ func (m *MetadataJSONFile) Open(ctx context.Context) (SizedReader, error) {
 
 	return bytes.NewReader(prettyMeta), nil
 }
+
+const metadataJSONDescription = `
+A read-only 'file' whose content contains the underlying entry's full metadata.
+This makes it easier for you to grep its values.
+`

@@ -34,9 +34,16 @@ func (s *storageObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) 
 }
 
 func (s *storageObjectPrefix) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "prefix").SetMetaAttributeSchema(storage.ObjectAttrs{})
+	return plugin.NewEntrySchema(s, "prefix").
+		SetDescription(storageObjectPrefixDescription).
+		SetMetaAttributeSchema(storage.ObjectAttrs{})
 }
 
 func (s *storageObjectPrefix) ChildSchemas() []*plugin.EntrySchema {
 	return bucketSchemas()
 }
+
+const storageObjectPrefixDescription = `
+This represents a common prefix shared by multiple Storage objects. See
+the bucket's description for more details on why we have this kind of entry.
+`

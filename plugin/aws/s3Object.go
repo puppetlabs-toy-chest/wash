@@ -52,6 +52,7 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 func (o *s3Object) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(o, "object").
+		SetDescription(s3ObjectDescription).
 		SetMetaAttributeSchema(s3Client.Object{}).
 		SetMetadataSchema(s3Client.HeadObjectOutput{})
 }
@@ -128,3 +129,8 @@ func (s *s3ObjectReader) Size() int64 {
 	attr := plugin.Attributes(s.o)
 	return int64(attr.Size())
 }
+
+const s3ObjectDescription = `
+This is an S3 object. See the bucket's description for more details on
+why we have this kind of entry.
+`

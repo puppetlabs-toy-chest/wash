@@ -36,7 +36,10 @@ func (d *FS) ChildSchemas() []*plugin.EntrySchema {
 
 // Schema returns the FS entry's schema
 func (d *FS) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(d, "fs").IsSingleton()
+	return plugin.
+		NewEntrySchema(d, "fs").
+		SetDescription(fsDescription).
+		IsSingleton()
 }
 
 // List creates a hierarchy of the filesystem of an Execable resource (the executor).
@@ -160,3 +163,15 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 	}()
 	return r, nil
 }
+
+const fsDescription = `
+This represents the root directory of a container/VM. It lets you navigate
+and interact with that container/VM's filesystem as if you were logged into
+it. Thus, you're able to do things like 'cat'/'tail' that container/VM's files
+(or even multiple files spread out across multiple containers/VMs).
+
+Note that Wash will exec a command on the container/VM whenever it invokes a
+List/Read/Stream action on a directory/file, and the action's result is not
+currently cached. For List, that command is 'find -exec stat'. For Read, that
+command is 'cat'. For Stream, that command is 'tail -f'.
+`

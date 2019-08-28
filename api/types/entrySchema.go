@@ -190,6 +190,18 @@ func (s *EntrySchema) Label() string {
 	return s.EntrySchema.Label
 }
 
+// Description returns the entry's description
+func (s *EntrySchema) Description() string {
+	return s.EntrySchema.Description
+}
+
+// SetDescription sets the entry's description. This should only be called
+// by the tests.
+func (s *EntrySchema) SetDescription(description string) *EntrySchema {
+	s.EntrySchema.Description = description
+	return s
+}
+
 // Singleton returns true if the entry's a singleton, false otherwise.
 func (s *EntrySchema) Singleton() bool {
 	return s.EntrySchema.Singleton

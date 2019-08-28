@@ -28,7 +28,9 @@ func (s *storageBucket) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (s *storageBucket) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "bucket").SetMetaAttributeSchema(storage.BucketAttrs{})
+	return plugin.NewEntrySchema(s, "bucket").
+		SetMetaAttributeSchema(storage.BucketAttrs{}).
+		SetDescription(storageBucketDescription)
 }
 
 func (s *storageBucket) ChildSchemas() []*plugin.EntrySchema {
@@ -75,3 +77,12 @@ func listBucket(ctx context.Context, bucket *storage.BucketHandle, prefix string
 func bucketSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{(&storageObjectPrefix{}).Schema(), (&storageObject{}).Schema()}
 }
+
+const storageBucketDescription = `
+This is a Storage bucket. For convenience, we impose some hierarchical structure
+on its objects by grouping keys with common prefixes into a specific directory.
+For example, the objects 'foo/bar' and 'foo/baz' are represented as files with
+path 'foo/bar' and path 'foo/baz', where 'foo' is represented as a 'directory'.
+Thus, if you ls this bucket, then everything you'll see is either a Storage
+object prefix ('directory') or a Storage object ('file').
+`

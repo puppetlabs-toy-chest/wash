@@ -29,7 +29,7 @@ func newFile(name string, attr plugin.EntryAttributes, impl Interface, path stri
 }
 
 func (v *file) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(v, "file")
+	return plugin.NewEntrySchema(v, "file").SetDescription(fileDescription)
 }
 
 // Open returns the content of the file as a SizedReader.
@@ -40,3 +40,7 @@ func (v *file) Open(ctx context.Context) (plugin.SizedReader, error) {
 func (v *file) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return v.impl.VolumeStream(ctx, v.path)
 }
+
+const fileDescription = `
+This is a file on a remote volume or a container/VM.
+`

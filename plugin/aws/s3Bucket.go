@@ -171,7 +171,8 @@ func newS3Bucket(name string, crtime time.Time, session *session.Session) *s3Buc
 func (b *s3Bucket) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(b, "bucket").
-		SetMetadataSchema(bucketMetadata{})
+		SetMetadataSchema(bucketMetadata{}).
+		SetDescription(s3BucketDescription)
 }
 
 func (b *s3Bucket) ChildSchemas() []*plugin.EntrySchema {
@@ -255,3 +256,12 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 
 	return region, nil
 }
+
+const s3BucketDescription = `
+This is an S3 bucket. For convenience, we impose some hierarchical structure
+on its objects by grouping keys with common prefixes into a specific directory.
+For example, the objects 'foo/bar' and 'foo/baz' are represented as files with
+path 'foo/bar' and path 'foo/baz', where 'foo' is represented as a 'directory'.
+Thus, if you ls this bucket, then everything you'll see is either an S3 object
+prefix ('directory') or an S3 object ('file').
+`
