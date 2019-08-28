@@ -177,8 +177,7 @@ func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 
 			// Ensure ID is set on all entries so that we can use it for caching later in places
 			// where the context doesn't include the parent's ID.
-			id := strings.TrimRight(p.id(), "/") + "/" + cname
-			entry.setID(id)
+			setChildID(p.id(), entry)
 
 			passAlongWrappedTypes(p, entry)
 		}
@@ -247,12 +246,16 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 	if entry.id() == "" {
 		// Try to set the ID based on parent ID
 		if obj := ctx.Value(parentID); obj != nil {
-			id := strings.TrimRight(obj.(string), "/") + "/" + CName(entry)
-			entry.setID(id)
+			setChildID(obj.(string), entry)
 		} else {
 			panic(fmt.Sprintf("Cached op %v on %v had no cache ID and context did not include parent ID", opName, entry.name()))
 		}
 	}
 
 	return cache.GetOrUpdate(opName, entry.id(), ttl, false, op)
+}
+
+func setChildID(parentID string, child Entry) {
+	id := strings.TrimRight(parentID, "/") + "/" + CName(child)
+	child.setID(id)
 }
