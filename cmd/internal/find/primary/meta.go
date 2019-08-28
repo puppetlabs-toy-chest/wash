@@ -409,10 +409,10 @@ Below are some examples of time predicates.
   -1h
       Returns true if v was less than one hour ago
 
-  {+1h}
+  +{1h}
       Returns true if v is more than one hour from now
 
-  {-1h}
+  -{1h}
       Returns true if v is less than one hour from now
 
 And here are some examples of time predicates being used in conjunction with
@@ -421,7 +421,7 @@ object predicates:
   .expiration_date +1h
       Returns true if m['expiration_date'] was more than one hour ago
 
-  .expiration_date {+1h}
+  .expiration_date +{1h}
       Returns true if m['expiration_date'] is more than an hour from now
 
 NOTE: As can be seen from the examples, time predicates only make sense when
