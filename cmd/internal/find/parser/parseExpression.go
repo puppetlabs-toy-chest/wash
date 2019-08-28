@@ -115,6 +115,11 @@ find . -name "*c" -a -mtime +1h
 find . -name "*c" -o -name "*d"
     Print out all entries whose cname ends with a "c" or a "d"
 
+NOTE: The following examples use two different types of time predicates that behave differently.
+Time attribute primaries such as mtime and crtime will only refer to times in the past but
+metadata fields may include future times. See their individual help sections for more on how
+to format time predicates.
+
 find . -daystart -name "*.log" -mtime 0
 find . -daystart -name "*.log" -a -mtime 0
     Print out all log files that were updated today.
