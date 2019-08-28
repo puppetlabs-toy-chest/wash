@@ -69,7 +69,7 @@ func Schema(e Entry) (*EntrySchema, error) {
 
 type entrySchema struct {
 	Label               string      `json:"label"`
-	Description         string      `json:"description"`
+	Description         string      `json:"description,omitempty"`
 	Singleton           bool        `json:"singleton"`
 	Actions             []string    `json:"actions"`
 	MetaAttributeSchema *JSONSchema `json:"meta_attribute_schema"`
