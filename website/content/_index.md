@@ -8,8 +8,8 @@ draft= false
 Wash helps you manage your remote infrastructure using well-established UNIX-y patterns and tools to free you from having to remember multiple ways of doing the same thing.
 
 <div id="horizontalmenu">
-    • <a href="#introduction">introduction</a>
-    • <a href="#getting-started">getting started</a>
+    • <a href="#wash-by-example">examples</a>
+    • <a href="#getting-started">get started</a>
     • <a href="#current-features">features</a>
     • <a href="#contributing">contributing</a>
     •
@@ -24,77 +24,67 @@ Have you ever had to:
 * Exec a command on a Kubernetes pod or GCP Compute Instance?
 * Find all AWS EC2 instances with a particular tag, or Docker containers/Kubernetes pods/GCP Compute instances with a specific label?
 
-If so, then some parts of the following tables might look familiar to you. If not, then here's how AWS/Docker/Kubernetes/GCP recommends that you do some of these tasks.
+Does it bother you that each of those is a bespoke, cryptic incantation of various vendor-specific tools? It's a lot of commands you have to use, applications you need to install, and DSLs you have to learn just to do some pretty basic tasks.
 
-<div style="width:200px">List all</div> | 
-----------------------|--------------------------------------------------
-AWS EC2 instances     | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --output text`
-Docker containers     | `docker ps --all`
-Kubernetes pods       | `kubectl get pods --all-namespaces`
-GCP Compute instances | `gcloud compute instances list`
-
-<div style="width:200px">Read</div>         | 
---------------------------------------------|---
-Console output of an EC2 instance           | `aws ec2 get-console-output --profile foo --instance-id bar`
-Console output of a Google compute instance | `gcloud compute instances get-serial-port-output foo`
-An S3 object's content                      | `aws s3api get-object content.txt --profile foo --bucket bar --key baz && cat content.txt && rm content.txt`
-A GCP Storage object's content              | `gsutil cat gs://foo/bar`
-
-<div style="width:200px">Exec `uname` on</div> | 
------------------------------|---
-An EC2 instance              | `ssh -i /path/my-key-pair.pem ec2-user@195.70.57.35 uname`
-An a Docker container        | `docker exec foo uname`
-Exec on a Kubernetes pod     | `kubectl exec foo uname`
-On a Google Compute instance | `gcloud compute ssh foo --command uname`
-
-<div style="width:200px">Find by 'owner' tag/label</div> | 
---------------------------|---
-EC2 instances             | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --filters Name=tag-key,Values=owner --output text`
-Docker containers         | `docker ps --filter “label=owner”`
-Kubernetes pods           | `kubectl get pods --all-namespaces --selector=owner`
-Google Compute instance   | `gcloud compute instances list --filter=”labels.owner:*”`
-
-That’s a lot of commands you have to use, applications you need to install, and DSLs you have to learn just to do some very fundamental and basic tasks. Now take a look at how you’d perform those same tasks with Wash:
-
-<div style="width:200px">List all</div> | 
-----------------------|---
-AWS EC2 instances     | `find aws/foo -k '*ec2*instance'`
-Docker containers     | `find docker -k '*container' `
-Kubernetes pods       | `find kubernetes -k '*pod'`
-GCP Compute instances | `find gcp -k '*compute*instance'`
-
-<div style="width:200px">Read</div>         | 
---------------------------------------------|---
-Console output of an EC2 instance           | `cat aws/foo/resources/ec2/instances/bar/console.out`
-Console output of a Google compute instance | `cat gcp/<project>/compute/foo/console.out`
-An S3 object's content                      | `cat aws/foo/resources/s3/bar/baz`
-A GCP Storage object's content              | `cat gcp/<project>/storage/foo/bar`
-
-<div style="width:200px">Exec `uname` on </div> | 
------------------------------|---
-An EC2 instance              | `wexec aws/foo/resources/ec2/instances/bar uname`
-An a Docker container        | `wexec docker/containers/foo uname`
-Exec on a Kubernetes pod     | `wexec kubernetes/<context>/<namespace>/pods/foo uname`
-On a Google Compute instance | `wexec gcp/<project>/compute/foo uname`
-
-<div style="width:200px">Find by 'owner' tag/label</div> | 
-------------------------|---
-EC2 instances           | `find aws/foo -k '*ec2*instance' -meta '.tags[?].key' owner`
-Docker containers       | `find docker -k '*container' -meta '.labels.owner' -exists`
-Kubernetes pods         | `find kubernetes -k '*pod' -meta '.metadata.labels.owner' -exists`
-Google Compute instance | `find gcp -k '*compute*instance' -meta '.labels.owner' -exists`
-
-From the table, we see that using Wash means:
-
-* You no longer have to learn different commands to execute a task across different things. All you need is one command (`find` for List/Find; `cat` for Read; and `wexec` for Exec).
-
-* You no longer have to install a bunch of different tools. All you need to install is the Wash binary.
-
-* You no longer have to learn different DSLs for filtering stuff. All you need to learn is find's expression syntax and its individual primaries. Once you do that, you can filter on almost any conceivable property of your specific thing.
-
-And this is only scratching the surface of Wash's capabilities. Checkout the screencast below to see some more (and to see Wash in action):
+Wash simplifies these common scenarios by using established, UNIX-y patterns.
 
 <script id="asciicast-mX8Mwa75rr1bJePLi3OnIOkJK" src="https://asciinema.org/a/mX8Mwa75rr1bJePLi3OnIOkJK.js" async></script>
+
+## Wash by example
+
+Wash tries to keep the simple things simple. You can explore, discover, introspect, and manipulate your infrastructure like you would files on a filesystem.
+
+*Start Wash:*<br/>
+`# wash`
+
+*Explore, like you would any filesystem:*<br/>
+`# ls docker/`<br/>
+`# ls aws/`<br/>
+`# ls kubernetes/`
+
+We think finding things should be as simple as using `find`:
+
+*List your AWS EC2 instances:*<br/>
+`# find aws/foo -k '*ec2*instance'`
+
+*List your docker containers:*<br/>
+`# find docker -k '*container' `
+
+*List your Kubernetes pods:*<br/>
+`# find kubernetes -k '*pod'`
+
+*List your GCP Compute instances:*<br/>
+`# find gcp -k '*compute*instance'`
+
+Reading the output from remote resources should be as simple as `cat`-ing a file:
+
+*Read the console output of an EC2 instance:*<br/>
+`# cat aws/foo/resources/ec2/instances/bar/console.out`
+
+*Read the console output of a Google compute instance:*<br/>
+`# cat gcp/<project>/compute/foo/console.out`
+
+*Read an S3 object's content:*<br/>
+`# cat aws/foo/resources/s3/bar/baz`
+
+*Read a GCP Storage object's content:*<br/>
+`# cat gcp/<project>/storage/foo/bar`
+
+Executing commands should be simple and uniform, regardless of the target:
+
+*Run `uname` on an EC2 instance:*<br/>
+`# wexec aws/foo/resources/ec2/instances/bar uname`
+
+*Run `uname` on a a Docker container:*<br/>
+`# wexec docker/containers/foo uname`
+
+*Run `uname` on a Kubernetes pod:*<br/>
+`# wexec kubernetes/<context>/<namespace>/pods/foo uname`
+
+*On a Google Compute instance:*<br/>
+`# wexec gcp/<project>/compute/foo uname`
+
+And this is only scratching the surface of Wash's capabilities. Check out the [list of features](#current-features) and the [tutorial](tutorial) for more!
 
 ## Getting started
 

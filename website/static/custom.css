@@ -79,3 +79,10 @@ div.footer {
     border-top: 9px solid #3880ff;
     font-family: 'Comfortaa';
 }
+
+blockquote {
+    border-left: 10px;
+    border-left-style: solid;
+    border-left-color: #ccc;
+    padding-left: 10px;
+}
