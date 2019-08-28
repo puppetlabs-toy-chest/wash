@@ -30,7 +30,7 @@ func newS3ObjectPrefix(name string, bucket string, prefix string, client *s3Clie
 }
 
 func (d *s3ObjectPrefix) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(d, "prefix")
+	return plugin.NewEntrySchema(d, "prefix").SetDescription(s3ObjectPrefixDescription)
 }
 
 func (d *s3ObjectPrefix) ChildSchemas() []*plugin.EntrySchema {
@@ -45,3 +45,8 @@ func (d *s3ObjectPrefix) ChildSchemas() []*plugin.EntrySchema {
 func (d *s3ObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, d.client, d.bucket, d.prefix)
 }
+
+const s3ObjectPrefixDescription = `
+This represents a common prefix shared by multiple S3 objects. See the
+bucket's description for more details on why we have this kind of entry.
+`

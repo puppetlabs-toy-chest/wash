@@ -61,7 +61,9 @@ func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 
 // Schema returns the root's schema
 func (r *Root) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(r, "gcp").IsSingleton()
+	return plugin.NewEntrySchema(r, "gcp").
+		SetDescription(rootDescription).
+		IsSingleton()
 }
 
 // List the available GCP projects
@@ -91,3 +93,21 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	return projects, nil
 }
+
+const rootDescription = `
+This is the GCP plugin root. It follows https://cloud.google.com/docs/authentication/production
+to find your credentials: - it will try GOOGLE_APPLICATION_CREDENTIALS as a service account file
+- use your credentials in $HOME/.config/gcloud/application_default_credentials.json. The simplest
+way to set this up is with
+
+  gcloud init
+  gcloud auth application-default login
+
+The GCP plugin will list all projects you have access to. The projects it lists can be limited
+by adding
+
+gcp:
+  projects: [project-1, project-2]
+
+to Wash’s config file. Project can be referenced either by name or project ID.
+`

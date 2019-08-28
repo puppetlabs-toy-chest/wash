@@ -20,7 +20,10 @@ func newStorageObject(name string, object *storage.ObjectHandle, attrs *storage.
 }
 
 func (s *storageObject) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(s, "object").SetMetaAttributeSchema(storage.ObjectAttrs{})
+	return plugin.
+		NewEntrySchema(s, "object").
+		SetDescription(storageObjectDescription).
+		SetMetaAttributeSchema(storage.ObjectAttrs{})
 }
 
 func (s *storageObject) Open(ctx context.Context) (plugin.SizedReader, error) {
@@ -46,3 +49,8 @@ func (r *objectReader) ReadAt(p []byte, off int64) (int, error) {
 func (r *objectReader) Size() int64 {
 	return r.size
 }
+
+const storageObjectDescription = `
+This is a Storage object. See the bucket's description for more details
+on why we have this kind of entry.
+`

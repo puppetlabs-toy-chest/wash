@@ -69,7 +69,10 @@ func (r *Root) Init(map[string]interface{}) error {
 
 // Schema returns the root's schema
 func (r *Root) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(r, "kubernetes").IsSingleton()
+	return plugin.
+		NewEntrySchema(r, "kubernetes").
+		SetDescription(rootDescription).
+		IsSingleton()
 }
 
 // ChildSchemas returns the root's child schemas
@@ -91,3 +94,10 @@ func (r *Root) WrappedTypes() plugin.SchemaMap {
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 	return r.contexts, nil
 }
+
+const rootDescription = `
+This is the Kubernetes plugin root. It lets you interact with Kubernetes resources
+like pods and persistent volume claims.
+
+Kubernetes contexts are extracted from ~/.kube/config.
+`

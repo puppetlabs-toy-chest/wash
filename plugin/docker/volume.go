@@ -50,6 +50,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 func (v *volume) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(v, "volume").
+		SetDescription(volumeDescription).
 		SetMetaAttributeSchema(types.Volume{})
 }
 
@@ -218,3 +219,12 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
 	return plugin.CleanupReader{ReadCloser: output, Cleanup: killAndDelete}, nil
 }
+
+const volumeDescription = `
+This is a Docker volume. We create a temporary Docker container whenever
+Wash invokes a List/Read/Stream action on it or one of its children, and
+the action's result is not currently cached. For List, we run 'find -exec stat'
+on the container and parse its output. For Read, we run 'sleep 60' then proceed
+to download the file content from the container. For Stream, we run 'tail -f' and
+pass over its output.
+`

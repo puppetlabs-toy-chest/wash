@@ -95,7 +95,10 @@ func (r *Root) ChildSchemas() []*plugin.EntrySchema {
 
 // Schema returns the root's schema
 func (r *Root) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(r, "aws").IsSingleton()
+	return plugin.
+		NewEntrySchema(r, "aws").
+		SetDescription(rootDescription).
+		IsSingleton()
 }
 
 // List the available AWS profiles
@@ -162,3 +165,24 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	return profiles, nil
 }
+
+const rootDescription = `
+This is the AWS plugin root. The AWS plugin reads the AWS_SHARED_CREDENTIALS_FILE
+environment variable or $HOME/.aws/credentials and AWS_CONFIG_FILE environment
+variable or $HOME/.aws/config to find profiles and configure the SDK. The profiles
+it lists can be limited by adding
+
+aws:
+  profiles: [profile_1, profile_2]
+
+to Wash’s config file.
+
+The AWS plugin currently supports EC2 and S3. IAM roles are supported when configured
+as described here. Note that currently region will also need to be specified with the
+profile.
+
+If using MFA, Wash will prompt for it on standard input. Credentials are valid for 1 hour.
+They are cached under wash/aws-credentials in your user cache directory so they can be
+re-used across server restarts. Wash may have to re-prompt for a new MFA token in response
+to navigating the Wash environment to authorize a new session.
+`

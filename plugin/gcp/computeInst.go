@@ -55,7 +55,10 @@ func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (c *computeInstance) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(c, "instance").SetMetaAttributeSchema(compute.Instance{})
+	return plugin.
+		NewEntrySchema(c, "instance").
+		SetDescription(computeInstDescription).
+		SetMetaAttributeSchema(compute.Instance{})
 }
 
 func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {
@@ -329,3 +332,10 @@ func ensureKey(metadata *compute.Metadata, keyField, user, key string, upload fu
 	err := upload(metadata)
 	return err == nil, err
 }
+
+const computeInstDescription = `
+This is a GCP Compute instance. Its Exec method mirrors running gcloud compute ssh.
+If not already present, it will generate a Google Compute-specific SSH key pair and
+known hosts file in your ~/.ssh directory and ensure they’re present on the machine
+you’re trying to connect to. Your current $USER name will be used as the login user.
+`

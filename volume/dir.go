@@ -32,7 +32,7 @@ func (v *dir) ChildSchemas() []*plugin.EntrySchema {
 }
 
 func (v *dir) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(v, "dir")
+	return plugin.NewEntrySchema(v, "dir").SetDescription(dirDescription)
 }
 
 // Generate children using the provided DirMap. The dir may not have a dirmap
@@ -71,3 +71,7 @@ func (v *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	return v.generateChildren(dirmap), nil
 }
+
+const dirDescription = `
+This is a volume directory.
+`

@@ -158,6 +158,7 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(inst, "instance").
+		SetDescription(ec2InstanceDescription).
 		SetMetaAttributeSchema(ec2InstanceMetadata{})
 }
 
@@ -297,3 +298,17 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	//
 	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: fallbackuser, IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
 }
+
+const ec2InstanceDescription = `
+This is an EC2 instance. Its Exec action uses SSH. It will look up port, user,
+and other configuration by exact hostname match from default SSH config files.
+If present, a local SSH agent will be used for authentication. Lots of SSH
+configuration is currently omitted, such as global known hosts files, finding
+known hosts from the config, identity file from config… pretty much everything
+but port and user from config as enumerated in
+https://github.com/kevinburke/ssh_config/blob/0.5/validators.go. The known hosts
+file will be ignored if StrictHostKeyChecking=no, such as in
+
+Host *.compute.amazonaws.com
+  StrictHostKeyChecking no
+`
