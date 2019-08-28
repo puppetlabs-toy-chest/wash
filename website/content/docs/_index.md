@@ -192,8 +192,9 @@ Host *.compute.amazonaws.com
 ### GCP
 
 The GCP plugin follows https://cloud.google.com/docs/authentication/production to find your credentials:
+
 - it will try `GOOGLE_APPLICATION_CREDENTIALS` as a service account file
-- use your credentials in `$HOME/.config/gcloud/application_default_credentials.json`
+- otherwise it will use your credentials in `$HOME/.config/gcloud/application_default_credentials.json`
 
 The simplest way to set this up is with
 ```
