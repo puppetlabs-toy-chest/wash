@@ -24,6 +24,11 @@ func (z zsh) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	cmd.Env = append(os.Environ(), "ZDOTDIR="+rundir)
 	zdotdir := os.Getenv("ZDOTDIR")
 
+	var common string
+	for _, alias := range subcommands {
+		common += "alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n"
+	}
+
 	content := `if [[ ! -s ~/.washenv ]]; then
 	# Reset ZDOTDIR for zsh config, then set it back so we load Wash's zshrc
   ZDOTDIR='` + zdotdir + `'
@@ -33,9 +38,7 @@ func (z zsh) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	ZDOTDIR='` + rundir + `'
 fi
 `
-	for _, alias := range subcommands {
-		content += "alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n"
-	}
+	content += common
 	content += "if [[ -s ~/.washenv ]]; then source ~/.washenv; fi\n"
 	if err := ioutil.WriteFile(filepath.Join(rundir, ".zshenv"), []byte(content), 0644); err != nil {
 		return nil, err
@@ -46,7 +49,10 @@ fi
   if [[ -s "${ZDOTDIR:-$HOME}/.zprofile" ]]; then source "${ZDOTDIR:-$HOME}/.zprofile"; fi
   if [[ -s "${ZDOTDIR:-$HOME}/.zshrc" ]]; then source "${ZDOTDIR:-$HOME}/.zshrc"; fi
 fi
-
+`
+	// Re-add aliases in case .zprofile or .zshrc overrode them.
+	content += common
+	content += `
 function prompter() {
   PROMPT="%F{cyan}wash $(realpath --relative-to=$W $(pwd))%F{green} ❯%f "
 }

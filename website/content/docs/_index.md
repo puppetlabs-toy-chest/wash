@@ -157,8 +157,10 @@ Customized environments also supports reading `~/.washenv` and `~/.washrc` files
 2. If running Wash interactively
    1. Do all non-interactive config above
    2. If `~/.washrc` does not exist, load the shell's default interactive config (such as `.bash_profile` or `.zshrc`)
-   3. Configure the command prompt
+   3. Re-configure subcommand aliases, and configure the command prompt
    4. If `~/.washrc` exists, load it
+
+That order ensures that the out-of-box experience of Wash is not adversely impacted by your existing environment while still inheriting most of your config. If you customize your Wash environment with `.washenv` and `.washrc`, be aware that it's possible to override Wash's default prompt and aliases.
 
 For other shells, Wash creates executables for subcommands and does no other customization.
 
