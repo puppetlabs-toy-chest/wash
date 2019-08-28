@@ -69,6 +69,7 @@ func Schema(e Entry) (*EntrySchema, error) {
 
 type entrySchema struct {
 	Label               string      `json:"label"`
+	Description         string      `json:"description"`
 	Singleton           bool        `json:"singleton"`
 	Actions             []string    `json:"actions"`
 	MetaAttributeSchema *JSONSchema `json:"meta_attribute_schema"`
@@ -141,6 +142,12 @@ func (s EntrySchema) MarshalJSON() ([]byte, error) {
 		s.fill(graph)
 	}
 	return graph.ToJSON()
+}
+
+// SetDescription sets the entry's description.
+func (s *EntrySchema) SetDescription(description string) *EntrySchema {
+	s.entrySchema.Description = strings.Trim(description, "\n")
+	return s
 }
 
 // IsSingleton marks the entry as a singleton entry.
