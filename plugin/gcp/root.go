@@ -96,9 +96,12 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 
 const rootDescription = `
 This is the GCP plugin root. It follows https://cloud.google.com/docs/authentication/production
-to find your credentials: - it will try GOOGLE_APPLICATION_CREDENTIALS as a service account file
-- use your credentials in $HOME/.config/gcloud/application_default_credentials.json. The simplest
-way to set this up is with
+to find your credentials:
+
+* it will try GOOGLE_APPLICATION_CREDENTIALS as a service account file
+* otherwise, it will use your credentials in $HOME/.config/gcloud/application_default_credentials.json.
+
+The simplest way to set this up is with
 
   gcloud init
   gcloud auth application-default login

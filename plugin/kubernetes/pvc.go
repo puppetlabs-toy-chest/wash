@@ -261,8 +261,8 @@ func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, err
 
 const pvcDescription = `
 This is a Kubernetes persistent volume claim. We create a temporary Kubernetes
-pod whenever Wash invokes a List/Read/Stream action on it or one of its children,
-and the action's result is not currently cached. For List, we run 'find -exec stat'
-on the pod and parse its output. For Read, we run 'cat' and return its output. For
-Stream, we run 'tail -f' and stream its output.
+pod whenever Wash invokes a currently uncached List/Read/Stream action on it or
+one of its children. For List, we run 'find -exec stat' on the pod and parse its
+output. For Read, we run 'cat' and return its output. For Stream, we run 'tail -f'
+and stream its output.
 `

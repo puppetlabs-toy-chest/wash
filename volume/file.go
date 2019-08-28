@@ -42,5 +42,5 @@ func (v *file) Stream(ctx context.Context) (io.ReadCloser, error) {
 }
 
 const fileDescription = `
-This is a volume file.
+This is a file on a remote volume or a container/VM.
 `

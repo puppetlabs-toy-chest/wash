@@ -73,5 +73,5 @@ func (v *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 const dirDescription = `
-This is a volume directory.
+This is a directory on a remote volume or a container/VM.
 `

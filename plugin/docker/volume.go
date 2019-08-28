@@ -222,9 +222,9 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 
 const volumeDescription = `
 This is a Docker volume. We create a temporary Docker container whenever
-Wash invokes a List/Read/Stream action on it or one of its children, and
-the action's result is not currently cached. For List, we run 'find -exec stat'
-on the container and parse its output. For Read, we run 'sleep 60' then proceed
-to download the file content from the container. For Stream, we run 'tail -f' and
-pass over its output.
+Wash invokes a currently uncached List/Read/Stream action on it or one of
+its children. For List, we run 'find -exec stat' on the container and parse
+its output. For Read, we run 'sleep 60' then proceed to download the file
+content from the container. For Stream, we run 'tail -f' and pass over its
+output.
 `
