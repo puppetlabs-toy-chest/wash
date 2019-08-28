@@ -88,7 +88,9 @@ func (suite *RegistryTestSuite) TestRegisterPluginInitError() {
 
 	suite.EqualError(reg.RegisterPlugin(m, nil), "failed")
 	m.AssertExpectations(suite.T())
-	suite.NotContains(reg.Plugins(), "mine")
+	suite.Contains(reg.Plugins(), "mine")
+	_, ok := reg.Plugins()["mine"].(*stubRoot)
+	suite.True(ok, "expected a stub plugin root to be registered")
 }
 
 func (suite *RegistryTestSuite) TestRegisterPluginInvalidPluginName() {

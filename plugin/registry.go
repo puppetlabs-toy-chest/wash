@@ -36,7 +36,22 @@ var pluginNameRegex = regexp.MustCompile("^[0-9a-zA-Z_-]+$")
 // RegisterPlugin initializes the given plugin and adds it to the registry if
 // initialization was successful.
 func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) error {
+	registerPlugin := func() {
+		r.plugins[root.name()] = root
+		r.pluginRoots = append(r.pluginRoots, root)
+	}
+
 	if err := root.Init(config); err != nil {
+		// Create a stubPluginRoot so that Wash users can see the plugin's
+		// documentation via 'describe <plugin>'. This is important b/c the
+		// plugin docs also include details on how to set it up. Note that
+		// 'describe <plugin>' will not work for external plugins. This is because
+		// the plugin documentation is contained in the root's description, and
+		// the root's description is contained in the root's schema. Retrieving
+		// an external plugin root's schema requires a successful Init invocation,
+		// which is not the case here.
+		root = newStubRoot(root)
+		registerPlugin()
 		return err
 	}
 
@@ -50,8 +65,7 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 		panic(msg)
 	}
 
-	r.plugins[root.name()] = root
-	r.pluginRoots = append(r.pluginRoots, root)
+	registerPlugin()
 	return nil
 }
 
@@ -68,4 +82,39 @@ func (r *Registry) Schema() *EntrySchema {
 // List all of Wash's loaded plugins
 func (r *Registry) List(ctx context.Context) ([]Entry, error) {
 	return r.pluginRoots, nil
+}
+
+type stubRoot struct {
+	EntryBase
+	pluginDocumentation string
+}
+
+func newStubRoot(root Root) *stubRoot {
+	stubRoot := &stubRoot{
+		EntryBase: NewEntry(Name(root)),
+	}
+	stubRoot.DisableDefaultCaching()
+	schema := root.Schema()
+	if schema != nil {
+		stubRoot.pluginDocumentation = schema.Description
+	}
+	return stubRoot
+}
+
+func (r *stubRoot) Init(map[string]interface{}) error {
+	return nil
+}
+
+func (r *stubRoot) Schema() *EntrySchema {
+	return NewEntrySchema(r, CName(r)).
+		SetDescription(r.pluginDocumentation).
+		IsSingleton()
+}
+
+func (r *stubRoot) ChildSchemas() []*EntrySchema {
+	return []*EntrySchema{}
+}
+
+func (r *stubRoot) List(context.Context) ([]Entry, error) {
+	return []Entry{}, nil
 }
