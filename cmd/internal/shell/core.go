@@ -21,7 +21,7 @@ type Shell interface {
 	//   1. if ~/.washenv exists, load it
 	// Additionally for interactive invocations they should:
 	//   1. if ~/.washrc does not exist, load the shell's default interactive config
-	//   1. configure the prompt
+	//   1. reconfigure subcommand aliases (in case they were overridden), configure the prompt
 	//   1. if ~/.washrc exists, load it
 	Command(subcommands []string, rundir string) (*exec.Cmd, error)
 }

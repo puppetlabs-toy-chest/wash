@@ -23,13 +23,15 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	cmd := exec.Command(b.sh, "--rcfile", rcpath)
 	cmd.Env = append(os.Environ(), "BASH_ENV="+envpath)
 
-	var content string
+	var common, content string
+	for _, alias := range subcommands {
+		common += "alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n"
+	}
+
 	if env := os.Getenv("BASH_ENV"); env != "" {
 		content += "[[ -s '~/" + env + "' && ! -s ~/.washenv ]] && source '" + env + "'\n"
 	}
-	for _, alias := range subcommands {
-		content += "alias " + alias + "='WASH_EMBEDDED=1 wash " + alias + "'\n"
-	}
+	content += common
 	content += "[[ -s ~/.washenv ]] && source ~/.washenv\n"
 	if err := ioutil.WriteFile(envpath, []byte(content), 0644); err != nil {
 		return nil, err
@@ -37,7 +39,10 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 
 	content = `source ` + envpath + `
 [[ -s ~/.bashrc && ! -s ~/.washrc ]] && source ~/.bashrc
-
+`
+	// Re-add aliases in case .bashrc overrode them.
+	content += common
+	content += `
 function prompter() {
 	export PS1="\e[0;36mwash $(realpath --relative-to=$W $(pwd))\e[0;32m ❯\e[m "
 }
