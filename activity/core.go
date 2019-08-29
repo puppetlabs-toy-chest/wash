@@ -128,38 +128,21 @@ func SubmitMethodInvocation(ctx context.Context, plugin string, entryType string
 		journal.addToHistory()
 	}
 
-	recorder := journal.recorder()
-
-	// Check if the method was already invoked
-	recorder.mIMux.RLock()
-	if recorder.methodInvoked(entryType, method) {
-		recorder.mIMux.RUnlock()
-		return
-	}
-	// Method wasn't invoked
-	recorder.mIMux.RUnlock()
-
-	recorder.mIMux.Lock()
-	defer recorder.mIMux.Unlock()
-
-	// Check the invocations again in case someone beat us to it
-	if recorder.methodInvoked(entryType, method) {
-		return
-	}
-	log.Debugf("Submitting %v method invocation for entry instance %v", method, entryType)
-	err := analytics.GetClient(ctx).Event(
-		"Invocation",
-		"Method",
-		analytics.Params{
-			"Label":  method,
-			"Plugin": plugin,
-		},
-	)
-	if err != nil {
-		// We should never hit this code-path
-		panic(fmt.Sprintf("Unexpected error when submitting the method invocation: %v", err))
-	}
-	recorder.recordMethodInvocation(entryType, method)
+	journal.recorder().submitMethodInvocation(entryType, method, func() {
+		log.Debugf("Submitting %v method invocation for entry instance %v", method, entryType)
+		err := analytics.GetClient(ctx).Event(
+			"Invocation",
+			"Method",
+			analytics.Params{
+				"Label":  method,
+				"Plugin": plugin,
+			},
+		)
+		if err != nil {
+			// We should never hit this code-path
+			panic(fmt.Sprintf("Unexpected error when submitting the method invocation: %v", err))
+		}
+	})
 }
 
 func closeRecorder(id string, obj interface{}) {

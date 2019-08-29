@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -63,13 +64,41 @@ func TestHistoryWithJournal(t *testing.T) {
 
 func TestRecorder_CanRecordMethodInvocations(t *testing.T) {
 	recorder := newRecorder()
+	var invoked bool
+	invoker := func() {
+		invoked = true
+	}
 
 	assert.False(t, recorder.methodInvoked("foo", "List"))
-	recorder.recordMethodInvocation("foo", "List")
+	recorder.submitMethodInvocation("foo", "List", invoker)
 	assert.True(t, recorder.methodInvoked("foo", "List"))
+	assert.True(t, invoked)
+
+	invoked = false
+	recorder.submitMethodInvocation("foo", "List", invoker)
+	assert.False(t, invoked)
 
 	// Test a different method
+	invoked = false
 	assert.False(t, recorder.methodInvoked("foo", "Exec"))
-	recorder.recordMethodInvocation("foo", "Exec")
+	recorder.submitMethodInvocation("foo", "Exec", invoker)
 	assert.True(t, recorder.methodInvoked("foo", "Exec"))
+	assert.True(t, invoked)
+}
+
+func TestRecorder_RecordsMethodInvocationsOnce(t *testing.T) {
+	recorder := newRecorder()
+	var count int
+	invoker := func() { count++ }
+	var wg sync.WaitGroup
+	for i := 0; i <= 100; i++ {
+		wg.Add(1)
+		go func() {
+			recorder.submitMethodInvocation("foo", "Read", invoker)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	assert.Equal(t, 1, count)
+	assert.True(t, recorder.methodInvoked("foo", "Read"))
 }
