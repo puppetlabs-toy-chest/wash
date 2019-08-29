@@ -10,11 +10,11 @@ Browse for existing issues. Otherwise, open a "[new issue](https://github.com/pu
 
 ## How to report a bug
 
-Open a "[Bug report](https://github.com/puppetlabs/wash/issues/new?template=bug_report.md)" issue in this repo.
+Open a "[Bug report](https://github.com/puppetlabs/wash/issues/new?template=bug-report.md)" issue in this repo.
 
 ## How to suggest a new feature
 
-Open a "[Feature request](https://github.com/puppetlabs/wash/issues/new?template=feature_request.md)" issue in this repo.
+Open a "[Feature request](https://github.com/puppetlabs/wash/issues/new?template=feature-request.md)" issue in this repo.
 
 ## Development Environment
 
@@ -41,15 +41,15 @@ We try to follow common Go conventions as enforced by the compiler and several s
 
 File naming should follow camelCase. When grouping several files around a single concept, multiple names can be joined by hyphens.
 
-For example, the Docker plugin has multiple files implenting components of a container. We name them
+For example, the Docker plugin has multiple files implementing components of a container. We name them
 - container-log.go
 - container-metadata.go
 - container.go
 
 ### Releases
 
-Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). Assets are automatically built. https://github.com/puppetlabs/homebrew-puppet needs to be manually updated to use the new release (in the future we hope to automate this with GitHub Actions).
+Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). Assets are automatically built and a [GitHub Action](https://github.com/puppetlabs/wash/blob/master/.github/workflows/release.yml) will open a PR against https://github.com/puppetlabs/homebrew-puppet to update to the new release.
 
 Release announcements are:
-- posted in [Slack #puppet](https://puppetcommunity.slack.com/app_redirect?channel=puppet); ask a moderator to re-post into #announcements
-- Puppet internal [release announcement process](https://confluence.puppetlabs.com/display/PM/Sending+Product+Release+Announcements)
+- posted in [Slack #wash](https://puppetcommunity.slack.com/app_redirect?channel=wash); ask a moderator to re-post into #announcements
+- Puppet internal [release announcement process](https://confluence.puppetlabs.com/display/PM/Sending+Product+Release+Announcements) sends to puppet-announce@ and puppet-users@
