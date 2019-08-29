@@ -107,7 +107,7 @@ func TestSubmitMethodInvocation_SubmittedMethodInvocation_DoesNotSubmitToGA(t *t
 		// Use a different journal ID so that we get a different recorder
 		ID: "bar",
 	}
-	journal.recorder().recordMethodInvocation("foo::file", "List")
+	journal.recorder().submitMethodInvocation("foo::file", "List", func() {})
 	ctx = context.WithValue(ctx, JournalKey, journal)
 	analyticsClient := &mockAnalyticsClient{}
 	analyticsClient.On("Event", mock.Anything, mock.Anything, mock.Anything).Return(nil)

@@ -208,18 +208,32 @@ func (r recorder) methodInvoked(entryType string, method string) bool {
 	return methodInvocations[method]
 }
 
-// recordMethodInvocation records an invocation of "method" by an instance
-// of "entryType". recordMethodInvocation is not thread-safe.
-func (r recorder) recordMethodInvocation(entryType string, method string) {
-	methodInvocations := r.methodInvocationsOf(entryType)
-	methodInvocations[method] = true
-}
+// submitMethodInvocation calls submitter and records an invocation of
+// "method" by an instance of "entryType" only if the "method" has not
+// previously been invoked by an instance of "entryType".
+func (r recorder) submitMethodInvocation(entryType string, method string, submitter func()) {
+	r.mIMux.RLock()
+	if r.methodInvoked(entryType, method) {
+		r.mIMux.RUnlock()
+		return
+	}
+	r.mIMux.RUnlock()
 
-func (r recorder) methodInvocationsOf(entryType string) methodInvocations {
+	r.mIMux.Lock()
 	methodInvocations, ok := r.methodInvocations[entryType]
 	if !ok {
 		methodInvocations = make(map[string]bool)
 		r.methodInvocations[entryType] = methodInvocations
 	}
-	return methodInvocations
+	if methodInvocations[method] {
+		r.mIMux.Unlock()
+		return
+	}
+
+	methodInvocations[method] = true
+	r.mIMux.Unlock()
+
+	// We don't need to lock while submitting. If the submission fails we move on instead of retrying
+	// so we can mark that we tried before even submitting.
+	submitter()
 }
