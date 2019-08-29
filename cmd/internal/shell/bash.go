@@ -44,7 +44,13 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	content += common
 	content += `
 function prompter() {
-	export PS1="\e[0;36mwash $(realpath --relative-to=$W $(pwd))\e[0;32m ❯\e[m "
+  local prompt_path
+  if [ -x "$(command -v realpath)" ]; then
+    prompt_path=$(realpath --relative-to=$W $(pwd))
+  else
+    prompt_path=$(basename $(pwd))
+  fi
+  export PS1="\e[0;36mwash ${prompt_path}\e[0;32m ❯\e[m "
 }
 export PROMPT_COMMAND=prompter
 

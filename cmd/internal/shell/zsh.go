@@ -54,7 +54,13 @@ fi
 	content += common
 	content += `
 function prompter() {
-  PROMPT="%F{cyan}wash $(realpath --relative-to=$W $(pwd))%F{green} ❯%f "
+  local prompt_path
+  if [ -x "$(command -v realpath)" ]; then
+    prompt_path=$(realpath --relative-to=$W $(pwd))
+  else
+    prompt_path=$(basename $(pwd))
+  fi
+  PROMPT="%F{cyan}wash ${prompt_path}%F{green} ❯%f "
 }
 
 autoload -Uz add-zsh-hook
