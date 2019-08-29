@@ -61,7 +61,7 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	cmdutil.Println(marshalledEntry)
+	cmdutil.Print(marshalledEntry)
 
 	return exitCode{0}
 }
