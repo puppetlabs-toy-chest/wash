@@ -198,9 +198,13 @@ func newRecorder() recorder {
 }
 
 // methodInvoked returns true if "method" was invoked by an instance
-// of "entryType". methodInvoked is not thread-safe.
+// of "entryType". methodInvoked is not thread-safe and should be called
+// with `r.mIMux.RLock()`.
 func (r recorder) methodInvoked(entryType string, method string) bool {
-	methodInvocations := r.methodInvocationsOf(entryType)
+	methodInvocations, ok := r.methodInvocations[entryType]
+	if !ok {
+		return false
+	}
 	return methodInvocations[method]
 }
 
