@@ -15,7 +15,12 @@ type storageObject struct {
 
 func newStorageObject(name string, object *storage.ObjectHandle, attrs *storage.ObjectAttrs) *storageObject {
 	obj := &storageObject{EntryBase: plugin.NewEntry(name), ObjectHandle: object}
-	obj.Attributes().SetMtime(attrs.Updated).SetSize(uint64(attrs.Size)).SetMeta(attrs)
+	obj.Attributes().
+		SetCrtime(attrs.Created).
+		SetCtime(attrs.Updated).
+		SetMtime(attrs.Updated).
+		SetSize(uint64(attrs.Size)).
+		SetMeta(attrs)
 	return obj
 }
 

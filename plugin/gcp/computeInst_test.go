@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ import (
 )
 
 func TestComputeInstance(t *testing.T) {
-	inst := compute.Instance{Name: "foo"}
+	inst := compute.Instance{Name: "foo", CreationTimestamp: time.Now().Format(time.RFC3339) }
 	compInst := newComputeInstance(&inst, computeProjectService{})
 	assert.Equal(t, "foo", compInst.Name())
 	assert.Implements(t, (*plugin.Parent)(nil), compInst)

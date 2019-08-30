@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -33,9 +34,15 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 		instance:  inst,
 		service:   c,
 	}
+	crtime, err := time.Parse(time.RFC3339, inst.CreationTimestamp)
+	if err != nil {
+		panic(fmt.Sprintf("Timestamp for %v was not expected format RFC3339: %v", comp, inst.CreationTimestamp))
+	}
 	comp.
 		DisableCachingFor(plugin.MetadataOp).
-		Attributes().SetMeta(inst)
+		Attributes().
+		SetCrtime(crtime).
+		SetMeta(inst)
 	return comp
 }
 
