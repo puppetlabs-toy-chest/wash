@@ -23,7 +23,12 @@ func newStorageObjectPrefix(bucket *storage.BucketHandle,
 		prefix:    prefix,
 	}
 	if attrs != nil {
-		pre.Attributes().SetMtime(attrs.Updated).SetSize(uint64(attrs.Size)).SetMeta(attrs)
+		pre.Attributes().
+			SetCrtime(attrs.Created).
+			SetCtime(attrs.Updated).
+			SetMtime(attrs.Updated).
+			SetSize(uint64(attrs.Size)).
+			SetMeta(attrs)
 	}
 	return pre
 }
