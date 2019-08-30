@@ -13,37 +13,35 @@ Have you ever had to:
 
 If so, then some parts of the following tables might look familiar to you. If not, then here's how AWS/Docker/Kubernetes/GCP recommends that you do some of these tasks.
 
-<div style="width:200px">List all</div> | 
+List all... | Command
 ----------------------|---
 AWS EC2 instances     | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --output text`
 Docker containers     | `docker ps --all`
 Kubernetes pods       | `kubectl get pods --all-namespaces`
 GCP Compute instances | `gcloud compute instances list`
 
-<div style="width:200px">Read</div>         | 
+Read... | Command
 --------------------------------------------|---
 Console output of an EC2 instance           | `aws ec2 get-console-output --profile foo --instance-id bar`
 Console output of a Google compute instance | `gcloud compute instances get-serial-port-output foo`
 An S3 object's content                      | `aws s3api get-object content.txt --profile foo --bucket bar --key baz && cat content.txt && rm content.txt`
 A GCP Storage object's content              | `gsutil cat gs://foo/bar`
 
-<div style="width:200px">Exec `uname` on</div> | 
+Exec `uname` on... | Command
 -----------------------------|---
 An EC2 instance              | `ssh -i /path/my-key-pair.pem ec2-user@195.70.57.35 uname`
 An a Docker container        | `docker exec foo uname`
 Exec on a Kubernetes pod     | `kubectl exec foo uname`
 On a Google Compute instance | `gcloud compute ssh foo --command uname`
 
-<div style="width:200px">Find by 'owner' tag/label</div> | 
+Find by 'owner'... | Command
 --------------------------|---
 EC2 instances             | `aws ec2 describe-instances --profile foo --query 'Reservations[].Instances[].InstanceId' --filters Name=tag-key,Values=owner --output text`
 Docker containers         | `docker ps --filter “label=owner”`
 Kubernetes pods           | `kubectl get pods --all-namespaces --selector=owner`
 Google Compute instance   | `gcloud compute instances list --filter=”labels.owner:*”`
 
-<p style="text-align: center;">Table 1: Common CLI Tasks</p>
-
-From Table 1, we see that you need to use different commands to List/Read/Exec/Find different things. Furthermore, these commands require you to install different applications that each come with their own set of (possibly conflicting) dependencies, and their own calling conventions. For example, to complete all the Find tasks specified in the table, you need to:
+From this, we see that you need to use different commands to List/Read/Exec/Find different things. Furthermore, these commands require you to install different applications that each come with their own set of (possibly conflicting) dependencies, and their own calling conventions. For example, to complete all the Find tasks specified in the table, you need to:
 
 * Use the `aws ec2 describe-instances`, `docker ps`, `kubectl get pods`, `gcloud compute instances list` commands (4 different commands).
 
@@ -51,39 +49,41 @@ From Table 1, we see that you need to use different commands to List/Read/Exec/F
 
 * Learn four different-but-similar DSLs for filtering stuff, which effectively means four different-but-similar ways of constructing and combining predicates on structured data (e.g. GCP's filter expressions, Kubernetes' field selectors, Kubernetes' label selectors, aws' describe-instances' --filters option, docker ps filtering, etc.).
 
-That's a lot of stuff you have to use and learn to do some very fundamental and basic tasks. It naturally begs the question of whether there's a better way of performing these tasks that is (1) more expressive than what's presented here, and (2) does not require you to learn different commands to perform a task on different things. The answer is Wash. With Wash, here's what the invocations look like:
+That's a lot of stuff you have to use and learn to do some very fundamental and basic tasks. It naturally begs the question of whether there's a better way of performing these tasks that is (1) more expressive than what's presented here, and (2) does not require you to learn different commands to perform a task on different things.
 
-<div style="width:200px">List all</div> | 
+The answer is Wash. With Wash, here's what the invocations look like:
+
+List all... | Command
 ----------------------|---
 AWS EC2 instances     | `find aws/foo -k '*ec2*instance'`
 Docker containers     | `find docker -k '*container' `
 Kubernetes pods       | `find kubernetes -k '*pod'`
 GCP Compute instances | `find gcp -k '*compute*instance'`
 
-<div style="width:200px">Read</div>         | 
+Read... | Command
 --------------------------------------------|---
 Console output of an EC2 instance           | `cat aws/foo/resources/ec2/instances/bar/console.out`
 Console output of a Google compute instance | `cat gcp/<project>/compute/foo/console.out`
 An S3 object's content                      | `cat aws/foo/resources/s3/bar/baz`
 A GCP Storage object's content              | `cat gcp/<project>/storage/foo/bar`
 
-<div style="width:200px">Exec `uname` on </div> | 
+Exec `uname` on... | Command
 -----------------------------|---
 An EC2 instance              | `wexec aws/foo/resources/ec2/instances/bar uname`
 An a Docker container        | `wexec docker/containers/foo uname`
 Exec on a Kubernetes pod     | `wexec kubernetes/<context>/<namespace>/pods/foo uname`
 On a Google Compute instance | `wexec gcp/<project>/compute/foo uname`
 
-<div style="width:200px">Find by 'owner' tag/label</div> | 
+Find by 'owner'... | Command
 ------------------------|---
 EC2 instances           | `find aws/foo -k '*ec2*instance' -meta '.tags[?].key' owner`
 Docker containers       | `find docker -k '*container' -meta '.labels.owner' -exists`
 Kubernetes pods         | `find kubernetes -k '*pod' -meta '.metadata.labels.owner' -exists`
 Google Compute instance | `find gcp -k '*compute*instance' -meta '.labels.owner' -exists`
 
-<p style="text-align: center;">Table 2: Common CLI Tasks with Wash</p>
+Contrast this with the commands you'd ordinarily have to use. We immediately see that using Wash means:
 
-Comparing Tables 1 and 2, we immediately see that using Wash means:
+* The commands you use follow established, UNIX conventions.
 
 * You no longer have to learn different commands to execute a task across different things. All you need is one command (`find` for List/Find; `cat` for Read; and `wexec` for Exec).
 
@@ -98,5 +98,7 @@ In fact, Wash is not just a centralization of basic and fundamental commands. It
 * You can tab-complete and glob stuff (if your shell supports those features). For example, assuming you're in the `docker/containers` directory, typing in `ls f` then tab will work just the way you'd expect it to work if you were in a standard directory like `/var/log` (where f would be a regular file or directory). Similarly, `tail */fs/var/log/messages` will tail every container's `/var/log/messages` file for updates.[^1]
 
 Furthermore, Wash is built on a plugin architecture. It ships with some default plugins for Docker, AWS, Kubernetes, and GCP, but you can easily extend it with your own plugin via the external plugin interface (and you can write that plugin in any language you want, including Bash). People have written external plugins for all sorts of things such as IoT devices, Goodreads, GitHub, PuppetDB, and even Spotify.
+
+If this all sounds intriguing to you, please [download Wash](/#getting-started) Wash and [give it a try](/#wash-by-example)!
 
 [^1]: Notice that this example showcases another Wash feature: that you don't have to SSH into a bunch of different things to individually tail their logs. For example, something like `tail aws/foo/resources/ec2/instances/bar/fs/var/log/messages gcp/baz/compute/qux/fs/var/log/messages` will tail the `/var/log/messages` file on the bar EC2 instance and the qux GCP compute instance. As a fun example, the command `tail -f $(find -k 'aws/*ec2*instance' -o -k 'gcp/*compute*instance' | sed s:$:/fs/var/log/messages:g)` will tail the `/var/log/messages` file of every EC2 instance and GCP compute instance. (Note that the intermediate sed appends `/fs/var/log/messages` to the outputted paths. Baking this logic into find considerably slows things down. Also, `fs` is short for “filesystem”. It represents the root directory of the EC2 instance/GCP compute instance).

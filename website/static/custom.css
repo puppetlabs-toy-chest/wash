@@ -86,3 +86,22 @@ blockquote {
     border-left-color: #ccc;
     padding-left: 10px;
 }
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    empty-cells: show;
+    margin: 1em 0em;
+}
+
+thead {
+    background-color: #e0e0e0;
+    color: #000;
+    text-align: left;
+    vertical-align: bottom;
+}
+
+td, th {
+    border: 1px solid #cbcbcb;
+    padding: 0.5em 1em;
+}
