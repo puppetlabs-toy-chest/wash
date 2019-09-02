@@ -20,7 +20,7 @@ jobs:
         git rm -r '*'
         touch .nojekyll
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.HOMEBREW_DEPLOY_TOKEN }}
     - name: Checkout latest tag
       run: git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
     - name: Build release website
