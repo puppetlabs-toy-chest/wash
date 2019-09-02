@@ -131,7 +131,7 @@ We've implemented a number of handy Wash commands ([docs](docs#wash-commands)):
 
 * `wash ls` - a version of `ls` that uses our API to enhance directory listings with Wash-specific info
   - _e.g. show you what primitives are supported for each resource_
-* `wash meta` - emits a resource's metadata to standard out
+* `wash meta` - emits a resource's metadata to standard output
 * `wash exec` - uses the `exec` primitive to let you invoke commands against resources
 * `wash find` - find resources using powerful selection predicates
 * `wash tail -f` - follow updates to resources that support the `stream` primitive as well as normal files
