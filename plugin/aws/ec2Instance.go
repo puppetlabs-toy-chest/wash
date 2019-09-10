@@ -264,8 +264,10 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		hostname = name.(string)
 	} else if ipaddr, ok := meta["PublicIpAddress"]; ok && ipaddr != nil {
 		hostname = ipaddr.(string)
+	} else if ipaddr, ok := meta["PrivateIpAddress"]; ok && ipaddr != nil {
+		hostname = ipaddr.(string)
 	} else {
-		return nil, fmt.Errorf("No public interface found for %v", inst)
+		return nil, fmt.Errorf("No available interface found for %v", inst)
 	}
 
 	var identityfile string
