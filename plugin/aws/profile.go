@@ -38,8 +38,8 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 		AssumeRoleTokenProvider: tokenProvider,
 		// TODO: make this configurable. Different IAM configs may allow different durations.
 		// Use the minimum IAM limit of 1 hour.
-		AssumeRoleTokenDuration: 1 * time.Hour,
-		SharedConfigState:       session.SharedConfigEnable,
+		AssumeRoleDuration: 1 * time.Hour,
+		SharedConfigState:  session.SharedConfigEnable,
 	})
 	if err != nil {
 		return nil, err
