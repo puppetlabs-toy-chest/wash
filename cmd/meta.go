@@ -61,7 +61,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 
-	cmdutil.Println(prettyMetadata)
+	cmdutil.Print(prettyMetadata)
 
 	return exitCode{0}
 }
