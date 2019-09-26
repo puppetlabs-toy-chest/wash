@@ -266,6 +266,7 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 		hostname = ipaddr.(string)
 	} else if ipaddr, ok := meta["PrivateIpAddress"]; ok && ipaddr != nil {
 		hostname = ipaddr.(string)
+		activity.Record(ctx, "No public address was found for %v, trying private IP address %v", inst, hostname)
 	} else {
 		return nil, fmt.Errorf("No available interface found for %v", inst)
 	}
