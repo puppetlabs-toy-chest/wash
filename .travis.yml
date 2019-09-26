@@ -11,6 +11,7 @@ env:
   - PROJECT_NAME=wash
   - WASH_DISABLE_ANALYTICS=true
   - HUGO_VERSION=0.57.1
+  - GOLANGCI_LINT_VERSION=v1.19.1
 jobs:
   include:
   - name: Test Go stable
@@ -23,7 +24,7 @@ jobs:
     - wash validate docker
   - name: Lint with golangci-lint
     before_script:
-    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.15.0
+    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
     script: golangci-lint run -v
   - name: Test that website builds
     install: curl -sfL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz | tar -xzC $(go env GOPATH)/bin
