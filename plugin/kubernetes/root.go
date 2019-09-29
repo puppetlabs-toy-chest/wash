@@ -43,26 +43,8 @@ func createContext(raw clientcmdapi.Config, name string, access clientcmd.Config
 
 // Init for root
 func (r *Root) Init(map[string]interface{}) error {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-	raw, err := config.RawConfig()
-	if err != nil {
-		return err
-	}
-
 	r.EntryBase = plugin.NewEntry("kubernetes")
 	r.DisableDefaultCaching()
-
-	contexts := make([]plugin.Entry, 0)
-	for name := range raw.Contexts {
-		ctx, err := createContext(raw, name, config.ConfigAccess())
-		if err != nil {
-			activity.Warnf(context.Background(), "loading context %v failed: %+v", name, err)
-			continue
-		}
-		contexts = append(contexts, ctx)
-	}
-	r.contexts = contexts
 
 	return nil
 }
@@ -92,7 +74,25 @@ func (r *Root) WrappedTypes() plugin.SchemaMap {
 
 // List returns available contexts.
 func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
-	return r.contexts, nil
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	config := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
+
+	raw, err := config.RawConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	contexts := make([]plugin.Entry, 0)
+	for name := range raw.Contexts {
+		ctx, err := createContext(raw, name, config.ConfigAccess())
+		if err != nil {
+			activity.Warnf(context.Background(), "loading context %v failed: %+v", name, err)
+			continue
+		}
+		contexts = append(contexts, ctx)
+	}
+
+	return contexts, nil
 }
 
 const rootDescription = `
