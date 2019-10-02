@@ -285,13 +285,11 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 		a.SetCrtime(t)
 	}
 	if mode, ok := mp["mode"]; ok {
-		// Even though os.FileModes are uint32 types, json.Unmarshal unmarshals them as float64.
-		// That's ok, because float64 has sufficient precision to represent all uint32 types.
-		if raw, ok := mode.(float64); ok {
-			a.SetMode(os.FileMode(raw))
-		} else {
-			return attrMungeError("mode", fmt.Errorf("mode was unexpected type %T: %v", mode, mode))
+		md, err := munge.ToUintMode(mode)
+		if err != nil {
+			return attrMungeError("mode", err)
 		}
+		a.SetMode(os.FileMode(md))
 	}
 	if size, ok := mp["size"]; ok {
 		sz, err := munge.ToSize(size)

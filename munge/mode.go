@@ -6,7 +6,10 @@ import (
 	"strconv"
 )
 
-func parseMode(mode interface{}) (uint64, error) {
+// ToUintMode converts a given mode to a uint64.
+// The mode can be either an integer or a string
+// representing an octal/hex/decimal number.
+func ToUintMode(mode interface{}) (uint64, error) {
 	switch t := mode.(type) {
 	case uint64:
 		return t, nil
@@ -14,16 +17,16 @@ func parseMode(mode interface{}) (uint64, error) {
 		return uint64(t), nil
 	case float64:
 		if t != float64(uint64(t)) {
-			return 0, fmt.Errorf("could not parse mode: the provided mode %v is a decimal number", t)
+			return 0, fmt.Errorf("the provided mode %v is a decimal number", t)
 		}
 		return uint64(t), nil
 	case string:
 		if intMode, err := strconv.ParseUint(t, 0, 32); err == nil {
 			return intMode, nil
 		}
-		return 0, fmt.Errorf("could not parse mode: the provided mode %v is not a octal/hex/decimal number", t)
+		return 0, fmt.Errorf("the provided mode %v is not a octal/hex/decimal number", t)
 	default:
-		return 0, fmt.Errorf("could not parse mode: the provided mode %v is not a uint64, int64, float64, or string", mode)
+		return 0, fmt.Errorf("the provided mode %v is not a uint64, int64, float64, or string", mode)
 	}
 }
 
@@ -34,7 +37,7 @@ func ToFileMode(mode interface{}) (os.FileMode, error) {
 	if fileMode, ok := mode.(os.FileMode); ok {
 		return fileMode, nil
 	}
-	intMode, err := parseMode(mode)
+	intMode, err := ToUintMode(mode)
 	if err != nil {
 		return 0, err
 	}
