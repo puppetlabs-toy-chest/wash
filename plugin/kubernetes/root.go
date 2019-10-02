@@ -21,7 +21,6 @@ import (
 // Root of the Kubernetes plugin
 type Root struct {
 	plugin.EntryBase
-	contexts []plugin.Entry
 }
 
 func createContext(raw clientcmdapi.Config, name string, access clientcmd.ConfigAccess) (plugin.Entry, error) {
