@@ -11,9 +11,9 @@ type ModeTestSuite struct {
 	MungeTestSuite
 }
 
-func (suite *ModeTestSuite) TestParseMode() {
+func (suite *ModeTestSuite) TestToUintMode() {
 	suite.mungeFunc = func(v interface{}) (interface{}, error) {
-		return parseMode(v)
+		return ToUintMode(v)
 	}
 	suite.runTestCases(
 		nTC(uint64(10), uint64(10)),
