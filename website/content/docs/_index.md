@@ -16,7 +16,7 @@ title= "Wash Documentation"
   * [wash stree](#wash-stree)
   * [wash tail](#wash-tail)
   * [wash validate](#wash-validate)
-  * [wash describe](#wash-describe)
+  * [wash docs](#wash-docs)
 * [Config](#config)
   * [wash.yaml](#wash-yaml)
   * [wash shell](#wash-shell)
@@ -106,9 +106,8 @@ Validate starts from the plugin root and does a breadth-first traversal of the p
 
 Each line represents validation of an entry type. The `lrsx` fields represent support for `list`, `read`, `stream`, and `execute` methods respectively, with '-' representing lack of support for a method.
 
-### wash describe
-
-Displays the entry's description (if it has one). An entry will have a description if what it is is not obvious from its path, or if there are any subtleties involved when invoking one of its supported actions (like e.g. additional configuration). If the entry's a plugin root, then the entry's description is the plugin's documentation.
+### wash docs
+Displays the entry's documentation. This is currently its description.
 
 ## Config
 
