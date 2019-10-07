@@ -98,14 +98,6 @@ find docker -k '*container'
     with '*' makes the query less dependent on a plugin's hierarchy (and hence more
     expressive).
 
-find -kind 'docker/*container'
-find -k 'docker/*container'
-    This also prints out all Docker containers. Here, the cwd is assumed to be the
-    mountpoint. Note that the reason we write 'docker/' instead of '*docker' or
-    'docker*' is because one could have multiple plugins containing the name "docker"
-    (e.g. "mock_docker", "docker_two"). Writing the pattern as 'docker/' ensures that
-    only the "docker" plugin's entries are checked.
-
 find docker aws -kind '*metadata.json'
 find docker aws -k '*metadata.json'
     This prints out all the metadata.json entries in the docker and aws plugins. Here, the
@@ -113,23 +105,23 @@ find docker aws -k '*metadata.json'
     conceptual example. It is meant to showcase how the kind primary works when multiple
     paths are passed into find.
 
-find aws -kind '*s3*bucket'
-find aws -k '*s3*bucket'
-    This prints out all S3 buckets.
+find aws/demo -kind '*s3*bucket'
+find aws/demo -k '*s3*bucket'
+    This prints out all S3 buckets in the demo profile.
 
 find docker -kind '*volumes*dir'
 find docker -k '*volumes*dir'
-	This prints out all Docker volume directories.
+    This prints out all Docker volume directories.
 
 find docker -kind '*container' -mtime -1h
 find docker -k '*container' -mtime -1h
-	This prints out all Docker containers that were modified within the last hour. Note that
-	without the kind primary, find would have visited all entries in the Docker plugin.
+    This prints out all Docker containers that were modified within the last hour. Note that
+    without the kind primary, find would have visited all entries in the Docker plugin.
 
 find -kind 'docker/*container' -o -k 'aws/*ec2*instance' -mtime -1h
 find -k 'docker/*container' -o -k 'aws/*ec2*instance' -mtime -1h
-	This prints out all Docker containers and EC2 instances that were modified within the
-	last hour.
+    This prints out all Docker containers and EC2 instances that were modified within the
+    last hour.
 
 NOTE: You can use 'stree <path>' to determine an entry's kind. For example, if <path>
 is "docker", then

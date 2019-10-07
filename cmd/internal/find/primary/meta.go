@@ -522,33 +522,33 @@ In these examples, let "m" be the value of the entry's 'meta' attribute.
     and o['value'] has expired. In the real world, this example could be combined with the
     kind primary to filter out all EC2 instances whose termination_date tag expired. The
     expression would look something like
-        find aws -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value +0h
+        find aws/demo -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value +0h
 
 -m '.tags[?]' .key termination_date -a .value -{1w}
     Same as the previous example, except this returns true if o['value'] will expire within
     the current week. In the real world, this example could be combined with the kind primary
     to filter out all EC2 instances whose termination_date tag will expire within the current
     week. The expression would look something like
-        find aws -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value -{1w}
+        find aws/demo -k '*ec2*instance' -m '.tags[?]' .key termination_date -a .value -{1w}
 
 -m '.tags[?]' .key \( sales -o product \)
     Returns true if m['tags'] has at least one object o s.t. o['key'] == sales OR product.
     In the real world, this example could be combined with the kind primary to filter out all
     EC2 instances that have a "sales" or "product" tag. The expression would look something
     like
-        find aws -k '*ec2*instance' -m '.tags[?]' .key \( sales -o product \)
+        find aws/demo -k '*ec2*instance' -m '.tags[?]' .key \( sales -o product \)
 
 -m .state.name pending -o running
     Returns true if m['state']['name'] == pending OR running. In the real world, this
     example could be combined with the kind primary to filter out pending/running EC2 instances.
     The expression would look something like
-        find aws -k '*ec2*instance' -m .state.name pending -o running
+        find aws/demo -k '*ec2*instance' -m .state.name pending -o running
 
 -m .vpcid vpc-0eb70f7f626d3db84
     Returns true if m['vpcid'] == vpc-0eb70f7f626d3db84. In the real world, this example
     could be combined with the kind primary to filter out EC2 instances attached to the VPC with ID
     vpc-0eb70f7f626d3db84. The expression would look something like
-        find aws -k '*ec2*instance' -m .vpcid vpc-0eb70f7f626d3db84
+        find aws/demo -k '*ec2*instance' -m .vpcid vpc-0eb70f7f626d3db84
 
     NOTE: With regex/glob support, this example could be shortened to something like
     "-m .vpcid vpc-0eb.*"

@@ -132,8 +132,13 @@ find . -path "docker*containers*" \( -name "*c" -o -name "*d" \) -mtime -1h
     have been parsed as '-name "*c" OR ( -name "*d" AND -mtime -1h)',
     which is a completely different predicate.
 
-find kubernetes -daystart -k '*pod' -m .status.startTime -{1d}
-    Print out all the Kubernetes pods that started today.
+find kubernetes/docker-for-desktop -daystart -k '*pod' -m .status.startTime -{1d}
+    Print out all the Kubernetes pods that started today in the docker-for-desktop
+    context. To see why this is correct, note that the -daystart option sets the
+    reference time to the start of the current day w.r.t your location. -{1d} returns
+    true if the given time value is less than 24 hours _past_ the reference time
+    (daystart). Hence, it will return true if the given time value (start time)
+    is within the current day (today).
 
 find docker/containers -daystart -fullmeta -m .state.startedAt -{1d}
     Prints out all the Docker containers that were started today. Note that the
