@@ -16,7 +16,7 @@ title: External Plugins
     - [Errors](#errors)
 - [Entry schema](#entry-schemas)
 - [Libraries](#libraries)
-- [Examples](#examples)
+- [Example Plugins](#example-plugins)
 
 # Adding an external plugin
 Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the _absolute_ path to the plugin script. An example `wash.yaml` config adding the `puppetwash` plugin is shown below:
@@ -84,7 +84,7 @@ With config
 external-plugins:
   - script: '/path/to/myplugin.rb'
 myplugin:
-  paths:
+  profiles:
     - profile_a
     - profile_b
 ```
@@ -415,7 +415,7 @@ Entry schemas are a useful way to document your plugin without having to maintai
 
 * [Wash gem](https://github.com/puppetlabs/wash-ruby)
 
-# Examples
+# Example Plugins
 
 * [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once without having to clone them
 * [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves
