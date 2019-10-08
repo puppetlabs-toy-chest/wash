@@ -379,10 +379,12 @@ This is the entry's content size.
 This is the entry's mode.
 
 #### Example JSON
+
 ```
 {
   "mode": 16832
 }
+```
 
 As a hexadecimal string
 
