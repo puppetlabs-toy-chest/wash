@@ -22,7 +22,7 @@ See https://pup.pt/wash/#getting-started for pre-requisites to run Wash.
 
 Wash is a single binary application written in Go. It uses Go modules to identify dependencies.
 
-To build it, run `go build`. To test, run `go test`.
+To build it, run `go build`. To test, run `go test ./...`.
 
 > Requires golang 1.12+.
 
