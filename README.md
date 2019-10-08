@@ -98,3 +98,5 @@ Project maintainers are not actively working on all of these things, but any of 
 
 ✓ = Implemented
 ○ = Possible, but not yet implemented
+
+See the [core plugin docs](CORE_PLUGIN_DEVELOPMENT.md) if you're interested in core plugin development.
