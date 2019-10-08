@@ -20,4 +20,6 @@ There are tons of ways to get involved with Wash, whether or not you're a progra
 
 - Have some cool ideas that could improve the tutorial? Please let us know!
 
+- Want to help us [build out or extend the shipped plugins](https://github.com/puppetlabs/wash/blob/master/CORE_PLUGIN_DEVELOPMENT.md)? Feel free to put up a PR!
+
 Come check us out on [Github](https://github.com/puppetlabs/wash), and in particular check out the [contribution guidelines](https://github.com/puppetlabs/wash/blob/master/contributing.md) and the [code of conduct](https://github.com/puppetlabs/wash/blob/master/code_of_conduct.md).
