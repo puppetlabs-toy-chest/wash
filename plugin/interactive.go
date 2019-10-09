@@ -3,6 +3,7 @@ package plugin
 import (
 	"fmt"
 	"os"
+	"sync"
 	"unsafe"
 
 	"github.com/mattn/go-isatty"
@@ -34,11 +35,18 @@ func tcSetpgrp(fd int, pgrp int) (err error) {
 	return unix.IoctlSetInt(fd, unix.TIOCSPGRP, int(uintptr(unsafe.Pointer(&v))))
 }
 
+// Only allow one Prompt call at a time. This prevents multiple plugins loading concurrently
+// from messing things up by calling Prompt concurrently.
+var promptMux sync.Mutex
+
 // Prompt prints the supplied message, then waits for input on stdin.
 func Prompt(msg string) (string, error) {
 	if !IsInteractive() {
 		return "", fmt.Errorf("not an interactive session")
 	}
+
+	promptMux.Lock()
+	defer promptMux.Unlock()
 
 	// Even if Wash is running interactively, it will not have control of STDIN while another command
 	// is running within the shell environment. If it doesn't have control and tries to read from it,

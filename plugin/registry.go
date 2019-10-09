@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sync"
 )
 
 // Registry represents the plugin registry. It is also Wash's root.
 type Registry struct {
 	EntryBase
+	mux         sync.Mutex
 	plugins     map[string]Root
 	pluginRoots []Entry
 }
@@ -25,8 +27,8 @@ func NewRegistry() *Registry {
 	return r
 }
 
-// Plugins returns a map of the currently registered
-// plugins
+// Plugins returns a map of the currently registered plugins. It should not be called
+// while registering plugins.
 func (r *Registry) Plugins() map[string]Root {
 	return r.plugins
 }
@@ -36,36 +38,40 @@ var pluginNameRegex = regexp.MustCompile("^[0-9a-zA-Z_-]+$")
 // RegisterPlugin initializes the given plugin and adds it to the registry if
 // initialization was successful.
 func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) error {
-	registerPlugin := func() {
+	registerPlugin := func(initSucceeded bool) {
+		r.mux.Lock()
+		if initSucceeded {
+			if !pluginNameRegex.MatchString(root.name()) {
+				msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.name())
+				panic(msg)
+			}
+
+			if _, ok := r.plugins[root.name()]; ok {
+				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.name())
+				panic(msg)
+			}
+		}
+
 		r.plugins[root.name()] = root
 		r.pluginRoots = append(r.pluginRoots, root)
+		r.mux.Unlock()
 	}
 
 	if err := root.Init(config); err != nil {
 		// Create a stubPluginRoot so that Wash users can see the plugin's
 		// documentation via 'describe <plugin>'. This is important b/c the
 		// plugin docs also include details on how to set it up. Note that
-		// 'describe <plugin>' will not work for external plugins. This is because
+		// 'docs <plugin>' will not work for external plugins. This is because
 		// the plugin documentation is contained in the root's description, and
 		// the root's description is contained in the root's schema. Retrieving
 		// an external plugin root's schema requires a successful Init invocation,
 		// which is not the case here.
 		root = newStubRoot(root)
-		registerPlugin()
+		registerPlugin(false)
 		return err
 	}
 
-	if !pluginNameRegex.MatchString(root.name()) {
-		msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.name())
-		panic(msg)
-	}
-
-	if _, ok := r.plugins[root.name()]; ok {
-		msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.name())
-		panic(msg)
-	}
-
-	registerPlugin()
+	registerPlugin(true)
 	return nil
 }
 

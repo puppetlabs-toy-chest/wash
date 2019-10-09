@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"sync"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -203,16 +204,24 @@ func (s *Server) Stop() {
 
 func (s *Server) loadPlugins(registry *plugin.Registry) {
 	log.Debug("Loading plugins")
+	var wg sync.WaitGroup
+	var fail sync.Once
 	anyFailed := false
+
 	for name, root := range s.plugins {
 		log.Infof("Loading %v", name)
-		if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
-			// %+v is a convention used by some errors to print additional context such as a stack trace
-			log.Warnf("%v failed to load: %+v", name, err)
-			anyFailed = true
-		}
+		wg.Add(1)
+		go func(name string, root plugin.Root) {
+			if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
+				// %+v is a convention used by some errors to print additional context such as a stack trace
+				log.Warnf("%v failed to load: %+v", name, err)
+				fail.Do(func() { anyFailed = true })
+			}
+			wg.Done()
+		}(name, root)
 	}
 
+	wg.Wait()
 	if anyFailed {
 		log.Warnf("Plugins you haven't configured can be disabled by adding a 'plugins' entry to wash.yaml.\nSee https://puppetlabs.github.io/wash/docs/#wash-yaml for details.\nWash will still expose a 'stub' plugin root so that you can view its documentation via 'describe <plugin>' (for core plugins only). However, you'll need to restart the Wash daemon in order to properly reload a failed plugin.\n")
 	}
