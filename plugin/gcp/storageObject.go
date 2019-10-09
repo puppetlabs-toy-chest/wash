@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"io"
 
 	"cloud.google.com/go/storage"
 	"github.com/puppetlabs/wash/plugin"
@@ -48,7 +47,7 @@ func (r *objectReader) ReadAt(p []byte, off int64) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return io.ReadFull(rdr, p)
+	return rdr.Read(p)
 }
 
 func (r *objectReader) Size() int64 {

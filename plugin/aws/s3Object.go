@@ -122,7 +122,7 @@ func (s *s3ObjectReader) ReadAt(p []byte, off int64) (int, error) {
 	}
 	defer s.closeContent(content)
 
-	return io.ReadFull(content, p)
+	return content.Read(p)
 }
 
 func (s *s3ObjectReader) Size() int64 {
