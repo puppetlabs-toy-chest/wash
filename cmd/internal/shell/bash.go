@@ -46,7 +46,7 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 function prompter() {
   local prompt_path
   if [ -x "$(command -v realpath)" ]; then
-    prompt_path=$(realpath --relative-to=$W $(pwd))
+    prompt_path=$(realpath --relative-base=$W $(pwd))
   else
     prompt_path=$(basename $(pwd))
   fi
