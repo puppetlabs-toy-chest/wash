@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/puppetlabs/wash/activity"
@@ -35,19 +34,20 @@ func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Confi
 	cntnr.pod = p
 
 	// Find when the container was started; set this as the creation time
-	creationTimestamp := time.Now()
 	for _, ecs := range cntnr.pod.Status.ContainerStatuses {
 		if ecs.Name == cntnr.EntryBase.Name() {
-			creationTimestamp = ecs.State.Running.StartedAt.Time
+			creationTimestamp := ecs.State.Running.StartedAt.Time
+			cntnr.
+				Attributes().
+				SetAtime(creationTimestamp).
+				SetCrtime(creationTimestamp).
+				SetMtime(creationTimestamp)
 			break
 		}
 	}
 
 	cntnr.
 		Attributes().
-		SetAtime(creationTimestamp).
-		SetCrtime(creationTimestamp).
-		SetMtime(creationTimestamp).
 		SetMeta(plugin.ToJSONObject(c))
 
 	return cntnr, nil
