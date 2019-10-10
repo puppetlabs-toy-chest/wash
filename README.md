@@ -26,6 +26,8 @@ To build it, run `go build`. To test, run `go test ./...`.
 
 > Requires golang 1.12+.
 
+See the [core plugin docs](CORE_PLUGIN_DEVELOPMENT.md) if you're interested in core plugin development.
+
 The latest pre-release version of the website can be found at https://puppetlabs.github.io/wash/dev.
 
 ## Roadmap
@@ -98,5 +100,3 @@ Project maintainers are not actively working on all of these things, but any of 
 
 ✓ = Implemented
 ○ = Possible, but not yet implemented
-
-See the [core plugin docs](CORE_PLUGIN_DEVELOPMENT.md) if you're interested in core plugin development.
