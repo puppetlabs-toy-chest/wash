@@ -193,7 +193,7 @@ func ServeFuseFS(
 	log.Infof("FUSE: Mounting at %v", mountpoint)
 	fuseConn, err := fuse.Mount(mountpoint)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, mountFailedErr(err)
 	}
 
 	// Start the FUSE server. We use the serverExitedCh to catch externally triggered unmounts.
