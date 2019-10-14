@@ -1,11 +1,11 @@
 ---
 title: Writing an external plugin
 ---
-In this tutorial, we will write the `local_fs` plugin. `local_fs` lets you navigate your local filesystem. Although it isn’t practically useful, it illustrates the key concepts behind external plugin development.
+In this tutorial, we'll write a plugin called `local_fs` that lets you navigate your local filesystem. Although the plugin isn’t practically useful,  this guide illustrates the key concepts behind external plugin development.
 
-An external plugin consists of a plugin script. Wash shells out to this script whenever it needs to invoke an entry’s supported action (like `list`), or if it needs to query something about the entry (like its metadata). In a more general sense, Wash shells out to the plugin script whenever it needs to invoke an entry’s supported method. The invocation’s `stdout` will (typically) contain the method’s result, while its `stderr` will (typically) contain any errors. To list `local_fs`' children, for example, Wash will invoke `local_fs.sh list /local_fs`[^1], then parse the appropriate entry objects from stdout.
+An external plugin consists of a *plugin* script. Wash shells out to this script whenever it needs to invoke an entry’s supported action (like *list*), or if it needs to query something about the entry (like its metadata). In a more general sense, Wash shells out to the plugin script whenever it needs to invoke an entry’s supported *method*. The invocation’s `stdout` typically contains the method’s result, while its `stderr` typically contains any errors. To list `local_fs`’ children, for example, Wash invokes `local_fs.sh list /local_fs`, then parses the appropriate entry objects from `stdout`.
 
-[^1]: Technically, Wash would invoke `local_fs.sh list /local_fs ''`, where the third argument `''` (empty string) represents `local_fs`’ state. We are ignoring state in this tutorial, so the third argument will always be `''` for all plugin script invocations.
+**Note:** Technically, Wash would invoke `local_fs.sh list /local_fs ''`, where the third argument `''` (empty string) represents `local_fs`’ *state*. We are ignoring state in this tutorial, so the third argument will always be `''` for *all* plugin script invocations.
 
 To get `local_fs` working, the first thing we need to do is implement the `init` method. Wash invokes `init` on startup to retrieve information about the external plugin’s root. Start by copying the following code into a `local_fs.sh` file:
 
@@ -66,14 +66,14 @@ exit 1
 
 **Note:** Don't forget to make `local_fs.sh` executable. `chmod +x /path/to/local_fs.sh` is one way of doing that.
 
-Then invoke `local_fs init`. Your output should look something like
+Then invoke `local_fs init`. Your output should look something like this:
 
 ```
 bash-3.2$ ./tutorials/local_fs.sh init
 {"name":"local_fs","methods":["list"],"attributes":{}}
 ```
 
-The printed JSON represents `local_fs`’ root. We see that the entry’s name is `local_fs`, that it implements `list`, and that it does not have any attributes. In fact, we will soon see that every entry will be represented by similar JSON. You can also deduce this fact from the `print_entry_json` helper’s name on line 46.
+The printed JSON represents `local_fs`’ root. We see that the entry’s name is `local_fs`, that it implements `list`, and that it does not have any attributes.
 
 Now that we’ve implemented `init`, let’s go ahead and see `local_fs` in action. Add the following to your `~/.puppetlabs/wash/wash.yaml` file:
 
@@ -82,7 +82,7 @@ external-plugins:
   - script: '/Users/enis.inan/GitHub/wash/tutorials/local_fs.sh'
 ```
 
-and start-up Wash. You should see `local_fs` included in `ls`' output.
+Start-up Wash and enter an `ls`. You should see `local_fs` included in the output.
 
 ```
 bash-3.2$ wash
@@ -94,7 +94,7 @@ wash . ❯ ls
 aws        docker     gcp        kubernetes local_fs
 ```
 
-If you try to `ls local_fs`, you should get an error
+We're not done yet, so if you try to `ls local_fs`, you'll get this error:
 
 ```
 wash . ❯ ls local_fs
@@ -301,7 +301,7 @@ esac
 
 **Note:** Don’t forget to set the `STAT_CMD` variable on line 81.
 
-`ls`’ing local_fs should work now:
+Now you can `ls local_fs`:
 
 ```
 wash . ❯ ls local_fs
@@ -313,9 +313,9 @@ Dump              Movies            Sites             go
 Experiments       Music             TranslationRepos  support-tool
 ```
 
-(You should compare your output with `ls $HOME`).
+Compare your output with `ls $HOME`.
 
-Recall that `ls local_fs` invokes the `list` action on the `local_fs` entry, which reduced to invoking `local_fs.sh list /local_fs` and parsing its output. Let’s check out the latter.
+Remember, when you use `ls local_fs`, which invokes the *list* action on the `local_fs` entry, Wash invokes `local_fs.sh list /local_fs` and parses its output. Let's see what happens when we invoke the script ourselves:
 
 ```
 bash-3.2$ ./tutorials/local_fs.sh list /local_fs
@@ -349,7 +349,7 @@ bash-3.2$ ./tutorials/local_fs.sh list /local_fs
 ]
 ```
 
-Each JSON object corresponds to a child entry. For example, the `Applications` directory’s JSON object is 
+Each JSON object corresponds to a child entry. For example, the `Applications` directory’s JSON object is:
 
 ```
 {
@@ -377,9 +377,7 @@ Each JSON object corresponds to a child entry. For example, the `Applications` d
 }
 ```
 
-Notice that `list`'s output also included the children’s attributes[^2]. We can use `winfo` to check them out.
-
-[^2]: The `mode` attribute doesn't work on Mac OS so we are omitting it for now. However, we're still including it as metadata.
+Notice that `list`'s output also included the children’s attributes. We can use `winfo` to check them out.
 
 ```
 wash . ❯ winfo local_fs/Applications
@@ -394,6 +392,8 @@ Attributes:
   mtime: 2017-05-26T13:53:19-07:00
   size: 128
 ```
+
+**Note:** The `mode` attribute doesn't work on Mac OS so we are omitting it for now. However, we're still including it as metadata.
 
 We can also use `meta` to check out each child’s metadata.
 
@@ -410,9 +410,11 @@ size: 128
 uid: 503
 ```
 
-Notice that the output matches the `meta` attribute[^3]. That’s because the `meta` attribute completely describes `local_fs`' children.
+Notice that the output matches the `meta` attribute. That’s because the `meta` attribute completely describes `local_fs`' children.
 
-[^3]: Recall that the `meta` attribute represented the raw response of a "bulk" fetch. For `local_fs`, the response would be `stat`’s output.
+**Remember:** The `meta` attribute represents the raw response of a "bulk" fetch. For `local_fs`, the response would be `stat`’s output.
+
+Congratulations! You've created your own Wash plugin to emulate some common file and directory filtering via the `local_fs` plugin and Wash `find`. The Wash external plugin interface, together with the attribute and metadata abstraction, make it possible for you to filter anything on almost anything! We can't wait to see what you do with Wash. Share your creations on the Wash Slack channel.
 
 # Exercises
 1. Try `cat`’ing a file in the `local_fs` plugin. What’s the underlying plugin script invocation? Hint: It’s similar to `list`.
@@ -442,8 +444,6 @@ Notice that the output matches the `meta` attribute[^3]. That’s because the `m
     2. Find all `local_fs` entries that are owned by the user with UID 10? Hint: `find local_fs -meta '.gid' 20` give you all `local_fs` entries with GID 20.
 
         {% include exercise_answer.html answer="<code>find local_fs -meta '.uid' 10</code>" %}
-
-   The purpose of this exercise was to show you that Wash’s external plugin interface and attributes and metadata abstraction make it possible for you to filter anything on almost anything. Here, we were able to emulate some common file and directory filtering via the `local_fs` plugin and `find`. You can learn more about `find` in the [Filtering entries with find](../02_find) tutorial.
 
 # Related Links
 * [External plugin docs]({{ '/docs/external-plugins' | relative_url }})
