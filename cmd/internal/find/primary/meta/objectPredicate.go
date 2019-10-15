@@ -38,19 +38,12 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 		return nil, nil, errz.NewMatchError("expected a key sequence")
 	}
 	tk := tokens[0]
-	if tk[0] != '.' {
-		return nil, nil, errz.NewMatchError("key sequences must begin with a '.'")
+	key, rem, err := parseKeySequence(tk)
+	if err != nil {
+		return nil, nil, err
 	}
-	tk = tk[1:]
-	loc := keyRegex.FindStringIndex(tk)
-	if loc == nil {
-		return nil, nil, fmt.Errorf("expected a key sequence after '.'")
-	}
-	key := tk[loc[0]:loc[1]]
-
 	var p predicate.Predicate
-	var err error
-	if len(tk) == loc[1] {
+	if len(rem) <= 0 {
 		// tk is a single key, so it is of the form "key". This is the base case.
 		tokens = tokens[1:]
 		p, tokens, err = baseCaseParser.Parse(tokens)
@@ -58,17 +51,30 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 		// tk is a key sequence, so it is of the form "key1.key2" (or "key1[?]"). keyRegex
 		// matched the "key1" part, while the ".key2"/"[?]" parts correspond to object/array
 		// predicates. We can let keySequenceParser figure this info out for us by setting
-		// tokens[0] to the regex's postmatch prior to passing it in.
-		tokens[0] = tk[loc[1]:]
+		// tokens[0] to the remaining part of tk
+		tokens[0] = rem
 		p, tokens, err = keySequenceParser.Parse(tokens)
 	}
-
 	if err != nil {
 		if errz.IsMatchError(err) {
 			err = fmt.Errorf("expected a predicate after %v", key)
 		}
 	}
 	return objectP(key, p), tokens, err
+}
+
+func parseKeySequence(tk string) (string, string, error) {
+	if len(tk) <= 0 || tk[0] != '.' {
+		return "", "", errz.NewMatchError("key sequences must begin with a '.'")
+	}
+	tk = tk[1:]
+	loc := keyRegex.FindStringIndex(tk)
+	if loc == nil {
+		return "", "", fmt.Errorf("expected a key sequence after '.'")
+	}
+	key := tk[loc[0]:loc[1]]
+	rem := tk[loc[1]:]
+	return key, rem, nil
 }
 
 func objectP(key string, p predicate.Predicate) Predicate {

@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
@@ -11,21 +12,39 @@ type ObjectPredicateTestSuite struct {
 	parserTestSuite
 }
 
-func (s *ObjectPredicateTestSuite) TestKeyRegex() {
-	s.Regexp(keyRegex, "k")
-	s.Regexp(keyRegex, "key")
-	s.Regexp(keyRegex, "key1.key2")
-	s.Regexp(keyRegex, "key1[]")
-	s.Regexp(keyRegex, "key1]")
-	s.Regexp(keyRegex, "key1[")
+func (s *ObjectPredicateTestSuite) TestParseKeySequence() {
+	type testCase struct {
+		input    string
+		key      string
+		rem      string
+		errRegex string
+	}
+	testCases := []testCase{
+		// Error cases
+		{"", "", "", "key sequences must begin with a '.'"},
+		{"f", "", "", "key sequences must begin with a '.'"},
+		{"[", "", "", "key sequences must begin with a '.'"},
+		{"]", "", "", "key sequences must begin with a '.'"},
+		{".", "", "", "expected a key sequence after '.'"},
+		// Happy cases
+		{".k", "k", "", ""},
+		{".key", "key", "", ""},
+		{".key1.key2", "key1", ".key2", ""},
+		{".key1[]", "key1", "[]", ""},
+		{".key1]", "key1", "]", ""},
+		{".key1[", "key1", "[", ""},
+	}
 
-	s.NotRegexp(keyRegex, "")
-	s.NotRegexp(keyRegex, ".")
-	s.NotRegexp(keyRegex, "[")
-	s.NotRegexp(keyRegex, "]")
-	s.NotRegexp(keyRegex, ".key")
-	s.NotRegexp(keyRegex, "[key")
-	s.NotRegexp(keyRegex, "]key")
+	for _, testCase := range testCases {
+		key, rem, err := parseKeySequence(testCase.input)
+		if testCase.errRegex != "" {
+			errRegex := regexp.MustCompile(testCase.errRegex)
+			s.Regexp(errRegex, err)
+		} else if s.NoError(err) {
+			s.Equal(testCase.key, key)
+			s.Equal(testCase.rem, rem)
+		}
+	}
 }
 
 func (s *ObjectPredicateTestSuite) TestParseObjectPredicateErrors() {
