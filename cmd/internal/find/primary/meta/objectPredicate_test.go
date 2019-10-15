@@ -26,6 +26,9 @@ func (s *ObjectPredicateTestSuite) TestParseKeySequence() {
 		{"[", "", "", "key sequences must begin with a '.'"},
 		{"]", "", "", "key sequences must begin with a '.'"},
 		{".", "", "", "expected a key sequence after '.'"},
+		{"\\.", "", "", "key sequences must begin with a '.'"},
+		{"\\[", "", "", "key sequences must begin with a '.'"},
+		{"\\]", "", "", "key sequences must begin with a '.'"},
 		// Happy cases
 		{".k", "k", "", ""},
 		{".key", "key", "", ""},
@@ -33,6 +36,16 @@ func (s *ObjectPredicateTestSuite) TestParseKeySequence() {
 		{".key1[]", "key1", "[]", ""},
 		{".key1]", "key1", "]", ""},
 		{".key1[", "key1", "[", ""},
+		{".k\\ey", "k\\ey", "", ""},
+		{".\\.", ".", "", ""},
+		{".\\[", "[", "", ""},
+		{".\\]", "]", "", ""},
+		{".foo\\.bar\\[baz\\].", "foo.bar[baz]", ".", ""},
+		{".foo\\.bar\\[baz\\][", "foo.bar[baz]", "[", ""},
+		{".foo\\.bar\\[baz\\]]", "foo.bar[baz]", "]", ""},
+		{".k\\\\ey", "k\\\\ey", "", ""},
+		{".k\\\\.ey", "k\\.ey", "", ""},
+		{".k\\\\\\.ey", "k\\\\.ey", "", ""},
 	}
 
 	for _, testCase := range testCases {

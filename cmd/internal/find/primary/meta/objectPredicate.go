@@ -2,23 +2,13 @@ package meta
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/errz"
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
 )
 
-// A key consists of one or more characters that aren't
-// ".", "[", or "]". The reason we have this limitation
-// is so we can support key sequences, which includes
-// nested keys like ".key1.key2", ".key1[?].key2", etc.
-// key sequences aren't specified in the grammar because
-// they make it harder to formalize the semantics.
-var keyRegex = regexp.MustCompile(`^([^\.\[\]]+)`)
-
 // ObjectPredicate => EmptyPredicate | ‘.’ Key Predicate
-// Key             => keyRegex
 func parseObjectPredicate(tokens []string) (predicate.Predicate, []string, error) {
 	if p, tokens, err := parseEmptyPredicate(tokens); err == nil {
 		return p, tokens, err
@@ -63,17 +53,48 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 	return objectP(key, p), tokens, err
 }
 
+// A key consists of one or more characters that aren't
+// ".", "[", or "]". The reason we have this limitation
+// is so we can support key sequences, which includes
+// nested keys like ".key1.key2", ".key1[?].key2", etc.
+// key sequences aren't specified in the grammar because
+// they make it harder to formalize the semantics.
+//
+// NOTE: Users can still specify ".", "[", or "]" by escaping
+// them with a backslash "\". For example, '.com\.docker\.compose'
+// would be parsed as the key "com.docker.compose".
 func parseKeySequence(tk string) (string, string, error) {
+	isTerminatingChar := func(char byte) bool {
+		return char == '.' || char == '[' || char == ']'
+	}
+
 	if len(tk) <= 0 || tk[0] != '.' {
 		return "", "", errz.NewMatchError("key sequences must begin with a '.'")
 	}
-	tk = tk[1:]
-	loc := keyRegex.FindStringIndex(tk)
-	if loc == nil {
+	key := ""
+	rem := tk[1:]
+	for {
+		if len(rem) <= 0 {
+			break
+		}
+		if isTerminatingChar(rem[0]) {
+			break
+		}
+		if rem[0] == '\\' {
+			// Lookahead and check for an escaped character
+			if len(rem) > 1 && isTerminatingChar(rem[1]) {
+				key += string(rem[1])
+				rem = rem[2:]
+				continue
+			}
+			// Otherwise, include "\" as part of the key
+		}
+		key += string(rem[0])
+		rem = rem[1:]
+	}
+	if len(key) <= 0 {
 		return "", "", fmt.Errorf("expected a key sequence after '.'")
 	}
-	key := tk[loc[0]:loc[1]]
-	rem := tk[loc[1]:]
 	return key, rem, nil
 }
 
