@@ -7,23 +7,18 @@ import (
 	"github.com/spf13/cobra"
 
 	apitypes "github.com/puppetlabs/wash/api/types"
-	"github.com/puppetlabs/wash/cmd/internal/config"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
 )
 
 func lsCommand() *cobra.Command {
-	aliases := []string{}
-	if !config.Embedded {
-		aliases = []string{"ls"}
-	}
 	lsCmd := &cobra.Command{
-		Use:     "ls [<file>]",
-		Aliases: aliases,
-		Short:   "Lists the resources at the indicated path",
-		Args:    cobra.MaximumNArgs(1),
-		RunE:    toRunE(lsMain),
+		Use:   "ls [<path>]",
+		Short: "Lists the resources at the indicated path",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  toRunE(lsMain),
 	}
+	lsCmd.Flags().BoolP("long", "l", false, "List in long format")
 	return lsCmd
 }
 
@@ -39,6 +34,14 @@ func format(t time.Time) string {
 	return t.Format(time.RFC822)
 }
 
+func cname(entry apitypes.Entry) string {
+	cname := entry.CName
+	if entry.Supports(plugin.ListAction()) {
+		cname += "/"
+	}
+	return cname
+}
+
 func formatLSEntries(ls []apitypes.Entry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
@@ -51,17 +54,7 @@ func formatLSEntries(ls []apitypes.Entry) string {
 
 		verbs := strings.Join(entry.Actions, ", ")
 
-		name := entry.CName
-		if len(ls) > 1 && i == 0 {
-			// Represent the pwd as "."
-			name = "."
-		}
-
-		if entry.Supports(plugin.ListAction()) {
-			name += "/"
-		}
-
-		table[i] = []string{name, mtimeStr, verbs}
+		table[i] = []string{cname(entry), mtimeStr, verbs}
 	}
 	return cmdutil.NewTableWithHeaders(headers(), table).Format()
 }
@@ -72,23 +65,36 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	if len(args) > 0 {
 		path = args[0]
 	}
+	longFormat, err := cmd.Flags().GetBool("long")
+	if err != nil {
+		panic(err.Error())
+	}
 
 	conn := cmdutil.NewClient()
-	e, err := conn.Info(path)
+	entry, err := conn.Info(path)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	entries := []apitypes.Entry{e}
-	if e.Supports(plugin.ListAction()) {
+
+	var entries []apitypes.Entry
+	if !entry.Supports(plugin.ListAction()) {
+		entries = []apitypes.Entry{entry}
+	} else {
 		children, err := conn.List(path)
 		if err != nil {
 			cmdutil.ErrPrintf("%v\n", err)
 			return exitCode{1}
 		}
-		entries = append(entries, children...)
+		entries = children
 	}
 
-	cmdutil.Print(formatLSEntries(entries))
+	if longFormat {
+		cmdutil.Print(formatLSEntries(entries))
+	} else {
+		for _, entry := range entries {
+			cmdutil.Println(cname(entry))
+		}
+	}
 	return exitCode{0}
 }
