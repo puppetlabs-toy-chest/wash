@@ -29,6 +29,7 @@ func (s *ObjectPredicateTestSuite) TestParseKey() {
 		{"\\.", "", "", "key sequences must begin with a '.'"},
 		{"\\[", "", "", "key sequences must begin with a '.'"},
 		{"\\]", "", "", "key sequences must begin with a '.'"},
+		{".\\e", "", "", "no escapable character specified after the '\\\\'"},
 		// Happy cases
 		{".k", "k", "", ""},
 		{".key", "key", "", ""},
@@ -36,26 +37,26 @@ func (s *ObjectPredicateTestSuite) TestParseKey() {
 		{".key1[]", "key1", "[]", ""},
 		{".key1]", "key1", "]", ""},
 		{".key1[", "key1", "[", ""},
-		{".k\\ey", "k\\ey", "", ""},
 		{".\\.", ".", "", ""},
 		{".\\[", "[", "", ""},
 		{".\\]", "]", "", ""},
+		{".\\\\", "\\", "", ""},
 		{".foo\\.bar\\[baz\\].", "foo.bar[baz]", ".", ""},
 		{".foo\\.bar\\[baz\\][", "foo.bar[baz]", "[", ""},
 		{".foo\\.bar\\[baz\\]]", "foo.bar[baz]", "]", ""},
-		{".k\\\\ey", "k\\\\ey", "", ""},
-		{".k\\\\.ey", "k\\.ey", "", ""},
-		{".k\\\\\\.ey", "k\\\\.ey", "", ""},
+		{".k\\\\.ey", "k\\", ".ey", ""},
 	}
 
 	for _, testCase := range testCases {
-		key, rem, err := parseKey(testCase.input)
+		input := testCase.input
+		inputMsg := "Input: " + input
+		key, rem, err := parseKey(input)
 		if testCase.errRegex != "" {
 			errRegex := regexp.MustCompile(testCase.errRegex)
-			s.Regexp(errRegex, err)
-		} else if s.NoError(err) {
-			s.Equal(testCase.key, key)
-			s.Equal(testCase.rem, rem)
+			s.Regexp(errRegex, err, inputMsg)
+		} else if s.NoError(err, inputMsg) {
+			s.Equal(testCase.key, key, inputMsg)
+			s.Equal(testCase.rem, rem, inputMsg)
 		}
 	}
 }

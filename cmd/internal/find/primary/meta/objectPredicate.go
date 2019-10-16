@@ -67,6 +67,9 @@ func parseKey(tk string) (string, string, error) {
 	isTerminatingChar := func(char byte) bool {
 		return char == '.' || char == '[' || char == ']'
 	}
+	isEscapableChar := func(char byte) bool {
+		return isTerminatingChar(char) || char == '\\'
+	}
 
 	if len(tk) <= 0 || tk[0] != '.' {
 		return "", "", errz.NewMatchError("key sequences must begin with a '.'")
@@ -81,13 +84,11 @@ func parseKey(tk string) (string, string, error) {
 			break
 		}
 		if rem[0] == '\\' {
-			// Lookahead and check for an escaped character
-			if len(rem) > 1 && isTerminatingChar(rem[1]) {
-				key += string(rem[1])
-				rem = rem[2:]
-				continue
+			// Lookahead and check for an escapable character
+			if len(rem) <= 1 || !isEscapableChar(rem[1]) {
+				return "", "", fmt.Errorf("no escapable character specified after the '\\'")
 			}
-			// Otherwise, include "\" as part of the key
+			rem = rem[1:]
 		}
 		key += string(rem[0])
 		rem = rem[1:]
