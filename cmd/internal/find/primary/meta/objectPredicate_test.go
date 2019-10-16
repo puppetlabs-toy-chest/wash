@@ -12,7 +12,7 @@ type ObjectPredicateTestSuite struct {
 	parserTestSuite
 }
 
-func (s *ObjectPredicateTestSuite) TestParseKeySequence() {
+func (s *ObjectPredicateTestSuite) TestParseKey() {
 	type testCase struct {
 		input    string
 		key      string
@@ -49,7 +49,7 @@ func (s *ObjectPredicateTestSuite) TestParseKeySequence() {
 	}
 
 	for _, testCase := range testCases {
-		key, rem, err := parseKeySequence(testCase.input)
+		key, rem, err := parseKey(testCase.input)
 		if testCase.errRegex != "" {
 			errRegex := regexp.MustCompile(testCase.errRegex)
 			s.Regexp(errRegex, err)

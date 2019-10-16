@@ -28,7 +28,7 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 		return nil, nil, errz.NewMatchError("expected a key sequence")
 	}
 	tk := tokens[0]
-	key, rem, err := parseKeySequence(tk)
+	key, rem, err := parseKey(tk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,7 +63,7 @@ func parseObjectP(tokens []string, baseCaseParser, keySequenceParser predicate.P
 // NOTE: Users can still specify ".", "[", or "]" by escaping
 // them with a backslash "\". For example, '.com\.docker\.compose'
 // would be parsed as the key "com.docker.compose".
-func parseKeySequence(tk string) (string, string, error) {
+func parseKey(tk string) (string, string, error) {
 	isTerminatingChar := func(char byte) bool {
 		return char == '.' || char == '[' || char == ']'
 	}
