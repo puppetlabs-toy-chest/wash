@@ -172,6 +172,9 @@ matches 'foo'.
       Returns true if some element in m['foo'] is an object o s.t.
       p(o['bar']) returns true.
 
+NOTE: You can use a backslash "\" to escape ".", "[", "]", or "\". For
+example, '.foo\.bar p' returns p(m['foo.bar']).
+
 PREDICATE EXPRESSIONS:
 Predicate expression syntax is structurally identical to the top-level
 expression syntax (type "wash find -h syntax" to get an overview of the

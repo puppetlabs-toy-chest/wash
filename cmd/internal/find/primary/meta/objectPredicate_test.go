@@ -1,6 +1,7 @@
 package meta
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/puppetlabs/wash/cmd/internal/find/parser/predicate"
@@ -11,21 +12,53 @@ type ObjectPredicateTestSuite struct {
 	parserTestSuite
 }
 
-func (s *ObjectPredicateTestSuite) TestKeyRegex() {
-	s.Regexp(keyRegex, "k")
-	s.Regexp(keyRegex, "key")
-	s.Regexp(keyRegex, "key1.key2")
-	s.Regexp(keyRegex, "key1[]")
-	s.Regexp(keyRegex, "key1]")
-	s.Regexp(keyRegex, "key1[")
+func (s *ObjectPredicateTestSuite) TestParseKey() {
+	type testCase struct {
+		input    string
+		key      string
+		rem      string
+		errRegex string
+	}
+	testCases := []testCase{
+		// Error cases
+		{"", "", "", "key sequences must begin with a '.'"},
+		{"f", "", "", "key sequences must begin with a '.'"},
+		{"[", "", "", "key sequences must begin with a '.'"},
+		{"]", "", "", "key sequences must begin with a '.'"},
+		{".", "", "", "expected a key sequence after '.'"},
+		{"\\.", "", "", "key sequences must begin with a '.'"},
+		{"\\[", "", "", "key sequences must begin with a '.'"},
+		{"\\]", "", "", "key sequences must begin with a '.'"},
+		{".\\e", "", "", "no escapable character specified after the '\\\\'"},
+		// Happy cases
+		{".k", "k", "", ""},
+		{".key", "key", "", ""},
+		{".key1.key2", "key1", ".key2", ""},
+		{".key1[]", "key1", "[]", ""},
+		{".key1]", "key1", "]", ""},
+		{".key1[", "key1", "[", ""},
+		{".\\.", ".", "", ""},
+		{".\\[", "[", "", ""},
+		{".\\]", "]", "", ""},
+		{".\\\\", "\\", "", ""},
+		{".foo\\.bar\\[baz\\].", "foo.bar[baz]", ".", ""},
+		{".foo\\.bar\\[baz\\][", "foo.bar[baz]", "[", ""},
+		{".foo\\.bar\\[baz\\]]", "foo.bar[baz]", "]", ""},
+		{".k\\\\.ey", "k\\", ".ey", ""},
+	}
 
-	s.NotRegexp(keyRegex, "")
-	s.NotRegexp(keyRegex, ".")
-	s.NotRegexp(keyRegex, "[")
-	s.NotRegexp(keyRegex, "]")
-	s.NotRegexp(keyRegex, ".key")
-	s.NotRegexp(keyRegex, "[key")
-	s.NotRegexp(keyRegex, "]key")
+	for _, testCase := range testCases {
+		input := testCase.input
+		inputMsg := "Input: " + input
+		key, rem, err := parseKey(input)
+		if testCase.errRegex != "" {
+			errRegex := regexp.MustCompile(testCase.errRegex)
+			s.Regexp(errRegex, err, inputMsg)
+		} else if s.NoError(err, inputMsg) {
+			s.Equal(testCase.key, key, inputMsg)
+			s.Equal(testCase.rem, rem, inputMsg)
+		}
+	}
 }
 
 func (s *ObjectPredicateTestSuite) TestParseObjectPredicateErrors() {
