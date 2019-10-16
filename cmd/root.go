@@ -153,7 +153,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 
 	addCommand(rootCmd, versionCommand())
 	addCommand(rootCmd, metaCommand())
-	addCommand(rootCmd, listCommand())
+	addCommand(rootCmd, lsCommand())
 	addCommand(rootCmd, execCommand())
 	addCommand(rootCmd, psCommand())
 	addCommand(rootCmd, findCommand())
