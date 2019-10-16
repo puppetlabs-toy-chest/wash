@@ -71,7 +71,15 @@ func Actions() map[string]Action {
 func SupportedActionsOf(entry Entry) []string {
 	switch t := entry.(type) {
 	case externalPlugin:
-		return t.supportedMethods()
+		var supportedActions []string
+		for _, method := range t.supportedMethods() {
+			// This ensures that we don't return methods like "metadata"/"schema",
+			// which are not valid Wash actions.
+			if _, ok := actions[method]; ok {
+				supportedActions = append(supportedActions, method)
+			}
+		}
+		return supportedActions
 	default:
 		actions := make([]string, 0)
 
