@@ -196,7 +196,7 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 // When using the reader returned by this method, use idempotent read operations
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
-func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
+func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})

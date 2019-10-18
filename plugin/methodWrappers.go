@@ -111,3 +111,13 @@ func Schema(e Entry) (*EntrySchema, error) {
 func List(ctx context.Context, p Parent) (map[string]Entry, error) {
 	return cachedList(ctx, p)
 }
+
+// Open reads the entry's content. Note that Open's results could be cached. Thus, when
+// using the reader returned by this method, use idempotent read operations such as ReadAt
+// or wrap it in a SectionReader. Using Read operations on the cached reader will change it
+// and make subsequent uses of the cached reader invalid.
+//
+// TODO: Could we change this to Read? E.g. plugin.Read.
+func Open(ctx context.Context, r Readable) (SizedReader, error) {
+	return cachedOpen(ctx, r)
+}

@@ -346,7 +346,7 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 func (suite *CacheTestSuite) TestCachedOpen() {
 	mockReader := strings.NewReader("foo")
 	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedOpen(ctx, e.(Readable))
+		return cachedOpen(ctx, e.(Readable))
 	})
 }
 
