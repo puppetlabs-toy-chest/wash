@@ -197,8 +197,7 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	suite.Equal(1, len(entries))
 	suite.Contains(entries, "path")
 
-	_, err = plugin.ClearCacheFor("/instance/fs")
-	suite.NoError(err)
+	_ = plugin.ClearCacheFor("/instance/fs")
 	entries, err = plugin.List(suite.ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries))

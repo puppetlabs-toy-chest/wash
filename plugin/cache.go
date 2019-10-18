@@ -63,15 +63,15 @@ const opQualifier = "^[a-zA-Z]+::"
 // This method exists to simplify ClearCacheFor's tests.
 // Specifically, it lets us decouple the regex's correctness
 // from the cache's implementation.
-func opKeysRegex(path string) (*regexp.Regexp, error) {
+func opKeysRegex(path string) *regexp.Regexp {
 	var expr string
 	if path == "/" {
 		expr = opQualifier + "/.*"
 	} else {
-		expr = opQualifier + "/" + strings.Trim(path, "/") + "($|/.*)"
+		expr = opQualifier + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "($|/.*)"
 	}
 
-	return regexp.Compile(expr)
+	return regexp.MustCompile(expr)
 }
 
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
@@ -79,13 +79,9 @@ func opKeysRegex(path string) (*regexp.Regexp, error) {
 //
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
-func ClearCacheFor(path string) ([]string, error) {
-	rx, err := opKeysRegex(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return cache.Delete(rx), nil
+func ClearCacheFor(path string) []string {
+	rx := opKeysRegex(path)
+	return cache.Delete(rx)
 }
 
 type opFunc func() (interface{}, error)

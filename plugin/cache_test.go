@@ -62,17 +62,6 @@ func (suite *CacheTestSuite) TearDownTest() {
 	UnsetTestCache()
 }
 
-func (suite *CacheTestSuite) opKeysRegex(path string) *regexp.Regexp {
-	rx, err := opKeysRegex(path)
-	if err != nil {
-		suite.FailNow(
-			fmt.Sprintf("opKeysRegex unexpectedly errored with %v", err),
-		)
-	}
-
-	return rx
-}
-
 func (suite *CacheTestSuite) TestOpNameRegex() {
 	suite.Regexp(opNameRegex, "a")
 	suite.Regexp(opNameRegex, "A")
@@ -89,7 +78,7 @@ func (suite *CacheTestSuite) TestOpNameRegex() {
 }
 
 func (suite *CacheTestSuite) TestOpKeysRegex() {
-	rx := suite.opKeysRegex("/a")
+	rx := opKeysRegex("/a")
 
 	// Test that it matches children
 	suite.Regexp(rx, "Test::/a/b")
@@ -103,22 +92,25 @@ func (suite *CacheTestSuite) TestOpKeysRegex() {
 	suite.NotRegexp(rx, "Test::/bc/d")
 
 	// Test that it matches root, and children of root
-	rx = suite.opKeysRegex("/")
+	rx = opKeysRegex("/")
 	suite.Regexp(rx, "Test::/")
 	suite.Regexp(rx, "Test::/a")
 	suite.Regexp(rx, "Test::/a/b")
 
+	// Test that it matches a path containing regex characters
+	rx = opKeysRegex("/foo*[]")
+	suite.Regexp(rx, "Test::/foo*[]")
+	suite.Regexp(rx, "Test::/foo*[]/bar(")
+	suite.Regexp(rx, "Test::/foo*[]/bar(/baz)")
 }
 
 func (suite *CacheTestSuite) TestClearCache() {
 	path := "/a"
-	rx := suite.opKeysRegex(path)
+	rx := opKeysRegex(path)
 
 	suite.cache.On("Delete", rx).Return([]string{"/a"})
-	deleted, err := ClearCacheFor(path)
-	if !suite.NoError(err) {
-		suite.Equal([]string{"/a"}, deleted)
-	}
+	deleted := ClearCacheFor(path)
+	suite.Equal([]string{"/a"}, deleted)
 }
 
 type cacheTestsMockEntry struct {
