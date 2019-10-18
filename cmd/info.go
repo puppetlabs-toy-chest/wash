@@ -18,17 +18,12 @@ func infoCommand() *cobra.Command {
 		RunE:    toRunE(infoMain),
 	}
 	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
-	infoCmd.Flags().BoolP("include-meta", "", false, "Include the meta attribute")
 	return infoCmd
 }
 
 func infoMain(cmd *cobra.Command, args []string) exitCode {
 	path := args[0]
 	output, err := cmd.Flags().GetString("output")
-	if err != nil {
-		panic(err.Error())
-	}
-	includeMeta, err := cmd.Flags().GetBool("include-meta")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -53,7 +48,7 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 	entryMap.Put("Name", entry.Name)
 	entryMap.Put("CName", entry.CName)
 	entryMap.Put("Actions", entry.Actions)
-	entryMap.Put("Attributes", entry.Attributes.ToMap(includeMeta))
+	entryMap.Put("Attributes", entry.Attributes.ToMap(false))
 
 	marshalledEntry, err := marshaller.Marshal(entryMap)
 	if err != nil {
