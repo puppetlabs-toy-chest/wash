@@ -353,7 +353,7 @@ func (suite *CacheTestSuite) TestCachedOpen() {
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockJSONObject := JSONObject{"foo": "bar"}
 	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockJSONObject, mockJSONObject, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedMetadata(ctx, e)
+		return cachedMetadata(ctx, e)
 	})
 }
 

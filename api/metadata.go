@@ -37,7 +37,7 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 		return errResp
 	}
 
-	metadata, err := plugin.CachedMetadata(ctx, entry)
+	metadata, err := plugin.Metadata(ctx, entry)
 
 	if err != nil {
 		return unknownErrorResponse(err)

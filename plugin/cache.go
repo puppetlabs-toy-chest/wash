@@ -208,8 +208,8 @@ func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 	return cachedContent.(SizedReader), nil
 }
 
-// CachedMetadata caches an entry's Metadata method
-func CachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
+// cachedMetadata caches an entry's Metadata method
+func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
 		return e.Metadata(ctx)
 	})

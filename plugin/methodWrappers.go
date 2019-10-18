@@ -121,3 +121,8 @@ func List(ctx context.Context, p Parent) (map[string]Entry, error) {
 func Open(ctx context.Context, r Readable) (SizedReader, error) {
 	return cachedOpen(ctx, r)
 }
+
+// Metadata returns the entry's metadata. Note that Metadata's results could be cached.
+func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
+	return cachedMetadata(ctx, e)
+}
