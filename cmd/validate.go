@@ -338,7 +338,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 	if plugin.ExecAction().IsSupportedOn(e) {
 		const testMessage = "hello"
 		obj, cancelFunc, err := withTimeout(ctx, "exec", name, func(ctx context.Context) (interface{}, error) {
-			return e.(plugin.Execable).Exec(ctx, "echo", []string{testMessage}, plugin.ExecOptions{})
+			return plugin.Exec(ctx, e.(plugin.Execable), "echo", []string{testMessage}, plugin.ExecOptions{})
 		})
 		if err != nil {
 			errs <- err

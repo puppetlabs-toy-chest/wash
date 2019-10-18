@@ -126,3 +126,8 @@ func Open(ctx context.Context, r Readable) (SizedReader, error) {
 func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
 	return cachedMetadata(ctx, e)
 }
+
+// Exec execs the command on the given entry.
+func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
+	return e.Exec(ctx, cmd, args, opts)
+}

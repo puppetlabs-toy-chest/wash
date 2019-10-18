@@ -32,7 +32,7 @@ func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, erro
 // invocation to analytics. Otherwise, use e#Exec.
 func ExecWithAnalytics(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	submitMethodInvocation(ctx, e, "Exec")
-	return e.Exec(ctx, cmd, args, opts)
+	return Exec(ctx, e, cmd, args, opts)
 }
 
 func submitMethodInvocation(ctx context.Context, e Entry, method string) {
