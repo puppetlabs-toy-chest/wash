@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	stsClient "github.com/aws/aws-sdk-go/service/sts"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -75,4 +76,41 @@ func (p *profile) ChildSchemas() []*plugin.EntrySchema {
 // List lists the resources directory
 func (p *profile) List(ctx context.Context) ([]plugin.Entry, error) {
 	return p.resourcesDir, nil
+}
+
+type profileMetadata struct {
+	AccessKeyID  string
+	Account      *string
+	Arn          *string
+	Name         string
+	ProviderName string
+	Region       *string
+	UserID       *string
+}
+
+// Metadata for AWS Profile
+func (p *profile) Metadata(ctx context.Context) (plugin.JSONObject, error) {
+	cred, err := p.session.Config.Credentials.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	stsC := stsClient.New(p.session)
+	request := &stsClient.GetCallerIdentityInput{}
+	resp, err := stsC.GetCallerIdentityWithContext(ctx, request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata profileMetadata
+	metadata.AccessKeyID = cred.AccessKeyID
+	metadata.Account = resp.Account
+	metadata.Arn = resp.Arn
+	metadata.Name = p.Name()
+	metadata.ProviderName = cred.ProviderName
+	metadata.Region = p.session.Config.Region
+	metadata.UserID = resp.UserId
+
+	return plugin.ToJSONObject(metadata), nil
 }
