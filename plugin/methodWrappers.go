@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -101,4 +102,12 @@ func IsPrefetched(e Entry) bool {
 // Schema returns the entry's schema.
 func Schema(e Entry) (*EntrySchema, error) {
 	return schema(e)
+}
+
+// List lists the parent's children. It returns a map of <entry_cname> => <entry_object>
+// to optimize querying a specific entry.
+//
+// Note that List's results could be cached.
+func List(ctx context.Context, p Parent) (map[string]Entry, error) {
+	return cachedList(ctx, p)
 }

@@ -149,7 +149,7 @@ func (c DuplicateCNameErr) Error() string {
 //
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
-func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
+func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 	cachedEntries, err := cachedDefaultOp(ctx, ListOp, p, func() (interface{}, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used

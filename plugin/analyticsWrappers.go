@@ -7,11 +7,11 @@ import (
 	"github.com/puppetlabs/wash/activity"
 )
 
-// ListWithAnalytics is a wrapper to plugin.CachedList. Use it when you need to report
-// a 'List' invocation to analytics. Otherwise, use plugin.CachedList
+// ListWithAnalytics is a wrapper to plugin.List. Use it when you need to report
+// a 'List' invocation to analytics. Otherwise, use plugin.List
 func ListWithAnalytics(ctx context.Context, p Parent) (map[string]Entry, error) {
 	submitMethodInvocation(ctx, p, "List")
-	return CachedList(ctx, p)
+	return List(ctx, p)
 }
 
 // OpenWithAnalytics is a wrapper to plugin.CachedOpen. Use it when you need to report
