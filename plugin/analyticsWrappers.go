@@ -7,30 +7,30 @@ import (
 	"github.com/puppetlabs/wash/activity"
 )
 
-// List is a wrapper to plugin.CachedList. Use it when you need to report
+// ListWithAnalytics is a wrapper to plugin.CachedList. Use it when you need to report
 // a 'List' invocation to analytics. Otherwise, use plugin.CachedList
-func List(ctx context.Context, p Parent) (map[string]Entry, error) {
+func ListWithAnalytics(ctx context.Context, p Parent) (map[string]Entry, error) {
 	submitMethodInvocation(ctx, p, "List")
 	return CachedList(ctx, p)
 }
 
-// Open is a wrapper to plugin.CachedOpen. Use it when you need to report
+// OpenWithAnalytics is a wrapper to plugin.CachedOpen. Use it when you need to report
 // a 'Read' invocation to analytics. Otherwise, use plugin.CachedOpen
-func Open(ctx context.Context, r Readable) (SizedReader, error) {
+func OpenWithAnalytics(ctx context.Context, r Readable) (SizedReader, error) {
 	submitMethodInvocation(ctx, r, "Read")
 	return CachedOpen(ctx, r)
 }
 
-// Stream is a wrapper to s#Stream. Use it when you need to report a 'Stream'
+// StreamWithAnalytics is a wrapper to s#Stream. Use it when you need to report a 'Stream'
 // invocation to analytics. Otherwise, use s#Stream
-func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
+func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	submitMethodInvocation(ctx, s, "Stream")
 	return s.Stream(ctx)
 }
 
-// Exec is a wrapper to e#Exec. Use it when you need to report an 'Exec'
+// ExecWithAnalytics is a wrapper to e#Exec. Use it when you need to report an 'Exec'
 // invocation to analytics. Otherwise, use e#Exec.
-func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
+func ExecWithAnalytics(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	submitMethodInvocation(ctx, e, "Exec")
 	return e.Exec(ctx, cmd, args, opts)
 }

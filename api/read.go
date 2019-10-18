@@ -35,7 +35,7 @@ var readHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unsupportedActionResponse(path, plugin.ReadAction())
 	}
 
-	content, err := plugin.Open(ctx, entry.(plugin.Readable))
+	content, err := plugin.OpenWithAnalytics(ctx, entry.(plugin.Readable))
 
 	if err != nil {
 		return erroredActionResponse(path, plugin.ReadAction(), err.Error())
