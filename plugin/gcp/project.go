@@ -27,12 +27,12 @@ func newProject(p *crm.Project, client *http.Client) *project {
 
 // List all services as dirs.
 func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
-	comp, err := newComputeDir(p.client, p.id)
+	comp, err := newComputeDir(ctx, p.client, p.id)
 	if err != nil {
 		return nil, err
 	}
 
-	stor, err := newStorageDir(p.client, p.id)
+	stor, err := newStorageDir(ctx, p.client, p.id)
 	if err != nil {
 		return nil, err
 	}

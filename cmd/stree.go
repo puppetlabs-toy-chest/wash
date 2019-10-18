@@ -15,7 +15,11 @@ func streeCommand() *cobra.Command {
 		Use:   "stree [<path>...]",
 		Short: "Displays the entry's stree (schema-tree)",
 		Long: `Displays the entry's stree (schema-tree), which is a high-level overview of the entry's
-hierarchy. Non-singleton types are bracketed with "[]".`,
+hierarchy. Non-singleton types are bracketed with "[]".
+
+If a subdirectory is listed in 'stree' but not visible in your directory then you are
+likely lacking permissions to enumerate that type of resource. View the 'whistory' entry
+for listing the directory to see why it's not included.`,
 		RunE: toRunE(streeMain),
 	}
 	return streeCmd

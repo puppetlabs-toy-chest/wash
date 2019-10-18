@@ -18,12 +18,15 @@ type s3Dir struct {
 	client  *s3Client.S3
 }
 
-func newS3Dir(session *session.Session) *s3Dir {
+func newS3Dir(ctx context.Context, session *session.Session) *s3Dir {
 	s3Dir := &s3Dir{
 		EntryBase: plugin.NewEntry("s3"),
 	}
 	s3Dir.session = session
 	s3Dir.client = s3Client.New(session)
+	if _, err := plugin.List(ctx, s3Dir); err != nil {
+		s3Dir.MarkInaccessible(ctx, err)
+	}
 	return s3Dir
 }
 

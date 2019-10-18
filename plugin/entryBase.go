@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"time"
+
+	"github.com/puppetlabs/wash/activity"
 )
 
 type defaultOpCode int8
@@ -43,6 +45,7 @@ type EntryBase struct {
 	ttl             [3]time.Duration
 	wrappedTypesMap SchemaMap
 	prefetched      bool
+	inaccessible    bool
 }
 
 // NewEntry creates a new entry
@@ -131,6 +134,17 @@ func (e *EntryBase) Attributes() *EntryAttributes {
 func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 	e.attr = attr
 	return e
+}
+
+func (e *EntryBase) isInaccessible() bool {
+	return e.inaccessible
+}
+
+// MarkInaccessible sets the inaccessible attribute and logs a message about why the entry is
+// inaccessible.
+func (e *EntryBase) MarkInaccessible(ctx context.Context, err error) {
+	activity.Record(ctx, "Omitting %v: %v", e.id(), err)
+	e.inaccessible = true
 }
 
 // Prefetched marks the entry as a prefetched entry. A prefetched entry

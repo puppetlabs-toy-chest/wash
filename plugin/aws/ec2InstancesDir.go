@@ -21,12 +21,15 @@ type ec2InstancesDir struct {
 	client  *ec2Client.EC2
 }
 
-func newEC2InstancesDir(session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
+func newEC2InstancesDir(ctx context.Context, session *session.Session, client *ec2Client.EC2) *ec2InstancesDir {
 	ec2InstancesDir := &ec2InstancesDir{
 		EntryBase: plugin.NewEntry("instances"),
 	}
 	ec2InstancesDir.session = session
 	ec2InstancesDir.client = client
+	if _, err := plugin.List(ctx, ec2InstancesDir); err != nil {
+		ec2InstancesDir.MarkInaccessible(ctx, err)
+	}
 	return ec2InstancesDir
 }
 

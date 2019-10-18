@@ -52,6 +52,7 @@ type Entry interface {
 	wrappedTypes() map[interface{}]*JSONSchema
 	setWrappedTypes(map[interface{}]*JSONSchema)
 	isPrefetched() bool
+	isInaccessible() bool
 }
 
 /*
