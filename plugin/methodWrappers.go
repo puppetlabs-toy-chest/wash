@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 )
@@ -130,4 +131,9 @@ func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
 // Exec execs the command on the given entry.
 func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	return e.Exec(ctx, cmd, args, opts)
+}
+
+// Stream streams the entry's content for updates.
+func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
+	return s.Stream(ctx)
 }

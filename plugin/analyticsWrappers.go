@@ -25,7 +25,7 @@ func OpenWithAnalytics(ctx context.Context, r Readable) (SizedReader, error) {
 // invocation to analytics. Otherwise, use s#Stream
 func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	submitMethodInvocation(ctx, s, "Stream")
-	return s.Stream(ctx)
+	return Stream(ctx, s)
 }
 
 // ExecWithAnalytics is a wrapper to e#Exec. Use it when you need to report an 'Exec'

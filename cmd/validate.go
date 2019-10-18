@@ -324,7 +324,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 
 	if plugin.StreamAction().IsSupportedOn(e) {
 		obj, cancelFunc, err := withTimeout(ctx, "stream", name, func(ctx context.Context) (interface{}, error) {
-			return e.(plugin.Streamable).Stream(ctx)
+			return plugin.Stream(ctx, e.(plugin.Streamable))
 		})
 		if err != nil {
 			errs <- err
