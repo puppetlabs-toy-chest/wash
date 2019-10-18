@@ -149,7 +149,7 @@ func (c DuplicateCNameErr) Error() string {
 //
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
-func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
+func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 	cachedEntries, err := cachedDefaultOp(ctx, ListOp, p, func() (interface{}, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
@@ -196,7 +196,7 @@ func CachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 // When using the reader returned by this method, use idempotent read operations
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
-func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
+func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
 		return r.Open(ctx)
 	})
@@ -208,8 +208,8 @@ func CachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 	return cachedContent.(SizedReader), nil
 }
 
-// CachedMetadata caches an entry's Metadata method
-func CachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
+// cachedMetadata caches an entry's Metadata method
+func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
 		return e.Metadata(ctx)
 	})

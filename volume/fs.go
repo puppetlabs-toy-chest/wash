@@ -64,7 +64,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 	// it interactively, see character device vs named pipe on /dev/stderr as an example. This also
 	// ensures we cleanup correctly when the context is cancelled.
 	opts := plugin.ExecOptions{Elevate: true, Tty: plugin.IsInteractive()}
-	cmd, err := executor.Exec(ctx, cmdline[0], cmdline[1:], opts)
+	cmd, err := plugin.Exec(ctx, executor, cmdline[0], cmdline[1:], opts)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, e
 func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
 	execOpts := plugin.ExecOptions{Elevate: true, Tty: true}
-	cmd, err := d.executor.Exec(ctx, "tail", []string{"-f", path}, execOpts)
+	cmd, err := plugin.Exec(ctx, d.executor, "tail", []string{"-f", path}, execOpts)
 	if err != nil {
 		activity.Record(ctx, "Exec error in VolumeRead: %v", err)
 		return nil, err

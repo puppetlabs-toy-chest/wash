@@ -90,7 +90,7 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	if body.Opts.Input != "" {
 		opts.Stdin = strings.NewReader(body.Opts.Input)
 	}
-	cmd, err := plugin.Exec(ctx, entry.(plugin.Execable), body.Cmd, body.Args, opts)
+	cmd, err := plugin.ExecWithAnalytics(ctx, entry.(plugin.Execable), body.Cmd, body.Args, opts)
 	if err != nil {
 		return erroredActionResponse(path, plugin.ExecAction(), err.Error())
 	}

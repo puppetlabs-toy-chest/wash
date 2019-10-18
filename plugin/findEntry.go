@@ -13,7 +13,7 @@ func FindEntry(ctx context.Context, start Entry, segments []string) (Entry, erro
 		switch curParent := start.(type) {
 		case Parent:
 			// Get the entries via. List()
-			entries, err := CachedList(ctx, curParent)
+			entries, err := List(ctx, curParent)
 			if err != nil {
 				return nil, err
 			}

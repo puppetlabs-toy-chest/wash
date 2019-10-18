@@ -87,7 +87,7 @@ func (suite *CacheHandlerTestSuite) TestRejectsGet() {
 }
 
 func (suite *CacheHandlerTestSuite) TestClearCache() {
-	// Populate the cache with a mocked resource and plugin.Cached*
+	// Populate the cache with a mocked resource and plugin.cached*
 	parent := newMockedParent()
 	parent.SetTestID("/dir")
 	parent.On("List", mock.Anything).Return([]plugin.Entry{}, nil)
@@ -95,7 +95,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	reqCtx := context.WithValue(context.Background(), mountpointKey, "/")
 
 	expectedChildren := make(map[string]plugin.Entry)
-	if children, err := plugin.CachedList(reqCtx, parent); suite.Nil(err) {
+	if children, err := plugin.List(reqCtx, parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
@@ -106,7 +106,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal("[]\n", w.Body.String())
 
-	if children, err := plugin.CachedList(context.Background(), parent); suite.Nil(err) {
+	if children, err := plugin.List(context.Background(), parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 
@@ -117,7 +117,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(http.StatusOK, w.Code)
 	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
 
-	if children, err := plugin.CachedList(context.Background(), parent); suite.Nil(err) {
+	if children, err := plugin.List(context.Background(), parent); suite.Nil(err) {
 		suite.Equal(expectedChildren, children)
 	}
 

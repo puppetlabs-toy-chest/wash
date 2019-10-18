@@ -46,7 +46,7 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	}
 
 	parent := entry.(plugin.Parent)
-	entries, err := plugin.List(ctx, parent)
+	entries, err := plugin.ListWithAnalytics(ctx, parent)
 	if err != nil {
 		if cnameErr, ok := err.(plugin.DuplicateCNameErr); ok {
 			return duplicateCNameResponse(cnameErr)

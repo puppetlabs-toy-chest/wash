@@ -276,7 +276,7 @@ func (suite *CacheTestSuite) TestCachedListDefaultOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
 	mungedOpValue := toMap(mockChildren)
 	suite.testCachedDefaultOp(ListOp, "List", mockChildren, mungedOpValue, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedList(ctx, e.(Parent))
+		return cachedList(ctx, e.(Parent))
 	})
 }
 
@@ -293,7 +293,7 @@ func (suite *CacheTestSuite) TestCachedListCNameErrors() {
 	child3 := newCacheTestsMockEntry("baz")
 	mockChildren := []Entry{child1, child2, child3}
 	entry.On("List", mock.Anything).Return(mockChildren, nil).Once()
-	_, err := CachedList(ctx, entry)
+	_, err := cachedList(ctx, entry)
 	if suite.Error(err) {
 		expectedErr := DuplicateCNameErr{
 			ParentID:                 "/my_plugin/foo",
@@ -321,7 +321,7 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.SetTestID("/")
 	entry.DisableDefaultCaching()
 	entry.On("List", mock.Anything).Return(mockChildren, nil).Once()
-	children, err := CachedList(ctx, entry)
+	children, err := cachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(toMap(mockChildren), children) {
 			suite.Equal("/foo#child1", children["foo#child1"].id())
@@ -334,7 +334,7 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.SetTestID("/parent")
 	entry.DisableDefaultCaching()
 	entry.On("List", mock.Anything).Return(mockChildren, nil).Once()
-	children, err = CachedList(ctx, entry)
+	children, err = cachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(toMap(mockChildren), children) {
 			suite.Equal("/parent/foo#child1", children["foo#child1"].id())
@@ -346,14 +346,14 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 func (suite *CacheTestSuite) TestCachedOpen() {
 	mockReader := strings.NewReader("foo")
 	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedOpen(ctx, e.(Readable))
+		return cachedOpen(ctx, e.(Readable))
 	})
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockJSONObject := JSONObject{"foo": "bar"}
 	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockJSONObject, mockJSONObject, func(ctx context.Context, e Entry) (interface{}, error) {
-		return CachedMetadata(ctx, e)
+		return cachedMetadata(ctx, e)
 	})
 }
 

@@ -42,7 +42,7 @@ func (m *MetadataJSONFile) Schema() *EntrySchema {
 
 // Open returns the metadata of the `other` entry as its content.
 func (m *MetadataJSONFile) Open(ctx context.Context) (SizedReader, error) {
-	meta, err := CachedMetadata(ctx, m.other)
+	meta, err := Metadata(ctx, m.other)
 	if err != nil {
 		return nil, err
 	}

@@ -64,7 +64,7 @@ func TestVolumeFile(t *testing.T) {
 		assert.Equal(t, "hello", string(buf))
 	}
 
-	rdr2, err := vf.Stream(context.Background())
+	rdr2, err := plugin.Stream(context.Background(), vf)
 	assert.Nil(t, err)
 	if assert.NotNil(t, rdr2) {
 		buf, err := ioutil.ReadAll(rdr2)
@@ -82,7 +82,7 @@ func TestVolumeFileErr(t *testing.T) {
 	assert.Nil(t, rdr)
 	assert.Equal(t, errors.New("fail"), err)
 
-	rdr2, err := vf.Stream(context.Background())
+	rdr2, err := plugin.Stream(context.Background(), vf)
 	assert.Nil(t, rdr2)
 	assert.Equal(t, errors.New("fail"), err)
 }

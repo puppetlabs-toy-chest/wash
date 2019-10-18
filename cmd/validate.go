@@ -138,10 +138,10 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 		wg.Done()
 	}()
 
-	// Use CachedList on the registry to ensure cache IDs are generated.
-	entries, err := plugin.CachedList(ctx, registry)
+	// Use List on the registry to ensure cache IDs are generated.
+	entries, err := plugin.List(ctx, registry)
 	if err != nil {
-		panic("CachedList on registry should not fail")
+		panic("List on registry should not fail")
 	}
 
 	// We use a worker pool to limit work-in-progress. Put the plugin on the worker pool.
@@ -265,7 +265,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 
 	if plugin.ListAction().IsSupportedOn(e) {
 		obj, cancelFunc, err := withTimeout(ctx, "list", name, func(ctx context.Context) (interface{}, error) {
-			return plugin.CachedList(ctx, e.(plugin.Parent))
+			return plugin.List(ctx, e.(plugin.Parent))
 		})
 		if err != nil {
 			errs <- err
@@ -312,7 +312,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 
 	if plugin.ReadAction().IsSupportedOn(e) {
 		_, cancelFunc, err := withTimeout(ctx, "read", name, func(ctx context.Context) (interface{}, error) {
-			return plugin.CachedOpen(ctx, e.(plugin.Readable))
+			return plugin.Open(ctx, e.(plugin.Readable))
 		})
 		if err != nil {
 			errs <- err
@@ -324,7 +324,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 
 	if plugin.StreamAction().IsSupportedOn(e) {
 		obj, cancelFunc, err := withTimeout(ctx, "stream", name, func(ctx context.Context) (interface{}, error) {
-			return e.(plugin.Streamable).Stream(ctx)
+			return plugin.Stream(ctx, e.(plugin.Streamable))
 		})
 		if err != nil {
 			errs <- err
@@ -338,7 +338,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 	if plugin.ExecAction().IsSupportedOn(e) {
 		const testMessage = "hello"
 		obj, cancelFunc, err := withTimeout(ctx, "exec", name, func(ctx context.Context) (interface{}, error) {
-			return e.(plugin.Execable).Exec(ctx, "echo", []string{testMessage}, plugin.ExecOptions{})
+			return plugin.Exec(ctx, e.(plugin.Execable), "echo", []string{testMessage}, plugin.ExecOptions{})
 		})
 		if err != nil {
 			errs <- err
