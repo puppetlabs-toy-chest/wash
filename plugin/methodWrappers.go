@@ -97,3 +97,8 @@ func Attributes(e Entry) EntryAttributes {
 func IsPrefetched(e Entry) bool {
 	return e.isPrefetched()
 }
+
+// Schema returns the entry's schema.
+func Schema(e Entry) (*EntrySchema, error) {
+	return schema(e)
+}

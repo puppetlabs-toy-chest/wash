@@ -23,9 +23,7 @@ func TypeID(e Entry) string {
 	return namespace(pluginName, rawTypeID)
 }
 
-// Schema returns the entry's schema. It is needed by the API,
-// so plugin authors should ignore this.
-func Schema(e Entry) (*EntrySchema, error) {
+func schema(e Entry) (*EntrySchema, error) {
 	switch t := e.(type) {
 	case externalPlugin:
 		return t.schema()
