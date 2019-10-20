@@ -689,6 +689,32 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestDelete() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		methods:   map[string]interface{}{"delete": nil},
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockInvokeAndWait := func(err error) {
+		mockScript.OnInvokeAndWait(ctx, "delete", entry).Return(mockInvocation([]byte{}), err).Once()
+	}
+
+	// Test that if InvokeAndWait errors, then Delete returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockInvokeAndWait(mockErr)
+	err := entry.Delete(ctx)
+	suite.EqualError(mockErr, err.Error())
+
+	// Test that Delete properly deletes the entry
+	mockInvokeAndWait(nil)
+	err = entry.Delete(ctx)
+	suite.NoError(err)
+}
+
 // TODO: Add tests for stdoutStreamer, Stream and Exec
 // once the API for Stream and Exec's at a more stable
 // state.
