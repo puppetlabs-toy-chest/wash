@@ -39,6 +39,7 @@ type Client interface {
 	// A "nil" schema means that the schema's unknown.
 	Schema(path string) (*apitypes.EntrySchema, error)
 	Screenview(name string, params analytics.Params) error
+	Delete(path string) error
 }
 
 // A domainSocketClient is a wash API client.
@@ -290,5 +291,11 @@ func (c *domainSocketClient) Screenview(name string, params analytics.Params) er
 		return err
 	}
 	_, err = c.doRequest(http.MethodPost, "/analytics/screenview", url.Values{}, bytes.NewReader(jsonBody))
+	return err
+}
+
+// Delete deletes the entry at "path"
+func (c *domainSocketClient) Delete(path string) error {
+	_, err := c.doRequest(http.MethodDelete, "/fs/delete", url.Values{"path": []string{path}}, nil)
 	return err
 }
