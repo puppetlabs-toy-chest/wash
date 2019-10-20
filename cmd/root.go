@@ -163,6 +163,7 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	addCommand(rootCmd, infoCommand())
 	addCommand(rootCmd, streeCommand())
 	addCommand(rootCmd, docsCommand())
+	addCommand(rootCmd, deleteCommand())
 
 	return rootCmd
 }
