@@ -117,6 +117,28 @@ func (suite *RegistryTestSuite) TestRegisterPluginRegisteredPlugin() {
 	suite.Panics(panicFunc, "r.RegisterPlugin: the mine plugin's already been registered")
 }
 
+type mockRootWithDelete struct {
+	*mockRoot
+}
+
+func (m *mockRootWithDelete) Delete(ctx context.Context) error {
+	return nil
+}
+
+func (suite *RegistryTestSuite) TestRegisterPluginPluginRootImplementsDelete() {
+	panicFunc := func() {
+		reg := NewRegistry()
+		m := &mockRootWithDelete{
+			mockRoot: &mockRoot{
+				EntryBase: NewEntry("mine"),
+			},
+		}
+		_ = reg.RegisterPlugin(m, map[string]interface{}{})
+	}
+
+	suite.Panics(panicFunc, "r.RegisterPlugin: the mine plugin's root implements delete")
+}
+
 func TestRegistry(t *testing.T) {
 	suite.Run(t, new(RegistryTestSuite))
 }

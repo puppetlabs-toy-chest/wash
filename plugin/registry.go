@@ -50,6 +50,11 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.name())
 				panic(msg)
 			}
+
+			if DeleteAction().IsSupportedOn(root) {
+				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's root implements delete", root.name())
+				panic(msg)
+			}
 		}
 
 		r.plugins[root.name()] = root
