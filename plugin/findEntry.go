@@ -19,7 +19,7 @@ func FindEntry(ctx context.Context, start Entry, segments []string) (Entry, erro
 			}
 
 			// Search for the specific entry
-			entry, ok := entries[segment]
+			entry, ok := entries.Load(segment)
 			if !ok {
 				reason := fmt.Sprintf("The %v entry does not exist", segment)
 				if len(visitedSegments) != 0 {

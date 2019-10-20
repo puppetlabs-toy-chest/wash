@@ -55,12 +55,13 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return erroredActionResponse(path, plugin.ListAction(), err.Error())
 	}
 
-	result := make([]apitypes.Entry, 0, len(entries))
-	for _, entry := range entries {
+	result := make([]apitypes.Entry, 0, entries.Len())
+	entries.Range(func(_ string, entry plugin.Entry) bool {
 		apiEntry := toAPIEntry(entry)
 		apiEntry.Path = path + "/" + apiEntry.CName
 		result = append(result, apiEntry)
-	}
+		return true
+	})
 	// Sort entries so they have a deterministic order.
 	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
 	activity.Record(ctx, "API: List %v %+v", path, result)

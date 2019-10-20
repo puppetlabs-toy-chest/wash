@@ -96,7 +96,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 
 	expectedChildren := make(map[string]plugin.Entry)
 	if children, err := plugin.List(reqCtx, parent); suite.Nil(err) {
-		suite.Equal(expectedChildren, children)
+		suite.Equal(expectedChildren, children.Map())
 	}
 
 	// Test clearing a different cache
@@ -107,7 +107,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal("[]\n", w.Body.String())
 
 	if children, err := plugin.List(context.Background(), parent); suite.Nil(err) {
-		suite.Equal(expectedChildren, children)
+		suite.Equal(expectedChildren, children.Map())
 	}
 
 	// Test clearing the cache
@@ -118,7 +118,7 @@ func (suite *CacheHandlerTestSuite) TestClearCache() {
 	suite.Equal(`["List::/dir"]`, strings.TrimSpace(w.Body.String()))
 
 	if children, err := plugin.List(context.Background(), parent); suite.Nil(err) {
-		suite.Equal(expectedChildren, children)
+		suite.Equal(expectedChildren, children.Map())
 	}
 
 	parent.AssertNumberOfCalls(suite.T(), "List", 2)

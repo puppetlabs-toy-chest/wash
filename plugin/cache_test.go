@@ -266,7 +266,8 @@ func toMap(children []Entry) map[string]Entry {
 
 func (suite *CacheTestSuite) TestCachedListDefaultOp() {
 	mockChildren := []Entry{newCacheTestsMockEntry("mockChild")}
-	mungedOpValue := toMap(mockChildren)
+	mungedOpValue := newEntryMap()
+	mungedOpValue.mp = toMap(mockChildren)
 	suite.testCachedDefaultOp(ListOp, "List", mockChildren, mungedOpValue, func(ctx context.Context, e Entry) (interface{}, error) {
 		return cachedList(ctx, e.(Parent))
 	})
@@ -315,9 +316,9 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.On("List", mock.Anything).Return(mockChildren, nil).Once()
 	children, err := cachedList(ctx, entry)
 	if suite.NoError(err) {
-		if suite.Equal(toMap(mockChildren), children) {
-			suite.Equal("/foo#child1", children["foo#child1"].id())
-			suite.Equal("/child2", children["child2"].id())
+		if suite.Equal(toMap(mockChildren), children.mp) {
+			suite.Equal("/foo#child1", children.mp["foo#child1"].id())
+			suite.Equal("/child2", children.mp["child2"].id())
 		}
 	}
 
@@ -328,9 +329,9 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	entry.On("List", mock.Anything).Return(mockChildren, nil).Once()
 	children, err = cachedList(ctx, entry)
 	if suite.NoError(err) {
-		if suite.Equal(toMap(mockChildren), children) {
-			suite.Equal("/parent/foo#child1", children["foo#child1"].id())
-			suite.Equal("/parent/child2", children["child2"].id())
+		if suite.Equal(toMap(mockChildren), children.mp) {
+			suite.Equal("/parent/foo#child1", children.mp["foo#child1"].id())
+			suite.Equal("/parent/child2", children.mp["child2"].id())
 		}
 	}
 }

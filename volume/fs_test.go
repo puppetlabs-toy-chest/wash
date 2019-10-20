@@ -79,12 +79,13 @@ func (suite *fsTestSuite) find(parent plugin.Parent, path string) plugin.Entry {
 		if !suite.NoError(err) {
 			suite.FailNow("Listing entries failed")
 		}
-		for nm, match := range entries {
+		entries.Range(func(nm string, match plugin.Entry) bool {
 			if nm == name {
 				entry = match
-				break
+				return false
 			}
-		}
+			return true
+		})
 	}
 	suite.Equal(names[len(names)-1], plugin.Name(entry))
 	return entry
@@ -158,17 +159,17 @@ func (suite *fsTestSuite) TestFSListTwice() {
 	if !suite.NoError(err) {
 		suite.FailNow("Listing entries failed")
 	}
-	suite.Equal(1, len(entries))
-	suite.Contains(entries, "path")
+	suite.Equal(1, entries.Len())
+	suite.Contains(entries.Map(), "path")
 
-	entries1, err := plugin.List(suite.ctx, entries["path"].(plugin.Parent))
+	entries1, err := plugin.List(suite.ctx, entries.Map()["path"].(plugin.Parent))
 	if suite.NoError(err) {
-		suite.Equal(1, len(entries1))
-		suite.Contains(entries1, "has")
-		entries2, err := plugin.List(suite.ctx, entries1["has"].(plugin.Parent))
+		suite.Equal(1, entries1.Len())
+		suite.Contains(entries1.Map(), "has")
+		entries2, err := plugin.List(suite.ctx, entries1.Map()["has"].(plugin.Parent))
 		if suite.NoError(err) {
-			suite.Equal(1, len(entries2))
-			suite.Contains(entries2, "got")
+			suite.Equal(1, entries2.Len())
+			suite.Contains(entries2.Map(), "got")
 		}
 	}
 }
@@ -194,13 +195,13 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	if !suite.NoError(err) {
 		suite.FailNow("Listing entries failed")
 	}
-	suite.Equal(1, len(entries))
-	suite.Contains(entries, "path")
+	suite.Equal(1, entries.Len())
+	suite.Contains(entries.Map(), "path")
 
 	_ = plugin.ClearCacheFor("/instance/fs")
 	entries, err = plugin.List(suite.ctx, entry)
 	if suite.NoError(err) {
-		suite.Equal(1, len(entries))
+		suite.Equal(1, entries.Len())
 	}
 	suite.Implements((*plugin.Parent)(nil), suite.find(fs, "var/log"))
 }

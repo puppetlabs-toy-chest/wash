@@ -33,6 +33,7 @@ var listAction = newAction("list", "Parent")
 var readAction = newAction("read", "Readable")
 var streamAction = newAction("stream", "Streamable")
 var execAction = newAction("exec", "Execable")
+var deleteAction = newAction("delete", "Deletable")
 
 // ListAction represents the list action
 func ListAction() Action {
@@ -52,6 +53,11 @@ func StreamAction() Action {
 // ExecAction represents the exec action
 func ExecAction() Action {
 	return execAction
+}
+
+// DeleteAction represents the delete action
+func DeleteAction() Action {
+	return deleteAction
 }
 
 // Actions returns all of the available Wash actions as a map
@@ -97,6 +103,9 @@ func SupportedActionsOf(entry Entry) []string {
 		}
 		if _, ok := entry.(Execable); ok {
 			actions = append(actions, ExecAction().Name)
+		}
+		if _, ok := entry.(Deletable); ok {
+			actions = append(actions, DeleteAction().Name)
 		}
 
 		return actions

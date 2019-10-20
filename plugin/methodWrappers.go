@@ -105,11 +105,11 @@ func Schema(e Entry) (*EntrySchema, error) {
 	return schema(e)
 }
 
-// List lists the parent's children. It returns a map of <entry_cname> => <entry_object>
-// to optimize querying a specific entry.
+// List lists the parent's children. It returns an EntryMap to optimize querying a specific
+// entry.
 //
 // Note that List's results could be cached.
-func List(ctx context.Context, p Parent) (map[string]Entry, error) {
+func List(ctx context.Context, p Parent) (*EntryMap, error) {
 	return cachedList(ctx, p)
 }
 
@@ -136,4 +136,21 @@ func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecO
 // Stream streams the entry's content for updates.
 func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	return s.Stream(ctx)
+}
+
+// Delete deletes the given entry.
+func Delete(ctx context.Context, d Deletable) error {
+	if err := d.Delete(ctx); err != nil {
+		return err
+	}
+	ClearCacheFor(ID(d))
+	// Delete this entry from the parent's cached list result
+	segments := strings.Split(d.id(), "/")
+	parentID := strings.Join(segments[:len(segments)-1], "/")
+	entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID)
+	if entries != nil {
+		cname := segments[len(segments)-1]
+		entries.(*EntryMap).Delete(cname)
+	}
+	return nil
 }

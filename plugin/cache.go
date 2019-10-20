@@ -146,7 +146,7 @@ func (c DuplicateCNameErr) Error() string {
 //
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
-func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
+func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 	cachedEntries, err := cachedDefaultOp(ctx, ListOp, p, func() (interface{}, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
@@ -156,11 +156,11 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 			return nil, err
 		}
 
-		searchedEntries := make(map[string]Entry)
+		searchedEntries := newEntryMap()
 		for _, entry := range entries {
 			cname := CName(entry)
 
-			if duplicateEntry, ok := searchedEntries[cname]; ok {
+			if duplicateEntry, ok := searchedEntries.mp[cname]; ok {
 				return nil, DuplicateCNameErr{
 					ParentID:                 p.id(),
 					FirstChildName:           duplicateEntry.name(),
@@ -175,7 +175,8 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 				// Skip entries that are expected to be inaccessible.
 				continue
 			}
-			searchedEntries[cname] = entry
+
+			searchedEntries.mp[cname] = entry
 
 			// Ensure ID is set on all entries so that we can use it for caching later in places
 			// where the context doesn't include the parent's ID.
@@ -191,7 +192,7 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 		return nil, err
 	}
 
-	return cachedEntries.(map[string]Entry), nil
+	return cachedEntries.(*EntryMap), nil
 }
 
 // CachedOpen caches a Readable object's Open method.
