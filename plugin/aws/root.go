@@ -49,15 +49,15 @@ func awsConfigFile() (string, error) {
 	return filepath.Join(homedir, ".aws", "config"), nil
 }
 
-func exists(path string) error {
+func exists(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("could not load any profiles: the %v file does not exist", path)
+			return false, nil
 		}
 
-		return err
+		return false, err
 	}
-	return nil
+	return true, nil
 }
 
 // Init for root
@@ -108,7 +108,8 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	if err := exists(awsCredentials); err != nil {
+	awsCredentialsExists, err := exists(awsCredentials)
+	if err != nil {
 		return nil, err
 	}
 
@@ -117,31 +118,47 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	if err := exists(awsConfig); err != nil {
+	awsConfigExists, err := exists(awsConfig)
+	if err != nil {
 		return nil, err
 	}
 
-	activity.Record(ctx, "Loading profiles from %v and %v", awsConfig, awsCredentials)
-
-	cred, err := ini.Load(awsCredentials)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %v: %v", awsCredentials, err)
+	if !awsCredentialsExists && !awsConfigExists {
+		return nil, fmt.Errorf("could not load any profiles: the %v and %v files do not exist", awsCredentials, awsConfig)
 	}
 
-	config, err := ini.Load(awsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read %v: %v", awsConfig, err)
+	var loadedFiles string
+	if awsCredentialsExists && awsConfigExists {
+		loadedFiles = fmt.Sprintf("%v and %v", awsCredentials, awsConfig)
+	} else if !awsCredentialsExists {
+		loadedFiles = fmt.Sprintf("%v", awsConfig)
+	} else {
+		loadedFiles = fmt.Sprintf("%v", awsCredentials)
 	}
+	activity.Record(ctx, "Loading profiles from %v", loadedFiles)
 
 	names := make(map[string]struct{})
-	for _, section := range cred.Sections() {
-		names[section.Name()] = struct{}{}
+
+	if awsCredentialsExists {
+		cred, err := ini.Load(awsCredentials)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %v: %v", awsCredentials, err)
+		}
+		for _, section := range cred.Sections() {
+			names[section.Name()] = struct{}{}
+		}
 	}
-	for _, section := range config.Sections() {
-		// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
-		// Named profiles in config begin with 'profile '. Trim that so config and credentials
-		// entries match up.
-		names[strings.TrimPrefix(section.Name(), "profile ")] = struct{}{}
+	if awsConfigExists {
+		config, err := ini.Load(awsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %v: %v", awsConfig, err)
+		}
+		for _, section := range config.Sections() {
+			// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
+			// Named profiles in config begin with 'profile '. Trim that so config and credentials
+			// entries match up.
+			names[strings.TrimPrefix(section.Name(), "profile ")] = struct{}{}
+		}
 	}
 
 	profiles := make([]plugin.Entry, 0, len(names))
