@@ -12,7 +12,7 @@ title: Docs
   * [wash find](#wash-find)
   * [wash history](#wash-history)
   * [wash info](#wash-info)
-  * [wash list/ls](#wash-list-ls)
+  * [wash ls](#wash-ls)
   * [wash meta](#wash-meta)
   * [wash ps](#wash-ps)
   * [wash server](#wash-server)
@@ -99,7 +99,7 @@ Journals are stored in `wash/activity` under your user cache directory, identifi
 
 Print all info Wash has about the specified path, including filesystem attributes and metadata.
 
-### wash list/ls
+### wash ls
 
 Lists the resources at the indicated path.
 

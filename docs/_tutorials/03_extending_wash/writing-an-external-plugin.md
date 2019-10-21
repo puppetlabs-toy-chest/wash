@@ -91,43 +91,19 @@ Welcome to Wash!
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'
 wash . ❯ ls
-aws        docker     gcp        kubernetes local_fs
+aws/
+docker/
+gcp/
+kubernetes/
+local_fs/
 ```
 
 We're not done yet, so if you try to `ls local_fs`, you'll get this error:
 
 ```
 wash . ❯ ls local_fs
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
-STDERR:
-No other entries have been implemented.
-WARN FUSE: List /local_fs errored: script returned a non-zero exit code of 1
-COMMAND: (PID 60927) /Users/enis.inan/GitHub/wash/tutorials/local_fs.sh list /local_fs ''
+puppetlabs.wash/errored-action: The list action errored on /Users/enis.inan/Library/Caches/wash/mnt863144881/local_fs: script returned a non-zero exit code of 1
+COMMAND: (PID 74196) /Users/enis.inan/GitHub/wash/local_fs.sh list /local_fs ''
 STDERR:
 No other entries have been implemented.
 ```
@@ -305,15 +281,35 @@ Now you can `ls local_fs`:
 
 ```
 wash . ❯ ls local_fs
-Applications      GitHub            PGitHub           Tutorials         svn
-Desktop           Installs          Pictures          Upload            workspace
-Documents         Library           Public            UsefulScripts
-Downloads         Misc              Ruby              eclipse-workspace
-Dump              Movies            Sites             go
-Experiments       Music             TranslationRepos  support-tool
+Applications/
+Desktop/
+Documents/
+Downloads/
+Dump/
+Experiments/
+GitHub/
+Installs/
+Library/
+Misc/
+Movies/
+Music/
+PGitHub/
+Pictures/
+Public/
+Ruby/
+Sites/
+TranslationRepos/
+Tutorials/
+Upload/
+UsefulScripts/
+eclipse-workspace/
+go/
+support-tool/
+svn/
+workspace/
 ```
 
-Compare your output with `ls $HOME`.
+Compare your output with `ls $HOME` (ignoring the hidden files).
 
 Remember, when you use `ls local_fs`, which invokes the *list* action on the `local_fs` entry, Wash invokes `local_fs.sh list /local_fs` and parses its output. Let's see what happens when we invoke the script ourselves:
 
