@@ -42,13 +42,14 @@ type decodedCacheTTLs struct {
 
 // decodedExternalPluginEntry describes a decoded serialized entry.
 type decodedExternalPluginEntry struct {
-	TypeID        string           `json:"type_id"`
-	Name          string           `json:"name"`
-	Methods       []interface{}    `json:"methods"`
-	SlashReplacer string           `json:"slash_replacer"`
-	CacheTTLs     decodedCacheTTLs `json:"cache_ttls"`
-	Attributes    EntryAttributes  `json:"attributes"`
-	State         string           `json:"state"`
+	TypeID             string           `json:"type_id"`
+	Name               string           `json:"name"`
+	Methods            []interface{}    `json:"methods"`
+	SlashReplacer      string           `json:"slash_replacer"`
+	CacheTTLs          decodedCacheTTLs `json:"cache_ttls"`
+	InaccessibleReason string           `json:"inaccessible_reason"`
+	Attributes         EntryAttributes  `json:"attributes"`
+	State              string           `json:"state"`
 }
 
 const entryMethodTypeError = "each method must be a string or tuple [<method>, <result>], not %v"
@@ -75,7 +76,7 @@ func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
 	return methods, nil
 }
 
-func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRoot bool) (*externalPluginEntry, error) {
+func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, schemaKnown, isRoot bool) (*externalPluginEntry, error) {
 	if len(e.Name) <= 0 {
 		return nil, fmt.Errorf("the entry name must be provided")
 	}
@@ -132,6 +133,9 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(schemaKnown bool, isRo
 	}
 	entry.SetAttributes(e.Attributes)
 	entry.setCacheTTLs(e.CacheTTLs)
+	if e.InaccessibleReason != "" {
+		entry.MarkInaccessible(ctx, fmt.Errorf(e.InaccessibleReason))
+	}
 	if e.SlashReplacer != "" {
 		if len([]rune(e.SlashReplacer)) > 1 {
 			msg := fmt.Sprintf("e.SlashReplacer: received string %v instead of a character", e.SlashReplacer)
@@ -321,7 +325,7 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 
 	entries := make([]Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
-		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(e.schemaKnown, false)
+		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(ctx, e.schemaKnown, false)
 		if err != nil {
 			return nil, err
 		}
