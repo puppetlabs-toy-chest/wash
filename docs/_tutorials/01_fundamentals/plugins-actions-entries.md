@@ -14,7 +14,10 @@ Welcome to Wash!
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'
 wash . ❯ ls
-aws        docker     gcp        kubernetes
+aws/
+docker/
+gcp/
+kubernetes/
 ```
 
 **Note:** You might see some warning messages about plugins failing to load. If you are not planning on using those plugins, then feel free to exclude them from the [list of loaded plugins](../../docs#config). Otherwise, follow the suggestions in the warning messages to properly setup the remaining plugins (and remember to restart the Wash shell!).
@@ -36,14 +39,17 @@ Notice how the prompt changed from `wash . >` to `wash docker >`. This is a usef
 
 ```
 wash docker ❯ ls
-containers volumes
+containers/
+volumes/
 ```
 
 From the output, we see that the Docker plugin lets us interact with containers and volumes via the `containers` and `volumes` entries. These entries support the `list` action, so they're represented as directories. Let’s try interacting with some containers.
 
 ```
+wash docker ❯ cd containers
 wash docker/containers ❯ ls
-wash_tutorial_redis_1 wash_tutorial_redis_1
+wash_tutorial_redis_1/
+wash_tutorial_web_1/
 ```
 
 Note that all the entries listed here are Docker containers. We can use the `winfo` command to see a Docker container’s supported actions.
@@ -75,7 +81,9 @@ Nice! Also notice that the Docker container supports the `list` action. That mea
 ```
 wash docker/containers ❯ cd wash_tutorial_redis_1
 wash docker/containers/wash_tutorial_redis_1 ❯ ls
-fs            log           metadata.json
+fs/
+log
+metadata.json
 ```
 
 Everything listed here is specific to the `wash_tutorial_redis_1` container. For example, `log` represents the `wash_tutorial_redis_1` container’s log. Let's look at its supported actions with `wsinfo`:

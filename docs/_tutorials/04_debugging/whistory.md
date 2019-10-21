@@ -10,7 +10,10 @@ Welcome to Wash!
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'
 wash . ❯ ls
-aws        docker     gcp        kubernetes
+aws/
+docker/
+gcp/
+kubernetes/
 wash . ❯ ls docker/volumes/wash_tutorial_redis
 appendonly.aof
 wash . ❯ cat docker/volumes/wash_tutorial_redis/appendonly.aof
