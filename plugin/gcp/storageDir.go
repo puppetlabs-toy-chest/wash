@@ -22,15 +22,19 @@ type storageDir struct {
 
 const storageScope = storage.ScopeReadOnly
 
-func newStorageDir(client *http.Client, projID string) (*storageDir, error) {
+func newStorageDir(ctx context.Context, client *http.Client, projID string) (*storageDir, error) {
 	cli, err := storage.NewClient(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		return nil, err
 	}
-	return &storageDir{
+	s := &storageDir{
 		EntryBase:            plugin.NewEntry("storage"),
 		storageProjectClient: storageProjectClient{Client: cli, projectID: projID},
-	}, nil
+	}
+	if _, err := plugin.List(ctx, s); err != nil {
+		s.MarkInaccessible(ctx, err)
+	}
+	return s, nil
 }
 
 // List all storage buckets as dirs.

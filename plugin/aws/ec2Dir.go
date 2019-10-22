@@ -14,7 +14,6 @@ type ec2Dir struct {
 	plugin.EntryBase
 	session *session.Session
 	client  *ec2Client.EC2
-	entries []plugin.Entry
 }
 
 func newEC2Dir(session *session.Session) *ec2Dir {
@@ -24,11 +23,6 @@ func newEC2Dir(session *session.Session) *ec2Dir {
 	ec2Dir.DisableDefaultCaching()
 	ec2Dir.session = session
 	ec2Dir.client = ec2Client.New(session)
-
-	ec2Dir.entries = []plugin.Entry{
-		newEC2InstancesDir(ec2Dir.session, ec2Dir.client),
-	}
-
 	return ec2Dir
 }
 
@@ -43,5 +37,5 @@ func (e *ec2Dir) ChildSchemas() []*plugin.EntrySchema {
 }
 
 func (e *ec2Dir) List(ctx context.Context) ([]plugin.Entry, error) {
-	return e.entries, nil
+	return []plugin.Entry{newEC2InstancesDir(ctx, e.session, e.client)}, nil
 }

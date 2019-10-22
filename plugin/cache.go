@@ -27,9 +27,9 @@ func InitCache() {
 	}
 }
 
-// SetTestCache sets the cache to the provided mock. It can only be called
-// by the tests
-func SetTestCache(c datastore.Cache) {
+// SetTestCache sets the cache to the provided mock. It can only be called by the tests.
+// Returns a context that includes a parent ID so later cache operations will succeed.
+func SetTestCache(c datastore.Cache) context.Context {
 	if notRunningTests() {
 		panic("SetTestCache can only be called when running the tests")
 	}
@@ -39,6 +39,7 @@ func SetTestCache(c datastore.Cache) {
 	}
 
 	cache = c
+	return context.WithValue(context.Background(), parentID, "/")
 }
 
 // UnsetTestCache unsets the test cache. It can only be called
@@ -172,6 +173,11 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 					SecondChildSlashReplacer: entry.slashReplacer(),
 					CName:                    cname,
 				}
+			}
+
+			if entry.isInaccessible() {
+				// Skip entries that are expected to be inaccessible.
+				continue
 			}
 			searchedEntries[cname] = entry
 

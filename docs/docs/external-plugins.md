@@ -270,6 +270,8 @@ This section describes the JSON object representing a serialized entry. An entry
 
 * `slash_replacer` is a single character that overrides the default slash replacer.
 
+* `inaccessible_reason` is a string specifying why the entry is inaccessible. The current plugin configuration may not provide sufficient permissions to access a particular resource. Rather than triggering an error in Wash, this resource can be omitted when listing available resources. The `inaccessible_reason` attribute provides a place to flag that the resource should be omitted from list results and log a reason for its omission.
+
 Below is an example entry JSON object showcasing all the possible keys at once.
 
 ```
@@ -285,7 +287,8 @@ Below is an example entry JSON object showcasing all the possible keys at once.
   "cache_ttls": {
     "read": 10
   },
-  "slash_replacer": ":"
+  "slash_replacer": ":",
+  "inaccessible_reason": "permission denied"
 }
 ```
 

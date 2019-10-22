@@ -21,15 +21,19 @@ type computeDir struct {
 
 const computeScope = compute.CloudPlatformScope
 
-func newComputeDir(client *http.Client, projID string) (*computeDir, error) {
+func newComputeDir(ctx context.Context, client *http.Client, projID string) (*computeDir, error) {
 	svc, err := compute.NewService(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		return nil, err
 	}
-	return &computeDir{
+	c := &computeDir{
 		EntryBase: plugin.NewEntry("compute"),
 		service:   computeProjectService{Service: svc, projectID: projID},
-	}, nil
+	}
+	if _, err := plugin.List(ctx, c); err != nil {
+		c.MarkInaccessible(ctx, err)
+	}
+	return c, nil
 }
 
 // List all services as dirs.

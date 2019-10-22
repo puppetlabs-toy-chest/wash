@@ -67,15 +67,15 @@ type ExternalPluginEntryTestSuite struct {
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequiredFields() {
 	decodedEntry := decodedExternalPluginEntry{}
 
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("name", err)
 	decodedEntry.Name = "decodedEntry"
 
-	_, err = decodedEntry.toExternalPluginEntry(false, false)
+	_, err = decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("methods", err)
 	decodedEntry.Methods = []interface{}{"list"}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(1, len(entry.methods))
@@ -90,7 +90,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 		Methods: []interface{}{"list", "stream"},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
@@ -112,7 +112,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_Support
 		Methods: []interface{}{},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 	}
@@ -125,7 +125,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 		Methods: []interface{}{[]interface{}{"list", []interface{}{childEntry}}, "read"},
 	}
 
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
@@ -146,7 +146,7 @@ func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithState() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.State = "some state"
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.State, entry.state)
 	}
@@ -155,7 +155,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithStat
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCacheTTLs() {
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		expectedTTLs := NewEntry("foo").ttl
 		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
@@ -167,11 +167,11 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	decodedEntry := newMockDecodedEntry("name")
 	decodedEntry.SlashReplacer = "a string"
 	suite.Panics(
-		func() { _, _ = decodedEntry.toExternalPluginEntry(false, false) },
+		func() { _, _ = decodedEntry.toExternalPluginEntry(context.Background(), false, false) },
 		"e.SlashReplacer: received string a string instead of a character",
 	)
 	decodedEntry.SlashReplacer = ":"
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(':', entry.slashReplacer())
 	}
@@ -181,7 +181,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	decodedEntry := newMockDecodedEntry("name")
 	t := time.Now()
 	decodedEntry.Attributes.SetCtime(t)
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		expectedAttr := EntryAttributes{}
 		expectedAttr.SetCtime(t)
@@ -194,7 +194,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list"},
 	}
-	entry, err := decodedEntry.toExternalPluginEntry(false, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.False(entry.schemaKnown)
 	}
@@ -205,7 +205,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list", "schema"},
 	}
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
@@ -215,7 +215,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list", "schema"},
 		TypeID:  "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(false, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("decodedEntry.*foo.*implements.*schema.*root", err)
 }
 
@@ -225,7 +225,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list"},
 		TypeID:  "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	suite.Regexp("decodedEntry.*foo.*must.*implement.*schema", err)
 }
 
@@ -234,7 +234,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Name:    "decodedEntry",
 		Methods: []interface{}{"list", "schema"},
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
 }
 
@@ -247,7 +247,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		},
 		TypeID: "foo",
 	}
-	_, err := decodedEntry.toExternalPluginEntry(true, false)
+	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	suite.Regexp("decodedEntry.*foo.*plugin.*roots.*support.*prefetching", err)
 }
 
@@ -257,10 +257,23 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 		Methods: []interface{}{"list", "schema"},
 		TypeID:  "foo",
 	}
-	entry, err := decodedEntry.toExternalPluginEntry(true, false)
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	if suite.NoError(err) {
 		suite.True(entry.schemaKnown)
 		suite.Equal("foo", rawTypeID(entry))
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithInaccessibleReason() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name:               "decodedEntry",
+		Methods:            []interface{}{"list", "stream"},
+		InaccessibleReason: "permission denied",
+	}
+
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
+	if suite.NoError(err) {
+		suite.True(entry.isInaccessible())
 	}
 }
 

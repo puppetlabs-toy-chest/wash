@@ -10,8 +10,7 @@ import (
 // resourcesDir represents the <profile>/resources directory
 type resourcesDir struct {
 	plugin.EntryBase
-	session   *session.Session
-	resources []plugin.Entry
+	session *session.Session
 }
 
 func newResourcesDir(session *session.Session) *resourcesDir {
@@ -20,12 +19,6 @@ func newResourcesDir(session *session.Session) *resourcesDir {
 	}
 	resourcesDir.DisableDefaultCaching()
 	resourcesDir.session = session
-
-	resourcesDir.resources = []plugin.Entry{
-		newS3Dir(resourcesDir.session),
-		newEC2Dir(resourcesDir.session),
-	}
-
 	return resourcesDir
 }
 
@@ -42,5 +35,8 @@ func (r *resourcesDir) ChildSchemas() []*plugin.EntrySchema {
 
 // List lists the available AWS resources
 func (r *resourcesDir) List(ctx context.Context) ([]plugin.Entry, error) {
-	return r.resources, nil
+	return []plugin.Entry{
+		newS3Dir(ctx, r.session),
+		newEC2Dir(r.session),
+	}, nil
 }
