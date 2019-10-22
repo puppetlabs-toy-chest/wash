@@ -143,7 +143,7 @@ func Delete(ctx context.Context, d Deletable) error {
 	if err := d.Delete(ctx); err != nil {
 		return err
 	}
-	ClearCacheFor(ID(d))
+	ClearCacheFor(d.id())
 	// Delete this entry from the parent's cached list result
 	segments := strings.Split(d.id(), "/")
 	parentID := strings.Join(segments[:len(segments)-1], "/")
