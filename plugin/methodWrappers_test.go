@@ -108,8 +108,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_ReturnsDeleteError() {
 	expectedErr := fmt.Errorf("an error")
 	e.On("Delete", ctx).Return(expectedErr)
 
-	var entry Entry = e
-	err := Delete(ctx, entry.(Deletable))
+	err := Delete(ctx, e)
 	suite.Equal(expectedErr, err)
 }
 
@@ -121,8 +120,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntry() {
 	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
 	suite.cache.On("Delete", mock.Anything).Return([]string{})
 
-	var entry Entry = e
-	err := Delete(ctx, entry.(Deletable))
+	err := Delete(ctx, e)
 	if suite.NoError(err) {
 		e.AssertExpectations(suite.T())
 	}
@@ -135,8 +133,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_ClearsEntryCache() {
 	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
 	suite.cache.On("Delete", opKeysRegex(e.id())).Return([]string{})
 
-	var entry Entry = e
-	err := Delete(context.Background(), entry.(Deletable))
+	err := Delete(context.Background(), e)
 	if suite.NoError(err) {
 		suite.cache.AssertExpectations(suite.T())
 	}
@@ -152,8 +149,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntryFromParentsCachedEn
 	suite.cache.On("Get", "List", "/foo").Return(entryMap, nil)
 	suite.cache.On("Delete", mock.Anything).Return([]string{})
 
-	var entry Entry = e
-	err := Delete(context.Background(), entry.(Deletable))
+	err := Delete(context.Background(), e)
 	if suite.NoError(err) {
 		suite.cache.AssertCalled(suite.T(), "Get", "List", "/foo")
 		suite.NotContains(entryMap.mp, "bar")
