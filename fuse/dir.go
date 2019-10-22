@@ -24,7 +24,7 @@ func newDir(p *dir, e plugin.Parent) *dir {
 	return &dir{newFuseNode("d", p, e)}
 }
 
-func (d *dir) children(ctx context.Context) (map[string]plugin.Entry, error) {
+func (d *dir) children(ctx context.Context) (*plugin.EntryMap, error) {
 	// Check for an updated entry in case it has static state.
 	updatedEntry, err := d.refind(ctx)
 	if err != nil {
@@ -53,7 +53,7 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	}
 
 	cname := req.Name
-	entry, ok := entries[cname]
+	entry, ok := entries.Load(cname)
 	if !ok {
 		log.Debugf("FUSE: %v not found in %v", req.Name, d)
 		return nil, fuse.ENOENT
@@ -79,15 +79,16 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		return nil, err
 	}
 
-	res := make([]fuse.Dirent, 0, len(entries))
-	for cname, entry := range entries {
+	res := make([]fuse.Dirent, 0, entries.Len())
+	entries.Range(func(cname string, entry plugin.Entry) bool {
 		var de fuse.Dirent
 		de.Name = cname
 		if plugin.ListAction().IsSupportedOn(entry) {
 			de.Type = fuse.DT_Dir
 		}
 		res = append(res, de)
-	}
+		return true
+	})
 	activity.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
 	return res, nil
 }

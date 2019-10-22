@@ -73,3 +73,9 @@ func (c *MockClient) Screenview(name string, params analytics.Params) error {
 	args := c.Called(name, params)
 	return args.Error(1)
 }
+
+// Delete mocks Client#Delete
+func (c *MockClient) Delete(path string) error {
+	args := c.Called(path)
+	return args.Error(0)
+}

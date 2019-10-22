@@ -375,6 +375,11 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 	return metadata, nil
 }
 
+func (e *externalPluginEntry) Delete(ctx context.Context) error {
+	_, err := e.script.InvokeAndWait(ctx, "delete", e)
+	return err
+}
+
 func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
 	inv := e.script.NewInvocation(ctx, "stream", e)
 	cmd := inv.command

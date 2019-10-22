@@ -63,15 +63,15 @@ const opQualifier = "^[a-zA-Z]+::"
 // This method exists to simplify ClearCacheFor's tests.
 // Specifically, it lets us decouple the regex's correctness
 // from the cache's implementation.
-func opKeysRegex(path string) (*regexp.Regexp, error) {
+func opKeysRegex(path string) *regexp.Regexp {
 	var expr string
 	if path == "/" {
 		expr = opQualifier + "/.*"
 	} else {
-		expr = opQualifier + "/" + strings.Trim(path, "/") + "($|/.*)"
+		expr = opQualifier + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "($|/.*)"
 	}
 
-	return regexp.Compile(expr)
+	return regexp.MustCompile(expr)
 }
 
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
@@ -79,13 +79,9 @@ func opKeysRegex(path string) (*regexp.Regexp, error) {
 //
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
-func ClearCacheFor(path string) ([]string, error) {
-	rx, err := opKeysRegex(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return cache.Delete(rx), nil
+func ClearCacheFor(path string) []string {
+	rx := opKeysRegex(path)
+	return cache.Delete(rx)
 }
 
 type opFunc func() (interface{}, error)
@@ -150,7 +146,7 @@ func (c DuplicateCNameErr) Error() string {
 //
 // CachedList returns a map of <entry_cname> => <entry_object> to optimize
 // querying a specific entry.
-func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
+func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 	cachedEntries, err := cachedDefaultOp(ctx, ListOp, p, func() (interface{}, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
@@ -160,11 +156,11 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 			return nil, err
 		}
 
-		searchedEntries := make(map[string]Entry)
+		searchedEntries := newEntryMap()
 		for _, entry := range entries {
 			cname := CName(entry)
 
-			if duplicateEntry, ok := searchedEntries[cname]; ok {
+			if duplicateEntry, ok := searchedEntries.mp[cname]; ok {
 				return nil, DuplicateCNameErr{
 					ParentID:                 p.id(),
 					FirstChildName:           duplicateEntry.name(),
@@ -179,7 +175,8 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 				// Skip entries that are expected to be inaccessible.
 				continue
 			}
-			searchedEntries[cname] = entry
+
+			searchedEntries.mp[cname] = entry
 
 			// Ensure ID is set on all entries so that we can use it for caching later in places
 			// where the context doesn't include the parent's ID.
@@ -195,7 +192,7 @@ func cachedList(ctx context.Context, p Parent) (map[string]Entry, error) {
 		return nil, err
 	}
 
-	return cachedEntries.(map[string]Entry), nil
+	return cachedEntries.(*EntryMap), nil
 }
 
 // CachedOpen caches a Readable object's Open method.

@@ -9,7 +9,7 @@ import (
 
 // ListWithAnalytics is a wrapper to plugin.List. Use it when you need to report
 // a 'List' invocation to analytics. Otherwise, use plugin.List
-func ListWithAnalytics(ctx context.Context, p Parent) (map[string]Entry, error) {
+func ListWithAnalytics(ctx context.Context, p Parent) (*EntryMap, error) {
 	submitMethodInvocation(ctx, p, "List")
 	return List(ctx, p)
 }
@@ -33,6 +33,13 @@ func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, erro
 func ExecWithAnalytics(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
 	submitMethodInvocation(ctx, e, "Exec")
 	return Exec(ctx, e, cmd, args, opts)
+}
+
+// DeleteWithAnalytics is a wrapper to plugin.Delete. Use it when you need to report a
+// 'Delete' invocation to analytics. Otherwise, use plugin.Delete.
+func DeleteWithAnalytics(ctx context.Context, d Deletable) error {
+	submitMethodInvocation(ctx, d, "Delete")
+	return Delete(ctx, d)
 }
 
 func submitMethodInvocation(ctx context.Context, e Entry, method string) {

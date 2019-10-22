@@ -146,9 +146,10 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 
 	// We use a worker pool to limit work-in-progress. Put the plugin on the worker pool.
 	wp := cmdutil.NewPool(parallel)
-	for _, e := range entries {
+	entries.Range(func(_ string, e plugin.Entry) bool {
 		wp.Submit(func() { processEntry(ctx, pw, wp, e, all, errs) })
-	}
+		return true
+	})
 
 	// Wait for work to complete.
 	wp.Finish()
@@ -272,18 +273,17 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 			return
 		}
 		cancelFunc()
-		entries := obj.(map[string]plugin.Entry)
+		entries := obj.(*plugin.EntryMap)
 
 		if all {
-			for _, entry := range entries {
-				// Make a local copy for the lambda to capture.
-				entry := entry
+			entries.Range(func(_ string, entry plugin.Entry) bool {
 				wp.Submit(func() { processEntry(ctx, pw, wp, entry, all, errs) })
-			}
+				return true
+			})
 		} else {
 			// Group children by ones that look "similar", and select one from each group to test.
 			groups := make(map[criteria][]plugin.Entry)
-			for _, entry := range entries {
+			entries.Range(func(_ string, entry plugin.Entry) bool {
 				// Skip files that we shouldn't read. This includes character devices, devices, and
 				// those we don't have permission to read.
 				attr := plugin.Attributes(entry)
@@ -291,7 +291,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 					(mode&os.ModeCharDevice == os.ModeCharDevice ||
 						mode&os.ModeNamedPipe == os.ModeNamedPipe ||
 						mode&os.ModeDevice == os.ModeDevice || mode&0400 == 0) {
-					continue
+					return true
 				}
 
 				ccrit := newCriteria(entry)
@@ -300,7 +300,9 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 				if ccrit.typeID == "" || ccrit.typeID != crit.typeID {
 					groups[ccrit] = append(groups[ccrit], entry)
 				}
-			}
+
+				return true
+			})
 
 			for _, items := range groups {
 				entry := items[rand.Intn(len(items))]
