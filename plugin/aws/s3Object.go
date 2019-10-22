@@ -9,6 +9,7 @@ import (
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
+	"github.com/aws/aws-sdk-go/aws"
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
 )
@@ -88,6 +89,14 @@ func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
 
 func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
 	return &s3ObjectReader{o: o}, nil
+}
+
+func (o *s3Object) Delete(ctx context.Context) (bool, error) {
+	_, err := o.client.DeleteObjectWithContext(ctx, &s3Client.DeleteObjectInput{
+		Bucket: aws.String(o.bucket),
+		Key:    aws.String(o.key),
+	})
+	return true, err
 }
 
 // TODO: Optimize this class later. For now, the simple implementation is

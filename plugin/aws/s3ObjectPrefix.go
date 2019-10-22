@@ -46,6 +46,11 @@ func (d *s3ObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) {
 	return listObjects(ctx, d.client, d.bucket, d.prefix)
 }
 
+func (d *s3ObjectPrefix) Delete(ctx context.Context) (bool, error) {
+	err := deleteObjects(ctx, d.client, d.bucket, d.prefix)
+	return true, err
+}
+
 const s3ObjectPrefixDescription = `
 This represents a common prefix shared by multiple S3 objects. See the
 bucket's description for more details on why we have this kind of entry.

@@ -254,6 +254,13 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 	return nil, fmt.Errorf("could not access the latest console log: %v", err)
 }
 
+func (inst *ec2Instance) Delete(ctx context.Context) (bool, error) {
+	_, err := inst.client.TerminateInstancesWithContext(ctx, &ec2Client.TerminateInstancesInput{
+		InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+	})
+	return false, err
+}
+
 func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	meta, err := inst.Metadata(ctx)
 	if err != nil {
