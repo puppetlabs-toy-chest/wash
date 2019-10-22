@@ -62,6 +62,11 @@ func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
 	return vol.List(ctx, v)
 }
 
+func (v *volume) Delete(ctx context.Context) (bool, error) {
+	err := v.client.VolumeRemove(ctx, v.Name(), true)
+	return true, err
+}
+
 // Create a container that mounts a volume to a default mountpoint and runs a command.
 func (v *volume) createContainer(ctx context.Context, cmd []string) (string, error) {
 	// Use tty to avoid messing with the extra log formatting.

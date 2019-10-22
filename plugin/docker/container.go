@@ -88,6 +88,14 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 	return []plugin.Entry{clf, cm, vol.NewFS("fs", c, 3)}, nil
 }
 
+func (c *container) Delete(ctx context.Context) (bool, error) {
+	err := c.client.ContainerRemove(ctx, c.id, types.ContainerRemoveOptions{
+		// TODO: Should we set RemoveVolumes and RemoveLinks too?
+		Force: true,
+	})
+	return true, err
+}
+
 func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	command := append([]string{cmd}, args...)
 	activity.Record(ctx, "Exec %v on %v", command, c.Name())
