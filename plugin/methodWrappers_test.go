@@ -117,7 +117,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_Updates
 	e.SetTestID("/foo/bar")
 	e.On("Delete", mock.Anything).Return(false, nil)
 
-	suite.cache.On("Delete", opKeysRegex(e.id())).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
 	suite.cache.On("Get", "List", "/foo").Return(newEntryMap(), nil)
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
@@ -151,7 +151,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_UpdatesCache() {
 
 	entryMap := newEntryMap()
 	entryMap.mp["bar"] = e
-	suite.cache.On("Delete", opKeysRegex(e.id())).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
 	suite.cache.On("Get", "List", "/foo").Return(entryMap, nil)
 
 	deleted, err := Delete(context.Background(), e)

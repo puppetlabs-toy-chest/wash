@@ -60,23 +60,7 @@ var opNameRegex = regexp.MustCompile("^[a-zA-Z]+$")
 
 const opQualifier = "^[a-zA-Z]+::"
 
-// This method exists to simplify ClearCacheFor's tests.
-// Specifically, it lets us decouple the regex's correctness
-// from the cache's implementation.
-func opKeysRegex(path string) *regexp.Regexp {
-	var expr string
-	if path == "/" {
-		expr = opQualifier + "/.*"
-	} else {
-		expr = opQualifier + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "($|/.*)"
-	}
-
-	return regexp.MustCompile(expr)
-}
-
-// opKeyRegex returns a regex that matches the key <op>::<path>.
-// It is useful for clearing a specific cached op for the entry
-// corresponding to <path>.
+// opKeyRegex returns a regex that matches <op>::<path>
 func opKeyRegex(op string, path string) *regexp.Regexp {
 	opRegex := "^" + regexp.QuoteMeta(op+"::")
 
@@ -90,13 +74,26 @@ func opKeyRegex(op string, path string) *regexp.Regexp {
 	return regexp.MustCompile(expr)
 }
 
+// This returns a regex that matches <op>::<path> and <op>::<child_path>
+// where <child_path> is a descendant of <path>.
+func allOpKeysIncludingChildrenRegex(path string) *regexp.Regexp {
+	var expr string
+	if path == "/" {
+		expr = opQualifier + "/.*"
+	} else {
+		expr = opQualifier + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "($|/.*)"
+	}
+
+	return regexp.MustCompile(expr)
+}
+
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
 // If successful, returns an array of deleted keys.
 //
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
 func ClearCacheFor(path string) []string {
-	rx := opKeysRegex(path)
+	rx := allOpKeysIncludingChildrenRegex(path)
 	return cache.Delete(rx)
 }
 
