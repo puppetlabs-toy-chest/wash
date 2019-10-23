@@ -77,8 +77,8 @@ func (suite *CacheTestSuite) TestOpNameRegex() {
 	suite.NotRegexp(opNameRegex, "abc  ")
 }
 
-func (suite *CacheTestSuite) TestOpKeysRegex() {
-	rx := opKeysRegex("/a")
+func (suite *CacheTestSuite) TestAllOpKeysIncludingChildrenRegex() {
+	rx := allOpKeysIncludingChildrenRegex("/a")
 
 	// Test that it matches children
 	suite.Regexp(rx, "Test::/a/b")
@@ -92,21 +92,54 @@ func (suite *CacheTestSuite) TestOpKeysRegex() {
 	suite.NotRegexp(rx, "Test::/bc/d")
 
 	// Test that it matches root, and children of root
-	rx = opKeysRegex("/")
+	rx = allOpKeysIncludingChildrenRegex("/")
 	suite.Regexp(rx, "Test::/")
 	suite.Regexp(rx, "Test::/a")
 	suite.Regexp(rx, "Test::/a/b")
 
 	// Test that it matches a path containing regex characters
-	rx = opKeysRegex("/foo*[]")
+	rx = allOpKeysIncludingChildrenRegex("/foo*[]")
 	suite.Regexp(rx, "Test::/foo*[]")
 	suite.Regexp(rx, "Test::/foo*[]/bar(")
 	suite.Regexp(rx, "Test::/foo*[]/bar(/baz)")
 }
 
+func (suite *CacheTestSuite) TestOpKeyRegex() {
+	rx := opKeyRegex("Test", "/a")
+
+	// Test that it matches <op>::<path>, that it does not match
+	// <otherOp>::<path>, and that it does not match any children.
+	suite.Regexp(rx, "Test::/a")
+	suite.NotRegexp(rx, "OtherTest::/a")
+	suite.NotRegexp(rx, "TestOther::/a")
+	suite.NotRegexp(rx, "List::/a")
+	suite.NotRegexp(rx, "Test::/a/b")
+
+	// Test that it does not match any other entries
+	suite.NotRegexp(rx, "Test::/")
+	suite.NotRegexp(rx, "Test::/ab")
+	suite.NotRegexp(rx, "Test::/bc/d")
+
+	// Repeat for root
+	rx = opKeyRegex("Test", "/")
+	suite.Regexp(rx, "Test::/")
+	suite.NotRegexp(rx, "OtherTest::/")
+	suite.NotRegexp(rx, "TestOther::/")
+	suite.NotRegexp(rx, "List::/")
+	suite.NotRegexp(rx, "Test::/a")
+
+	// Repeat for a path with regex characters
+	rx = opKeyRegex("Test", "/foo*[]")
+	suite.Regexp(rx, "Test::/foo*[]")
+	suite.NotRegexp(rx, "OtherTest::/foo*[]")
+	suite.NotRegexp(rx, "TestOther::/foo*[]")
+	suite.NotRegexp(rx, "List::/foo*[]")
+	suite.NotRegexp(rx, "Test::/foo*[]/a")
+}
+
 func (suite *CacheTestSuite) TestClearCache() {
 	path := "/a"
-	rx := opKeysRegex(path)
+	rx := allOpKeysIncludingChildrenRegex(path)
 
 	suite.cache.On("Delete", rx).Return([]string{"/a"})
 	deleted := ClearCacheFor(path)

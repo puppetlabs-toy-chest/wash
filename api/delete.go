@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/puppetlabs/wash/activity"
@@ -14,7 +16,7 @@ import (
 //     Schemes: http
 //
 //     Responses:
-//       200
+//       200: bool
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
@@ -27,10 +29,14 @@ var deleteHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	if !plugin.DeleteAction().IsSupportedOn(entry) {
 		return unsupportedActionResponse(path, plugin.DeleteAction())
 	}
-	err := plugin.Delete(ctx, entry.(plugin.Deletable))
+	deleted, err := plugin.Delete(ctx, entry.(plugin.Deletable))
 	if err != nil {
 		return erroredActionResponse(path, plugin.DeleteAction(), err.Error())
 	}
-	activity.Record(ctx, "API: Delete %v", path)
+	activity.Record(ctx, "API: Delete %v %v", path, deleted)
+	jsonEncoder := json.NewEncoder(w)
+	if err = jsonEncoder.Encode(deleted); err != nil {
+		return unknownErrorResponse(fmt.Errorf("Could not marshal delete's result for %v: %v", path, err))
+	}
 	return nil
 }

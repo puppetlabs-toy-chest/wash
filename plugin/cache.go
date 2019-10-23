@@ -60,10 +60,23 @@ var opNameRegex = regexp.MustCompile("^[a-zA-Z]+$")
 
 const opQualifier = "^[a-zA-Z]+::"
 
-// This method exists to simplify ClearCacheFor's tests.
-// Specifically, it lets us decouple the regex's correctness
-// from the cache's implementation.
-func opKeysRegex(path string) *regexp.Regexp {
+// opKeyRegex returns a regex that matches <op>::<path>
+func opKeyRegex(op string, path string) *regexp.Regexp {
+	opRegex := "^" + regexp.QuoteMeta(op+"::")
+
+	var expr string
+	if path == "/" {
+		expr = opRegex + "/$"
+	} else {
+		expr = opRegex + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "$"
+	}
+
+	return regexp.MustCompile(expr)
+}
+
+// This returns a regex that matches <op>::<path> and <op>::<child_path>
+// where <child_path> is a descendant of <path>.
+func allOpKeysIncludingChildrenRegex(path string) *regexp.Regexp {
 	var expr string
 	if path == "/" {
 		expr = opQualifier + "/.*"
@@ -80,7 +93,7 @@ func opKeysRegex(path string) *regexp.Regexp {
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
 func ClearCacheFor(path string) []string {
-	rx := opKeysRegex(path)
+	rx := allOpKeysIncludingChildrenRegex(path)
 	return cache.Delete(rx)
 }
 

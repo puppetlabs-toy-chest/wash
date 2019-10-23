@@ -199,7 +199,12 @@ type Readable interface {
 // should ensure that it and all its children are removed. If the entry has
 // any dependencies that need to be deleted, then Delete should return an
 // error.
+//
+// If Delete returns true, then that means the entry was deleted. If Delete
+// returns false, then that means the entry is marked for deletion by the
+// plugin's API. You should return false if you anticipate delete taking a long
+// time (> 30 seconds).
 type Deletable interface {
 	Entry
-	Delete(context.Context) error
+	Delete(context.Context) (bool, error)
 }

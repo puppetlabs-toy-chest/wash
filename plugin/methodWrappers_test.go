@@ -65,9 +65,9 @@ func (m *methodWrappersTestsMockEntry) List(ctx context.Context) ([]Entry, error
 	return args.Get(0).([]Entry), args.Error(1)
 }
 
-func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) error {
+func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) (bool, error) {
 	args := m.Called(ctx)
-	return args.Error(0)
+	return args.Get(0).(bool), args.Error(1)
 }
 
 func (m *methodWrappersTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
@@ -106,53 +106,77 @@ func (suite *MethodWrappersTestSuite) TestDelete_ReturnsDeleteError() {
 	e := newMethodWrappersTestsMockEntry("foo")
 
 	expectedErr := fmt.Errorf("an error")
-	e.On("Delete", ctx).Return(expectedErr)
+	e.On("Delete", ctx).Return(false, expectedErr)
 
-	err := Delete(ctx, e)
+	_, err := Delete(ctx, e)
 	suite.Equal(expectedErr, err)
 }
 
-func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntry() {
-	ctx := context.Background()
-	e := newMethodWrappersTestsMockEntry("foo")
-	e.On("Delete", ctx).Return(nil)
+func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_UpdatesCache() {
+	e := newMethodWrappersTestsMockEntry("bar")
+	e.SetTestID("/foo/bar")
+	e.On("Delete", mock.Anything).Return(false, nil)
 
-	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
-	suite.cache.On("Delete", mock.Anything).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
+	suite.cache.On("Get", "List", "/foo").Return(newEntryMap(), nil)
+	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
-	err := Delete(ctx, e)
+	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
+		suite.False(deleted)
 		e.AssertExpectations(suite.T())
-	}
-}
-
-func (suite *MethodWrappersTestSuite) TestDelete_ClearsEntryCache() {
-	e := newMethodWrappersTestsMockEntry("foo")
-	e.On("Delete", mock.Anything).Return(nil)
-
-	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
-	suite.cache.On("Delete", opKeysRegex(e.id())).Return([]string{})
-
-	err := Delete(context.Background(), e)
-	if suite.NoError(err) {
 		suite.cache.AssertExpectations(suite.T())
 	}
 }
 
-func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntryFromParentsCachedEntryMap() {
+func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_NoCachedListResult_IgnoresParentCache() {
 	e := newMethodWrappersTestsMockEntry("bar")
 	e.SetTestID("/foo/bar")
-	e.On("Delete", mock.Anything).Return(nil)
+	e.On("Delete", mock.Anything).Return(false, nil)
+
+	suite.cache.On("Delete", mock.Anything).Return([]string{})
+	suite.cache.On("Get", "List", "/foo").Return(nil, nil)
+
+	deleted, err := Delete(context.Background(), e)
+	if suite.NoError(err) {
+		suite.False(deleted)
+		suite.cache.AssertNotCalled(suite.T(), "Delete", opKeyRegex("List", "/foo"))
+	}
+}
+
+func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_UpdatesCache() {
+	e := newMethodWrappersTestsMockEntry("bar")
+	e.SetTestID("/foo/bar")
+	e.On("Delete", mock.Anything).Return(true, nil)
 
 	entryMap := newEntryMap()
 	entryMap.mp["bar"] = e
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
 	suite.cache.On("Get", "List", "/foo").Return(entryMap, nil)
-	suite.cache.On("Delete", mock.Anything).Return([]string{})
 
-	err := Delete(context.Background(), e)
+	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
-		suite.cache.AssertCalled(suite.T(), "Get", "List", "/foo")
+		suite.True(deleted)
+		e.AssertExpectations(suite.T())
+		suite.cache.AssertExpectations(suite.T())
 		suite.NotContains(entryMap.mp, "bar")
+	}
+}
+
+func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_NoCachedListResult_IgnoresParentCache() {
+	e := newMethodWrappersTestsMockEntry("bar")
+	e.SetTestID("/foo/bar")
+	e.On("Delete", mock.Anything).Return(true, nil)
+
+	suite.cache.On("Delete", mock.Anything).Return([]string{})
+	suite.cache.On("Get", "List", "/foo").Return(nil, nil)
+
+	deleted, err := Delete(context.Background(), e)
+	if suite.NoError(err) {
+		suite.True(deleted)
+		// If Delete did not ignore the parent cache, then there'd be a nil pointer panic
+		// because Delete calls EntryMap#Delete. Thus if we get to this point, that means
+		// a panic did not occur so the test passed.
 	}
 }
 

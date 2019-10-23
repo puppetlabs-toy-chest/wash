@@ -139,18 +139,35 @@ func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 }
 
 // Delete deletes the given entry.
-func Delete(ctx context.Context, d Deletable) error {
-	if err := d.Delete(ctx); err != nil {
-		return err
+func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
+	deleted, err = d.Delete(ctx)
+	if err != nil {
+		return
 	}
+
+	// Delete was successful, so update the cache to ensure that fresh data's loaded
+	// when needed. This includes:
+	//   * Clearing the entry and its children's cache.
+	//   * Updating the parent's cached list result.
 	ClearCacheFor(d.id())
-	// Delete this entry from the parent's cached list result
 	segments := strings.Split(d.id(), "/")
 	parentID := strings.Join(segments[:len(segments)-1], "/")
+	listOpName := defaultOpCodeToNameMap[ListOp]
 	entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID)
-	if entries != nil {
+	if entries == nil {
+		return
+	}
+	if deleted {
+		// The entry was deleted, so delete the entry from the parent's cached list
+		// result.
 		cname := segments[len(segments)-1]
 		entries.(*EntryMap).Delete(cname)
+	} else {
+		// The entry will eventually be deleted. However it's likely that Delete
+		// did update the entry (e.g. on VMs, Delete causes a state transition).
+		// Thus, we clear the parent's cached list result to ensure fresh data.
+		cache.Delete(opKeyRegex(listOpName, parentID))
 	}
-	return nil
+
+	return
 }

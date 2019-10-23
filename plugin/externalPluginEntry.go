@@ -375,9 +375,22 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 	return metadata, nil
 }
 
-func (e *externalPluginEntry) Delete(ctx context.Context) error {
-	_, err := e.script.InvokeAndWait(ctx, "delete", e)
-	return err
+func (e *externalPluginEntry) Delete(ctx context.Context) (deleted bool, err error) {
+	inv, err := e.script.InvokeAndWait(ctx, "delete", e)
+	if err != nil {
+		return
+	}
+	if err = json.Unmarshal(inv.stdout.Bytes(), &deleted); err != nil {
+		err = newStdoutDecodeErr(
+			ctx,
+			"delete's result",
+			err,
+			inv,
+			"true",
+		)
+		return
+	}
+	return
 }
 
 func (e *externalPluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {

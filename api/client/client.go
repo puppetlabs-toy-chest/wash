@@ -39,7 +39,7 @@ type Client interface {
 	// A "nil" schema means that the schema's unknown.
 	Schema(path string) (*apitypes.EntrySchema, error)
 	Screenview(name string, params analytics.Params) error
-	Delete(path string) error
+	Delete(path string) (bool, error)
 }
 
 // A domainSocketClient is a wash API client.
@@ -111,23 +111,27 @@ func (c *domainSocketClient) doRequest(method, endpoint string, params url.Value
 	return nil, unmarshalErrorResp(resp)
 }
 
-func (c *domainSocketClient) getRequest(endpoint string, params url.Values, result interface{}) error {
-	respBody, err := c.doRequest(http.MethodGet, endpoint, params, nil)
+func (c *domainSocketClient) doRequestAndParseJSONBody(method, endpoint string, params url.Values, body io.Reader, result interface{}) error {
+	respBody, err := c.doRequest(method, endpoint, params, body)
 	if err != nil {
 		return err
 	}
 
 	defer func() { errz.Log(respBody.Close()) }()
-	body, err := ioutil.ReadAll(respBody)
+	respBodyBytes, err := ioutil.ReadAll(respBody)
 	if err != nil {
 		return err
 	}
 
-	if err := json.Unmarshal(body, result); err != nil {
-		return fmt.Errorf("Non-JSON body at %v: %v", endpoint, string(body))
+	if err := json.Unmarshal(respBodyBytes, result); err != nil {
+		return fmt.Errorf("Non-JSON body at %v: %v", endpoint, string(respBodyBytes))
 	}
 
 	return nil
+}
+
+func (c *domainSocketClient) getRequest(endpoint string, params url.Values, result interface{}) error {
+	return c.doRequestAndParseJSONBody(http.MethodGet, endpoint, params, nil, result)
 }
 
 // Info retrieves the information of the resource located at "path"
@@ -295,7 +299,8 @@ func (c *domainSocketClient) Screenview(name string, params analytics.Params) er
 }
 
 // Delete deletes the entry at "path"
-func (c *domainSocketClient) Delete(path string) error {
-	_, err := c.doRequest(http.MethodDelete, "/fs/delete", url.Values{"path": []string{path}}, nil)
-	return err
+func (c *domainSocketClient) Delete(path string) (bool, error) {
+	var deleted bool
+	err := c.doRequestAndParseJSONBody(http.MethodDelete, "/fs/delete", url.Values{"path": []string{path}}, nil, &deleted)
+	return deleted, err
 }
