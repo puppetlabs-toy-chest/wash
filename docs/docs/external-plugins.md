@@ -11,6 +11,7 @@ title: External Plugins
     - [stream](#stream)
     - [exec](#exec)
     - [schema](#schema)
+    - [delete](#delete)
     - [Entry JSON object](#entry-json-object)
     - [Entry schema graph JSON object](#entry-schema-graph-json-object)
     - [Errors](#errors)
@@ -206,6 +207,19 @@ bash-3.2$ /path/to/myplugin.rb schema /myplugin/foo ''
     ]
   }
 }
+```
+
+## delete
+`<plugin_script> delete <path> <state>`
+
+When `delete` is invoked, the script must output a boolean JSON. `true` means that the entry was deleted. `false` means that the entry is marked for deletion and will eventually be deleted.
+
+**Note:** If you anticipate `delete` taking a long time (> 30 seconds), then output `false`.
+
+### Examples
+```
+bash-3.2$ /path/to/myplugin.rb delete /myplugin/foo ''
+true
 ```
 
 ## Entry JSON object
