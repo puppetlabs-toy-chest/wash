@@ -699,20 +699,29 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 	entry.SetTestID("/foo")
 
 	ctx := context.Background()
-	mockInvokeAndWait := func(err error) {
-		mockScript.OnInvokeAndWait(ctx, "delete", entry).Return(mockInvocation([]byte{}), err).Once()
+	mockInvokeAndWait := func(stdout []byte, err error) {
+		mockScript.OnInvokeAndWait(ctx, "delete", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
 	// Test that if InvokeAndWait errors, then Delete returns its error
 	mockErr := fmt.Errorf("execution error")
-	mockInvokeAndWait(mockErr)
-	err := entry.Delete(ctx)
+	mockInvokeAndWait([]byte{}, mockErr)
+	_, err := entry.Delete(ctx)
 	suite.EqualError(mockErr, err.Error())
 
-	// Test that Delete properly deletes the entry
-	mockInvokeAndWait(nil)
-	err = entry.Delete(ctx)
-	suite.NoError(err)
+	// Test that Delete returns an error if stdout does not have the right
+	// output format
+	mockInvokeAndWait([]byte("bad format"), nil)
+	_, err = entry.Delete(ctx)
+	suite.Regexp(regexp.MustCompile("stdout"), err)
+
+	// Test that Delete properly deletes the entry and decodes the result
+	// from stdout
+	mockInvokeAndWait([]byte("true"), nil)
+	deleted, err := entry.Delete(ctx)
+	if suite.NoError(err) {
+		suite.True(deleted)
+	}
 }
 
 // TODO: Add tests for stdoutStreamer, Stream and Exec

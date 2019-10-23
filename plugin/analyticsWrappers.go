@@ -37,7 +37,7 @@ func ExecWithAnalytics(ctx context.Context, e Execable, cmd string, args []strin
 
 // DeleteWithAnalytics is a wrapper to plugin.Delete. Use it when you need to report a
 // 'Delete' invocation to analytics. Otherwise, use plugin.Delete.
-func DeleteWithAnalytics(ctx context.Context, d Deletable) error {
+func DeleteWithAnalytics(ctx context.Context, d Deletable) (bool, error) {
 	submitMethodInvocation(ctx, d, "Delete")
 	return Delete(ctx, d)
 }

@@ -195,11 +195,8 @@ type Readable interface {
 	Open(context.Context) (SizedReader, error)
 }
 
-// Deletable is an entry that can be deleted. Entries that implement Delete
-// should ensure that it and all its children are removed. If the entry has
-// any dependencies that need to be deleted, then Delete should return an
-// error.
+// Deletable is an entry that can be deleted.
 type Deletable interface {
 	Entry
-	Delete(context.Context) error
+	Delete(context.Context) (bool, error)
 }

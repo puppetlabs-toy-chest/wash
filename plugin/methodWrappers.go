@@ -139,12 +139,20 @@ func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 }
 
 // Delete deletes the given entry.
-func Delete(ctx context.Context, d Deletable) error {
-	if err := d.Delete(ctx); err != nil {
-		return err
+func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
+	deleted, err = d.Delete(ctx)
+	if err != nil {
+		return
 	}
+	if !deleted {
+		// The entry will eventually be deleted so leave the cache alone.
+		return
+	}
+	// The entry was deleted, so we can clear its cache and delete the
+	// entry from the parent's cached list result. The latter ensures
+	// that the entry will not appear in the parent's ls output if the
+	// user immediately ls'es the parent after deleting the entry.
 	ClearCacheFor(d.id())
-	// Delete this entry from the parent's cached list result
 	segments := strings.Split(d.id(), "/")
 	parentID := strings.Join(segments[:len(segments)-1], "/")
 	entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID)
@@ -152,5 +160,5 @@ func Delete(ctx context.Context, d Deletable) error {
 		cname := segments[len(segments)-1]
 		entries.(*EntryMap).Delete(cname)
 	}
-	return nil
+	return
 }

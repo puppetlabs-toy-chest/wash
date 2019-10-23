@@ -64,13 +64,18 @@ func deleteMain(cmd *cobra.Command, args []string) exitCode {
 	for _, path := range pathsToDelete {
 		wg.Add(1)
 		go func(path string) {
-			if err := conn.Delete(path); err != nil {
-				writeMux.Lock()
-				defer writeMux.Unlock()
+			defer wg.Done()
+			deleted, err := conn.Delete(path)
+			writeMux.Lock()
+			defer writeMux.Unlock()
+			if err != nil {
 				cmdutil.ErrPrintf("%v\n", err)
 				anyFailed = true
+				return
 			}
-			wg.Done()
+			if !deleted {
+				cmdutil.Printf("%v has been marked for deletion and will eventually be deleted\n", path)
+			}
 		}(path)
 	}
 	wg.Wait()

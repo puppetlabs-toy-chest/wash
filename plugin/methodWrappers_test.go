@@ -65,9 +65,9 @@ func (m *methodWrappersTestsMockEntry) List(ctx context.Context) ([]Entry, error
 	return args.Get(0).([]Entry), args.Error(1)
 }
 
-func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) error {
+func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) (bool, error) {
 	args := m.Called(ctx)
-	return args.Error(0)
+	return args.Get(0).(bool), args.Error(1)
 }
 
 func (m *methodWrappersTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
@@ -106,51 +106,52 @@ func (suite *MethodWrappersTestSuite) TestDelete_ReturnsDeleteError() {
 	e := newMethodWrappersTestsMockEntry("foo")
 
 	expectedErr := fmt.Errorf("an error")
-	e.On("Delete", ctx).Return(expectedErr)
+	e.On("Delete", ctx).Return(false, expectedErr)
 
-	err := Delete(ctx, e)
+	_, err := Delete(ctx, e)
 	suite.Equal(expectedErr, err)
 }
 
-func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntry() {
+func (suite *MethodWrappersTestSuite) TestDelete_DeletionInProgress_LeavesCacheAlone() {
 	ctx := context.Background()
 	e := newMethodWrappersTestsMockEntry("foo")
-	e.On("Delete", ctx).Return(nil)
+	e.On("Delete", ctx).Return(false, nil)
 
-	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
-	suite.cache.On("Delete", mock.Anything).Return([]string{})
-
-	err := Delete(ctx, e)
+	deleted, err := Delete(ctx, e)
 	if suite.NoError(err) {
+		suite.False(deleted)
 		e.AssertExpectations(suite.T())
 	}
 }
 
-func (suite *MethodWrappersTestSuite) TestDelete_ClearsEntryCache() {
+func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_ClearsEntryCache() {
 	e := newMethodWrappersTestsMockEntry("foo")
-	e.On("Delete", mock.Anything).Return(nil)
+	e.On("Delete", mock.Anything).Return(true, nil)
 
 	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
 	suite.cache.On("Delete", opKeysRegex(e.id())).Return([]string{})
 
-	err := Delete(context.Background(), e)
+	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
+		suite.True(deleted)
 		suite.cache.AssertExpectations(suite.T())
+		e.AssertExpectations(suite.T())
 	}
 }
 
-func (suite *MethodWrappersTestSuite) TestDelete_DeletesEntryFromParentsCachedEntryMap() {
+func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_DeletesEntryFromParentsCachedEntryMap() {
 	e := newMethodWrappersTestsMockEntry("bar")
 	e.SetTestID("/foo/bar")
-	e.On("Delete", mock.Anything).Return(nil)
+	e.On("Delete", mock.Anything).Return(true, nil)
 
 	entryMap := newEntryMap()
 	entryMap.mp["bar"] = e
 	suite.cache.On("Get", "List", "/foo").Return(entryMap, nil)
 	suite.cache.On("Delete", mock.Anything).Return([]string{})
 
-	err := Delete(context.Background(), e)
+	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
+		suite.True(deleted)
 		suite.cache.AssertCalled(suite.T(), "Get", "List", "/foo")
 		suite.NotContains(entryMap.mp, "bar")
 	}
