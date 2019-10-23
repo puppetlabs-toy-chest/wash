@@ -61,6 +61,11 @@ func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
 	}, nil
 }
 
+func (c *computeInstance) Delete(ctx context.Context) (bool, error) {
+	_, err := c.service.Instances.Delete(c.service.projectID, getZone(c.instance), c.Name()).Do()
+	return false, err
+}
+
 func (c *computeInstance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "instance").

@@ -38,6 +38,11 @@ func (s *storageObjectPrefix) List(ctx context.Context) ([]plugin.Entry, error) 
 	return listBucket(ctx, s.bucket, s.prefix)
 }
 
+func (s *storageObjectPrefix) Delete(ctx context.Context) (bool, error) {
+	err := deleteObjects(ctx, s.bucket, s.prefix)
+	return true, err
+}
+
 func (s *storageObjectPrefix) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(s, "prefix").
 		SetDescription(storageObjectPrefixDescription).
