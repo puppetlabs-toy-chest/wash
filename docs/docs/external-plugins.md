@@ -212,7 +212,9 @@ bash-3.2$ /path/to/myplugin.rb schema /myplugin/foo ''
 ## delete
 `<plugin_script> delete <path> <state>`
 
-When `delete` is invoked, the script must output a boolean JSON. `true` means that the entry was deleted. `false` means that the entry is marked for deletion and will eventually be deleted.
+When `delete` is invoked, the script must output a boolean JSON. `true` means that the entry was deleted. `false` means that the entry is marked for deletion and will eventually be deleted by the plugin's API.
+
+`delete` should ensure that both the entry and its children are removed. If the entry has any dependencies that need to be deleted, then `delete` should error.
 
 **Note:** If you anticipate `delete` taking a long time (> 30 seconds), then output `false`.
 
