@@ -74,6 +74,22 @@ func opKeysRegex(path string) *regexp.Regexp {
 	return regexp.MustCompile(expr)
 }
 
+// opKeyRegex returns a regex that matches the key <op>::<path>.
+// It is useful for clearing a specific cached op for the entry
+// corresponding to <path>.
+func opKeyRegex(op string, path string) *regexp.Regexp {
+	opRegex := "^" + regexp.QuoteMeta(op+"::")
+
+	var expr string
+	if path == "/" {
+		expr = opRegex + "/$"
+	} else {
+		expr = opRegex + "/" + regexp.QuoteMeta(strings.Trim(path, "/")) + "$"
+	}
+
+	return regexp.MustCompile(expr)
+}
+
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
 // If successful, returns an array of deleted keys.
 //

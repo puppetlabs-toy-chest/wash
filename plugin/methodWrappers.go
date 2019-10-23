@@ -144,21 +144,30 @@ func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
 	if err != nil {
 		return
 	}
-	if !deleted {
-		// The entry will eventually be deleted so leave the cache alone.
-		return
-	}
-	// The entry was deleted, so we can clear its cache and delete the
-	// entry from the parent's cached list result. The latter ensures
-	// that the entry will not appear in the parent's ls output if the
-	// user immediately ls'es the parent after deleting the entry.
+
+	// Delete was successful, so update the cache to ensure that fresh data's loaded
+	// when needed. This includes:
+	//   * Clearing the entry and its children's cache.
+	//   * Updating the parent's cached list result.
 	ClearCacheFor(d.id())
 	segments := strings.Split(d.id(), "/")
 	parentID := strings.Join(segments[:len(segments)-1], "/")
+	listOpName := defaultOpCodeToNameMap[ListOp]
 	entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID)
-	if entries != nil {
+	if entries == nil {
+		return
+	}
+	if deleted {
+		// The entry was deleted, so delete the entry from the parent's cached list
+		// result.
 		cname := segments[len(segments)-1]
 		entries.(*EntryMap).Delete(cname)
+	} else {
+		// The entry will eventually be deleted. However it's likely that Delete
+		// did update the entry (e.g. on VMs, Delete causes a state transition).
+		// Thus, we clear the parent's cached list result to ensure fresh data.
+		cache.Delete(opKeyRegex(listOpName, parentID))
 	}
+
 	return
 }
