@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
-	"k8s.io/client-go/rest"
 	corev1 "k8s.io/api/core/v1"
-	k8s "k8s.io/client-go/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 type pod struct {
@@ -65,3 +66,7 @@ func (p *pod) List(ctx context.Context) ([]plugin.Entry, error) {
 	return entries, nil
 }
 
+func (p *pod) Delete(ctx context.Context) (bool, error) {
+	err := p.client.CoreV1().Pods(p.ns).Delete(p.Name(), &v1.DeleteOptions{})
+	return true, err
+}

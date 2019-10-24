@@ -5,6 +5,7 @@ import (
 
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -46,4 +47,9 @@ func (n *namespace) ChildSchemas() []*plugin.EntrySchema {
 
 func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
 	return n.resources, nil
+}
+
+func (n *namespace) Delete(ctx context.Context) (bool, error) {
+	err := n.client.CoreV1().Namespaces().Delete(n.Name(), &v1.DeleteOptions{})
+	return true, err
 }
