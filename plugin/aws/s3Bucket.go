@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
 // listObjects is a helper that lists the objects which start with a specific
@@ -143,6 +144,15 @@ func listObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix
 	return entries, nil
 }
 
+// deleteObjects is a helper that deletes all objects that start with a specific prefix.
+func deleteObjects(ctx context.Context, client *s3Client.S3, bucket string, prefix string) error {
+	iterator := s3manager.NewDeleteListIterator(client, &s3Client.ListObjectsInput{
+		Bucket: awsSDK.String(bucket),
+		Prefix: awsSDK.String(prefix),
+	})
+	return s3manager.NewBatchDeleteWithClient(client).Delete(ctx, iterator)
+}
+
 // s3Bucket represents an S3 bucket.
 type s3Bucket struct {
 	plugin.EntryBase
@@ -184,6 +194,21 @@ func (b *s3Bucket) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 	return listObjects(ctx, b.client, b.Name(), "")
+}
+
+func (b *s3Bucket) Delete(ctx context.Context) (bool, error) {
+	// According to https://docs.aws.amazon.com/AmazonS3/latest/dev/delete-or-empty-bucket.html,
+	// we must delete the bucket's objects and object versions (for versioned buckets) before
+	// deleting the bucket itself. We defer deleting object versions as part of supporting
+	// versioned buckets, which is a separate piece of work that's tracked in https://github.com/puppetlabs/wash/issues/561
+	err := deleteObjects(ctx, b.client, b.Name(), "")
+	if err != nil {
+		return false, fmt.Errorf("error deleting all the objects: %v", err)
+	}
+	_, err = b.client.DeleteBucketWithContext(ctx, &s3Client.DeleteBucketInput{
+		Bucket: aws.String(plugin.Name(b)),
+	})
+	return true, err
 }
 
 type bucketMetadata struct {

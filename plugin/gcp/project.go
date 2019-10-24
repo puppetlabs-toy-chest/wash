@@ -6,6 +6,7 @@ import (
 
 	"github.com/puppetlabs/wash/plugin"
 	crm "google.golang.org/api/cloudresourcemanager/v1"
+	"google.golang.org/api/option"
 )
 
 type project struct {
@@ -38,6 +39,15 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 
 	return []plugin.Entry{comp, stor}, nil
+}
+
+func (p *project) Delete(ctx context.Context) (bool, error) {
+	crmService, err := crm.NewService(context.Background(), option.WithHTTPClient(p.client))
+	if err != nil {
+		return false, err
+	}
+	_, err = crmService.Projects.Delete(p.id).Do()
+	return true, err
 }
 
 func (p *project) Schema() *plugin.EntrySchema {

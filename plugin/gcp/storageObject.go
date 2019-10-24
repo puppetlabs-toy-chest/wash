@@ -34,6 +34,11 @@ func (s *storageObject) Open(ctx context.Context) (plugin.SizedReader, error) {
 	return &objectReader{ObjectHandle: s.ObjectHandle, size: int64(s.Attributes().Size())}, nil
 }
 
+func (s *storageObject) Delete(ctx context.Context) (bool, error) {
+	err := s.ObjectHandle.Delete(ctx)
+	return true, err
+}
+
 type objectReader struct {
 	*storage.ObjectHandle
 	size int64

@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -29,6 +30,17 @@ func newStorageBucket(client storageProjectClient, bucket *storage.BucketAttrs) 
 func (s *storageBucket) List(ctx context.Context) ([]plugin.Entry, error) {
 	bucket := s.Bucket(s.Name())
 	return listBucket(ctx, bucket, "")
+}
+
+func (s *storageBucket) Delete(ctx context.Context) (bool, error) {
+	// GCP only deletes empty buckets, so we'll need to delete all of its
+	// objects before deleting the bucket.
+	err := deleteObjects(ctx, s.Bucket(s.Name()), "")
+	if err != nil {
+		return false, err
+	}
+	err = s.Bucket(s.Name()).Delete(ctx)
+	return true, err
 }
 
 func (s *storageBucket) Schema() *plugin.EntrySchema {
@@ -76,6 +88,27 @@ func listBucket(ctx context.Context, bucket *storage.BucketHandle, prefix string
 		}
 	}
 	return entries, nil
+}
+
+func deleteObjects(ctx context.Context, bucket *storage.BucketHandle, prefix string) error {
+	// Unfortunately, GCP doesn't have a BatchDelete endpoint so we will have to
+	// delete each object one at a time.
+	//
+	// TODO: Parallelize this
+	it := bucket.Objects(ctx, &storage.Query{Prefix: prefix})
+	for {
+		objAttrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if err := bucket.Object(objAttrs.Name).Delete(ctx); err != nil {
+			return fmt.Errorf("failed to delete the %v object: %v", objAttrs.Name, err)
+		}
+	}
+	return nil
 }
 
 func bucketSchemas() []*plugin.EntrySchema {

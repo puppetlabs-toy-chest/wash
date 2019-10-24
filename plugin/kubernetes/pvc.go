@@ -61,6 +61,11 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 	return volume.List(ctx, v)
 }
 
+func (v *pvc) Delete(ctx context.Context) (bool, error) {
+	err := v.pvci.Delete(v.Name(), &metav1.DeleteOptions{})
+	return true, err
+}
+
 // Create a container that mounts a pvc to a default mountpoint and runs a command.
 func (v *pvc) createPod(cmd []string) (string, error) {
 	pod := &corev1.Pod{
