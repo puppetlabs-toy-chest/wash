@@ -200,7 +200,7 @@ func (b *s3Bucket) Delete(ctx context.Context) (bool, error) {
 	// According to https://docs.aws.amazon.com/AmazonS3/latest/dev/delete-or-empty-bucket.html,
 	// we must delete the bucket's objects and object versions (for versioned buckets) before
 	// deleting the bucket itself. We defer deleting object versions as part of supporting
-	// versioned buckets, which is a separate piece of work.
+	// versioned buckets, which is a separate piece of work that's tracked in https://github.com/puppetlabs/wash/issues/561
 	err := deleteObjects(ctx, b.client, b.Name(), "")
 	if err != nil {
 		return false, fmt.Errorf("error deleting all the objects: %v", err)

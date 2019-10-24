@@ -14,7 +14,6 @@ import (
 	"github.com/puppetlabs/wash/volume"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
@@ -63,7 +62,7 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (v *pvc) Delete(ctx context.Context) (bool, error) {
-	err := v.pvci.Delete(v.Name(), &v1.DeleteOptions{})
+	err := v.pvci.Delete(v.Name(), &metav1.DeleteOptions{})
 	return true, err
 }
 

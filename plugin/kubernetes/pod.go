@@ -6,7 +6,6 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -67,6 +66,6 @@ func (p *pod) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (p *pod) Delete(ctx context.Context) (bool, error) {
-	err := p.client.CoreV1().Pods(p.ns).Delete(p.Name(), &v1.DeleteOptions{})
+	err := p.client.CoreV1().Pods(p.ns).Delete(p.Name(), &metav1.DeleteOptions{})
 	return true, err
 }

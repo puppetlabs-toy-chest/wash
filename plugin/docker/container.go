@@ -90,7 +90,6 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 
 func (c *container) Delete(ctx context.Context) (bool, error) {
 	err := c.client.ContainerRemove(ctx, c.id, types.ContainerRemoveOptions{
-		// TODO: Should we set RemoveVolumes and RemoveLinks too?
 		Force: true,
 	})
 	return true, err
