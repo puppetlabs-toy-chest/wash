@@ -116,11 +116,11 @@ func (c *client) flush() {
 	// before submitting the data.
 	baseParams := c.baseParams()
 	var logMsg strings.Builder
-	logMsg.WriteString(fmt.Sprintf("Submitting analytics... (%v)\nPayload:\n", baseParams))
+	fmt.Fprintf(&logMsg, "Submitting analytics... (%v)\nPayload:\n", baseParams)
 	var payload []string
 	for _, hit := range c.queuedHits {
 		payload = append(payload, hit.merge(baseParams).encode())
-		logMsg.WriteString(fmt.Sprintf("  %v\n", hit))
+		fmt.Fprintf(&logMsg, "  %v\n", hit)
 	}
 	log.Debug(logMsg.String())
 	body := strings.Join(payload, "\n")
