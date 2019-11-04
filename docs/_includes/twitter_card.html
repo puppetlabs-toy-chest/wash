@@ -1,0 +1,20 @@
+<!-- Twitter card -->
+{% if page.twitter -%}
+<meta name="twitter:creator" content="@{{ page.twitter }}">
+{% endif -%}
+<meta name="twitter:title"   content="{{ page.title }}">
+
+{% if page.summary -%}
+<meta name="twitter:description" content="{{ page.summary }}">
+{% else -%}
+<meta name="twitter:description" content="{{ site.description }}">
+{% endif -%}
+
+{% if page.image -%}
+<meta name="twitter:card"  content="summary_large_image">
+<meta name="twitter:image" content="{{ site.url }}{{ site.base_url }}{{ page.image }}">
+{% else -%}
+<meta name="twitter:card"  content="summary">
+<meta name="twitter:image" content="{{ site.url }}{{ site.base_url }}{{ site.title_image }}">
+{% endif -%}
+<!-- end of Twitter card -->
