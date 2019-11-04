@@ -2,7 +2,6 @@ package volume
 
 import (
 	"context"
-	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -23,7 +22,6 @@ func newDir(name string, attr plugin.EntryAttributes, impl Interface, path strin
 	vd.impl = impl
 	vd.path = path
 	vd.SetAttributes(attr)
-	vd.SetTTLOf(plugin.ListOp, 30*time.Second)
 	return vd
 }
 
@@ -44,9 +42,11 @@ func (v *dir) generateChildren(dirmap DirMap) []plugin.Entry {
 		subpath := v.path + "/" + name
 		if attr.Mode().IsDir() {
 			newEntry := newDir(name, attr, v.impl, subpath)
+			newEntry.SetTTLOf(plugin.ListOp, ListTTL)
 			if d, ok := dirmap[subpath]; ok && d != nil {
 				newEntry.dirmap = dirmap
 				newEntry.Prefetched()
+				newEntry.DisableCachingFor(plugin.ListOp)
 			}
 			entries = append(entries, newEntry)
 		} else {

@@ -35,6 +35,7 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 	vol.pvci = pi
 	vol.podi = pd
 
+	vol.SetTTLOf(plugin.ListOp, volume.ListTTL)
 	vol.
 		Attributes().
 		SetCrtime(p.CreationTimestamp.Time).

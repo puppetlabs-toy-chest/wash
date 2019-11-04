@@ -9,6 +9,7 @@ package volume
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -56,3 +57,7 @@ func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
 	return newDir("dummy", plugin.EntryAttributes{}, impl, RootPath).List(ctx)
 }
+
+// ListTTL represents the List op's TTL. The entry implementing volume.Interface should
+// set the List op's TTL to this value.
+const ListTTL = 30 * time.Second
