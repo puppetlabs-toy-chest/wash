@@ -26,6 +26,7 @@ func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
 	}
 	fs.executor = executor
 	fs.maxdepth = maxdepth
+	fs.SetTTLOf(plugin.ListOp, ListTTL)
 	return fs
 }
 

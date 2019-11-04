@@ -83,26 +83,26 @@ func StatParse(line string) (plugin.EntryAttributes, string, error) {
 	return attr, segments[5], nil
 }
 
-// Ensure the directory at newpath - and its parents - all exist. Return the contents of that
+// Ensure the directory at newpath - and its parents - all exist. Returns the children of that
 // directory. The directory may not exist if we're parsing stat output for a basepath that's closer
 // to the root directory than where we searched because we want to preserve some of the hierarchy.
-func makedirs(dirmap DirMap, newpath string) Dir {
+func makeChildren(dirmap DirMap, newpath string) Children {
 	// If it exists, return the children map. Base case would be newpath == RootPath, which we create
 	// at the start of StatParseAll.
 	if newchildren, ok := dirmap[newpath]; ok {
 		return newchildren
 	}
 
-	// Create the attributes map for the new path.
-	newchildren := make(Dir)
+	// Create the children for the new path.
+	newchildren := make(Children)
 	dirmap[newpath] = newchildren
 
-	// Check if we need to create the parent, and get its attributes map.
+	// Check if we need to create the parent, and get its children.
 	parent, file := path.Split(newpath)
 	parent = strings.TrimSuffix(parent, "/")
-	parentchildren := makedirs(dirmap, parent)
+	parentchildren := makeChildren(dirmap, parent)
 
-	// Add attributes for the new path to the parent's attributes map. Then return the new map.
+	// Add attributes for the new path to the parent's children. Then return the new map.
 	attr := plugin.EntryAttributes{}
 	attr.SetMode(os.ModeDir | 0550)
 	parentchildren[file] = attr
@@ -119,7 +119,7 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 	scanner := bufio.NewScanner(output)
 	// Create lookup table for directories to contents, and prepopulate the root entry because
 	// the mount point won't be included in the stat output.
-	dirmap := DirMap{RootPath: make(Dir)}
+	dirmap := DirMap{RootPath: make(Children)}
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		// Skip error lines in case we're running in a tty.
@@ -135,18 +135,18 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 			if numSegments > maxdepth {
 				panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
 			} else if attr.Mode().IsDir() {
-				// Mark directories at maxdepth as unexplored with a nil Dir.
+				// Mark directories at maxdepth as unexplored with nil Children.
 				if numSegments == maxdepth {
-					dirmap[relative] = Dir(nil)
+					dirmap[relative] = Children(nil)
 				} else {
-					dirmap[relative] = make(Dir)
+					dirmap[relative] = make(Children)
 				}
 			}
 
 			// Add each entry to its parent's listing.
 			parent, file := path.Split(relative)
 			parent = strings.TrimSuffix(parent, "/")
-			parentchildren := makedirs(dirmap, parent)
+			parentchildren := makeChildren(dirmap, parent)
 			// Attr + path represents a volume dir or file.
 			parentchildren[file] = attr
 		}

@@ -9,6 +9,7 @@ package volume
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/puppetlabs/wash/plugin"
 )
@@ -30,13 +31,13 @@ type Interface interface {
 	VolumeStream(ctx context.Context, path string) (io.ReadCloser, error)
 }
 
-// A Dir is a map of files in a directory to their attributes.
-type Dir = map[string]plugin.EntryAttributes
+// Children represents a directory's children. It is a map of <child_path> => <child_attributes>.
+type Children = map[string]plugin.EntryAttributes
 
-// A DirMap is a map of directory names to a map of their directory contents.
-// The Dir may be a nil map, in which case we assume that its children have not been
-// discovered yet and will run VolumeList on the directory.
-type DirMap = map[string]Dir
+// A DirMap is a map of <dir_path> => <children>. If <children> is nil, then that means
+// that <dir_path>'s children haven't been discovered yet, so we will run VolumeList on
+// <dir_path>.
+type DirMap = map[string]Children
 
 // ChildSchemas returns a volume's child schema
 func ChildSchemas() []*plugin.EntrySchema {
@@ -56,3 +57,7 @@ func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
 	return newDir("dummy", plugin.EntryAttributes{}, impl, RootPath).List(ctx)
 }
+
+// ListTTL represents the List op's TTL. The entry implementing volume.Interface should
+// set the List op's TTL to this value.
+const ListTTL = 30 * time.Second

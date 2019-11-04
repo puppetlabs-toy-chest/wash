@@ -16,7 +16,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
-	vol "github.com/puppetlabs/wash/volume"
+	volpkg "github.com/puppetlabs/wash/volume"
 )
 
 type volume struct {
@@ -36,6 +36,7 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 		EntryBase: plugin.NewEntry(v.Name),
 	}
 	vol.client = c
+	vol.SetTTLOf(plugin.ListOp, volpkg.ListTTL)
 	vol.
 		Attributes().
 		SetCrtime(startTime).
@@ -55,11 +56,11 @@ func (v *volume) Schema() *plugin.EntrySchema {
 }
 
 func (v *volume) ChildSchemas() []*plugin.EntrySchema {
-	return vol.ChildSchemas()
+	return volpkg.ChildSchemas()
 }
 
 func (v *volume) List(ctx context.Context) ([]plugin.Entry, error) {
-	return vol.List(ctx, v)
+	return volpkg.List(ctx, v)
 }
 
 func (v *volume) Delete(ctx context.Context) (bool, error) {
@@ -89,12 +90,12 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	return created.ID, nil
 }
 
-func (v *volume) VolumeList(ctx context.Context, path string) (vol.DirMap, error) {
+func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, error) {
 	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
 	maxdepth := 10
 
 	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cid, err := v.createContainer(ctx, vol.StatCmd(mountpoint+path, maxdepth))
+	cid, err := v.createContainer(ctx, volpkg.StatCmd(mountpoint+path, maxdepth))
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +142,7 @@ func (v *volume) VolumeList(ctx context.Context, path string) (vol.DirMap, error
 		return nil, errors.New(string(bytes))
 	}
 
-	return vol.StatParseAll(output, mountpoint, path, maxdepth)
+	return volpkg.StatParseAll(output, mountpoint, path, maxdepth)
 }
 
 func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
