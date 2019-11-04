@@ -1,4 +1,8 @@
 title: Wash
+description: "Wide Area SHell: a cloud-native shell for bringing remote infrastructure to your terminal."
+url: https://puppetlabs.github.io
+base_url: /wash
+title_image: /assets/images/wash-logo.png
 google_analytics: UA-144580607-2
 exclude: [vendor, Boltdir, acceptance, modules, .git, Gemfile, Gemfile.lock]
 
