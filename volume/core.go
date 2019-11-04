@@ -9,6 +9,8 @@ package volume
 import (
 	"context"
 	"io"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -29,15 +31,24 @@ type Interface interface {
 	VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error)
 	// Accepts a path and streams updates to the content associated with that path.
 	VolumeStream(ctx context.Context, path string) (io.ReadCloser, error)
+	// Deletes the volume node at the specified path. Mirrors plugin.Deletable#Delete
+	VolumeDelete(ctx context.Context, path string) (bool, error)
 }
 
-// Children represents a directory's children. It is a map of <child_path> => <child_attributes>.
+// Children represents a directory's children. It is a map of <child_basename> => <child_attributes>.
 type Children = map[string]plugin.EntryAttributes
 
 // A DirMap is a map of <dir_path> => <children>. If <children> is nil, then that means
 // that <dir_path>'s children haven't been discovered yet, so we will run VolumeList on
 // <dir_path>.
 type DirMap = map[string]Children
+
+// dirMap is a thread-safe wrapper to a DirMap object. It is needed to properly implement
+// Delete.
+type dirMap struct {
+	mp  DirMap
+	mux sync.RWMutex
+}
 
 // ChildSchemas returns a volume's child schema
 func ChildSchemas() []*plugin.EntrySchema {
@@ -61,3 +72,28 @@ func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 // ListTTL represents the List op's TTL. The entry implementing volume.Interface should
 // set the List op's TTL to this value.
 const ListTTL = 30 * time.Second
+
+// delete is a keyword, so we use deleteNode instead. Note that this implementation is
+// symmetric with plugin.Delete except that we are managing a dirmap instead of a cache.
+func deleteNode(ctx context.Context, impl Interface, path string, dirmap *dirMap) (deleted bool, err error) {
+	deleted, err = impl.VolumeDelete(ctx, path)
+	if err != nil {
+		return
+	}
+	if !deleted {
+		return
+	}
+
+	// The node was deleted so remove it from the dirmap and from its parent's children
+	dirmap.mux.Lock()
+	defer dirmap.mux.Unlock()
+
+	delete(dirmap.mp, path)
+	segments := strings.Split(path, "/")
+	parentPath := strings.Join(segments[:len(segments)-1], "/")
+	if parentChildren, ok := dirmap.mp[parentPath]; ok {
+		basename := segments[len(segments)-1]
+		delete(parentChildren, basename)
+	}
+	return
+}

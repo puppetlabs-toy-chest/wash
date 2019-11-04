@@ -165,6 +165,17 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 	return r, nil
 }
 
+// VolumeDelete satisfies the Interface required by Delete to delete volume nodes.
+func (d *FS) VolumeDelete(ctx context.Context, path string) (bool, error) {
+	activity.Record(ctx, "Deleting %v on %v", path, plugin.ID(d.executor))
+	_, err := exec(ctx, d.executor, []string{"rm", "-rf", path})
+	if err != nil {
+		activity.Record(ctx, "Exec error running 'rm -rf %v' in VolumeDelete: %v", path, err)
+		return false, err
+	}
+	return true, nil
+}
+
 const fsDescription = `
 This represents the root directory of a container/VM. It lets you navigate
 and interact with that container/VM's filesystem as if you were logged into

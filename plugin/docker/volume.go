@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -224,6 +225,58 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
 	return plugin.CleanupReader{ReadCloser: output, Cleanup: killAndDelete}, nil
+}
+
+func (v *volume) VolumeDelete(ctx context.Context, path string) (bool, error) {
+	// Create a container that mounts a volume and deletes its file. Run rm -rf on it.
+	cid, err := v.createContainer(ctx, []string{"rm", "-rf", mountpoint + path})
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted container %v: %v", cid, err)
+	}()
+
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		return false, err
+	}
+
+	activity.Record(ctx, "Waiting for container %v", cid)
+	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
+	var statusCode int64
+	select {
+	case err := <-errC:
+		return false, err
+	case result := <-waitC:
+		statusCode = result.StatusCode
+		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
+	}
+
+	opts := types.ContainerLogsOptions{ShowStdout: true}
+	if statusCode != 0 {
+		opts.ShowStderr = true
+	}
+
+	activity.Record(ctx, "Gathering log for %v", cid)
+	output, err := v.client.ContainerLogs(ctx, cid, opts)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
+	}()
+
+	if statusCode != 0 {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return false, err
+		}
+		return false, errors.New(strings.Trim(string(bytes), "\n"))
+	}
+
+	return true, nil
 }
 
 const volumeDescription = `

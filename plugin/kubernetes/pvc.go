@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/activity"
@@ -263,6 +264,42 @@ func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, err
 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
 	return plugin.CleanupReader{ReadCloser: output, Cleanup: delete}, nil
+}
+
+func (v *pvc) VolumeDelete(ctx context.Context, path string) (bool, error) {
+	// Create a container that mounts a pvc and inspects it. Run rm -rf on it.
+	pid, err := v.createPod([]string{"rm", "-rf", mountpoint + path})
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
+	}()
+
+	activity.Record(ctx, "Waiting for pod %v to start", pid)
+	// Start watching for new events related to the pod we created.
+	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
+		return false, err
+	}
+
+	activity.Record(ctx, "Gathering log for %v", pid)
+	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
+	if lerr != nil {
+		return false, lerr
+	}
+	defer func() {
+		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
+	}()
+
+	if err == errPodTerminated {
+		bytes, err := ioutil.ReadAll(output)
+		if err != nil {
+			return false, err
+		}
+		return false, errors.New(strings.Trim(string(bytes), "\n"))
+	}
+
+	return true, nil
 }
 
 const pvcDescription = `

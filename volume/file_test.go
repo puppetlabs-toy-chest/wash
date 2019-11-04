@@ -37,6 +37,10 @@ func (m *mockFileEntry) VolumeStream(context.Context, string) (io.ReadCloser, er
 	return ioutil.NopCloser(strings.NewReader(m.content)), nil
 }
 
+func (m *mockFileEntry) VolumeDelete(context.Context, string) (bool, error) {
+	return true, nil
+}
+
 func (m *mockFileEntry) Schema() *plugin.EntrySchema {
 	return nil
 }

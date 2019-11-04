@@ -31,6 +31,12 @@ func (m *mockDirEntry) VolumeStream(context.Context, string) (io.ReadCloser, err
 	return nil, nil
 }
 
+func (m *mockDirEntry) VolumeDelete(ctx context.Context, path string) (bool, error) {
+	// deleteNode's tests use this entry, so we need to implement VolumeDelete for them
+	args := m.Called(ctx, path)
+	return args.Get(0).(bool), args.Error(1)
+}
+
 func (m *mockDirEntry) Schema() *plugin.EntrySchema {
 	return nil
 }
@@ -62,7 +68,7 @@ func TestVolumeDir(t *testing.T) {
 
 	assert.NotNil(t, dmap[RootPath]["path2"])
 	vd = newDir("path", dmap[RootPath]["path2"], &entry, "/path2")
-	vd.dirmap = dmap
+	vd.dirmap = &dirMap{mp: dmap}
 	entries, err = vd.List(ctx)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(entries))
