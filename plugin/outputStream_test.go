@@ -21,10 +21,10 @@ func newOutputStream(ctx context.Context) *OutputStream {
 	ch := make(chan ExecOutputChunk, 1)
 	return &OutputStream{
 		ctx: ctx,
-		id: Stdout,
-		ch: ch,
+		id:  Stdout,
+		ch:  ch,
 		closer: &multiCloser{
-			ch: ch,
+			ch:        ch,
 			countdown: 1,
 		},
 	}
@@ -66,7 +66,7 @@ func (suite *OutputStreamTestSuite) TestWrite() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 	stream := newOutputStream(ctx)
-	
+
 	// Test a successful write
 	data := []byte("data")
 	nw, writeErr := stream.Write(data)
@@ -185,6 +185,21 @@ func (suite *OutputStreamTestSuite) TestCloseWithError_ConsecutiveCloses() {
 	suite.assertClosed(stream)
 	stream.CloseWithError(nil)
 	suite.assertClosed(stream)
+}
+
+func (suite *OutputStreamTestSuite) TestCloseWithError_AllSubsequentSendsNoop() {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	stream := newOutputStream(ctx)
+	stream.CloseWithError(nil)
+	suite.assertClosed(stream)
+
+	// Note that the test will panic if stream.Write sends something on
+	// the closed channel.
+	_, err := stream.Write([]byte("foo"))
+	suite.NoError(err)
+	cancelFunc()
+	_, err = stream.Write([]byte("bar"))
+	suite.NoError(err)
 }
 
 func TestOutputStream(t *testing.T) {
