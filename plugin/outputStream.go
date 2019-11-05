@@ -13,7 +13,7 @@ type OutputStream struct {
 	id         ExecPacketType
 	ch         chan ExecOutputChunk
 	closer     *multiCloser
-	mux        sync.Mutex
+	mux        sync.RWMutex
 	closed     bool
 }
 
@@ -27,6 +27,13 @@ func (s *OutputStream) sendError(timestamp time.Time, err error) {
 
 // WriteWithTimestamp writes the given data with the specified timestamp
 func (s *OutputStream) WriteWithTimestamp(timestamp time.Time, data []byte) error {
+	s.mux.RLock()
+	defer s.mux.RUnlock()
+
+	if s.closed {
+		return nil
+	}
+
 	select {
 	case <-s.ctx.Done():
 		s.sendError(timestamp, s.ctx.Err())
