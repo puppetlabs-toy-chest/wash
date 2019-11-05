@@ -17,6 +17,7 @@ import (
 type Journal struct {
 	ID, Description string
 	start           time.Time
+	hide            bool
 }
 
 // NewJournal creates a new journal entry with start time set to 'now'.
@@ -48,6 +49,11 @@ func initHistory() historyBlob {
 
 // addToHistory appends the command description to history if it hasn't been registered before.
 func (j Journal) addToHistory() {
+	// Hidden journals aren't added to history.
+	if j.hide {
+		return
+	}
+
 	// Return if already added to history.
 	history.mux.RLock()
 	if _, ok := history.stored[j.ID]; ok {

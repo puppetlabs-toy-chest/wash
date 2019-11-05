@@ -45,6 +45,16 @@ func JournalForPID(pid int) Journal {
 		} else {
 			log.Infof("Unable to get command-line for pid %v: %v", pid, err)
 		}
+
+		if parent, err := proc.Ppid(); err == nil {
+			if parent == 1 {
+				out.hide = true
+				log.Debugf("Command %v was invoked by pid 1 and will not be displayed in history", out)
+			}
+		} else {
+			log.Infof("Unable to find parent pid of %v: %v", out, err)
+		}
+
 		return out, nil
 	})
 
