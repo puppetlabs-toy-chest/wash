@@ -124,8 +124,6 @@ func SubmitMethodInvocation(ctx context.Context, plugin string, entryType string
 
 	if journal.ID == "" {
 		journal = deadLetterOfficeJournal
-	} else {
-		journal.addToHistory()
 	}
 
 	journal.recorder().submitMethodInvocation(entryType, method, func() {
