@@ -91,12 +91,11 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	return created.ID, nil
 }
 
-func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, error) {
-	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
-	maxdepth := 10
-
-	// Create a container that mounts a volume and inspects it. Run it and capture the output.
-	cid, err := v.createContainer(ctx, volpkg.StatCmd(mountpoint+path, maxdepth))
+// Runs cmd in a temporary container. If the exit code is 0, then it returns the cmd's output.
+// Otherwise, it wraps the cmd's output in an error object.
+func (v *volume) runInTemporaryContainer(ctx context.Context, cmd []string) ([]byte, error) {
+	// Create a container that mounts a volume and deletes its file. Run rm -rf on it.
+	cid, err := v.createContainer(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -135,15 +134,24 @@ func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, er
 		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
 	}()
 
-	if statusCode != 0 {
-		bytes, err := ioutil.ReadAll(output)
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New(string(bytes))
+	bytes, err := ioutil.ReadAll(output)
+	if err != nil {
+		return nil, err
 	}
+	if statusCode != 0 {
+		return nil, errors.New(strings.Trim(string(bytes), "\n"))
+	}
+	return bytes, nil
+}
 
-	return volpkg.StatParseAll(output, mountpoint, path, maxdepth)
+func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, error) {
+	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
+	maxdepth := 10
+	output, err := v.runInTemporaryContainer(ctx, volpkg.StatCmd(mountpoint+path, maxdepth))
+	if err != nil {
+		return nil, err
+	}
+	return volpkg.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
 func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
@@ -228,54 +236,10 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 }
 
 func (v *volume) VolumeDelete(ctx context.Context, path string) (bool, error) {
-	// Create a container that mounts a volume and deletes its file. Run rm -rf on it.
-	cid, err := v.createContainer(ctx, []string{"rm", "-rf", mountpoint + path})
+	_, err := v.runInTemporaryContainer(ctx, []string{"rm", "-rf", mountpoint + path})
 	if err != nil {
 		return false, err
 	}
-	defer func() {
-		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		activity.Record(ctx, "Deleted container %v: %v", cid, err)
-	}()
-
-	activity.Record(ctx, "Starting container %v", cid)
-	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		return false, err
-	}
-
-	activity.Record(ctx, "Waiting for container %v", cid)
-	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
-	var statusCode int64
-	select {
-	case err := <-errC:
-		return false, err
-	case result := <-waitC:
-		statusCode = result.StatusCode
-		activity.Record(ctx, "Container %v finished[%v]: %v", cid, result.StatusCode, result.Error)
-	}
-
-	opts := types.ContainerLogsOptions{ShowStdout: true}
-	if statusCode != 0 {
-		opts.ShowStderr = true
-	}
-
-	activity.Record(ctx, "Gathering log for %v", cid)
-	output, err := v.client.ContainerLogs(ctx, cid, opts)
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		activity.Record(ctx, "Closed log for %v: %v", cid, output.Close())
-	}()
-
-	if statusCode != 0 {
-		bytes, err := ioutil.ReadAll(output)
-		if err != nil {
-			return false, err
-		}
-		return false, errors.New(strings.Trim(string(bytes), "\n"))
-	}
-
 	return true, nil
 }
 
