@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/activity"
@@ -143,12 +144,11 @@ func (v *pvc) waitForPod(ctx context.Context, pid string) error {
 	}
 }
 
-func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
-	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
-	maxdepth := 10
-
-	// Create a container that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := v.createPod(volume.StatCmd(mountpoint+path, maxdepth))
+// Runs cmd in a temporary pod. If the exit code is 0, then it returns the cmd's output.
+// Otherwise, it wraps the cmd's output in an error object.
+func (v *pvc) runInTemporaryPod(ctx context.Context, cmd []string) ([]byte, error) {
+	// Create a pod that mounts a pvc and inspects it. Run it and capture the output.
+	pid, err := v.createPod(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -171,54 +171,32 @@ func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error
 		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
 	}()
 
-	if err == errPodTerminated {
-		bytes, err := ioutil.ReadAll(output)
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New(string(bytes))
+	bytes, readErr := ioutil.ReadAll(output)
+	if readErr != nil {
+		return nil, readErr
 	}
+	if err == errPodTerminated {
+		return nil, errors.New(strings.Trim(string(bytes), "\n"))
+	}
+	return bytes, nil
+}
 
-	return volume.StatParseAll(output, mountpoint, path, maxdepth)
+func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
+	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
+	maxdepth := 10
+	output, err := v.runInTemporaryPod(ctx, volume.StatCmd(mountpoint+path, maxdepth))
+	if err != nil {
+		return nil, err
+	}
+	return volume.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
 func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
-	// Create a container that mounts a pvc and output the file.
-	pid, err := v.createPod([]string{"cat", mountpoint + path})
-	activity.Record(ctx, "Reading from: %v", mountpoint+path)
+	output, err := v.runInTemporaryPod(ctx, []string{"cat", mountpoint + path})
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
-	}()
-
-	activity.Record(ctx, "Waiting for pod %v", pid)
-	// Start watching for new events related to the pod we created.
-	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
-		return nil, err
-	}
-	podErr := err
-
-	activity.Record(ctx, "Gathering log for %v", pid)
-	output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
-	}()
-
-	bits, err := ioutil.ReadAll(output)
-	if err != nil {
-		return nil, err
-	}
-	activity.Record(ctx, "Read: %v", bits)
-
-	if podErr == errPodTerminated {
-		return nil, errors.New(string(bits))
-	}
-	return bytes.NewReader(bits), nil
+	return bytes.NewReader(output), nil
 }
 
 func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
@@ -263,6 +241,14 @@ func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, err
 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
 	return plugin.CleanupReader{ReadCloser: output, Cleanup: delete}, nil
+}
+
+func (v *pvc) VolumeDelete(ctx context.Context, path string) (bool, error) {
+	_, err := v.runInTemporaryPod(ctx, []string{"rm", "-rf", mountpoint + path})
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 const pvcDescription = `

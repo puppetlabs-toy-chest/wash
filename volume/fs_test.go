@@ -227,6 +227,21 @@ func (suite *fsTestSuite) TestFSRead() {
 	suite.Equal("hello", string(buf))
 }
 
+func (suite *fsTestSuite) TestVolumeDelete() {
+	exec := suite.createExec(varLogFixture, varLogDepth)
+	fs := NewFS("fs", exec, varLogDepth)
+	// ID would normally be set when listing FS within the parent instance.
+	fs.SetTestID("/instance/fs")
+
+	execResult := suite.createResult("deleted")
+	exec.On("Exec", mock.Anything, "rm", []string{"-rf", "/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
+	deleted, err := fs.VolumeDelete(context.Background(), "/var/log/path1/a file")
+	if suite.NoError(err) {
+		suite.True(deleted)
+		exec.AssertCalled(suite.T(), "Exec", mock.Anything, "rm", []string{"-rf", "/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true})
+	}
+}
+
 func TestFS(t *testing.T) {
 	suite.Run(t, new(fsTestSuite))
 }

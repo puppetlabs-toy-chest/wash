@@ -11,7 +11,7 @@ type dir struct {
 	plugin.EntryBase
 	impl   Interface
 	path   string
-	dirmap DirMap
+	dirmap *dirMap
 }
 
 // newDir creates a dir populated from dirs.
@@ -35,22 +35,27 @@ func (v *dir) Schema() *plugin.EntrySchema {
 
 // Generate children using the provided DirMap. The dir may not have a dirmap
 // stored if it's a source because it should dynamically generate it.
-func (v *dir) generateChildren(dirmap DirMap) []plugin.Entry {
-	parent := dirmap[v.path]
+func (v *dir) generateChildren(dirmap *dirMap) []plugin.Entry {
+	dirmap.mux.RLock()
+	defer dirmap.mux.RUnlock()
+
+	parent := dirmap.mp[v.path]
 	entries := make([]plugin.Entry, 0, len(parent))
 	for name, attr := range parent {
 		subpath := v.path + "/" + name
 		if attr.Mode().IsDir() {
 			newEntry := newDir(name, attr, v.impl, subpath)
 			newEntry.SetTTLOf(plugin.ListOp, ListTTL)
-			if d, ok := dirmap[subpath]; ok && d != nil {
+			if d, ok := dirmap.mp[subpath]; ok && d != nil {
 				newEntry.dirmap = dirmap
 				newEntry.Prefetched()
 				newEntry.DisableCachingFor(plugin.ListOp)
 			}
 			entries = append(entries, newEntry)
 		} else {
-			entries = append(entries, newFile(name, attr, v.impl, subpath))
+			newEntry := newFile(name, attr, v.impl, subpath)
+			newEntry.dirmap = dirmap
+			entries = append(entries, newEntry)
 		}
 	}
 	return entries
@@ -69,7 +74,11 @@ func (v *dir) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	return v.generateChildren(dirmap), nil
+	return v.generateChildren(&dirMap{mp: dirmap}), nil
+}
+
+func (v *dir) Delete(ctx context.Context) (bool, error) {
+	return deleteNode(ctx, v.impl, v.path, v.dirmap)
 }
 
 const dirDescription = `
