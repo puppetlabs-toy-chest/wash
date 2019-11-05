@@ -20,8 +20,8 @@ type container struct {
 	plugin.EntryBase
 	client *k8s.Clientset
 	config *rest.Config
-	ns	 string
-	pod *corev1.Pod
+	ns     string
+	pod    *corev1.Pod
 }
 
 func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, c *corev1.Container, p *corev1.Pod) (*container, error) {
@@ -35,7 +35,7 @@ func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Confi
 
 	// Find when the container was started; set this as the creation time
 	for _, ecs := range cntnr.pod.Status.ContainerStatuses {
-		if ecs.Name == cntnr.EntryBase.Name() {
+		if ecs.Name == cntnr.EntryBase.Name() && ecs.State.Running != nil {
 			creationTimestamp := ecs.State.Running.StartedAt.Time
 			cntnr.
 				Attributes().
@@ -82,7 +82,7 @@ func (c *container) Stream(ctx context.Context) (io.ReadCloser, error) {
 	var tailLines int64 = 10
 	logOptions := corev1.PodLogOptions{
 		Container: c.Name(),
-		Follow: true,
+		Follow:    true,
 		TailLines: &tailLines,
 	}
 	req := c.client.CoreV1().Pods(c.ns).GetLogs(c.pod.Name, &logOptions)
