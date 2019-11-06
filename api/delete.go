@@ -29,7 +29,7 @@ var deleteHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	if !plugin.DeleteAction().IsSupportedOn(entry) {
 		return unsupportedActionResponse(path, plugin.DeleteAction())
 	}
-	deleted, err := plugin.Delete(ctx, entry.(plugin.Deletable))
+	deleted, err := plugin.DeleteWithAnalytics(ctx, entry.(plugin.Deletable))
 	if err != nil {
 		return erroredActionResponse(path, plugin.DeleteAction(), err.Error())
 	}
