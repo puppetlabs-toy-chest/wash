@@ -83,7 +83,26 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	netcfg := network.NetworkingConfig{}
 	created, err := v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, "")
 	if err != nil {
-		return "", err
+		// Pull busybox if create failed because it wasn't found.
+		// Taken from https://github.com/docker/cli/blob/v19.03.4/cli/command/container/create.go#L218-L241.
+		if client.IsErrNotFound(err) {
+			var pullRdr io.ReadCloser
+			if pullRdr, err = v.client.ImagePull(ctx, "busybox:latest", types.ImagePullOptions{}); err != nil {
+				return "", err
+			}
+			defer pullRdr.Close()
+
+			writer := activity.Writer{Context: ctx, Prefix: "Pulling busybox"}
+			if _, err := io.Copy(writer, pullRdr); err != nil {
+				return "", err
+			}
+
+			if created, err = v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, ""); err != nil {
+				return "", err
+			}
+		} else {
+			return "", err
+		}
 	}
 	for _, warn := range created.Warnings {
 		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
