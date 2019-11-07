@@ -326,7 +326,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchem
 	)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchemaGraph() {
+func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchema() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -350,6 +350,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 	s, err := entry.schema()
 	if suite.NoError(err) {
 		suite.Equal(entry.schemaGraphs[TypeID(entry)], s.graph)
+		suite.Equal(s.entrySchema.Actions, []string{"schema"})
 		// Make sure that Wash did not shell out to the plugin script
 		mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
 	}
@@ -466,6 +467,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 			stdout = strings.ReplaceAll(stdout, "methods", "actions")
 			stdout = strings.ReplaceAll(stdout, "baz.", "fooPlugin::baz.")
 			suite.JSONEq(stdout, string(schemaJSON))
+			suite.Equal(schema.Actions, []string{"list"})
 		}
 	}
 }
@@ -689,6 +691,34 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestSignal() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		methods:   map[string]interface{}{"signal": nil},
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockInvokeAndWait := func(signal string, stdout []byte, err error) {
+		mockScript.OnInvokeAndWait(ctx, "signal", entry, signal).Return(mockInvocation(stdout), err).Once()
+	}
+
+	// Test that if InvokeAndWait errors, then Signal returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockInvokeAndWait("start", []byte{}, mockErr)
+	err := entry.Signal(ctx, "start")
+	suite.EqualError(mockErr, err.Error())
+
+	// Test that Signal properly signals the entry
+	mockInvokeAndWait("start", []byte{}, nil)
+	err = entry.Signal(ctx, "start")
+	if suite.NoError(err) {
+		mockScript.AssertExpectations(suite.T())
+	}
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
@@ -864,6 +894,44 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfPare
 `)
 	_, err := unmarshalSchemaGraph(entry, stdout)
 	suite.Regexp("parent.*entries.*children", err)
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotSignalableAndSignalsProvided() {
+	entry := &externalPluginEntry{
+		rawTypeID: "foo",
+	}
+	entry.SetTestID("fooPlugin")
+
+	stdout := []byte(`
+{
+	"foo":{
+		"label": "fooLabel",
+		"methods": [],
+		"signals": {"foo": "bar"}
+	}
+}
+`)
+	_, err := unmarshalSchemaGraph(entry, stdout)
+	suite.Regexp("entry.*signals.*not.*signalable", err)
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSignalableAndSignalsNotProvided() {
+	entry := &externalPluginEntry{
+		rawTypeID: "foo",
+	}
+	entry.SetTestID("fooPlugin")
+
+	stdout := []byte(`
+{
+	"foo":{
+		"label": "fooLabel",
+		"methods": ["signal"],
+		"signals": {}
+	}
+}
+`)
+	_, err := unmarshalSchemaGraph(entry, stdout)
+	suite.Regexp("signalable.*entries.*signal", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMissingChildSchema() {

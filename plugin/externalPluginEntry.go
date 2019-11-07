@@ -296,6 +296,8 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 	}
 	s := NewEntrySchema(e, "foo")
 	s.graph = graph
+	entrySchemaV, _ := s.graph.Get(TypeID(e))
+	s.entrySchema = entrySchemaV.(entrySchema)
 	return s, nil
 }
 
@@ -373,6 +375,11 @@ func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) 
 		)
 	}
 	return metadata, nil
+}
+
+func (e *externalPluginEntry) Signal(ctx context.Context, signal string) error {
+	_, err := e.script.InvokeAndWait(ctx, "signal", e, signal)
+	return err
 }
 
 func (e *externalPluginEntry) Delete(ctx context.Context) (deleted bool, err error) {
@@ -611,10 +618,13 @@ func unmarshalSchemaGraph(e externalPlugin, stdout []byte) (*linkedhashmap.Map, 
 			return fmt.Errorf("the entry's methods must be provided")
 		}
 		isParent := false
+		isSignalable := false
 		for _, method := range node.Methods {
-			if method == "list" {
+			switch method {
+			case "list":
 				isParent = true
-				break
+			case "signal":
+				isSignalable = true
 			}
 		}
 		if !isParent && len(node.Children) > 0 {
@@ -630,6 +640,12 @@ func unmarshalSchemaGraph(e externalPlugin, stdout []byte) (*linkedhashmap.Map, 
 				namespacedChildren = append(namespacedChildren, namespace(pluginName, child))
 			}
 			node.Children = namespacedChildren
+		}
+		if !isSignalable && len(node.Signals) > 0 {
+			return fmt.Errorf("entry has included a list of supported signals even though it is not signalable. Signalable entries must implement signal")
+		}
+		if isSignalable && len(node.Signals) <= 0 {
+			return fmt.Errorf("signalable entries must include their supported signals")
 		}
 		if node.MetaAttributeSchema != nil && node.MetaAttributeSchema.Type.Type != "object" {
 			return fmt.Errorf("invalid value for the meta attribute schema: expected a JSON object schema but got %v", node.MetaAttributeSchema.Type.Type)
