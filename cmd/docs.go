@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"strings"
+
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -31,11 +33,32 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v: schema unknown\n", path)
 		return exitCode{0}
 	}
+
+	// Print the description
 	description := schema.Description()
 	if len(description) > 0 {
-		cmdutil.Println(description)
+		cmdutil.Println(strings.Trim(description, "\n"))
 	} else {
 		cmdutil.Println("No description provided.")
 	}
+
+	// Print the supported signals (if there are any). This part is printed as
+	//   SUPPORTED SIGNALS:
+	//     * <signal>
+	//         <desc>
+	//     * <signal>
+	//         <desc>
+	if len(schema.Signals()) > 0 {
+		cmdutil.Println()
+		cmdutil.Printf("SUPPORTED SIGNALS\n")
+		for signal, description := range schema.Signals() {
+			cmdutil.Printf("* %v\n", signal)
+			lines := strings.Split(strings.Trim(description, "\n"), "\n")
+			for _, line := range lines {
+				cmdutil.Printf("    %v\n", line)
+			}
+		}
+	}
+
 	return exitCode{0}
 }

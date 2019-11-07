@@ -79,3 +79,9 @@ func (c *MockClient) Delete(path string) (bool, error) {
 	args := c.Called(path)
 	return args.Get(0).(bool), args.Error(1)
 }
+
+// Signal mocks Client#Signal
+func (c *MockClient) Signal(path string, signal string) error {
+	args := c.Called(path, signal)
+	return args.Error(0)
+}
