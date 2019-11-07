@@ -202,6 +202,18 @@ func (s *EntrySchema) SetDescription(description string) *EntrySchema {
 	return s
 }
 
+// Signals returns the entry's supported signals
+func (s *EntrySchema) Signals() map[string]string {
+	return s.EntrySchema.Signals
+}
+
+// SetSignals sets the entry's supported signals. This should only be called
+// by the tests.
+func (s *EntrySchema) SetSignals(signals map[string]string) *EntrySchema {
+	s.EntrySchema.Signals = signals
+	return s
+}
+
 // Singleton returns true if the entry's a singleton, false otherwise.
 func (s *EntrySchema) Singleton() bool {
 	return s.EntrySchema.Singleton
