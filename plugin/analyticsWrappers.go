@@ -35,6 +35,13 @@ func ExecWithAnalytics(ctx context.Context, e Execable, cmd string, args []strin
 	return Exec(ctx, e, cmd, args, opts)
 }
 
+// SignalWithAnalytics is a wrapper to plugin.Signal. Use it when you need to report a
+// 'Signal' invocation to analytics. Otherwise, use plugin.Signal.
+func SignalWithAnalytics(ctx context.Context, s Signalable, signal string) error {
+	submitMethodInvocation(ctx, s, "Signal")
+	return Signal(ctx, s, signal)
+}
+
 // DeleteWithAnalytics is a wrapper to plugin.Delete. Use it when you need to report a
 // 'Delete' invocation to analytics. Otherwise, use plugin.Delete.
 func DeleteWithAnalytics(ctx context.Context, d Deletable) (bool, error) {

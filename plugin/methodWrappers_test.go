@@ -57,7 +57,8 @@ type methodWrappersTestsMockEntry struct {
 }
 
 func (m *methodWrappersTestsMockEntry) Schema() *EntrySchema {
-	return nil
+	args := m.Called()
+	return args.Get(0).(*EntrySchema)
 }
 
 func (m *methodWrappersTestsMockEntry) List(ctx context.Context) ([]Entry, error) {
@@ -73,6 +74,11 @@ func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) (bool, error)
 func (m *methodWrappersTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(SizedReader), args.Error(1)
+}
+
+func (m *methodWrappersTestsMockEntry) Signal(ctx context.Context, signal string) error {
+	args := m.Called(ctx, signal)
+	return args.Error(0)
 }
 
 func newMethodWrappersTestsMockEntry(name string) *methodWrappersTestsMockEntry {
@@ -99,6 +105,59 @@ func (suite *MethodWrappersTestSuite) TestPrefetched() {
 	suite.False(IsPrefetched(e))
 	e.Prefetched()
 	suite.True(IsPrefetched(e))
+}
+
+func (suite *MethodWrappersTestSuite) TestSignal_ReturnsSignalError() {
+	ctx := context.Background()
+	e := newMethodWrappersTestsMockEntry("foo")
+
+	expectedErr := fmt.Errorf("an error")
+
+	e.On("Schema").Return((*EntrySchema)(nil))
+	e.On("Signal", ctx, "start").Return(expectedErr)
+
+	err := Signal(ctx, e, "start")
+	suite.Equal(expectedErr, err)
+}
+
+func (suite *MethodWrappersTestSuite) TestSignal_SendsSignalAndUpdatesCache() {
+	ctx := context.Background()
+	e := newMethodWrappersTestsMockEntry("bar")
+	e.SetTestID("/foo/bar")
+
+	e.On("Schema").Return((*EntrySchema)(nil))
+	e.On("Signal", ctx, "start").Return(nil)
+
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
+	suite.cache.On("Get", "List", "/foo").Return(newEntryMap(), nil)
+	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
+
+	// Also test case-insensitivity here
+	err := Signal(ctx, e, "START")
+	if suite.NoError(err) {
+		e.AssertExpectations(suite.T())
+		suite.cache.AssertExpectations(suite.T())
+	}
+}
+
+func (suite *MethodWrappersTestSuite) TestSignal_SchemaKnown_ReturnsInvalidInputErrForInvalidSignal() {
+	ctx := context.Background()
+	e := newMethodWrappersTestsMockEntry("foo")
+
+	schema := &EntrySchema{
+		entrySchema: entrySchema{
+			Signals: map[string]string{
+				"start": "Starts the entry",
+				"stop":  "Stops the entry",
+			},
+		},
+	}
+	e.On("Schema").Return(schema)
+	e.On("Signal", ctx, "start").Return(nil)
+
+	err := Signal(ctx, e, "invalid_signal")
+	suite.True(IsInvalidInputErr(err))
+	suite.Regexp("invalid.*signal.*invalid_signal.*start.*stop", err)
 }
 
 func (suite *MethodWrappersTestSuite) TestDelete_ReturnsDeleteError() {

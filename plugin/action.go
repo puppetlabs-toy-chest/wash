@@ -34,6 +34,7 @@ var readAction = newAction("read", "Readable")
 var streamAction = newAction("stream", "Streamable")
 var execAction = newAction("exec", "Execable")
 var deleteAction = newAction("delete", "Deletable")
+var signalAction = newAction("signal", "Signalable")
 
 // ListAction represents the list action
 func ListAction() Action {
@@ -58,6 +59,11 @@ func ExecAction() Action {
 // DeleteAction represents the delete action
 func DeleteAction() Action {
 	return deleteAction
+}
+
+// SignalAction represents the signal action
+func SignalAction() Action {
+	return signalAction
 }
 
 // Actions returns all of the available Wash actions as a map

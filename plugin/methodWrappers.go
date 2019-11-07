@@ -4,9 +4,26 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 )
+
+// InvalidInputErr indicates that the method invocation received invalid
+// input (e.g. plugin.Signal received an unsupported signal).
+type InvalidInputErr struct {
+	reason string
+}
+
+func (e InvalidInputErr) Error() string {
+	return e.reason
+}
+
+// IsInvalidInputErr returns true if err is an InvalidInputErr error object
+func IsInvalidInputErr(err error) bool {
+	_, ok := err.(InvalidInputErr)
+	return ok
+}
 
 // This file contains all of the plugin.<Method> wrappers. You should
 // invoke plugin.<Method> instead of e.<Method> because plugin.<Method>
@@ -138,6 +155,48 @@ func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	return s.Stream(ctx)
 }
 
+// Signal signals the entry with the specified signal
+func Signal(ctx context.Context, s Signalable, signal string) error {
+	// Signals are case-insensitive
+	signal = strings.ToLower(signal)
+
+	// Validate the provided signal if the entry's schema is available
+	schema, err := Schema(s)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve the entry's schema for signal validation: %v", err)
+	}
+	if schema != nil {
+		if _, ok := schema.Signals[signal]; !ok {
+			var validSignals []string
+			for signal := range schema.Signals {
+				validSignals = append(validSignals, signal)
+			}
+			sort.Strings(validSignals)
+			return InvalidInputErr{
+				fmt.Sprintf("invalid signal %v. Valid signals are %v", signal, strings.Join(validSignals, ", ")),
+			}
+		}
+	}
+
+	// Go ahead and send the signal
+	err = s.Signal(ctx, signal)
+	if err != nil {
+		return err
+	}
+
+	// The signal was successfully sent. Clear the entry's cache and its parent's
+	// cached list result to ensure that fresh data's loaded when needed
+	ClearCacheFor(s.id())
+	parentID, _ := splitID(s.id())
+	listOpName := defaultOpCodeToNameMap[ListOp]
+	entries, _ := cache.Get(listOpName, parentID)
+	if entries != nil {
+		cache.Delete(opKeyRegex(listOpName, parentID))
+	}
+
+	return nil
+}
+
 // Delete deletes the given entry.
 func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
 	deleted, err = d.Delete(ctx)
@@ -150,24 +209,34 @@ func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
 	//   * Clearing the entry and its children's cache.
 	//   * Updating the parent's cached list result.
 	ClearCacheFor(d.id())
-	segments := strings.Split(d.id(), "/")
-	parentID := strings.Join(segments[:len(segments)-1], "/")
+	parentID, cname := splitID(d.id())
 	listOpName := defaultOpCodeToNameMap[ListOp]
-	entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID)
+	entries, _ := cache.Get(listOpName, parentID)
 	if entries == nil {
 		return
 	}
 	if deleted {
 		// The entry was deleted, so delete the entry from the parent's cached list
 		// result.
-		cname := segments[len(segments)-1]
 		entries.(*EntryMap).Delete(cname)
 	} else {
 		// The entry will eventually be deleted. However it's likely that Delete
 		// did update the entry (e.g. on VMs, Delete causes a state transition).
 		// Thus, we clear the parent's cached list result to ensure fresh data.
+		//
+		// Note that this is symmetric with Signal. This makes sense because for
+		// some entries, deleting that entry is equivalent to sending a termination
+		// signal (e.g. EC2 instances).
 		cache.Delete(opKeyRegex(listOpName, parentID))
 	}
 
 	return
+}
+
+// returns (parentID, cname)
+func splitID(entryID string) (string, string) {
+	segments := strings.Split(entryID, "/")
+	parentID := strings.Join(segments[:len(segments)-1], "/")
+	cname := segments[len(segments)-1]
+	return parentID, cname
 }
