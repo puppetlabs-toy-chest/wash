@@ -17,7 +17,6 @@ jobs:
   - name: Test Docker plugin
     before_script:
     - go install
-    - docker pull busybox
     - docker-compose -f examples/swarm/docker-compose.yml up -d
     script:
     - wash validate docker
