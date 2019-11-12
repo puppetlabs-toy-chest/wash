@@ -34,7 +34,7 @@ func (cs *containersDir) ChildSchemas() []*plugin.EntrySchema {
 
 // List
 func (cs *containersDir) List(ctx context.Context) ([]plugin.Entry, error) {
-	containers, err := cs.client.ContainerList(ctx, types.ContainerListOptions{})
+	containers, err := cs.client.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return nil, err
 	}
