@@ -907,7 +907,9 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotS
 	"foo":{
 		"label": "fooLabel",
 		"methods": [],
-		"signals": {"foo": "bar"}
+		"signals": [
+		  {"name": "foo", "description": "bar"}
+		]
 	}
 }
 `)
@@ -926,7 +928,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSign
 	"foo":{
 		"label": "fooLabel",
 		"methods": ["signal"],
-		"signals": {}
+		"signals": []
 	}
 }
 `)

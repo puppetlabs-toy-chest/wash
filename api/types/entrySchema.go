@@ -10,6 +10,9 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
+// SignalSchema represents a signal's schema
+type SignalSchema = plugin.SignalSchema
+
 // EntrySchema describes an entry's schema, which is what's returned by
 // the /fs/schema endpoint.
 //
@@ -203,13 +206,13 @@ func (s *EntrySchema) SetDescription(description string) *EntrySchema {
 }
 
 // Signals returns the entry's supported signals
-func (s *EntrySchema) Signals() map[string]string {
+func (s *EntrySchema) Signals() []SignalSchema {
 	return s.EntrySchema.Signals
 }
 
 // SetSignals sets the entry's supported signals. This should only be called
 // by the tests.
-func (s *EntrySchema) SetSignals(signals map[string]string) *EntrySchema {
+func (s *EntrySchema) SetSignals(signals []SignalSchema) *EntrySchema {
 	s.EntrySchema.Signals = signals
 	return s
 }

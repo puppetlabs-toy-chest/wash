@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -146,9 +147,26 @@ func (suite *MethodWrappersTestSuite) TestSignal_SchemaKnown_ReturnsInvalidInput
 
 	schema := &EntrySchema{
 		entrySchema: entrySchema{
-			Signals: map[string]string{
-				"start": "Starts the entry",
-				"stop":  "Stops the entry",
+			Signals: []SignalSchema{
+				SignalSchema{
+					signalSchema: signalSchema{
+						Name:        "start",
+						Description: "Starts the entry",
+					},
+				},
+				SignalSchema{
+					signalSchema: signalSchema{
+						Name:        "stop",
+						Description: "Stops the entry",
+					},
+				},
+				SignalSchema{
+					signalSchema: signalSchema{
+						Name:        "linux",
+						Description: "Supports one of the Linux signals",
+					},
+					regex: regexp.MustCompile("\\Asig.*"),
+				},
 			},
 		},
 	}
@@ -157,7 +175,7 @@ func (suite *MethodWrappersTestSuite) TestSignal_SchemaKnown_ReturnsInvalidInput
 
 	err := Signal(ctx, e, "invalid_signal")
 	suite.True(IsInvalidInputErr(err))
-	suite.Regexp("invalid.*signal.*invalid_signal.*start.*stop", err)
+	suite.Regexp("invalid.*signal.*invalid_signal.*start.*stop.*linux", err)
 }
 
 func (suite *MethodWrappersTestSuite) TestDelete_ReturnsDeleteError() {

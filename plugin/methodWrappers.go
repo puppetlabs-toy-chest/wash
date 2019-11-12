@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"time"
 )
@@ -166,15 +165,30 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 		return fmt.Errorf("failed to retrieve the entry's schema for signal validation: %v", err)
 	}
 	if schema != nil {
-		if _, ok := schema.Signals[signal]; !ok {
-			var validSignals []string
-			for signal := range schema.Signals {
-				validSignals = append(validSignals, signal)
+		var validSignals []string
+		var validSignalGroups []string
+		var isValidSignal bool
+		for _, signalSchema := range schema.Signals {
+			if signalSchema.IsGroup() {
+				validSignalGroups = append(validSignalGroups, signalSchema.Name())
+				isValidSignal = signalSchema.Regex().MatchString(signal)
+			} else {
+				validSignals = append(validSignals, signalSchema.Name())
+				isValidSignal = signalSchema.Name() == signal
 			}
-			sort.Strings(validSignals)
-			return InvalidInputErr{
-				fmt.Sprintf("invalid signal %v. Valid signals are %v", signal, strings.Join(validSignals, ", ")),
+			if isValidSignal {
+				break
 			}
+		}
+		if !isValidSignal {
+			errMsg := fmt.Sprintf("invalid signal %v", signal)
+			if len(validSignals) > 0 {
+				errMsg += fmt.Sprintf(". Valid signals are %v", strings.Join(validSignals, ", "))
+			}
+			if len(validSignalGroups) > 0 {
+				errMsg += fmt.Sprintf(". Valid signal groups are %v", strings.Join(validSignalGroups, ", "))
+			}
+			return InvalidInputErr{errMsg}
 		}
 	}
 
