@@ -2,10 +2,12 @@ package aws
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 
+	"github.com/aws/aws-sdk-go/aws"
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
@@ -23,7 +25,12 @@ func newS3Dir(ctx context.Context, session *session.Session) *s3Dir {
 		EntryBase: plugin.NewEntry("s3"),
 	}
 	s3Dir.session = session
-	s3Dir.client = s3Client.New(session)
+
+	// All S3 buckets can be listed from any region. Normalize the configured region so we can still
+	// list buckets if region is unspecified.
+	region := s3Client.NormalizeBucketLocation(awsSDK.StringValue(session.Config.Region))
+	s3Dir.client = s3Client.New(session, aws.NewConfig().WithRegion(region))
+
 	if _, err := plugin.List(ctx, s3Dir); err != nil {
 		s3Dir.MarkInaccessible(ctx, err)
 	}
@@ -44,7 +51,7 @@ func (s *s3Dir) ChildSchemas() []*plugin.EntrySchema {
 func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	resp, err := s.client.ListBucketsWithContext(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error listing buckets: %w", err)
 	}
 
 	activity.Record(ctx, "Listing %v S3 buckets", len(resp.Buckets))

@@ -260,13 +260,12 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 	// You can force a retry by deleting the cache entry if there was an error.
 	resp, err := plugin.CachedOp(ctx, "Region", b, 24*time.Hour, func() (interface{}, error) {
 		locRequest := &s3Client.GetBucketLocationInput{Bucket: awsSDK.String(b.Name())}
-		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest)
+		// Normalize bucket location so empty region responses are interpreted as Amazon's default (us-east-1)
+		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest, s3Client.WithNormalizeBucketLocation)
 		if err != nil {
-			return nil, fmt.Errorf("could not get the region of bucket %v: %v", b.Name(), err)
+			return nil, fmt.Errorf("could not get the region of bucket %v: %w", b.Name(), err)
 		}
-
-		// The response will be empty if the bucket is in Amazon's default region (us-east-1)
-		return s3Client.NormalizeBucketLocation(awsSDK.StringValue(resp.LocationConstraint)), nil
+		return resp, nil
 	})
 
 	if err != nil {
