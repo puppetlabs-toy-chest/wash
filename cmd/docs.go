@@ -11,7 +11,7 @@ import (
 func docsCommand() *cobra.Command {
 	docsCmd := &cobra.Command{
 		Use:   "docs <path>",
-		Short: "Displays the entry's documentation. This is currently its description.",
+		Short: "Displays the entry's documentation. This is currently its description and any supported signals/signal groups.",
 		RunE:  toRunE(docsMain),
 	}
 	return docsCmd

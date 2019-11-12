@@ -155,7 +155,8 @@ func (s *EntrySchema) IsSingleton() *EntrySchema {
 	return s
 }
 
-// AddSignal adds the given signal to s' supported signals
+// AddSignal adds the given signal to s' supported signals. See https://puppetlabs.github.io/wash/docs#signal
+// for a list of common signal names. You should try to re-use these names if you can.
 func (s *EntrySchema) AddSignal(name string, description string) *EntrySchema {
 	return s.addSignalSchema(name, "", description)
 
