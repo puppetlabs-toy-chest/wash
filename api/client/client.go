@@ -40,6 +40,7 @@ type Client interface {
 	Schema(path string) (*apitypes.EntrySchema, error)
 	Screenview(name string, params analytics.Params) error
 	Delete(path string) (bool, error)
+	Signal(path string, signal string) error
 }
 
 // A domainSocketClient is a wash API client.
@@ -303,4 +304,15 @@ func (c *domainSocketClient) Delete(path string) (bool, error) {
 	var deleted bool
 	err := c.doRequestAndParseJSONBody(http.MethodDelete, "/fs/delete", url.Values{"path": []string{path}}, nil, &deleted)
 	return deleted, err
+}
+
+// Signal sends the given signal to tne entry at "path"
+func (c *domainSocketClient) Signal(path string, signal string) error {
+	payload := apitypes.SignalBody{Signal: signal}
+	jsonBody, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = c.doRequest(http.MethodPost, "/fs/signal", url.Values{"path": []string{path}}, bytes.NewReader(jsonBody))
+	return err
 }

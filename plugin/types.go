@@ -208,3 +208,14 @@ type Deletable interface {
 	Entry
 	Delete(context.Context) (bool, error)
 }
+
+// Signalable is an entry that can be signaled. Signal should return nil if the
+// signal was successfully sent. Otherwise, it should return an error explaining
+// why the signal was not sent.
+//
+// NOTE: The sent signal can be arbitrary. See <SIGNAL TODO: Link docs> for
+// a list of common signals that can be sent.
+type Signalable interface {
+	Entry
+	Signal(context.Context, string) error
+}

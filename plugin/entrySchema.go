@@ -66,13 +66,14 @@ func schema(e Entry) (*EntrySchema, error) {
 }
 
 type entrySchema struct {
-	Label               string      `json:"label"`
-	Description         string      `json:"description,omitempty"`
-	Singleton           bool        `json:"singleton"`
-	Actions             []string    `json:"actions"`
-	MetaAttributeSchema *JSONSchema `json:"meta_attribute_schema"`
-	MetadataSchema      *JSONSchema `json:"metadata_schema"`
-	Children            []string    `json:"children"`
+	Label               string         `json:"label"`
+	Description         string         `json:"description,omitempty"`
+	Singleton           bool           `json:"singleton"`
+	Signals             []SignalSchema `json:"signals,omitempty"`
+	Actions             []string       `json:"actions"`
+	MetaAttributeSchema *JSONSchema    `json:"meta_attribute_schema"`
+	MetadataSchema      *JSONSchema    `json:"metadata_schema"`
+	Children            []string       `json:"children"`
 }
 
 // EntrySchema represents an entry's schema. Use plugin.NewEntrySchema

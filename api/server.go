@@ -124,6 +124,7 @@ func StartAPI(
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/fs/schema", schemaHandler).Methods(http.MethodGet)
 	r.Handle("/fs/delete", deleteHandler).Methods(http.MethodDelete)
+	r.Handle("/fs/signal", signalHandler).Methods(http.MethodPost)
 	r.Handle("/cache", cacheHandler).Methods(http.MethodDelete)
 	r.Handle("/history", historyHandler).Methods(http.MethodGet)
 	r.Handle("/history/{index:[0-9]+}", historyEntryHandler).Methods(http.MethodGet)
