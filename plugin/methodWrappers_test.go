@@ -165,7 +165,7 @@ func (suite *MethodWrappersTestSuite) TestSignal_SchemaKnown_ReturnsInvalidInput
 						Name:        "linux",
 						Description: "Supports one of the Linux signals",
 					},
-					regex: regexp.MustCompile("\\Asig.*"),
+					regex: regexp.MustCompile(`\Asig.*`),
 				},
 			},
 		},
