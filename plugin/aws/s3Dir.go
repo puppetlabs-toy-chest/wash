@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -44,7 +45,7 @@ func (s *s3Dir) ChildSchemas() []*plugin.EntrySchema {
 func (s *s3Dir) List(ctx context.Context) ([]plugin.Entry, error) {
 	resp, err := s.client.ListBucketsWithContext(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error listing buckets: %w", err)
 	}
 
 	activity.Record(ctx, "Listing %v S3 buckets", len(resp.Buckets))

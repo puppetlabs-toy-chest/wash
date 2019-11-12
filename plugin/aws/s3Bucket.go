@@ -263,7 +263,7 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 		// Normalize bucket location so empty region responses are interpreted as Amazon's default (us-east-1)
 		resp, err := b.client.GetBucketLocationWithContext(ctx, locRequest, s3Client.WithNormalizeBucketLocation)
 		if err != nil {
-			return nil, fmt.Errorf("could not get the region of bucket %v: %v", b.Name(), err)
+			return nil, fmt.Errorf("could not get the region of bucket %v: %w", b.Name(), err)
 		}
 		return resp, nil
 	})
