@@ -53,6 +53,7 @@ func printJournalEntry(index string, follow bool) error {
 	// Jun 13 15:44:04.433 stdout: 4096 1559079604 1557434981 1559079604 41ed /lib
 	//                     2597536 1552660099 1552660099 1559079604 81ed /lib/libcrypto.so.1.1
 	scanner := bufio.NewScanner(rdr)
+	scanner.Buffer(make([]byte, 4096), 100*1024*1024)
 	for scanner.Scan() {
 		var line, empty logFmtLine
 		if err := logfmt.Unmarshal(scanner.Bytes(), &line); err != nil {
@@ -81,8 +82,7 @@ func printJournalEntry(index string, follow bool) error {
 			}
 		}
 	}
-
-	return nil
+	return scanner.Err()
 }
 
 func printHistory(follow bool) error {
