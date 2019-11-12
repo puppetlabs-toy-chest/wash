@@ -155,6 +155,43 @@ func (s *EntrySchema) IsSingleton() *EntrySchema {
 	return s
 }
 
+// AddSignal adds the given signal to s' supported signals
+func (s *EntrySchema) AddSignal(name string, description string) *EntrySchema {
+	return s.addSignalSchema(name, "", description)
+
+}
+
+// AddSignalGroup adds the given signal group to s' supported signals
+func (s *EntrySchema) AddSignalGroup(name string, regex string, description string) *EntrySchema {
+	if len(regex) <= 0 {
+		panic("s.AddSignalGroup: received empty regex")
+	}
+	return s.addSignalSchema(name, regex, description)
+}
+
+func (s *EntrySchema) addSignalSchema(name string, regex string, description string) *EntrySchema {
+	if len(name) <= 0 {
+		panic("s.addSignalSchema: received empty name")
+	}
+	if len(description) <= 0 {
+		panic("s.addSignalSchema: received empty description")
+	}
+	schema := SignalSchema{
+		signalSchema: signalSchema{
+			Name:        name,
+			Regex:       regex,
+			Description: description,
+		},
+	}
+	err := schema.normalize()
+	if err != nil {
+		msg := fmt.Sprintf("s.addSignalSchema: received invalid regex: %v", err)
+		panic(msg)
+	}
+	s.Signals = append(s.Signals, schema)
+	return s
+}
+
 // SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
 // that will be marshalled into a JSON schema. SetMetaSchema will panic
 // if obj is not a struct.

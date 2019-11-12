@@ -70,7 +70,14 @@ func (s *SignalSchema) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
+	return s.normalize()
+}
+
+// normalizes s by downcasing its name, making its regex case-insensitive,
+// and compiling the latter. Returns an error if the regex fails compilation.
+func (s *SignalSchema) normalize() error {
 	s.signalSchema.Name = strings.ToLower(s.signalSchema.Name)
+	var err error
 	if len(s.signalSchema.Regex) > 0 {
 		// (?i) tells Go that the regex is case-insensitive
 		s.signalSchema.Regex = "(?i)" + s.signalSchema.Regex

@@ -113,6 +113,9 @@ func SupportedActionsOf(entry Entry) []string {
 		if _, ok := entry.(Deletable); ok {
 			actions = append(actions, DeleteAction().Name)
 		}
+		if _, ok := entry.(Signalable); ok {
+			actions = append(actions, SignalAction().Name)
+		}
 
 		return actions
 	}

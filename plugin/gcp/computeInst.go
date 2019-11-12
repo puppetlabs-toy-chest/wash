@@ -70,7 +70,10 @@ func (c *computeInstance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "instance").
 		SetDescription(computeInstDescription).
-		SetMetaAttributeSchema(compute.Instance{})
+		SetMetaAttributeSchema(compute.Instance{}).
+		AddSignal("start", "Starts the instance").
+		AddSignal("stop", "Stops the instance").
+		AddSignal("reset", "Resets the instance, similar to doing a hard-reset on your computer")
 }
 
 func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {
@@ -79,6 +82,21 @@ func (c *computeInstance) ChildSchemas() []*plugin.EntrySchema {
 		(&plugin.MetadataJSONFile{}).Schema(),
 		(&volume.FS{}).Schema(),
 	}
+}
+
+func (c *computeInstance) Signal(ctx context.Context, signal string) error {
+	var err error
+	switch signal {
+	case "start":
+		_, err = c.service.Instances.Start(c.service.projectID, getZone(c.instance), c.Name()).Do()
+	case "stop":
+		_, err = c.service.Instances.Stop(c.service.projectID, getZone(c.instance), c.Name()).Do()
+	case "reset":
+		_, err = c.service.Instances.Reset(c.service.projectID, getZone(c.instance), c.Name()).Do()
+	default:
+		err = fmt.Errorf("unsupported signal %v", signal)
+	}
+	return err
 }
 
 func (c *computeInstance) Exec(ctx context.Context, cmd string, args []string,
