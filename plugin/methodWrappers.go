@@ -162,7 +162,7 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 	// Validate the provided signal if the entry's schema is available
 	schema, err := Schema(s)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve the entry's schema for signal validation: %v", err)
+		return fmt.Errorf("failed to retrieve the entry's schema for signal validation: %w", err)
 	}
 	if schema != nil {
 		var validSignals []string
