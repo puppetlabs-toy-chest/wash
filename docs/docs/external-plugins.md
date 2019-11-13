@@ -12,6 +12,7 @@ title: External Plugins
     - [exec](#exec)
     - [schema](#schema)
     - [delete](#delete)
+    - [signal](#signal)
     - [Entry JSON object](#entry-json-object)
     - [Entry schema graph JSON object](#entry-schema-graph-json-object)
     - [Errors](#errors)
@@ -224,6 +225,19 @@ bash-3.2$ /path/to/myplugin.rb delete /myplugin/foo ''
 true
 ```
 
+## signal
+`<plugin_script> signal <path> <state> <signal>`
+
+A successful `signal` invocation should not output anything.
+
+**Note:** `<signal>` is downcased. If entry schemas are enabled, then `<signal>` will be a valid signal.
+
+### Examples
+```
+bash-3.2$ /path/to/myplugin.rb signal /myplugin/foo '' start
+bash-3.2$
+```
+
 ## Entry JSON object
 This section describes the JSON object representing a serialized entry. An entry JSON object supports the following keys. Only the `name` and `methods` keys are required.
 
@@ -340,6 +354,31 @@ The entry schema JSON object supports the following keys. Only the `label` and `
    ]
    ```
 
+* `signals` is an array of hashes specifying the entry's supported signals and signal groups.
+
+  **EXAMPLES**
+  ```
+  [
+    {
+      "name": "start",
+      "description": "Start the thing"
+    },
+    {
+      "name": "stop",
+      "description": "Stop the thing"
+    },
+    {
+      "name": "linux",
+      "description": "Consists of all the supported Linux signals like SIGHUP, SIGKILL",
+      "regex": "\\Asig*"
+    }
+  ]
+  ```
+
+  Note that the [regex](https://golang.org/pkg/regexp/syntax/#pkg-overview) key describes a supported signal in the given signal group. It distinguishes signal groups from signals.
+
+  A given signal is valid iff it matches a supported signal's _name_ OR a supported signal group's _regex_. See the [signal action docs]({{ '/docs#signal' | relative_url }}) for a list of common signal names. You should try to reuse these names where applicable.
+
 * `meta_attribute_schema` is a serialized JSON schema representing the entry's `meta` attribute schema.
 
 * `metadata_schema` is a serialized JSON schema representing the entry's `metadata` schema.
@@ -364,7 +403,8 @@ Below is an example entry schema JSON object showcasing all the possible keys at
 {
   "label": "foo",
   "methods": [
-    "list"
+    "list",
+    "signal"
   ],
   "singleton": false,
   "description": "A description.",
@@ -386,7 +426,13 @@ Below is an example entry schema JSON object showcasing all the possible keys at
       }
     },
     "type": "object"
-  }
+  },
+  "signals": [
+    {
+      "name": "start",
+      "description": "Start the thing"
+    }
+  ]
 }
 ```
 

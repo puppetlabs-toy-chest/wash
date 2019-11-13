@@ -63,7 +63,13 @@ func (c *container) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "container").
 		SetMetaAttributeSchema(types.Container{}).
-		SetMetadataSchema(types.ContainerJSON{})
+		SetMetadataSchema(types.ContainerJSON{}).
+		AddSignal("start", "Starts the container. Equivalent to 'docker start <container>'").
+		AddSignal("stop", "Stops the container. Equivalent to 'docker stop <container>'").
+		AddSignal("pause", "Suspends all processes in the container. Equivalent to 'docker pause <container>'").
+		AddSignal("resume", "Un-suspends all processes in the container. Equivalent to 'docker unpause <container>'").
+		AddSignal("restart", "Restarts the container. Equivalent to 'docker restart <container>'").
+		AddSignalGroup("linux", `\Asig.+`, "Consists of all the supported Linux signals like SIGHUP, SIGKILL. Equivalent to\n'docker kill <container> --signal <signal>'")
 }
 
 func (c *container) ChildSchemas() []*plugin.EntrySchema {
@@ -160,4 +166,24 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		execCmd.SetExitCode(resp.ExitCode)
 	}()
 	return execCmd, nil
+}
+
+func (c *container) Signal(ctx context.Context, signal string) error {
+	var err error
+	switch signal {
+	case "start":
+		err = c.client.ContainerStart(ctx, c.id, types.ContainerStartOptions{})
+	case "stop":
+		err = c.client.ContainerStop(ctx, c.id, nil)
+	case "pause":
+		err = c.client.ContainerPause(ctx, c.id)
+	case "resume":
+		err = c.client.ContainerUnpause(ctx, c.id)
+	case "restart":
+		err = c.client.ContainerRestart(ctx, c.id, nil)
+	default:
+		// linux signal
+		err = c.client.ContainerKill(ctx, c.id, signal)
+	}
+	return err
 }

@@ -159,7 +159,12 @@ func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(inst, "instance").
 		SetDescription(ec2InstanceDescription).
-		SetMetaAttributeSchema(ec2InstanceMetadata{})
+		SetMetaAttributeSchema(ec2InstanceMetadata{}).
+		AddSignal("start", "Starts the EC2 instance").
+		AddSignal("stop", "Stops the EC2 instance").
+		AddSignal("hibernate", "Hibernates the EC2 instance").
+		AddSignal("restart", "Reboots the EC2 instance").
+		AddSignal("terminate", "Terminates the EC2 instance")
 }
 
 func (inst *ec2Instance) ChildSchemas() []*plugin.EntrySchema {
@@ -255,10 +260,7 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 }
 
 func (inst *ec2Instance) Delete(ctx context.Context) (bool, error) {
-	_, err := inst.client.TerminateInstancesWithContext(ctx, &ec2Client.TerminateInstancesInput{
-		InstanceIds: awsSDK.StringSlice([]string{inst.id}),
-	})
-	return false, err
+	return false, inst.Signal(ctx, "terminate")
 }
 
 func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
@@ -307,6 +309,36 @@ func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, op
 	// fallbackuser and identiyfile can be overridden in ~/.ssh/config.
 	//
 	return transport.ExecSSH(ctx, transport.Identity{Host: hostname, FallbackUser: fallbackuser, IdentityFile: identityfile}, append([]string{cmd}, args...), opts)
+}
+
+func (inst *ec2Instance) Signal(ctx context.Context, signal string) error {
+	var err error
+	switch signal {
+	case "start":
+		_, err = inst.client.StartInstancesWithContext(ctx, &ec2Client.StartInstancesInput{
+			InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+		})
+	case "stop":
+		_, err = inst.client.StopInstancesWithContext(ctx, &ec2Client.StopInstancesInput{
+			InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+		})
+	case "hibernate":
+		_, err = inst.client.StopInstancesWithContext(ctx, &ec2Client.StopInstancesInput{
+			InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+			Hibernate:   awsSDK.Bool(true),
+		})
+	case "restart":
+		_, err = inst.client.RebootInstancesWithContext(ctx, &ec2Client.RebootInstancesInput{
+			InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+		})
+	case "terminate":
+		_, err = inst.client.TerminateInstancesWithContext(ctx, &ec2Client.TerminateInstancesInput{
+			InstanceIds: awsSDK.StringSlice([]string{inst.id}),
+		})
+	default:
+		err = fmt.Errorf("unknown signal %v", signal)
+	}
+	return err
 }
 
 const ec2InstanceDescription = `

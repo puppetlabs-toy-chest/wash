@@ -213,8 +213,7 @@ type Deletable interface {
 // signal was successfully sent. Otherwise, it should return an error explaining
 // why the signal was not sent.
 //
-// NOTE: The sent signal can be arbitrary. See <SIGNAL TODO: Link docs> for
-// a list of common signals that can be sent.
+// NOTE: You can assume that the sent signal is downcased and valid.
 type Signalable interface {
 	Entry
 	Signal(context.Context, string) error

@@ -20,6 +20,8 @@ title: Docs
   * [wash tail](#wash-tail)
   * [wash validate](#wash-validate)
   * [wash docs](#wash-docs)
+  * [wash delete](#wash-delete)
+  * [wash signal](#wash-signal)
 * [Config](#config)
   * [wash.yaml](#wash-yaml)
   * [wash shell](#wash-shell)
@@ -29,6 +31,8 @@ title: Docs
   * [read](#read)
   * [stream](#stream)
   * [exec](#exec)
+  * [delete](#delete)
+  * [signal](#signal)
 * [Attributes](#attributes)
   * [crtime](#crtime)
   * [mtime](#mtime)
@@ -136,7 +140,15 @@ Each line represents validation of an entry type. The `lrsx` fields represent su
 
 ### wash docs
 
-Displays the entry's documentation. This is currently its description.
+Displays the entry's documentation. This is currently its description and any supported signals/signal groups.
+
+### wash delete
+
+Deletes the entries at the specified paths, prompting the user for confirmation before deleting each entry.
+
+### wash signal
+
+Sends the specified signal to the entry at the specified path.
 
 ## Config
 
@@ -282,6 +294,55 @@ The `exec` action lets you execute a command on an entry.
 wash . ❯ wexec gcp/Wash/compute/instance-1 uname
 Linux
 ```
+
+### delete
+The `delete` action lets you delete an entry.
+
+#### Examples
+```
+wash . ❯ delete docker/containers/quizzical_colden
+remove docker/containers/quizzical_colden?: y
+```
+
+### signal
+The `signal` action lets you signal an entry. Use the `docs` command to view an entry's supported signals.
+
+#### Examples
+```
+wash . ❯ docs docker/containers/wash_tutorial_redis_1
+No description provided.
+
+SUPPORTED SIGNALS
+* start
+    Starts the container. Equivalent to 'docker start <container>'
+* stop
+    Stops the container. Equivalent to 'docker stop <container>'
+* pause
+    Suspends all processes in the container. Equivalent to 'docker pause <container>'
+* resume
+    Un-suspends all processes in the container. Equivalent to 'docker unpause <container>'
+* restart
+    Restarts the container. Equivalent to 'docker restart <container>'
+
+SUPPORTED SIGNAL GROUPS
+* linux
+    Consists of all the supported Linux signals like SIGHUP, SIGKILL. Equivalent to
+    'docker kill <container> --signal <signal>'
+```
+
+```
+wash . ❯ signal start docker/containers/wash_tutorial_redis_1
+wash . ❯
+```
+
+#### Common Signals
+* start
+* stop
+* pause
+* resume
+* restart
+* hibernate
+* reset
 
 ## Attributes
 
