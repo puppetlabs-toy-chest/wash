@@ -8,7 +8,7 @@ import (
 
 func signalCommand() *cobra.Command {
 	signalCmd := &cobra.Command{
-		Use:   "signal <signal> <path>",
+		Use:   "signal <path> <signal>",
 		Short: "Sends the specified signal to the entry at the specified path",
 		Args:  cobra.MinimumNArgs(2),
 		RunE:  toRunE(signalMain),
@@ -18,8 +18,8 @@ func signalCommand() *cobra.Command {
 }
 
 func signalMain(cmd *cobra.Command, args []string) exitCode {
-	signal := args[0]
-	path := args[1]
+	path := args[0]
+	signal := args[1]
 
 	conn := cmdutil.NewClient()
 

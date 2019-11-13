@@ -331,7 +331,7 @@ SUPPORTED SIGNAL GROUPS
 ```
 
 ```
-wash . ❯ signal start docker/containers/wash_tutorial_redis_1
+wash . ❯ signal docker/containers/wash_tutorial_redis_1 start
 wash . ❯
 ```
 
