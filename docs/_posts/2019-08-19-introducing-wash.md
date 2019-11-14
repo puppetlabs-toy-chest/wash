@@ -1,8 +1,7 @@
 ---
 title: "Introducing Wash"
-summary: "Simplify exploring cloud infrastructure with Wash"
-author: Michael Smith
-twitter: lasthemy
+description: "Simplify exploring cloud infrastructure with Wash"
+author: michaelsmith
 ---
 
 Have you ever had to:

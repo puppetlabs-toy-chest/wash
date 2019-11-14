@@ -1,8 +1,7 @@
 ---
 title: "Wash is a filesystem"
-summary: "Demonstrates how Wash provides a filesystem to leverage the tools you already use"
-author: Michael Smith
-twitter: lasthemy
+description: "Demonstrates how Wash provides a filesystem to leverage the tools you already use"
+author: michaelsmith
 ---
 
 One of the core principles of Wash is that interacting with things like a filesystem is familiar and powerful. Files are easy to manipulate; every system comes with a suite of tools to do so. They have permanence and a fixed place in a hierarchy, so they're easy to find again. When building Wash we wanted to leverage that for some basic operations.
