@@ -12,6 +12,11 @@ type zsh struct {
 }
 
 func (z zsh) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
+	// Generate alias executables so things like `xargs` work.
+	if err := writeAliases(subcommands, rundir); err != nil {
+		return nil, err
+	}
+
 	// Generate and invoke custom .zshenv and .zshrc files.
 	// - .zshenv will load ~/.zshenv (if ~/.washenv is absent), then alias subcommands,
 	//   then load ~/.washenv (if present).
