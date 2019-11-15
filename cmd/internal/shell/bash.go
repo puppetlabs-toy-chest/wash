@@ -12,6 +12,11 @@ type bash struct {
 }
 
 func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
+	// Generate alias executables so things like `xargs` work.
+	if err := writeAliases(subcommands, rundir); err != nil {
+		return nil, err
+	}
+
 	// Generate and invoke custom .bashenv and .bashrc files.
 	// - .bashenv will alias subcommands, then load ~/.washenv (if present).
 	// - .bashrc will load ~/.bashrc (if ~/.washrc is absent), then configure the prompt,

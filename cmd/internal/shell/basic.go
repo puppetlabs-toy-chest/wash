@@ -15,14 +15,22 @@ type basic struct {
 func (b basic) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 	// These are executables instead of aliases because putting alias declarations at the beginning
 	// of stdin for the command doesn't work right (issues with TTY).
-	// Generate executable wrappers for available subcommands based on their aliases.
-	for _, alias := range subcommands {
-		if err := writeAlias(filepath.Join(rundir, alias), alias); err != nil {
-			return nil, fmt.Errorf("unable to create alias for subcommand %v: %v", alias, err)
-		}
+	if err := writeAliases(subcommands, rundir); err != nil {
+		return nil, err
 	}
 
 	return exec.Command(b.sh), nil
+}
+
+// Helper to write executable wrappers for available Wash subcommands based on their aliases.
+// This is broadly useful because things like `xargs` ignore builtins and aliases.
+func writeAliases(subcommands []string, rundir string) error {
+	for _, alias := range subcommands {
+		if err := writeAlias(filepath.Join(rundir, alias), alias); err != nil {
+			return fmt.Errorf("unable to create alias for subcommand %v: %v", alias, err)
+		}
+	}
+	return nil
 }
 
 // Create an executable file at the given path that invokes the given wash subcommand.
