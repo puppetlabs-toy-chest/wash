@@ -265,7 +265,7 @@ func (b *s3Bucket) getRegion(ctx context.Context) (string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("could not get the region of bucket %v: %w", b.Name(), err)
 		}
-		return resp, nil
+		return awsSDK.StringValue(resp.LocationConstraint), nil
 	})
 
 	if err != nil {
