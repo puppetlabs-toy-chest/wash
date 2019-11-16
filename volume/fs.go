@@ -58,13 +58,9 @@ func (e nonZeroError) Error() string {
 	return fmt.Sprintf("Exec exited non-zero [%v] running %v: %v", e.exitcode, strings.Join(e.cmdline, " "), e.output)
 }
 
-func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*bytes.Buffer, error) {
+func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty bool) (*bytes.Buffer, error) {
 	// Use Elevate because it's common to login to systems as a non-root user and sudo.
-	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
-	// being logged in as a user. `ls` will report different file types based on whether you're using
-	// it interactively, see character device vs named pipe on /dev/stderr as an example. This also
-	// ensures we cleanup correctly when the context is cancelled.
-	opts := plugin.ExecOptions{Elevate: true, Tty: plugin.IsInteractive()}
+	opts := plugin.ExecOptions{Elevate: true, Tty: tty}
 	cmd, err := plugin.Exec(ctx, executor, cmdline[0], cmdline[1:], opts)
 	if err != nil {
 		return nil, err
@@ -101,7 +97,11 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string) (*byt
 func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	cmdline := StatCmd(path, d.maxdepth)
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
-	buf, err := exec(ctx, d.executor, cmdline)
+
+	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
+	// being logged in as a user. `ls` will report different file types based on whether you're using
+	// it interactively, see character device vs named pipe on /dev/stderr as an example.
+	buf, err := exec(ctx, d.executor, cmdline, plugin.IsInteractive())
 	if _, ok := err.(nonZeroError); ok {
 		// May not have access to some files, but list the rest.
 		activity.Record(ctx, "%v running %v, attempting to parse output", err, cmdline)
@@ -117,7 +117,9 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 // VolumeOpen satisfies the Interface required by List to read file contents.
 func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
 	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
-	buf, err := exec(ctx, d.executor, []string{"cat", path})
+
+	// Don't use Tty when outputting file content because it may convert LF to CRLF.
+	buf, err := exec(ctx, d.executor, []string{"cat", path}, false)
 	if err != nil {
 		activity.Record(ctx, "Exec error running 'cat %v' in VolumeOpen: %v", path, err)
 		return nil, err
@@ -168,7 +170,9 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 // VolumeDelete satisfies the Interface required by Delete to delete volume nodes.
 func (d *FS) VolumeDelete(ctx context.Context, path string) (bool, error) {
 	activity.Record(ctx, "Deleting %v on %v", path, plugin.ID(d.executor))
-	_, err := exec(ctx, d.executor, []string{"rm", "-rf", path})
+
+	// Skip tty because we don't need it, we ignore the output.
+	_, err := exec(ctx, d.executor, []string{"rm", "-rf", path}, false)
 	if err != nil {
 		activity.Record(ctx, "Exec error running 'rm -rf %v' in VolumeDelete: %v", path, err)
 		return false, err
