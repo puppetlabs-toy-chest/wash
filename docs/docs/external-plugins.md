@@ -228,9 +228,11 @@ true
 ## signal
 `<plugin_script> signal <path> <state> <signal>`
 
-A successful `signal` invocation should not output anything.
+A successful `signal` invocation should return when the signal was successfully sent, and it should not output anything.
 
 **Note:** `<signal>` is downcased. If entry schemas are enabled, then `<signal>` will be a valid signal.
+
+**Note:** Checkout the [signal action docs]({{ 'docs/#signal' | relative_url }}) for a list of common signal names.
 
 ### Examples
 ```
