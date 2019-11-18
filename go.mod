@@ -8,6 +8,7 @@ replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.2019082220
 
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
+	cloud.google.com/go/firestore v1.1.0
 	cloud.google.com/go/storage v1.0.0
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Benchkram/errz v0.0.0-20180520163740-571a80a661f2
@@ -80,11 +81,9 @@ require (
 	go.mongodb.org/mongo-driver v1.0.4 // indirect
 	go.opencensus.io v0.22.1 // indirect
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
-	golang.org/x/exp v0.0.0-20190925190815-26a69ce95baf // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
-	golang.org/x/tools v0.0.0-20190926165942-a8d5d34286bd // indirect
-	google.golang.org/api v0.10.0
+	google.golang.org/api v0.13.0
 	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect
