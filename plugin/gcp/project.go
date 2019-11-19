@@ -48,7 +48,19 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	return []plugin.Entry{comp, stor, firestore, pubsub}, nil
+	cloudFunctions, err := newCloudFunctionsDir(ctx, p.client, p.id)
+	if err != nil {
+		return nil, err
+	}
+
+	children := []plugin.Entry{
+		comp,
+		stor,
+		firestore,
+		pubsub,
+		cloudFunctions,
+	}
+	return children, nil
 }
 
 func (p *project) Delete(ctx context.Context) (bool, error) {
@@ -71,5 +83,6 @@ func (p *project) ChildSchemas() []*plugin.EntrySchema {
 		(&computeDir{}).Schema(),
 		(&storageDir{}).Schema(),
 		(&firestoreDir{}).Schema(),
+		(&cloudFunctionsDir{}).Schema(),
 	}
 }
