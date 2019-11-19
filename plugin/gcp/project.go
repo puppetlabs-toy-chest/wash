@@ -38,7 +38,12 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	return []plugin.Entry{comp, stor}, nil
+	firestore, err := newFirestoreDir(ctx, p.id)
+	if err != nil {
+		return nil, err
+	}
+
+	return []plugin.Entry{comp, stor, firestore}, nil
 }
 
 func (p *project) Delete(ctx context.Context) (bool, error) {
@@ -60,5 +65,6 @@ func (p *project) ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
 		(&computeDir{}).Schema(),
 		(&storageDir{}).Schema(),
+		(&firestoreDir{}).Schema(),
 	}
 }
