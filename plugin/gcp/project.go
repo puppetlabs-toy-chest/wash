@@ -43,7 +43,12 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
-	return []plugin.Entry{comp, stor, firestore}, nil
+	pubsub, err := newPubsubDir(ctx, p.id)
+	if err != nil {
+		return nil, err
+	}
+
+	return []plugin.Entry{comp, stor, firestore, pubsub}, nil
 }
 
 func (p *project) Delete(ctx context.Context) (bool, error) {

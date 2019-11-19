@@ -9,6 +9,7 @@ replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.2019082220
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	cloud.google.com/go/firestore v1.1.0
+	cloud.google.com/go/pubsub v1.0.1
 	cloud.google.com/go/storage v1.0.0
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Benchkram/errz v0.0.0-20180520163740-571a80a661f2
