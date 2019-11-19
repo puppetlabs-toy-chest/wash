@@ -7,14 +7,9 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-type firestoreProjectClient struct {
-	*firestore.Client
-	projectID string
-}
-
 type firestoreDir struct {
 	plugin.EntryBase
-	client firestoreProjectClient
+	client *firestore.Client
 }
 
 func newFirestoreDir(ctx context.Context, projID string) (*firestoreDir, error) {
@@ -24,7 +19,7 @@ func newFirestoreDir(ctx context.Context, projID string) (*firestoreDir, error) 
 	}
 	f := &firestoreDir{
 		EntryBase: plugin.NewEntry("firestore"),
-		client:    firestoreProjectClient{Client: cli, projectID: projID},
+		client:    cli,
 	}
 	if _, err := plugin.List(ctx, f); err != nil {
 		f.MarkInaccessible(ctx, err)
@@ -53,7 +48,7 @@ func (f *firestoreDir) ChildSchemas() []*plugin.EntrySchema {
 	}
 }
 
-func toCollectionEntries(client firestoreProjectClient, parent string, colls []*firestore.CollectionRef) []plugin.Entry {
+func toCollectionEntries(client *firestore.Client, parent string, colls []*firestore.CollectionRef) []plugin.Entry {
 	entries := make([]plugin.Entry, len(colls))
 	for ix, coll := range colls {
 		entries[ix] = newFirestoreCollection(client, parent, coll)
