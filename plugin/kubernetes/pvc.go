@@ -191,7 +191,7 @@ func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error
 	return volume.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
-func (v *pvc) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
+func (v *pvc) VolumeRead(ctx context.Context, path string) (io.ReaderAt, error) {
 	output, err := v.runInTemporaryPod(ctx, []string{"cat", mountpoint + path})
 	if err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ type Interface interface {
 	// points to a nil Dir, it is assumed to be unexplored.
 	VolumeList(ctx context.Context, path string) (DirMap, error)
 	// Accepts a path and returns the content associated with that path.
-	VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error)
+	VolumeRead(ctx context.Context, path string) (io.ReaderAt, error)
 	// Accepts a path and streams updates to the content associated with that path.
 	VolumeStream(ctx context.Context, path string) (io.ReadCloser, error)
 	// Deletes the volume node at the specified path. Mirrors plugin.Deletable#Delete

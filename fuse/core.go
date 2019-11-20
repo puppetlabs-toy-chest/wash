@@ -178,6 +178,10 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 			plugin.StreamAction().IsSupportedOn(updatedEntry) {
 			mode |= 0440
 		}
+		if !plugin.ReadAction().IsSupportedOn(updatedEntry) {
+			// An unreadable file can be assumed to have no size.
+			attr.SetSize(0)
+		}
 	}
 
 	f.applyAttr(a, &attr, mode)

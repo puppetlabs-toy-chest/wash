@@ -14,6 +14,7 @@ type file struct {
 	impl   Interface
 	path   string
 	dirmap *dirMap
+	rdr    io.ReaderAt
 }
 
 // newFile creates a VolumeFile.
@@ -24,7 +25,7 @@ func newFile(name string, attr plugin.EntryAttributes, impl Interface, path stri
 	vf.impl = impl
 	vf.path = path
 	vf.SetAttributes(attr)
-	vf.SetTTLOf(plugin.OpenOp, 60*time.Second)
+	vf.SetTTLOf(plugin.ReadOp, 60*time.Second)
 
 	return vf
 }
@@ -33,9 +34,14 @@ func (v *file) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(v, "file").SetDescription(fileDescription)
 }
 
-// Open returns the content of the file as a SizedReader.
-func (v *file) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return v.impl.VolumeOpen(ctx, v.path)
+func (v *file) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if v.rdr == nil {
+		var err error
+		if v.rdr, err = v.impl.VolumeRead(ctx, v.path); err != nil {
+			return 0, err
+		}
+	}
+	return v.rdr.ReadAt(p, off)
 }
 
 func (v *file) Stream(ctx context.Context) (io.ReadCloser, error) {

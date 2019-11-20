@@ -217,11 +217,8 @@ func (suite *fsTestSuite) TestFSRead() {
 
 	execResult := suite.createResult("hello")
 	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
-	rdr, err := entry.(plugin.Readable).Open(context.Background())
-	suite.NoError(err)
-	suite.Equal(int64(5), rdr.Size())
 	buf := make([]byte, 5)
-	n, err := rdr.ReadAt(buf, 0)
+	n, err := entry.(plugin.Readable).Read(context.Background(), buf, 0)
 	suite.NoError(err)
 	suite.Equal(5, n)
 	suite.Equal("hello", string(buf))

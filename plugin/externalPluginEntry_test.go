@@ -290,7 +290,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	entry.setCacheTTLs(decodedTTLs)
 
 	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(ListOp))
-	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(OpenOp))
+	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(ReadOp))
 	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(MetadataOp))
 }
 
@@ -523,7 +523,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestOpen() {
+func (suite *ExternalPluginEntryTestSuite) TestRead() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -536,23 +536,24 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 		mockScript.OnInvokeAndWait(ctx, "read", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
-	// Test that if InvokeAndWait errors, then Open returns its error
+	// Test that if InvokeAndWait errors, then Read returns its error
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
-	_, err := entry.Open(ctx)
+	_, err := entry.Read(ctx, nil, 0)
 	suite.EqualError(mockErr, err.Error())
 
-	// Test that Open wraps all of stdout into a SizedReader
+	// Test that Read returns all of stdout
 	stdout := "foo"
 	mockInvokeAndWait([]byte(stdout), nil)
-	rdr, err := entry.Open(ctx)
+	buf := make([]byte, 3)
+	n, err := entry.Read(ctx, buf, 0)
 	if suite.NoError(err) {
-		expectedRdr := bytes.NewReader([]byte(stdout))
-		suite.Equal(expectedRdr, rdr)
+		suite.Equal(3, n)
+		suite.Equal([]byte(stdout), buf)
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
+func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -589,12 +590,11 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 				}
 
 				if suite.Equal([]string{"read"}, SupportedActionsOf(children[0])) {
-					rdr, err := children[0].(Readable).Open(ctx)
+					buf := make([]byte, 1024)
+					n, err := children[0].(Readable).Read(ctx, buf, 0)
 					suite.NoError(err)
-					buf := make([]byte, rdr.Size())
-					_, err = rdr.ReadAt(buf, 0)
-					suite.NoError(err)
-					suite.Equal(someContent, string(buf))
+					suite.Equal(len(someContent), n)
+					suite.Equal(someContent, string(buf[0:n]))
 				}
 			}
 		}
@@ -631,7 +631,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 		suite.EqualError(err, `implementation of list must conform to `+
 			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
 
-		_, err = entries[0].(Readable).Open(ctx)
+		_, err = entries[0].(Readable).Read(ctx, nil, 0)
 		suite.EqualError(err, "Read method must provide a string, not [1 2]")
 	}
 }

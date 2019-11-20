@@ -141,7 +141,7 @@ func (t *pubsubTopic) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return t.newPubsubTopicWatcher(ctx)
 }
 
-func (t *pubsubTopic) Write(ctx context.Context, _ int64, b []byte) (int, error) {
+func (t *pubsubTopic) Write(ctx context.Context, b []byte, _ int64) (int, error) {
 	result := t.topic.Publish(ctx, &pubsub.Message{Data: b})
 	sid, err := result.Get(ctx)
 	activity.Record(ctx, "Message %v published with server ID %v: %v", string(b), sid, err)

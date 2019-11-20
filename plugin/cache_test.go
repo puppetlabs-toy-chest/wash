@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -68,7 +67,7 @@ func (suite *CacheTestSuite) TestOpNameRegex() {
 	suite.Regexp(opNameRegex, "op")
 	suite.Regexp(opNameRegex, "Op")
 	suite.Regexp(opNameRegex, "List")
-	suite.Regexp(opNameRegex, "Open")
+	suite.Regexp(opNameRegex, "Read")
 	suite.Regexp(opNameRegex, "Metadata")
 
 	suite.NotRegexp(opNameRegex, "")
@@ -171,9 +170,9 @@ func (e *cacheTestsMockEntry) Schema() *EntrySchema {
 	return nil
 }
 
-func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
-	args := e.Called(ctx)
-	return args.Get(0).(SizedReader), args.Error(1)
+func (e *cacheTestsMockEntry) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	args := e.Called(ctx, p, off)
+	return args.Get(0).(int), args.Error(1)
 }
 
 func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (JSONObject, error) {
@@ -367,13 +366,6 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 			suite.Equal("/parent/child2", children.mp["child2"].id())
 		}
 	}
-}
-
-func (suite *CacheTestSuite) TestCachedOpen() {
-	mockReader := strings.NewReader("foo")
-	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
-		return cachedOpen(ctx, e.(Readable))
-	})
 }
 
 func (suite *CacheTestSuite) TestCachedMetadata() {

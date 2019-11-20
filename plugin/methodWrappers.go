@@ -94,20 +94,7 @@ func ID(e Entry) string {
 // Attributes returns the entry's attributes. If size is unknown, it will check whether the entry
 // has locally cached content and if so set that for the size.
 func Attributes(e Entry) EntryAttributes {
-	// Sometimes an entry doesn't know its size unless it's already downloaded some content. Having
-	// to download content makes list slow, and is a burden for external plugin developers. Check if
-	// we already know the size. If not, FUSE will use a reasonable default so tools don't ignore it.
-	attr := e.attributes()
-	if !attr.HasSize() && cache != nil {
-		// We have no way to preserve this on the entry, and it likely wouldn't help because we often
-		// recreate the entry to ensure we have an accurate representation. So when the cache expires
-		// we revert to stating the size is unknown until the next read operation.
-		if val, _ := cache.Get(defaultOpCodeToNameMap[OpenOp], e.id()); val != nil {
-			rdr := val.(SizedReader)
-			attr.SetSize(uint64(rdr.Size()))
-		}
-	}
-	return attr
+	return e.attributes()
 }
 
 // IsPrefetched returns whether an entry has data that was added during creation that it would
@@ -129,14 +116,14 @@ func List(ctx context.Context, p Parent) (*EntryMap, error) {
 	return cachedList(ctx, p)
 }
 
-// Open reads the entry's content. Note that Open's results could be cached. Thus, when
-// using the reader returned by this method, use idempotent read operations such as ReadAt
-// or wrap it in a SectionReader. Using Read operations on the cached reader will change it
-// and make subsequent uses of the cached reader invalid.
-//
-// TODO: Could we change this to Read? E.g. plugin.Read.
-func Open(ctx context.Context, r Readable) (SizedReader, error) {
-	return cachedOpen(ctx, r)
+// Read fills the supplied buffer from the entry.
+func Read(ctx context.Context, r Readable, p []byte, off int64) (int, error) {
+	return r.Read(ctx, p, off)
+}
+
+// Write sends the supplied buffer to the entry.
+func Write(ctx context.Context, a Writable, p []byte, off int64) (int, error) {
+	return a.Write(ctx, p, off)
 }
 
 // Metadata returns the entry's metadata. Note that Metadata's results could be cached.
@@ -152,11 +139,6 @@ func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecO
 // Stream streams the entry's content for updates.
 func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	return s.Stream(ctx)
-}
-
-// Write sends the supplied buffer to the entry.
-func Write(ctx context.Context, a Writable, offset int64, b []byte) (int, error) {
-	return a.Write(ctx, offset, b)
 }
 
 // Signal signals the entry with the specified signal

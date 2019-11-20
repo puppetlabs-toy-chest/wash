@@ -1,9 +1,7 @@
 package apifs
 
 import (
-	"bytes"
 	"context"
-	"io/ioutil"
 	"os"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -19,12 +17,13 @@ func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
 	}
 }
 
-func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {
-	content, err := ioutil.ReadFile(f.path)
+func (f *file) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	file, err := os.Open(f.path)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	return bytes.NewReader(content), nil
+	defer file.Close()
+	return file.ReadAt(p, off)
 }
 
 func (f *file) Schema() *plugin.EntrySchema {

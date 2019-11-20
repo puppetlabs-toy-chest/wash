@@ -183,16 +183,13 @@ type Streamable interface {
 	Stream(context.Context) (io.ReadCloser, error)
 }
 
-// SizedReader returns a ReaderAt that can report its Size.
-type SizedReader interface {
-	io.ReaderAt
-	Size() int64
-}
-
-// Readable is an entry that has a fixed amount of content we can read.
+// Readable is an entry that can read data directly from the entry.
+// The Size attribute should be set when implementing this interface.
+// If your entry reads all data at once and saves it, it should update
+// the Size attribute on any call to Read.
 type Readable interface {
 	Entry
-	Open(context.Context) (SizedReader, error)
+	Read(ctx context.Context, p []byte, off int64) (n int, err error)
 }
 
 // Writable is an entry that can write data directly to the entry. It mirrors
@@ -200,7 +197,7 @@ type Readable interface {
 // remote write operations.
 type Writable interface {
 	Entry
-	Write(context.Context, int64, []byte) (int, error)
+	Write(ctx context.Context, p []byte, off int64) (n int, err error)
 }
 
 // Deletable is an entry that can be deleted. Entries that implement Delete

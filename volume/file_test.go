@@ -23,7 +23,7 @@ func (m *mockFileEntry) VolumeList(context.Context, string) (DirMap, error) {
 	return nil, nil
 }
 
-func (m *mockFileEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
+func (m *mockFileEntry) VolumeRead(context.Context, string) (io.ReaderAt, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -58,13 +58,10 @@ func TestVolumeFile(t *testing.T) {
 	expectedAttr.SetCtime(now)
 	assert.Equal(t, expectedAttr, attr)
 
-	rdr, err := vf.Open(context.Background())
-	assert.Nil(t, err)
-	if assert.NotNil(t, rdr) {
-		buf := make([]byte, rdr.Size())
-		n, err := rdr.ReadAt(buf, 0)
-		assert.Nil(t, err)
-		assert.Equal(t, int64(n), rdr.Size())
+	buf := make([]byte, 5)
+	n, err := vf.Read(context.Background(), buf, 0)
+	if assert.Nil(t, err) {
+		assert.Equal(t, 5, n)
 		assert.Equal(t, "hello", string(buf))
 	}
 
@@ -82,8 +79,7 @@ func TestVolumeFileErr(t *testing.T) {
 	impl := &mockFileEntry{EntryBase: plugin.NewEntry("parent"), err: errors.New("fail")}
 	vf := newFile("mine", plugin.EntryAttributes{}, impl, "my path")
 
-	rdr, err := vf.Open(context.Background())
-	assert.Nil(t, rdr)
+	_, err := vf.Read(context.Background(), nil, 0)
 	assert.Equal(t, errors.New("fail"), err)
 
 	rdr2, err := plugin.Stream(context.Background(), vf)

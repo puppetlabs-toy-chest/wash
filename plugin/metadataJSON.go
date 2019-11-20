@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 )
@@ -9,7 +8,8 @@ import (
 // MetadataJSONFile represents a metadata.json file that contains another entry's metadata.
 type MetadataJSONFile struct {
 	EntryBase
-	other Entry
+	other   Entry
+	content []byte
 }
 
 // NewMetadataJSONFile creates a new MetadataJSONFile. If caching Metadata on the `other` entry is
@@ -22,15 +22,23 @@ func NewMetadataJSONFile(ctx context.Context, other Entry) (*MetadataJSONFile, e
 
 	if other.getTTLOf(MetadataOp) < 0 {
 		// Content is presumably easy to get, so use it to determine size.
-		content, err := meta.Open(ctx)
-		if err != nil {
+		if err := meta.refreshContent(ctx); err != nil {
 			return nil, err
 		}
-
-		meta.Attributes().SetSize(uint64(content.Size()))
 	}
 
 	return meta, nil
+}
+
+func (m *MetadataJSONFile) refreshContent(ctx context.Context) error {
+	meta, err := Metadata(ctx, m.other)
+	if err != nil {
+		return err
+	}
+
+	m.content, err = json.MarshalIndent(meta, "", "  ")
+	m.Attributes().SetSize(uint64(len(m.content)))
+	return err
 }
 
 // Schema defines the schema of a metadata.json file.
@@ -40,19 +48,13 @@ func (m *MetadataJSONFile) Schema() *EntrySchema {
 		IsSingleton()
 }
 
-// Open returns the metadata of the `other` entry as its content.
-func (m *MetadataJSONFile) Open(ctx context.Context) (SizedReader, error) {
-	meta, err := Metadata(ctx, m.other)
-	if err != nil {
-		return nil, err
+// Read returns the metadata of the `other` entry as its content.
+func (m *MetadataJSONFile) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if err := m.refreshContent(ctx); err != nil {
+		return 0, err
 	}
 
-	prettyMeta, err := json.MarshalIndent(meta, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewReader(prettyMeta), nil
+	return copy(p, m.content), nil
 }
 
 const metadataJSONDescription = `

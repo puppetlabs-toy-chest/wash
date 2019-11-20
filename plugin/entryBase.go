@@ -13,13 +13,13 @@ type defaultOpCode int8
 const (
 	// ListOp represents Parent#List
 	ListOp defaultOpCode = iota
-	// OpenOp represents Readable#Open
-	OpenOp
+	// ReadOp represents Readable#Read
+	ReadOp
 	// MetadataOp represents Entry#Metadata
 	MetadataOp
 )
 
-var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
+var defaultOpCodeToNameMap = [3]string{"List", "Read", "Metadata"}
 
 /*
 EntryBase implements Entry, making it easy to create new entries.
@@ -184,7 +184,7 @@ func (e *EntryBase) DisableCachingFor(op defaultOpCode) *EntryBase {
 }
 
 // DisableDefaultCaching disables the default caching
-// for List, Open and Metadata.
+// for List, Read and Metadata.
 func (e *EntryBase) DisableDefaultCaching() *EntryBase {
 	for op := range e.ttl {
 		e.DisableCachingFor(defaultOpCode(op))

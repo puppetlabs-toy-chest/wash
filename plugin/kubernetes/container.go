@@ -18,10 +18,11 @@ import (
 
 type container struct {
 	plugin.EntryBase
-	client *k8s.Clientset
-	config *rest.Config
-	ns     string
-	pod    *corev1.Pod
+	client  *k8s.Clientset
+	config  *rest.Config
+	ns      string
+	pod     *corev1.Pod
+	content []byte
 }
 
 func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns string, c *corev1.Container, p *corev1.Pod) (*container, error) {
@@ -59,23 +60,28 @@ func (c *container) Schema() *plugin.EntrySchema {
 		SetMetaAttributeSchema(corev1.Container{})
 }
 
-func (c *container) Open(ctx context.Context) (plugin.SizedReader, error) {
-	logOptions := corev1.PodLogOptions{
-		Container: c.Name(),
-	}
-	req := c.client.CoreV1().Pods(c.ns).GetLogs(c.pod.Name, &logOptions)
-	rdr, err := req.Stream()
-	if err != nil {
-		return nil, err
-	}
-	var buf bytes.Buffer
-	var n int64
-	if n, err = buf.ReadFrom(rdr); err != nil {
-		return nil, fmt.Errorf("unable to read logs: %v", err)
-	}
-	activity.Record(ctx, "Read %v bytes of %v log", n, c.Name())
+func (c *container) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if len(c.content) <= 0 {
+		logOptions := corev1.PodLogOptions{
+			Container: c.Name(),
+		}
+		req := c.client.CoreV1().Pods(c.ns).GetLogs(c.pod.Name, &logOptions)
+		rdr, err := req.Stream()
+		if err != nil {
+			return 0, err
+		}
 
-	return bytes.NewReader(buf.Bytes()), nil
+		var buf bytes.Buffer
+		var n int64
+		if n, err = buf.ReadFrom(rdr); err != nil {
+			return 0, fmt.Errorf("unable to read logs: %v", err)
+		}
+		activity.Record(ctx, "Read %v bytes of %v log", n, c.Name())
+		c.content = buf.Bytes()
+		c.Attributes().SetSize(uint64(buf.Len()))
+	}
+
+	return copy(p, c.content[off:]), nil
 }
 
 func (c *container) Stream(ctx context.Context) (io.ReadCloser, error) {

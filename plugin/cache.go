@@ -101,9 +101,9 @@ type opFunc func() (interface{}, error)
 
 // CachedOp caches the given op's result for the duration specified by the
 // ttl. You should use it when you need more fine-grained caching than what
-// the existing CachedList, CachedOpen, and CachedMetadata methods provide.
+// the existing CachedList, CachedRead, and CachedMetadata methods provide.
 // For example, CachedOp could be useful to cache an API request whose
-// response lets you implement Open() and Metadata() for the given entry.
+// response lets you implement Read() and Metadata() for the given entry.
 //
 // A ttl of 0 uses the cache default of 1 minute. Negative ttls are not allowed.
 //
@@ -208,22 +208,6 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 	return cachedEntries.(*EntryMap), nil
 }
 
-// CachedOpen caches a Readable object's Open method.
-// When using the reader returned by this method, use idempotent read operations
-// such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
-// reader will change it and make subsequent uses of the cached reader invalid.
-func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
-		return r.Open(ctx)
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cachedContent.(SizedReader), nil
-}
-
 // cachedMetadata caches an entry's Metadata method
 func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
@@ -237,7 +221,7 @@ func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 	return cachedMetadata.(JSONObject), nil
 }
 
-// Common helper for CachedList, CachedOpen and CachedMetadata
+// Common helper for CachedList, CachedRead and CachedMetadata
 func cachedDefaultOp(ctx context.Context, opCode defaultOpCode, entry Entry, op opFunc) (interface{}, error) {
 	opName := defaultOpCodeToNameMap[opCode]
 	ttl := entry.getTTLOf(opCode)

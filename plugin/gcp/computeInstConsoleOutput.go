@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"strings"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -13,6 +12,7 @@ type computeInstanceConsoleOutput struct {
 	plugin.EntryBase
 	instance *compute.Instance
 	service  computeProjectService
+	console  string
 }
 
 func newComputeInstanceConsoleOutput(inst *compute.Instance, c computeProjectService) *computeInstanceConsoleOutput {
@@ -27,15 +27,18 @@ func (cl *computeInstanceConsoleOutput) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(cl, "console.out").IsSingleton()
 }
 
-func (cl *computeInstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
-	zone := getZone(cl.instance)
-	activity.Record(ctx,
-		"Getting output for instance %v in project %v, zone %v", cl.instance.Name, cl.service.projectID, zone)
-	outputCall := cl.service.Instances.GetSerialPortOutput(cl.service.projectID, zone, cl.instance.Name)
-	outputResp, err := outputCall.Context(ctx).Do()
-	if err != nil {
-		return nil, err
+func (cl *computeInstanceConsoleOutput) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if cl.console == "" {
+		zone := getZone(cl.instance)
+		activity.Record(ctx,
+			"Getting output for instance %v in project %v, zone %v", cl.instance.Name, cl.service.projectID, zone)
+		outputCall := cl.service.Instances.GetSerialPortOutput(cl.service.projectID, zone, cl.instance.Name)
+		outputResp, err := outputCall.Context(ctx).Do()
+		if err != nil {
+			return 0, err
+		}
+		cl.console = outputResp.Contents
 	}
 
-	return strings.NewReader(outputResp.Contents), nil
+	return copy(p, cl.console[off:]), nil
 }

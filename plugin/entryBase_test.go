@@ -39,7 +39,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 
 	suite.Equal("foo", e.Name())
 	suite.assertOpTTL(e, ListOp, "List", 15*time.Second)
-	suite.assertOpTTL(e, OpenOp, "Open", 15*time.Second)
+	suite.assertOpTTL(e, ReadOp, "Read", 15*time.Second)
 	suite.assertOpTTL(e, MetadataOp, "Metadata", 15*time.Second)
 
 	e.setID("/foo")
@@ -52,7 +52,7 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	suite.assertOpTTL(e, ListOp, "List", -1)
 
 	e.DisableDefaultCaching()
-	suite.assertOpTTL(e, OpenOp, "Open", -1)
+	suite.assertOpTTL(e, ReadOp, "Read", -1)
 	suite.assertOpTTL(e, MetadataOp, "Metadata", -1)
 }
 

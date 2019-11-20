@@ -30,33 +30,18 @@ func (s *storageObject) Schema() *plugin.EntrySchema {
 		SetMetaAttributeSchema(storage.ObjectAttrs{})
 }
 
-func (s *storageObject) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return &objectReader{ObjectHandle: s.ObjectHandle, size: int64(s.Attributes().Size())}, nil
-}
-
-func (s *storageObject) Delete(ctx context.Context) (bool, error) {
-	err := s.ObjectHandle.Delete(ctx)
-	return true, err
-}
-
-type objectReader struct {
-	*storage.ObjectHandle
-	size int64
-}
-
-// This is a fairly inefficient implementation that always reads exactly what's asked for.
-// However most uses will probably read the content once and buffer it themselves.
-// TODO: buffer some so that we don't read lots of small chunks.
-func (r *objectReader) ReadAt(p []byte, off int64) (int, error) {
-	rdr, err := r.NewRangeReader(context.Background(), off, int64(len(p)))
+func (s *storageObject) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	// TODO: buffer reads
+	rdr, err := s.ObjectHandle.NewRangeReader(ctx, off, int64(len(p)))
 	if err != nil {
 		return 0, err
 	}
 	return rdr.Read(p)
 }
 
-func (r *objectReader) Size() int64 {
-	return r.size
+func (s *storageObject) Delete(ctx context.Context) (bool, error) {
+	err := s.ObjectHandle.Delete(ctx)
+	return true, err
 }
 
 const storageObjectDescription = `

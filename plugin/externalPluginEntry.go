@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -159,6 +158,7 @@ type externalPluginEntry struct {
 	script    externalPluginScript
 	methods   map[string]interface{}
 	state     string
+	content   []byte
 	rawTypeID string
 	// schemaKnown is set by the root. We use it to enforce the invariant
 	// "If the root implements schema, all entries must implement schema"
@@ -174,7 +174,7 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 		e.SetTTLOf(ListOp, ttls.List*time.Second)
 	}
 	if ttls.Read != 0 {
-		e.SetTTLOf(OpenOp, ttls.Read*time.Second)
+		e.SetTTLOf(ReadOp, ttls.Read*time.Second)
 	}
 	if ttls.Metadata != 0 {
 		e.SetTTLOf(MetadataOp, ttls.Metadata*time.Second)
@@ -339,19 +339,23 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
+func (e *externalPluginEntry) Read(ctx context.Context, p []byte, off int64) (int, error) {
 	if impl, ok := e.methods["read"]; ok && impl != nil {
 		if content, ok := impl.(string); ok {
-			return strings.NewReader(content), nil
+			return copy(p, content[off:]), nil
 		}
-		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
+		return 0, fmt.Errorf("Read method must provide a string, not %v", impl)
 	}
 
-	inv, err := e.script.InvokeAndWait(ctx, "read", e)
-	if err != nil {
-		return nil, err
+	if len(e.content) <= 0 {
+		inv, err := e.script.InvokeAndWait(ctx, "read", e)
+		if err != nil {
+			return 0, err
+		}
+		e.content = inv.stdout.Bytes()
+		e.Attributes().SetSize(uint64(inv.stdout.Len()))
 	}
-	return bytes.NewReader(inv.stdout.Bytes()), nil
+	return copy(p, e.content[off:]), nil
 }
 
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {

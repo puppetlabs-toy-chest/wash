@@ -37,18 +37,21 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	var fh fileHandle
 	fh.id = f.String()
 
-	// Initiate content request and return a channel providing the results.
+	// Prepare a reader for reading content.
 	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
-		content, err := plugin.OpenWithAnalytics(ctx, updatedEntry.(plugin.Readable))
-		if err != nil {
-			activity.Warnf(ctx, "FUSE: Open %v errored: %v", f, err)
-			return nil, err
-		}
+		fh.r = updatedEntry.(plugin.Readable)
 
-		activity.Record(ctx, "FUSE: Opened %v", f)
-		fh.r = content
+		attrs := plugin.Attributes(updatedEntry)
+		if !attrs.HasSize() {
+			// Request data to set the Size attribute.
+			if _, err := fh.r.Read(ctx, nil, 0); err != nil {
+				activity.Warnf(ctx, "FUSE: Open failed on %v attempting to prefill content: %w", f, err)
+				return nil, err
+			}
+		}
 	}
 
+	// Prepare a writer for making updates.
 	if plugin.WriteAction().IsSupportedOn(updatedEntry) {
 		fh.w = updatedEntry.(plugin.Writable)
 	}
@@ -62,31 +65,21 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 type fileHandle struct {
-	r  io.ReaderAt
+	r  plugin.Readable
 	w  plugin.Writable
 	id string
 }
 
 var _ fs.Handle = (*fileHandle)(nil)
-var _ = fs.HandleReleaser(fileHandle{})
 var _ = fs.HandleReader(fileHandle{})
 var _ = fs.HandleWriter(fileHandle{})
 
-func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
-	activity.Record(ctx, "FUSE: Release %v", fh.id)
-	if closer, ok := fh.r.(io.Closer); ok {
-		return closer.Close()
-	}
-
-	if closer, ok := fh.w.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
+	if fh.r == nil {
+		panic("Should not have permission to read something that's not Readable")
+	}
 	buf := make([]byte, req.Size)
-	n, err := fh.r.ReadAt(buf, req.Offset)
+	n, err := plugin.ReadWithAnalytics(ctx, fh.r, buf, req.Offset)
 	if err == io.EOF {
 		err = nil
 	}
@@ -96,8 +89,11 @@ func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 }
 
 func (fh fileHandle) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-	n, err := plugin.WriteWithAnalytics(ctx, fh.w, req.Offset, req.Data)
+	if fh.w == nil {
+		panic("Should not have permission to write something that's not Writable")
+	}
+	n, err := plugin.WriteWithAnalytics(ctx, fh.w, req.Data, req.Offset)
 	resp.Size = n
-	activity.Record(ctx, "FUSE: Write %v/%v bytes starting at %v from %v: %v", n, len(req.Data), req.Offset, fh.id, err)
+	activity.Record(ctx, "FUSE: Wrote %v/%v bytes starting at %v from %v: %v", n, len(req.Data), req.Offset, fh.id, err)
 	return err
 }

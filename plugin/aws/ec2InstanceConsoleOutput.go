@@ -1,18 +1,17 @@
 package aws
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// ec2InstanceConsoleOutput represents an EC2 instance's
-// console output
+// ec2InstanceConsoleOutput represents an EC2 instance's console output
 type ec2InstanceConsoleOutput struct {
 	plugin.EntryBase
-	inst   *ec2Instance
-	latest bool
+	inst    *ec2Instance
+	latest  bool
+	content []byte
 }
 
 func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest bool) (*ec2InstanceConsoleOutput, error) {
@@ -46,11 +45,12 @@ func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(cl, "console.out")
 }
 
-func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (cl *ec2InstanceConsoleOutput) Read(ctx context.Context, p []byte, off int64) (int, error) {
 	output, err := cl.inst.cachedConsoleOutput(ctx, cl.latest)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return bytes.NewReader(output.content), nil
+	cl.Attributes().SetSize(uint64(len(output.content)))
+	return copy(p, output.content[off:]), nil
 }

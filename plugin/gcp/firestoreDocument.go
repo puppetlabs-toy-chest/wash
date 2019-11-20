@@ -1,7 +1,6 @@
 package gcp
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"time"
@@ -101,8 +100,8 @@ func newFirestoreDocumentDataJSON(data map[string]interface{}) (*firestoreDocume
 	return dataEntry, nil
 }
 
-func (data *firestoreDocumentDataJSON) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return bytes.NewReader(data.bytes), nil
+func (data *firestoreDocumentDataJSON) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	return copy(p, data.bytes[off:]), nil
 }
 
 func (data *firestoreDocumentDataJSON) Schema() *plugin.EntrySchema {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/activity"
@@ -24,6 +23,7 @@ type cloudFunctionLogService struct {
 type cloudFunctionLog struct {
 	plugin.EntryBase
 	service cloudFunctionLogService
+	log     string
 }
 
 func newCloudFunctionLog(ctx context.Context, service cloudFunctionsProjectService, region string, functionName string) (*cloudFunctionLog, error) {
@@ -38,22 +38,26 @@ func newCloudFunctionLog(ctx context.Context, service cloudFunctionsProjectServi
 	return cfl, nil
 }
 
-func (cfl *cloudFunctionLog) Open(ctx context.Context) (plugin.SizedReader, error) {
-	// 1000 matches gcloud's upper limit for fetching logs
-	entries, err := cfl.fetchEntries(ctx, 1000, "")
-	if err != nil {
-		return nil, err
+func (cfl *cloudFunctionLog) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if cfl.log == "" {
+		// 1000 matches gcloud's upper limit for fetching logs
+		entries, err := cfl.fetchEntries(ctx, 1000, "")
+		if err != nil {
+			return 0, err
+		}
+		table := cmdutil.NewTableWithHeaders(
+			[]cmdutil.ColumnHeader{
+				{ShortName: "level", FullName: "LEVEL"},
+				{ShortName: "execution_id", FullName: "EXECUTION_ID"},
+				{ShortName: "time_utc", FullName: "TIME_UTC"},
+				{ShortName: "log", FullName: "LOG"},
+			},
+			entries,
+		)
+		cfl.log = table.Format()
 	}
-	table := cmdutil.NewTableWithHeaders(
-		[]cmdutil.ColumnHeader{
-			{ShortName: "level", FullName: "LEVEL"},
-			{ShortName: "execution_id", FullName: "EXECUTION_ID"},
-			{ShortName: "time_utc", FullName: "TIME_UTC"},
-			{ShortName: "log", FullName: "LOG"},
-		},
-		entries,
-	)
-	return strings.NewReader(table.Format()), nil
+
+	return copy(p, cfl.log[off:]), nil
 }
 
 // Note that we use afterTimestamp instead of pageToken because the latter doesn't work well with

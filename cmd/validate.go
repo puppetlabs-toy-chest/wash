@@ -314,7 +314,7 @@ func processEntry(ctx context.Context, pw progress.Writer, wp cmdutil.Pool, e pl
 
 	if plugin.ReadAction().IsSupportedOn(e) {
 		_, cancelFunc, err := withTimeout(ctx, "read", name, func(ctx context.Context) (interface{}, error) {
-			return plugin.Open(ctx, e.(plugin.Readable))
+			return plugin.Read(ctx, e.(plugin.Readable), nil, 0)
 		})
 		if err != nil {
 			errs <- err

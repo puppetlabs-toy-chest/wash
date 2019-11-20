@@ -16,6 +16,7 @@ type containerLogFile struct {
 	plugin.EntryBase
 	containerName string
 	client        *client.Client
+	content       []byte
 }
 
 func newContainerLogFile(container *container) *containerLogFile {
@@ -41,28 +42,32 @@ func (clf *containerLogFile) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(clf, "log").IsSingleton()
 }
 
-func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
-	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
-	rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
-	if err != nil {
-		return nil, err
+func (clf *containerLogFile) Read(ctx context.Context, p []byte, off int64) (int, error) {
+	if len(clf.content) <= 0 {
+		opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
+		rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
+		if err != nil {
+			return 0, err
+		}
+
+		var buf bytes.Buffer
+		var n int64
+		if clf.isTty(ctx) {
+			if n, err = buf.ReadFrom(rdr); err != nil {
+				return 0, err
+			}
+		} else {
+			// Write stdout and stderr to the same buffer.
+			if n, err = stdcopy.StdCopy(&buf, &buf, rdr); err != nil {
+				return 0, err
+			}
+		}
+		activity.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
+		clf.content = buf.Bytes()
+		clf.Attributes().SetSize(uint64(buf.Len()))
 	}
 
-	var buf bytes.Buffer
-	var n int64
-	if clf.isTty(ctx) {
-		if n, err = buf.ReadFrom(rdr); err != nil {
-			return nil, err
-		}
-	} else {
-		// Write stdout and stderr to the same buffer.
-		if n, err = stdcopy.StdCopy(&buf, &buf, rdr); err != nil {
-			return nil, err
-		}
-	}
-	activity.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
-
-	return bytes.NewReader(buf.Bytes()), nil
+	return copy(p, clf.content[off:]), nil
 }
 
 func (clf *containerLogFile) Stream(ctx context.Context) (io.ReadCloser, error) {
