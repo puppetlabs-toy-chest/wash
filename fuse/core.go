@@ -74,7 +74,7 @@ func (f *fuseNode) String() string {
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
-func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir bool) {
+func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, defaultMode os.FileMode) {
 	// Setting a.Valid to 1 second avoids frequent Attr calls.
 	a.Valid = 1 * time.Second
 
@@ -88,10 +88,8 @@ func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, isdir b
 		if a.Mode&os.ModeCharDevice == os.ModeCharDevice {
 			a.Mode |= os.ModeDevice
 		}
-	} else if isdir {
-		a.Mode = os.ModeDir | 0550
 	} else {
-		a.Mode = 0440
+		a.Mode = defaultMode
 	}
 
 	const blockSize = 4096
@@ -169,7 +167,17 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	// is not strictly necessary for the other FUSE operations, we choose to
 	// leave it alone.
 
-	f.applyAttr(a, &attr, plugin.ListAction().IsSupportedOn(updatedEntry))
+	var mode os.FileMode
+	if plugin.ListAction().IsSupportedOn(updatedEntry) {
+		mode = os.ModeDir | 0550
+	} else {
+		if plugin.ReadAction().IsSupportedOn(updatedEntry) ||
+			plugin.StreamAction().IsSupportedOn(updatedEntry) {
+			mode |= 0440
+		}
+	}
+
+	f.applyAttr(a, &attr, mode)
 	log.Debugf("FUSE: Attr finished %v", f)
 	return nil
 }
