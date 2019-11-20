@@ -15,17 +15,24 @@ func ListWithAnalytics(ctx context.Context, p Parent) (*EntryMap, error) {
 }
 
 // OpenWithAnalytics is a wrapper to plugin.Open. Use it when you need to report
-// a 'Read' invocation to analytics. Otherwise, use plugin.Open
+// a 'Read' invocation to analytics. Otherwise, use plugin.Open.
 func OpenWithAnalytics(ctx context.Context, r Readable) (SizedReader, error) {
 	submitMethodInvocation(ctx, r, "Read")
 	return Open(ctx, r)
 }
 
 // StreamWithAnalytics is a wrapper to s#Stream. Use it when you need to report a 'Stream'
-// invocation to analytics. Otherwise, use s#Stream
+// invocation to analytics. Otherwise, use s#Stream.
 func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	submitMethodInvocation(ctx, s, "Stream")
 	return Stream(ctx, s)
+}
+
+// WriteWithAnalytics is a wrapper to w#Write. Use it when you need to report an 'Write'
+// invocation to analytics. Otherwise, use w#Write.
+func WriteWithAnalytics(ctx context.Context, w Writable, off int64, b []byte) (int, error) {
+	submitMethodInvocation(ctx, w, "Write")
+	return Write(ctx, w, off, b)
 }
 
 // ExecWithAnalytics is a wrapper to e#Exec. Use it when you need to report an 'Exec'

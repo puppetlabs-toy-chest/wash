@@ -171,6 +171,9 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 	if plugin.ListAction().IsSupportedOn(updatedEntry) {
 		mode = os.ModeDir | 0550
 	} else {
+		if plugin.WriteAction().IsSupportedOn(updatedEntry) {
+			mode |= 0220
+		}
 		if plugin.ReadAction().IsSupportedOn(updatedEntry) ||
 			plugin.StreamAction().IsSupportedOn(updatedEntry) {
 			mode |= 0440

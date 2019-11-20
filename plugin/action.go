@@ -32,6 +32,7 @@ func (a Action) IsSupportedOn(entry Entry) bool {
 var listAction = newAction("list", "Parent")
 var readAction = newAction("read", "Readable")
 var streamAction = newAction("stream", "Streamable")
+var writeAction = newAction("write", "Writable")
 var execAction = newAction("exec", "Execable")
 var deleteAction = newAction("delete", "Deletable")
 var signalAction = newAction("signal", "Signalable")
@@ -49,6 +50,11 @@ func ReadAction() Action {
 // StreamAction represents the stream action
 func StreamAction() Action {
 	return streamAction
+}
+
+// WriteAction represents the append action
+func WriteAction() Action {
+	return writeAction
 }
 
 // ExecAction represents the exec action
@@ -106,6 +112,9 @@ func SupportedActionsOf(entry Entry) []string {
 		}
 		if _, ok := entry.(Streamable); ok {
 			actions = append(actions, StreamAction().Name)
+		}
+		if _, ok := entry.(Writable); ok {
+			actions = append(actions, WriteAction().Name)
 		}
 		if _, ok := entry.(Execable); ok {
 			actions = append(actions, ExecAction().Name)

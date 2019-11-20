@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"runtime"
 	"sync"
 	"time"
 
@@ -40,6 +41,11 @@ func newPubsubTopic(client *pubsub.Client, topic *pubsub.Topic) *pubsubTopic {
 	top.
 		Attributes().
 		SetMeta(pubsubTopicAttrMeta{PublishSettings: topic.PublishSettings})
+
+	// This may be somewhat hacky, but it ensures the goroutines for publishing get cleaned up eventually.
+	// Writeable can optionally also implement io.Closer to do cleanup when we're done writing,
+	// but we may re-use this client so we shouldn't stop it in Close.
+	runtime.SetFinalizer(top, func(t *pubsubTopic) { t.topic.Stop() })
 	return top
 }
 
@@ -148,6 +154,16 @@ func (w *pubsubTopicWatcher) Close() error {
 func (t *pubsubTopic) Stream(ctx context.Context) (io.ReadCloser, error) {
 	// Create subscription and wrap it in a ReadCloser to handle cleanup.
 	return t.newPubsubTopicWatcher(ctx)
+}
+
+func (t *pubsubTopic) Write(ctx context.Context, _ int64, b []byte) (int, error) {
+	result := t.topic.Publish(ctx, &pubsub.Message{Data: b})
+	sid, err := result.Get(ctx)
+	activity.Record(ctx, "Message %v published with server ID %v: %v", string(b), sid, err)
+	if err != nil {
+		return 0, err
+	}
+	return len(b), nil
 }
 
 func (t *pubsubTopic) Schema() *plugin.EntrySchema {
