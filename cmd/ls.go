@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"strings"
+	"bytes"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -12,11 +12,19 @@ import (
 )
 
 func lsCommand() *cobra.Command {
+	var perms string
+	for _, entry := range permMap {
+		perms += "  " + entry.name + " => " + string(entry.short) + "\n"
+	}
 	lsCmd := &cobra.Command{
 		Use:   "ls [<path>]",
-		Short: "Lists the resources at the indicated path",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  toRunE(lsMain),
+		Short: "Lists resources at the indicated path",
+		Long: `Lists resources at the indicated path.
+
+When using the long format, permissions are abreviated:
+` + perms,
+		Args: cobra.MaximumNArgs(1),
+		RunE: toRunE(lsMain),
 	}
 	lsCmd.Flags().BoolP("long", "l", false, "List in long format")
 	return lsCmd
@@ -25,8 +33,9 @@ func lsCommand() *cobra.Command {
 func headers() []cmdutil.ColumnHeader {
 	return []cmdutil.ColumnHeader{
 		{ShortName: "name", FullName: "NAME"},
+		{ShortName: "crtime", FullName: "CREATED"},
 		{ShortName: "mtime", FullName: "MODIFIED"},
-		{ShortName: "verbs", FullName: "ACTIONS"},
+		{ShortName: "perms", FullName: "PERMISSIONS"},
 	}
 }
 
@@ -42,19 +51,47 @@ func cname(entry apitypes.Entry) string {
 	return cname
 }
 
+type permEntry struct {
+	name  string
+	short byte
+}
+
+var permMap = []permEntry{{"list", 'l'}, {"read", 'r'}, {"write", 'w'}, {"exec", 'x'}, {"stream", 's'}, {"delete", 'd'}}
+
+func contains(a []string, x string) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
+	}
+	return false
+}
+
 func formatLSEntries(ls []apitypes.Entry) string {
 	table := make([][]string, len(ls))
 	for i, entry := range ls {
-		var mtimeStr string
+		var crtimeStr, mtimeStr string
 		if entry.Attributes.HasMtime() {
 			mtimeStr = format(entry.Attributes.Mtime())
 		} else {
 			mtimeStr = "<unknown>"
 		}
 
-		verbs := strings.Join(entry.Actions, ", ")
+		if entry.Attributes.HasCrtime() {
+			crtimeStr = format(entry.Attributes.Crtime())
+		} else {
+			crtimeStr = "<unknown>"
+		}
 
-		table[i] = []string{cname(entry), mtimeStr, verbs}
+		// Permissions are: lrwxsd (list, read, write, exec, stream, delete)
+		perms := bytes.Repeat([]byte{'-'}, len(permMap))
+		for i, perm := range permMap {
+			if contains(entry.Actions, perm.name) {
+				perms[i] = perm.short
+			}
+		}
+
+		table[i] = []string{cname(entry), crtimeStr, mtimeStr, string(perms)}
 	}
 	return cmdutil.NewTableWithHeaders(headers(), table).Format()
 }
