@@ -83,6 +83,7 @@ func (p *project) ChildSchemas() []*plugin.EntrySchema {
 		(&computeDir{}).Schema(),
 		(&storageDir{}).Schema(),
 		(&firestoreDir{}).Schema(),
+		(&pubsubDir{}).Schema(),
 		(&cloudFunctionsDir{}).Schema(),
 	}
 }
