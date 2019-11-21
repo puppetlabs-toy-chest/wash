@@ -31,6 +31,39 @@
         }
       }
     },
+    "/fs/delete": {
+      "delete": {
+        "description": "On success, returns a boolean that describes whether the delete was applied immediately\nor is pending.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "delete"
+        ],
+        "summary": "Deletes the entry at the specified path.",
+        "operationId": "deleteEntry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {},
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
     "/fs/exec": {
       "post": {
         "description": "Executes a command on the remote system described by the supplied path.",
@@ -190,42 +223,6 @@
         }
       }
     },
-    "/fs/read": {
-      "get": {
-        "description": "Read content from the specified entry.",
-        "produces": [
-          "application/json",
-          "application/octet-stream"
-        ],
-        "schemes": [
-          "http"
-        ],
-        "tags": [
-          "read"
-        ],
-        "summary": "Read content",
-        "operationId": "readContent",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "uniquely identifies an entry",
-            "name": "Path",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/octetResponse"
-          },
-          "404": {
-            "$ref": "#/responses/errorResp"
-          },
-          "500": {
-            "$ref": "#/responses/errorResp"
-          }
-        }
-      }
-    },
     "/fs/schema": {
       "get": {
         "description": "Returns a map of Type IDs to EntrySchema objects describing the plugin schema starting at the\ngiven path. The first key in the map corresponds to the path's schema.",
@@ -240,10 +237,56 @@
         ],
         "summary": "Schema for an entry at path",
         "operationId": "entrySchema",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/schemaResponse"
           },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
+    "/fs/signal": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "signal"
+        ],
+        "summary": "Sends a signal to the entry at the specified path.",
+        "operationId": "signalEntry",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {},
           "400": {
             "$ref": "#/responses/errorResp"
           },
@@ -430,13 +473,13 @@
       "x-go-package": "github.com/puppetlabs/wash/api/types"
     },
     "EntryAttributes": {
-      "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCtime(ctime).\nSetMtime(mtime).\nSetMeta(meta)\nentry.SetAttributes(attr)",
+      "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCrtime(crtime).\nSetMtime(mtime).\nSetMeta(meta)\nentry.SetAttributes(attr)",
       "type": "object",
       "title": "EntryAttributes represents an entry's attributes. We use a struct\ninstead of a map for efficient memory allocation/deallocation,\nwhich is needed to make Parent#List fast.",
       "x-go-package": "github.com/puppetlabs/wash/plugin"
     },
     "EntrySchema": {
-      "description": "EntrySchema describes an entry's schema, which\nis what's returned by the /fs/schema endpoint.",
+      "description": "EntrySchema describes an entry's schema, which is what's returned by\nthe /fs/schema endpoint.",
       "type": "object",
       "properties": {
         "actions": {
@@ -453,6 +496,10 @@
           },
           "x-go-name": "Children"
         },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
         "label": {
           "type": "string",
           "x-go-name": "Label"
@@ -462,6 +509,13 @@
         },
         "metadata_schema": {
           "$ref": "#/definitions/Schema"
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignalSchema"
+          },
+          "x-go-name": "Signals"
         },
         "singleton": {
           "type": "boolean",
@@ -560,16 +614,6 @@
       "type": "object",
       "x-go-package": "github.com/emirpasic/gods/maps/linkedhashmap"
     },
-    "RawMessage": {
-      "description": "It implements Marshaler and Unmarshaler and can\nbe used to delay JSON decoding or precompute a JSON encoding.",
-      "type": "array",
-      "title": "RawMessage is a raw encoded JSON value.",
-      "items": {
-        "type": "integer",
-        "format": "uint8"
-      },
-      "x-go-package": "encoding/json"
-    },
     "Reader": {
       "description": "Read reads up to len(p) bytes into p. It returns the number of bytes\nread (0 \u003c= n \u003c= len(p)) and any error encountered. Even if Read\nreturns n \u003c len(p), it may use all of p as scratch space during the call.\nIf some data is available but not len(p) bytes, Read conventionally\nreturns what is available instead of waiting for more.\n\nWhen Read encounters an error or end-of-file condition after\nsuccessfully reading n \u003e 0 bytes, it returns the number of\nbytes read. It may return the (non-nil) error from the same call\nor return the error (and n == 0) from a subsequent call.\nAn instance of this general case is that a Reader returning\na non-zero number of bytes at the end of the input stream may\nreturn either err == EOF or err == nil. The next Read should\nreturn 0, EOF.\n\nCallers should always process the n \u003e 0 bytes returned before\nconsidering the error err. Doing so correctly handles I/O errors\nthat happen after reading some bytes and also both of the\nallowed EOF behaviors.\n\nImplementations of Read are discouraged from returning a\nzero byte count with a nil error, except when len(p) == 0.\nCallers should treat a return of 0 and nil as indicating that\nnothing happened; in particular it does not indicate EOF.\n\nImplementations must not retain p.",
       "type": "object",
@@ -594,7 +638,8 @@
           "$ref": "#/definitions/Type"
         },
         "additionalProperties": {
-          "$ref": "#/definitions/RawMessage"
+          "type": "object",
+          "x-go-name": "AdditionalProperties"
         },
         "allOf": {
           "type": "array",
@@ -761,6 +806,25 @@
       },
       "x-go-package": "github.com/ekinanp/jsonschema"
     },
+    "SignalSchema": {
+      "description": "SignalSchema represents a given signal/signal group's schema",
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
+        "name": {
+          "type": "string",
+          "x-go-name": "Name"
+        },
+        "regex": {
+          "type": "string",
+          "x-go-name": "Regex"
+        }
+      },
+      "x-go-package": "github.com/puppetlabs/wash/plugin"
+    },
     "Type": {
       "type": "object",
       "title": "Type represents a JSON Schema object type.",
@@ -778,7 +842,8 @@
           "$ref": "#/definitions/Type"
         },
         "additionalProperties": {
-          "$ref": "#/definitions/RawMessage"
+          "type": "object",
+          "x-go-name": "AdditionalProperties"
         },
         "allOf": {
           "type": "array",
@@ -975,7 +1040,7 @@
       }
     },
     "EntrySchema": {
-      "description": "EntrySchema describes an entry's schema, which\nis what's returned by the /fs/schema endpoint.",
+      "description": "EntrySchema describes an entry's schema, which is what's returned by\nthe /fs/schema endpoint.",
       "schema": {
         "type": "object",
         "$ref": "#/definitions/Map"
@@ -994,7 +1059,12 @@
             "type": "string"
           }
         },
-        "entry": {},
+        "description": {
+          "type": "string"
+        },
+        "entry": {
+          "description": "Store the entry so that we can compute its type ID and, if the entry's\na core plugin entry, enumerate its child schemas when marshaling its\nschema."
+        },
         "graph": {
           "description": "graph is an ordered map of `\u003cTypeID\u003e` =\u003e `\u003cEntrySchema\u003e`. We store it to make\nMarshalJSON's implementation easier.\n\nNOTE: The reason we don't synchronize children with graph is b/c entry\nschemas are immutable. Clients that want to mess with the state (e.g. like\n`wash find`) can do so at their own peril."
         },
@@ -1005,8 +1075,20 @@
         "meta_attribute_schema": {},
         "metadataSchemaObj": {},
         "metadata_schema": {},
+        "path": {
+          "type": "string"
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SignalSchema"
+          }
+        },
         "singleton": {
           "type": "boolean"
+        },
+        "typeID": {
+          "type": "string"
         }
       }
     },

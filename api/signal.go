@@ -9,7 +9,7 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// swagger:route POST /fs/signal signal
+// swagger:route POST /fs/signal signal signalEntry
 //
 // Sends a signal to the entry at the specified path.
 //

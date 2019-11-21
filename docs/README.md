@@ -34,5 +34,3 @@ Then run it and [redoc-cli](https://github.com/Rebilly/ReDoc/blob/master/cli/REA
 swagger generate spec > docs/docs/api.json
 npx redoc-cli bundle docs/docs/api.json -o docs/docs/api.html --options.nativeScrollbars
 ```
-
-> Note that this is somewhat painful to get right with the current state of Go modules. Please ask for help if you have trouble.
