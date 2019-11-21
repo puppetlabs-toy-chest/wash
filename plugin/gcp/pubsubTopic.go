@@ -1,12 +1,10 @@
 package gcp
 
 import (
-	"container/list"
 	"context"
 	"fmt"
 	"io"
 	"runtime"
-	"sync"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -80,15 +78,11 @@ func (t *pubsubTopic) Delete(ctx context.Context) (bool, error) {
 }
 
 // A ReadCloser that subscribes to a topic and buffers all messages that appear there.
-// Uses a mutex to synchronize accessing the queue (List) and recording receive errors.
-// It shares this mutex because accessing the error is low cost and unlikely to happen
-// while we're still buffering messages.
 type pubsubTopicWatcher struct {
 	ctx   context.Context
 	sub   *pubsub.Subscription
-	mux   sync.Mutex
-	queue *list.List
-	err   error
+	queue <-chan *pubsub.Message
+	err   <-chan error
 }
 
 func (t *pubsubTopic) newPubsubTopicWatcher(ctx context.Context) (*pubsubTopicWatcher, error) {
@@ -101,19 +95,19 @@ func (t *pubsubTopic) newPubsubTopicWatcher(ctx context.Context) (*pubsubTopicWa
 		return nil, err
 	}
 
-	watcher := &pubsubTopicWatcher{ctx: ctx, sub: sub, queue: list.New()}
+	// Use a buffer so we can Ack messages quickly.
+	queue := make(chan *pubsub.Message, 5)
+	errCh := make(chan error)
+	watcher := &pubsubTopicWatcher{ctx: ctx, sub: sub, queue: queue, err: errCh}
 
 	bufferMessages := func(_ context.Context, msg *pubsub.Message) {
 		msg.Ack()
-		watcher.mux.Lock()
-		watcher.queue.PushBack(msg)
-		watcher.mux.Unlock()
+		queue <- msg
 	}
 	go func() {
-		err := sub.Receive(ctx, bufferMessages)
-		watcher.mux.Lock()
-		watcher.err = err
-		watcher.mux.Unlock()
+		errCh <- sub.Receive(ctx, bufferMessages)
+		close(errCh)
+		close(queue)
 	}()
 	return watcher, nil
 }
@@ -121,30 +115,21 @@ func (t *pubsubTopic) newPubsubTopicWatcher(ctx context.Context) (*pubsubTopicWa
 func (w *pubsubTopicWatcher) Read(p []byte) (int, error) {
 	// If there are outstanding messages, return one.
 	// If not, check if the context is done before returning.
-	var msg *pubsub.Message
-	w.mux.Lock()
-	if w.queue.Len() > 0 {
-		e := w.queue.Front()
-		w.queue.Remove(e)
-		msg = e.Value.(*pubsub.Message)
-	}
-	w.mux.Unlock()
+	if msg, ok := <-w.queue; ok {
+		activity.Record(w.ctx, "Reading next message: %v", msg)
 
-	activity.Record(w.ctx, "Reading next message: %v", msg)
-	if msg == nil {
-		select {
-		case <-w.ctx.Done():
-			return 0, io.EOF
-		default:
-			w.mux.Lock()
-			defer w.mux.Unlock()
-			return 0, w.err
-		}
+		// TODO: don't truncate messages longer than the read buffer.
+		s := fmt.Sprintf("%v | %v", msg.PublishTime.Format(time.StampMilli), string(msg.Data))
+		return copy(p, []byte(s)), nil
 	}
 
-	// TODO: don't truncate messages longer than the read buffer.
-	s := fmt.Sprintf("%v | %v", msg.PublishTime.Format(time.StampMilli), string(msg.Data))
-	return copy(p, []byte(s)), nil
+	activity.Record(w.ctx, "All messages read, waiting for completion")
+	select {
+	case <-w.ctx.Done():
+		return 0, io.EOF
+	case err := <-w.err:
+		return 0, err
+	}
 }
 
 func (w *pubsubTopicWatcher) Close() error {
