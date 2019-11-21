@@ -154,6 +154,11 @@ func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 	return s.Stream(ctx)
 }
 
+// Write sends the supplied buffer to the entry.
+func Write(ctx context.Context, a Writable, offset int64, b []byte) (int, error) {
+	return a.Write(ctx, offset, b)
+}
+
 // Signal signals the entry with the specified signal
 func Signal(ctx context.Context, s Signalable, signal string) error {
 	// Signals are case-insensitive

@@ -85,6 +85,8 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 		de.Name = cname
 		if plugin.ListAction().IsSupportedOn(entry) {
 			de.Type = fuse.DT_Dir
+		} else {
+			de.Type = fuse.DT_File
 		}
 		res = append(res, de)
 		return true

@@ -9,11 +9,11 @@ import (
 
 type firestoreCollection struct {
 	plugin.EntryBase
-	client firestoreProjectClient
+	client *firestore.Client
 	path   string
 }
 
-func newFirestoreCollection(client firestoreProjectClient, parent string, collRef *firestore.CollectionRef) *firestoreCollection {
+func newFirestoreCollection(client *firestore.Client, parent string, collRef *firestore.CollectionRef) *firestoreCollection {
 	return &firestoreCollection{
 		EntryBase: plugin.NewEntry(collRef.ID),
 		client:    client,

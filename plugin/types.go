@@ -195,6 +195,14 @@ type Readable interface {
 	Open(context.Context) (SizedReader, error)
 }
 
+// Writable is an entry that can write data directly to the entry. It mirrors
+// the WriterAt interface with an added context for handling the lifecycle of
+// remote write operations.
+type Writable interface {
+	Entry
+	Write(context.Context, int64, []byte) (int, error)
+}
+
 // Deletable is an entry that can be deleted. Entries that implement Delete
 // should ensure that it and all its children are removed. If the entry has
 // any dependencies that need to be deleted, then Delete should return an

@@ -12,7 +12,7 @@ import (
 
 type firestoreDocument struct {
 	plugin.EntryBase
-	client firestoreProjectClient
+	client *firestore.Client
 	path   string
 	data   map[string]interface{}
 }
@@ -24,7 +24,7 @@ type firestoreDocumentMetadata struct {
 	Data       map[string]interface{} `json:"Data"`
 }
 
-func newFirestoreDocument(client firestoreProjectClient, parent string, snapshot *firestore.DocumentSnapshot) *firestoreDocument {
+func newFirestoreDocument(client *firestore.Client, parent string, snapshot *firestore.DocumentSnapshot) *firestoreDocument {
 	doc := &firestoreDocument{
 		EntryBase: plugin.NewEntry(snapshot.Ref.ID),
 		client:    client,
