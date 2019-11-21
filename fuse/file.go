@@ -96,7 +96,7 @@ func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse
 }
 
 func (fh fileHandle) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.WriteResponse) error {
-	n, err := fh.w.Write(ctx, req.Offset, req.Data)
+	n, err := plugin.WriteWithAnalytics(ctx, fh.w, req.Offset, req.Data)
 	resp.Size = n
 	activity.Record(ctx, "FUSE: Write %v/%v bytes starting at %v from %v: %v", n, len(req.Data), req.Offset, fh.id, err)
 	return err
