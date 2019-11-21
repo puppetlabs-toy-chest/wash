@@ -119,7 +119,6 @@ func StartAPI(
 	r.Handle("/fs/info", infoHandler).Methods(http.MethodGet)
 	r.Handle("/fs/list", listHandler).Methods(http.MethodGet)
 	r.Handle("/fs/metadata", metadataHandler).Methods(http.MethodGet)
-	r.Handle("/fs/read", readHandler).Methods(http.MethodGet)
 	r.Handle("/fs/stream", streamHandler).Methods(http.MethodGet)
 	r.Handle("/fs/exec", execHandler).Methods(http.MethodPost)
 	r.Handle("/fs/schema", schemaHandler).Methods(http.MethodGet)
