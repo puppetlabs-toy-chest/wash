@@ -62,7 +62,7 @@ func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (c *computeInstance) Delete(ctx context.Context) (bool, error) {
-	_, err := c.service.Instances.Delete(c.service.projectID, getZone(c.instance), c.Name()).Do()
+	_, err := c.service.Instances.Delete(c.service.projectID, getZone(c.instance), c.Name()).Context(ctx).Do()
 	return false, err
 }
 

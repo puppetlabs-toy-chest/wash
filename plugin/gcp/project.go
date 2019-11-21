@@ -68,7 +68,7 @@ func (p *project) Delete(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, err = crmService.Projects.Delete(p.id).Do()
+	_, err = crmService.Projects.Delete(p.id).Context(ctx).Do()
 	return true, err
 }
 
