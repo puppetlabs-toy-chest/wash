@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -12,12 +13,18 @@ import (
 type cloudFunction struct {
 	plugin.EntryBase
 	service cloudFunctionsProjectService
+	region  string
 }
 
 func newCloudFunction(function *cloudfunctions.CloudFunction, service cloudFunctionsProjectService) *cloudFunction {
+	// functionPath is formatted as projects/<project_id>/locations/<region>/functions/<function_name>
+	functionPath := function.Name
+	segments := strings.Split(functionPath, "/")
+	region, functionName := segments[3], segments[5]
 	cf := &cloudFunction{
-		EntryBase: plugin.NewEntry(function.Name),
+		EntryBase: plugin.NewEntry(functionName),
 		service:   service,
+		region:    region,
 	}
 	mtime, err := time.Parse(time.RFC3339, function.UpdateTime)
 	if err != nil {
@@ -31,7 +38,7 @@ func newCloudFunction(function *cloudfunctions.CloudFunction, service cloudFunct
 }
 
 func (cf *cloudFunction) List(ctx context.Context) ([]plugin.Entry, error) {
-	cfl, err := newCloudFunctionLog(ctx, cf.service, cf.Name())
+	cfl, err := newCloudFunctionLog(ctx, cf.service, cf.region, cf.Name())
 	if err != nil {
 		return nil, err
 	}

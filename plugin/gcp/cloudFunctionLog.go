@@ -26,14 +26,11 @@ type cloudFunctionLog struct {
 	service cloudFunctionLogService
 }
 
-func newCloudFunctionLog(ctx context.Context, service cloudFunctionsProjectService, functionPath string) (*cloudFunctionLog, error) {
+func newCloudFunctionLog(ctx context.Context, service cloudFunctionsProjectService, region string, functionName string) (*cloudFunctionLog, error) {
 	svc, err := logging.NewService(ctx, option.WithHTTPClient(service.client))
 	if err != nil {
 		return nil, err
 	}
-	// functionPath is formatted as projects/<project_id>/locations/<region>/functions/<function_name>
-	segments := strings.Split(functionPath, "/")
-	region, functionName := segments[3], segments[5]
 	cfl := &cloudFunctionLog{
 		EntryBase: plugin.NewEntry("log"),
 		service:   cloudFunctionLogService{svc, service.projectID, region, functionName},
