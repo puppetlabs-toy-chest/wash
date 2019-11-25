@@ -18,10 +18,10 @@ func newCloudFunctionLog(ctx context.Context, service cloudFunctionsProjectServi
 		// Note that we leave the severity and timestamp as-is to make them easier
 		// to parse with existing log libraries. This is slightly different from
 		// `gcloud function logs read <function_name>`
-		{"level", func(e *logging.LogEntry) string { return e.Severity }},
+		severityField,
 		{"execution_id", func(e *logging.LogEntry) string { return e.Labels["execution_id"] }},
-		{"time_utc", func(e *logging.LogEntry) string { return e.Timestamp }},
-		{"log", func(e *logging.LogEntry) string { return e.TextPayload }},
+		timestampField,
+		msgField,
 	}
 	filter := fmt.Sprintf(
 		"logName:\"cloud-functions\" AND resource.type=\"cloud_function\" AND resource.labels.region=\"%v\" AND resource.labels.function_name=\"%v\"",

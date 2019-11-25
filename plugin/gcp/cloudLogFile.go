@@ -20,6 +20,16 @@ type cloudLogEntryField struct {
 	accessor func(*logging.LogEntry) string
 }
 
+// These are some common log entry fields
+var severityField = cloudLogEntryField{"level", func(e *logging.LogEntry) string {
+	if len(e.Severity) <= 0 {
+		return "DEFAULT"
+	}
+	return e.Severity
+}}
+var timestampField = cloudLogEntryField{"time_utc", func(e *logging.LogEntry) string { return e.Timestamp }}
+var msgField = cloudLogEntryField{"log", func(e *logging.LogEntry) string { return e.TextPayload }}
+
 type cloudLogFile struct {
 	service   *logging.Service
 	fields    []cloudLogEntryField

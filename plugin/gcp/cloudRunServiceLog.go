@@ -15,11 +15,11 @@ type cloudRunServiceLog struct {
 
 func newCloudRunServiceLog(ctx context.Context, apiService cloudRunProjectAPIService, region string, serviceName string) (*cloudRunServiceLog, error) {
 	fields := []cloudLogEntryField{
-		{"level", func(e *logging.LogEntry) string { return e.Severity }},
+		severityField,
 		// Return only the first 16 characters of the instance ID to make the output readable
-		{"instance_id", func(e *logging.LogEntry) string { return e.Labels["instanceId"][0:15] }},
-		{"time_utc", func(e *logging.LogEntry) string { return e.Timestamp }},
-		{"log", func(e *logging.LogEntry) string { return e.TextPayload }},
+		{"instance_id", func(e *logging.LogEntry) string { return e.Labels["instanceId"][0:16] }},
+		timestampField,
+		msgField,
 	}
 	filter := fmt.Sprintf(
 		"logName:\"run.googleapis.com\" AND resource.type=\"cloud_run_revision\" AND resource.labels.location=\"%v\" AND resource.labels.service_name=\"%v\"",
