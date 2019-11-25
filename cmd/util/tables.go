@@ -99,6 +99,8 @@ func (t *Table) Format() string {
 				// in an incorrectly formatted table.
 				column.ShortName = longestColumn
 				column.FullName = longestColumn
+			} else if len(longestColumn) < len(column.FullName) {
+				longestColumn = column.FullName
 			}
 			width = len(longestColumn) + 2
 		}
