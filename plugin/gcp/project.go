@@ -53,12 +53,18 @@ func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
 		return nil, err
 	}
 
+	cloudRun, err := newCloudRunDir(ctx, p.client, p.id)
+	if err != nil {
+		return nil, err
+	}
+
 	children := []plugin.Entry{
 		comp,
 		stor,
 		firestore,
 		pubsub,
 		cloudFunctions,
+		cloudRun,
 	}
 	return children, nil
 }
@@ -85,5 +91,6 @@ func (p *project) ChildSchemas() []*plugin.EntrySchema {
 		(&firestoreDir{}).Schema(),
 		(&pubsubDir{}).Schema(),
 		(&cloudFunctionsDir{}).Schema(),
+		(&cloudRunDir{}).Schema(),
 	}
 }
