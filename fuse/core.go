@@ -162,6 +162,18 @@ func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
 		return err
 	}
 	attr := plugin.Attributes(updatedEntry)
+	if !attr.HasSize() && plugin.ReadAction().IsSupportedOn(updatedEntry) {
+		// This Readable entry doesn't know its size, so download its content and set the size
+		// to that. This enables built-in tools like `cat` to work without slowing down `list`.
+		//
+		// TODO: How can we prevent tab-completion from being slow?
+		rdr, err := plugin.Open(ctx, updatedEntry.(plugin.Readable))
+		if err != nil {
+			activity.Warnf(ctx, "FUSE: Attr errored calculating %v size: %v", f, err)
+		} else {
+			attr.SetSize(uint64(rdr.Size()))
+		}
+	}
 	// NOTE: We could set f.entry to updatedEntry, but doing so would require
 	// a separate mutex which may hinder performance. Since updating f.entry
 	// is not strictly necessary for the other FUSE operations, we choose to

@@ -91,23 +91,9 @@ func ID(e Entry) string {
 	return e.id()
 }
 
-// Attributes returns the entry's attributes. If size is unknown, it will check whether the entry
-// has locally cached content and if so set that for the size.
+// Attributes returns the entry's attributes.
 func Attributes(e Entry) EntryAttributes {
-	// Sometimes an entry doesn't know its size unless it's already downloaded some content. Having
-	// to download content makes list slow, and is a burden for external plugin developers. Check if
-	// we already know the size. If not, FUSE will use a reasonable default so tools don't ignore it.
-	attr := e.attributes()
-	if !attr.HasSize() && cache != nil {
-		// We have no way to preserve this on the entry, and it likely wouldn't help because we often
-		// recreate the entry to ensure we have an accurate representation. So when the cache expires
-		// we revert to stating the size is unknown until the next read operation.
-		if val, _ := cache.Get(defaultOpCodeToNameMap[OpenOp], e.id()); val != nil {
-			rdr := val.(SizedReader)
-			attr.SetSize(uint64(rdr.Size()))
-		}
-	}
-	return attr
+	return e.attributes()
 }
 
 // IsPrefetched returns whether an entry has data that was added during creation that it would
