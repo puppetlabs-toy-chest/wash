@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,8 +14,10 @@ import (
 	awsSDK "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	s3Client "github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/dustin/go-humanize"
 )
 
 // listObjects is a helper that lists the objects which start with a specific
@@ -158,6 +161,7 @@ type s3Bucket struct {
 	plugin.EntryBase
 	crtime  time.Time
 	client  *s3Client.S3
+	cwcli   *cloudwatch.CloudWatch
 	session *session.Session
 }
 
@@ -167,6 +171,7 @@ func newS3Bucket(name string, crtime time.Time, session *session.Session) *s3Buc
 	}
 	bucket.crtime = crtime
 	bucket.client = s3Client.New(session)
+	bucket.cwcli = cloudwatch.New(session)
 	bucket.session = session
 	bucket.
 		Attributes().
@@ -215,6 +220,10 @@ type bucketMetadata struct {
 	TagSet []*s3Client.Tag
 	Region string
 	Crtime time.Time
+	Size   struct {
+		Average, Minimum, Maximum float64
+		HumanAvg                  string
+	}
 }
 
 func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
@@ -250,6 +259,30 @@ func (b *s3Bucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	}
 	metadata.Region = region
 	metadata.Crtime = b.crtime
+
+	// Get some metrics.
+	today := time.Now()
+	before := today.AddDate(0, 0, -3)
+	dims := []*cloudwatch.Dimension{
+		(&cloudwatch.Dimension{}).SetName("StorageType").SetValue("StandardStorage"),
+		(&cloudwatch.Dimension{}).SetName("BucketName").SetValue(b.Name()),
+	}
+	average, min, max := "Average", "Minimum", "Maximum"
+	metricStatInput := (&cloudwatch.GetMetricStatisticsInput{}).SetStartTime(before).SetEndTime(today).
+		SetDimensions(dims).SetNamespace("AWS/S3").SetMetricName("BucketSizeBytes").SetPeriod(86400).SetStatistics([]*string{&average, &min, &max})
+	metricStatOutput, err := b.cwcli.GetMetricStatistics(metricStatInput)
+	if err != nil {
+		activity.Record(ctx, "Unable to get bucket size for %v from CloudWatch: %v", b.Name(), err)
+	} else if data := metricStatOutput.Datapoints; len(data) > 0 {
+		// Sort so the newest data is first.
+		sort.Slice(data, func(i, j int) bool {
+			return data[i].Timestamp.After(*data[j].Timestamp)
+		})
+		metadata.Size.Average = *data[0].Average
+		metadata.Size.Minimum = *data[0].Minimum
+		metadata.Size.Maximum = *data[0].Maximum
+		metadata.Size.HumanAvg = humanize.Bytes(uint64(metadata.Size.Average))
+	}
 
 	return plugin.ToJSONObject(metadata), nil
 }
