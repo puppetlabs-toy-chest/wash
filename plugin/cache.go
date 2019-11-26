@@ -164,7 +164,11 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
 		// to calculate its attributes. Note that the child's ID is set in cachedOp.
-		entries, err := p.List(context.WithValue(ctx, parentID, p.id()))
+		var entries []Entry
+		err := withConsole(ctx, func(c context.Context) (err error) {
+			entries, err = p.List(context.WithValue(c, parentID, p.id()))
+			return
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -213,8 +217,12 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 // such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
 // reader will change it and make subsequent uses of the cached reader invalid.
 func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
-		return r.Open(ctx)
+	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (rdr interface{}, err error) {
+		err = withConsole(ctx, func(c context.Context) (err error) {
+			rdr, err = r.Open(c)
+			return
+		})
+		return
 	})
 
 	if err != nil {
@@ -226,8 +234,12 @@ func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
 
 // cachedMetadata caches an entry's Metadata method
 func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
-	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (interface{}, error) {
-		return e.Metadata(ctx)
+	cachedMetadata, err := cachedDefaultOp(ctx, MetadataOp, e, func() (obj interface{}, err error) {
+		err = withConsole(ctx, func(c context.Context) (err error) {
+			obj, err = e.Metadata(c)
+			return
+		})
+		return
 	})
 
 	if err != nil {

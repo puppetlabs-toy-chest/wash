@@ -1,9 +1,12 @@
 package plugin
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"github.com/mattn/go-isatty"
@@ -35,18 +38,14 @@ func tcSetpgrp(fd int, pgrp int) (err error) {
 	return unix.IoctlSetInt(fd, unix.TIOCSPGRP, int(uintptr(unsafe.Pointer(&v))))
 }
 
-// Only allow one Prompt call at a time. This prevents multiple plugins loading concurrently
-// from messing things up by calling Prompt concurrently.
-var promptMux sync.Mutex
-
-// Prompt prints the supplied message, then waits for input on stdin.
-func Prompt(msg string) (string, error) {
+// withConsole invokes the specified function while Wash has control of console input.
+// The function should save results by writing to captured variables.
+func withConsole(ctx context.Context, fn func(context.Context) error) error {
 	if !IsInteractive() {
-		return "", fmt.Errorf("not an interactive session")
+		// If not interactive, all we can do is call the function and return.
+		// If the function prompts for input without checking whether it can, then it may crash.
+		return fn(ctx)
 	}
-
-	promptMux.Lock()
-	defer promptMux.Unlock()
 
 	// Even if Wash is running interactively, it will not have control of STDIN while another command
 	// is running within the shell environment. If it doesn't have control and tries to read from it,
@@ -56,27 +55,63 @@ func Prompt(msg string) (string, error) {
 	inFd := int(os.Stdin.Fd())
 	inGrp, err := tcGetpgrp(inFd)
 	if err != nil {
-		return "", fmt.Errorf("error getting process group controlling stdin: %v", err)
+		return fmt.Errorf("error getting process group controlling stdin: %v", err)
 	}
 	curGrp := unix.Getpgrp()
 
-	var v string
 	if inGrp == curGrp {
-		// We control stdin
-		fmt.Fprintf(os.Stderr, "%s: ", msg)
-		_, err = fmt.Scanln(&v)
-	} else {
-		// Need to get control, prompt, then return control.
-		if err := tcSetpgrp(inFd, curGrp); err != nil {
-			return "", fmt.Errorf("error getting control of stdin: %v", err)
-		}
-		fmt.Fprintf(os.Stderr, "%s: ", msg)
-		_, err = fmt.Scanln(&v)
+		return fn(ctx)
+	}
+
+	// Catch Ctrl-C while we have input control. Otherwise the shell exits.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT)
+
+	// On Ctrl-C, cancel the function call.
+	cancelCtx, cancel := context.WithCancel(ctx)
+	go func() {
+		<-sigCh
+		cancel()
+	}()
+
+	// Cleanup when the function exits.
+	defer func() {
+		// Reset the signal watch first so we know there won't be any more attempts to
+		// write to sigCh after we close it.
+		signal.Reset(syscall.SIGINT)
+		close(sigCh)
+	}()
+
+	// Need to get control, call the function, then return control.
+	if err := tcSetpgrp(inFd, curGrp); err != nil {
+		return fmt.Errorf("error getting control of stdin: %v", err)
+	}
+
+	// Restore input control when we return.
+	defer func() {
 		if err := tcSetpgrp(inFd, inGrp); err != nil {
 			// Panic if we can't return control. A messed up environment that they 'kill -9' is worse.
 			panic(err.Error())
 		}
+	}()
+
+	return fn(cancelCtx)
+}
+
+// Only allow one Prompt call at a time. This prevents multiple plugins loading concurrently
+// from messing things up by calling Prompt concurrently.
+var promptMux sync.Mutex
+
+// Prompt prints the supplied message, then waits for input on stdin.
+func Prompt(msg string) (v string, err error) {
+	if IsInteractive() {
+		promptMux.Lock()
+		defer promptMux.Unlock()
+
+		fmt.Fprintf(os.Stderr, "%s: ", msg)
+		_, err = fmt.Scanln(&v)
+	} else {
+		err = fmt.Errorf("not an interactive session")
 	}
-	// Return the error set by Scanln.
-	return v, err
+	return
 }
