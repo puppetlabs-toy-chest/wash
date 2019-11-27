@@ -148,7 +148,7 @@ Deletes the entries at the specified paths, prompting the user for confirmation 
 
 ### wash signal
 
-Sends the specified signal to the entry at the specified path.
+Sends the specified signal to the entries at the specified paths.
 
 ## Config
 
@@ -331,7 +331,7 @@ SUPPORTED SIGNAL GROUPS
 ```
 
 ```
-wash . ❯ signal docker/containers/wash_tutorial_redis_1 start
+wash . ❯ signal start docker/containers/wash_tutorial_redis_1
 wash . ❯
 ```
 
