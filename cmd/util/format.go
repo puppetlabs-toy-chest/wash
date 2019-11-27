@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -19,6 +20,10 @@ var Stderr io.Writer = os.Stderr
 // ColoredStderr represents a color supporting writer for Stderr
 var ColoredStderr io.Writer = color.Error
 
+var stdoutMux sync.Mutex
+
+var stderrMux sync.Mutex
+
 // ErrPrintf formats and prints the provided format string and args on stderr and
 // colors the output red.
 func ErrPrintf(msg string, a ...interface{}) {
@@ -26,6 +31,13 @@ func ErrPrintf(msg string, a ...interface{}) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// SafeErrPrintf is a thread-safe wrapper to ErrPrintf
+func SafeErrPrintf(msg string, a ...interface{}) {
+	stderrMux.Lock()
+	defer stderrMux.Unlock()
+	ErrPrintf(msg, a...)
 }
 
 // Printf is a wrapper to fmt.Printf that prints to cmdutil.Stdout
@@ -36,6 +48,13 @@ func Printf(msg string, a ...interface{}) {
 	}
 }
 
+// SafePrintf is a thread-safe wrapper to Printf
+func SafePrintf(msg string, a ...interface{}) {
+	stdoutMux.Lock()
+	defer stdoutMux.Unlock()
+	Printf(msg, a...)
+}
+
 // Println is a wrapper to fmt.Println that prints to cmdutil.Stdout
 func Println(a ...interface{}) {
 	_, err := fmt.Fprintln(Stdout, a...)
@@ -44,12 +63,26 @@ func Println(a ...interface{}) {
 	}
 }
 
+// SafePrintln is a thread-safe wrapper to Println
+func SafePrintln(a ...interface{}) {
+	stdoutMux.Lock()
+	defer stdoutMux.Unlock()
+	Println(a...)
+}
+
 // Print is a wrapper to fmt.Print that prints to cmdutil.Stdout
-func Print(a... interface{}) {
+func Print(a ...interface{}) {
 	_, err := fmt.Fprint(Stdout, a...)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// SafePrint is a thread-safe wrapper to Print
+func SafePrint(a ...interface{}) {
+	stdoutMux.Lock()
+	defer stdoutMux.Unlock()
+	Print(a...)
 }
 
 // FormatDuration formats a duration as `[[dd-]hh:]mm:ss` according to

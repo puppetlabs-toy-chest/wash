@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,24 +16,19 @@ import (
 
 func lsCommand() *cobra.Command {
 	lsCmd := &cobra.Command{
-		Use:   "ls [<path>]",
-		Short: "Lists the resources at the indicated path",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  toRunE(lsMain),
+		Use:   "ls [<path>]...",
+		Short: "Lists the children of the specified paths, or current directory if not specified",
+		Long: `Lists the children of the specified paths, or current directory if
+no path is specified. If the -l option is set, then the name,
+last modified time, and supported actions are displayed for
+each child.`,
+		RunE: toRunE(lsMain),
 	}
 	lsCmd.Flags().BoolP("long", "l", false, "List in long format")
 	return lsCmd
 }
 
-func headers() []cmdutil.ColumnHeader {
-	return []cmdutil.ColumnHeader{
-		{ShortName: "name", FullName: "NAME"},
-		{ShortName: "mtime", FullName: "MODIFIED"},
-		{ShortName: "verbs", FullName: "ACTIONS"},
-	}
-}
-
-func format(t time.Time) string {
+func formatTime(t time.Time) string {
 	return t.Format(time.RFC822)
 }
 
@@ -42,28 +40,53 @@ func cname(entry apitypes.Entry) string {
 	return cname
 }
 
-func formatLSEntries(ls []apitypes.Entry) string {
-	table := make([][]string, len(ls))
-	for i, entry := range ls {
-		var mtimeStr string
-		if entry.Attributes.HasMtime() {
-			mtimeStr = format(entry.Attributes.Mtime())
+// item should be a "file"/"dir" type item. formatItem returns
+// an array of rows representing that item's entries
+func formatItem(item lsItem, longFormat bool) [][]string {
+	var entries []apitypes.Entry
+	if item.Type() != dirItem {
+		// Print the path for "file" items. This is consistent
+		// with the built-in ls
+		item.entry.CName = item.path
+		entries = append(entries, item.entry)
+	} else {
+		entries = item.children
+	}
+
+	var rows [][]string
+	for _, entry := range entries {
+		var row []string
+
+		if !longFormat {
+			row = []string{cname(entry)}
 		} else {
-			mtimeStr = "<unknown>"
+			var mtimeStr string
+			if entry.Attributes.HasMtime() {
+				mtimeStr = formatTime(entry.Attributes.Mtime())
+			} else {
+				mtimeStr = "<mtime unknown>"
+			}
+			verbs := strings.Join(entry.Actions, ", ")
+			row = []string{cname(entry), mtimeStr, verbs}
 		}
 
-		verbs := strings.Join(entry.Actions, ", ")
-
-		table[i] = []string{cname(entry), mtimeStr, verbs}
+		rows = append(rows, row)
 	}
-	return cmdutil.NewTableWithHeaders(headers(), table).Format()
+
+	return rows
+}
+
+func pad(str string, longFormat bool) []string {
+	if longFormat {
+		return []string{str, "", ""}
+	}
+	return []string{str}
 }
 
 func lsMain(cmd *cobra.Command, args []string) exitCode {
-	// If no path is declared, try to list the current directory/resource
-	path := "."
+	paths := []string{"."}
 	if len(args) > 0 {
-		path = args[0]
+		paths = args
 	}
 	longFormat, err := cmd.Flags().GetBool("long")
 	if err != nil {
@@ -71,30 +94,106 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	conn := cmdutil.NewClient()
-	entry, err := conn.Info(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+	items := make([]lsItem, len(paths))
+
+	// Fetch the required data
+	var wg sync.WaitGroup
+	for ix, path := range paths {
+		wg.Add(1)
+		go func(ix int, path string) {
+			defer wg.Done()
+
+			var item lsItem
+			item.path = path
+			item.entry, item.err = conn.Info(path)
+			if item.err == nil && item.Type() == dirItem {
+				item.children, item.err = conn.List(path)
+			}
+
+			items[ix] = item
+		}(ix, path)
+	}
+	wg.Wait()
+
+	// Sort the items to ensure that the output's
+	// printed in the expected "errors", "files",
+	// and "dirs" order.
+	sort.Slice(items, func(i int, j int) bool {
+		itemOne := items[i]
+		itemTwo := items[j]
+
+		return (itemOne.Type() < itemTwo.Type()) ||
+			((itemOne.Type() == itemTwo.Type()) && (itemOne.path < itemTwo.path))
+	})
+
+	// Partition the items. This makes it easier to print them.
+	itemSlice := make(map[int][]lsItem)
+	for _, item := range items {
+		itemSlice[item.Type()] = append(itemSlice[item.Type()], item)
+	}
+	errorItems, fileItems, dirItems := itemSlice[errorItem], itemSlice[fileItem], itemSlice[dirItem]
+
+	// Print the items out. Start with the "error" items.
+	ec := 0
+	for _, item := range errorItems {
+		ec = 1
+		cmdutil.ErrPrintf("ls: %v: %v\n", item.path, item.err)
+	}
+	// Now print the "file"/"dir" items as a table to maintain
+	// consistent padding. To do that, we'll need to generate
+	// the table's rows. Start with the "file" items
+	var rows [][]string
+	for _, item := range fileItems {
+		rows = append(rows, formatItem(item, longFormat)...)
+	}
+	// Now move on to the "dir" items
+	newline := pad("", longFormat)
+	if len(items) != len(dirItems) {
+		// An "error"/"file" item was printed so include a newline
+		rows = append(rows, newline)
+	}
+	multiplePaths := len(items) > 1
+	for ix, item := range dirItems {
+		if multiplePaths {
+			rows = append(rows, pad(fmt.Sprintf("%v:", item.path), longFormat))
+		}
+		rows = append(rows, formatItem(item, longFormat)...)
+		if ix != (len(dirItems) - 1) {
+			rows = append(rows, newline)
+		}
+	}
+	// Now create and print the table using the generated rows
+	if len(rows) > 0 {
+		cmdutil.Print(cmdutil.NewTable(rows...).Format())
 	}
 
-	var entries []apitypes.Entry
-	if !entry.Supports(plugin.ListAction()) {
-		entries = []apitypes.Entry{entry}
-	} else {
-		children, err := conn.List(path)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
-		}
-		entries = children
-	}
+	// Return the exit code
+	return exitCode{ec}
+}
 
-	if longFormat {
-		cmdutil.Print(formatLSEntries(entries))
-	} else {
-		for _, entry := range entries {
-			cmdutil.Println(cname(entry))
-		}
+// There's three possible types of lsItems:
+//   * An "error" -- entry that resulted in a failed API request
+//   * A "file"   -- entry that does not implement "list"
+//   * A "dir"    -- entry that does implement "list"
+type lsItem struct {
+	path     string
+	entry    apitypes.Entry
+	children []apitypes.Entry
+	err      error
+}
+
+const (
+	errorItem = 0
+	fileItem  = 1
+	dirItem   = 2
+)
+
+func (item lsItem) Type() int {
+	if item.err != nil {
+		return errorItem
 	}
-	return exitCode{0}
+	if !item.entry.Supports(plugin.ListAction()) {
+		return fileItem
+	}
+	return dirItem
 }
