@@ -145,30 +145,18 @@ func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
 }
 
 // Exec execs the command on the given entry.
-func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (result ExecCommand, err error) {
-	err = withConsole(ctx, func(c context.Context) (err error) {
-		result, err = e.Exec(ctx, cmd, args, opts)
-		return
-	})
-	return
+func Exec(ctx context.Context, e Execable, cmd string, args []string, opts ExecOptions) (ExecCommand, error) {
+	return e.Exec(ctx, cmd, args, opts)
 }
 
 // Stream streams the entry's content for updates.
-func Stream(ctx context.Context, s Streamable) (rdr io.ReadCloser, err error) {
-	err = withConsole(ctx, func(c context.Context) (err error) {
-		rdr, err = s.Stream(c)
-		return
-	})
-	return
+func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
+	return s.Stream(ctx)
 }
 
 // Write sends the supplied buffer to the entry.
-func Write(ctx context.Context, a Writable, offset int64, b []byte) (n int, err error) {
-	err = withConsole(ctx, func(c context.Context) (err error) {
-		n, err = a.Write(c, offset, b)
-		return
-	})
-	return
+func Write(ctx context.Context, a Writable, offset int64, b []byte) (int, error) {
+	return a.Write(ctx, offset, b)
 }
 
 // Signal signals the entry with the specified signal
@@ -210,10 +198,7 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 	}
 
 	// Go ahead and send the signal
-	err = withConsole(ctx, func(c context.Context) (err error) {
-		err = s.Signal(c, signal)
-		return
-	})
+	err = s.Signal(ctx, signal)
 	if err != nil {
 		return err
 	}
@@ -233,10 +218,7 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 
 // Delete deletes the given entry.
 func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
-	err = withConsole(ctx, func(c context.Context) (err error) {
-		deleted, err = d.Delete(c)
-		return
-	})
+	deleted, err = d.Delete(ctx)
 	if err != nil {
 		return
 	}
