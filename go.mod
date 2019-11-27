@@ -8,6 +8,7 @@ replace github.com/docker/docker => github.com/docker/engine v1.4.2-0.2019082220
 
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
+	cloud.google.com/go v0.46.3
 	cloud.google.com/go/firestore v1.1.0
 	cloud.google.com/go/pubsub v1.0.1
 	cloud.google.com/go/storage v1.0.0
@@ -26,6 +27,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.3.3 // indirect
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
+	github.com/dustin/go-humanize v1.0.0
 	github.com/ekinanp/go-cache v2.1.0+incompatible
 	github.com/ekinanp/jsonschema v0.0.0-20190624212413-cd4dbe12fbae
 	github.com/elazarl/goproxy v0.0.0-20181111060418-2ce16c963a8a // indirect
@@ -39,6 +41,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3
+	github.com/golang/protobuf v1.3.2
 	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.2.2 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -85,6 +88,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190813064441-fde4db37ae7a
 	google.golang.org/api v0.13.0
+	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a
 	gopkg.in/go-ini/ini.v1 v1.42.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.42.0 // indirect

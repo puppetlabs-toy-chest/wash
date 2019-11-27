@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/iterator"
+	"google.golang.org/genproto/googleapis/monitoring/v3"
 )
 
 type storageBucket struct {
@@ -24,6 +27,44 @@ func newStorageBucket(client storageProjectClient, bucket *storage.BucketAttrs) 
 		SetMtime(bucket.Created).
 		SetMeta(bucket)
 	return stor
+}
+
+type fullMeta struct {
+	*storage.BucketAttrs
+	Size float64
+}
+
+func (s *storageBucket) Metadata(ctx context.Context) (plugin.JSONObject, error) {
+	bucket, err := s.Bucket(s.Name()).Attrs(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var size float64
+	if s.metrics != nil {
+		today := time.Now()
+		before := today.AddDate(0, 0, -1)
+		interval := &monitoring.TimeInterval{
+			StartTime: &timestamp.Timestamp{Seconds: before.Unix()},
+			EndTime:   &timestamp.Timestamp{Seconds: today.Unix()},
+		}
+		req := &monitoring.ListTimeSeriesRequest{
+			Name:     "projects/" + s.projectID,
+			Filter:   `metric.type = "storage.googleapis.com/storage/total_bytes" AND resource.label.bucket_name = "` + s.Name() + `"`,
+			Interval: interval,
+			PageSize: 1,
+		}
+		point, err := s.metrics.ListTimeSeries(ctx, req).Next()
+		if err != nil {
+			activity.Record(ctx, "Unable to get bucket size for %v from Stackdriver: %v", s.Name(), err)
+		} else if len(point.Points) <= 0 {
+			activity.Record(ctx, "Stackdriver returned no data points for storage.googleapis.com/storage/total_bytes metric of bucket %v", s.Name())
+		} else {
+			size = point.Points[0].Value.GetDoubleValue()
+		}
+	}
+
+	return plugin.ToJSONObject(fullMeta{bucket, size}), nil
 }
 
 // List all storage objects as dirs and files.
@@ -46,6 +87,7 @@ func (s *storageBucket) Delete(ctx context.Context) (bool, error) {
 func (s *storageBucket) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(s, "bucket").
 		SetMetaAttributeSchema(storage.BucketAttrs{}).
+		SetMetadataSchema(fullMeta{}).
 		SetDescription(storageBucketDescription)
 }
 
