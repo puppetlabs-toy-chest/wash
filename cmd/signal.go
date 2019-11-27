@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"sync"
+
 	"github.com/spf13/cobra"
 
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
@@ -8,8 +10,8 @@ import (
 
 func signalCommand() *cobra.Command {
 	signalCmd := &cobra.Command{
-		Use:   "signal <path> <signal>",
-		Short: "Sends the specified signal to the entry at the specified path",
+		Use:   "signal <signal> [path]...",
+		Short: "Sends the specified signal to the entries at the specified paths",
 		Args:  cobra.MinimumNArgs(2),
 		RunE:  toRunE(signalMain),
 	}
@@ -18,15 +20,29 @@ func signalCommand() *cobra.Command {
 }
 
 func signalMain(cmd *cobra.Command, args []string) exitCode {
-	path := args[0]
-	signal := args[1]
+	signal := args[0]
+	paths := args[1:]
 
 	conn := cmdutil.NewClient()
 
-	err := conn.Signal(path, signal)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+	// Perform the operation in parallel
+	ec := 0
+	var wg sync.WaitGroup
+	for _, path := range paths {
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+			err := conn.Signal(path, signal)
+			if err != nil {
+				ec = 1
+				cmdutil.SafeErrPrintf("%v: %v\n", path, err)
+			} else {
+				cmdutil.SafePrintf("signalled %v\n", path)
+			}
+		}(path)
 	}
-	return exitCode{0}
+	wg.Wait()
+
+	// Return the exit code
+	return exitCode{ec}
 }
