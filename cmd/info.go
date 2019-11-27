@@ -13,7 +13,6 @@ func infoCommand() *cobra.Command {
 		Use:     use + " <path> [<path>]...",
 		Aliases: aliases,
 		Short:   "Prints the entries' info at the specified paths",
-		Long:    `Print all info Wash has about the specified paths.`,
 		Args:    cobra.MinimumNArgs(1),
 		RunE:    toRunE(infoMain),
 	}

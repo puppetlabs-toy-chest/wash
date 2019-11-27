@@ -83,7 +83,7 @@ Invoking `wash` starts the daemon as part of the process, then enters your curre
 
 ### wash clear
 
-Wash caches most operations. If the resource you're querying appears out-of-date, use this command to reset the cache for resources at or contained within the specified path. Defaults to the current directory if a path is not specified.
+Wash caches most operations. If the resource you're querying appears out-of-date, use this subcommand to reset the cache for resources at or contained within the specified paths. Defaults to the current directory if no path is provided.
 
 ### wash exec
 
@@ -101,15 +101,15 @@ Journals are stored in `wash/activity` under your user cache directory, identifi
 
 ### wash info
 
-Print all info Wash has about the specified path, including filesystem attributes and metadata.
+Prints the entries' info at the specified paths.
 
 ### wash ls
 
-Lists the resources at the indicated path.
+Lists the children of the specified paths, or current directory if no path is specified. If the `-l` option is set, then the name, last modified time, and supported actions are displayed for each child.
 
 ### wash meta
 
-Prints the entry's metadata. By default, meta prints the full metadata as returned by the metadata endpoint. Specify the `--attribute` flag to instead print the meta attribute, a (possibly) reduced set of metadata that's returned when entries are enumerated.
+Prints the metadata of the given entries. By default, meta prints the full metadata as returned by the metadata endpoint. Specify the `--attribute` flag to instead print the meta attribute, a (possibly) reduced set of metadata that's returned when entries are enumerated.
 
 ### wash ps
 
