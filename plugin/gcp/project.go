@@ -2,7 +2,10 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/puppetlabs/wash/plugin"
 	crm "google.golang.org/api/cloudresourcemanager/v1"
@@ -28,43 +31,33 @@ func newProject(p *crm.Project, client *http.Client) *project {
 
 // List all services as dirs.
 func (p *project) List(ctx context.Context) ([]plugin.Entry, error) {
-	comp, err := newComputeDir(ctx, p.client, p.id)
-	if err != nil {
-		return nil, err
+	var wg sync.WaitGroup
+	var mux sync.Mutex
+	var errs []string
+	var children []plugin.Entry
+
+	save := func(ent plugin.Entry, err error) {
+		defer wg.Done()
+		mux.Lock()
+		defer mux.Unlock()
+		if err != nil {
+			errs = append(errs, err.Error())
+		} else {
+			children = append(children, ent)
+		}
 	}
 
-	stor, err := newStorageDir(ctx, p.client, p.id)
-	if err != nil {
-		return nil, err
-	}
+	go func() { save(newComputeDir(ctx, p.client, p.id)) }()
+	go func() { save(newStorageDir(ctx, p.client, p.id)) }()
+	go func() { save(newFirestoreDir(ctx, p.id)) }()
+	go func() { save(newPubsubDir(ctx, p.id)) }()
+	go func() { save(newCloudFunctionsDir(ctx, p.client, p.id)) }()
+	go func() { save(newCloudRunDir(ctx, p.client, p.id)) }()
+	wg.Add(6)
+	wg.Wait()
 
-	firestore, err := newFirestoreDir(ctx, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	pubsub, err := newPubsubDir(ctx, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudFunctions, err := newCloudFunctionsDir(ctx, p.client, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudRun, err := newCloudRunDir(ctx, p.client, p.id)
-	if err != nil {
-		return nil, err
-	}
-
-	children := []plugin.Entry{
-		comp,
-		stor,
-		firestore,
-		pubsub,
-		cloudFunctions,
-		cloudRun,
+	if len(errs) > 0 {
+		return nil, fmt.Errorf(strings.Join(errs, ", "))
 	}
 	return children, nil
 }
