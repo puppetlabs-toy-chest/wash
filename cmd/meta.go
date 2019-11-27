@@ -7,12 +7,13 @@ import (
 
 func metaCommand() *cobra.Command {
 	metaCmd := &cobra.Command{
-		Use:   "meta <path>",
-		Short: "Prints the entry's metadata",
-		Long: `Prints the entry's metadata. By default, meta prints the full metadata as returned by the
-metadata endpoint. Specify the --attribute flag to instead print the meta attribute, a
-(possibly) reduced set of metadata that's returned when entries are enumerated.`,
-		Args: cobra.ExactArgs(1),
+		Use:   "meta <path> [<path>]...",
+		Short: "Prints the metadata of the given entries",
+		Long: `Prints the metadata of the given entries. By default, meta prints the
+full metadata as returned by the metadata endpoint. Specify the
+--attribute flag to instead print the meta attribute, a (possibly)
+reduced set of metadata that's returned when entries are enumerated.`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: toRunE(metaMain),
 	}
 	metaCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
@@ -21,7 +22,7 @@ metadata endpoint. Specify the --attribute flag to instead print the meta attrib
 }
 
 func metaMain(cmd *cobra.Command, args []string) exitCode {
-	path := args[0]
+	paths := args
 	output, err := cmd.Flags().GetString("output")
 	if err != nil {
 		panic(err.Error())
@@ -39,29 +40,42 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := cmdutil.NewClient()
 
-	var metadata map[string]interface{}
-	if showMetaAttr {
-		e, err := conn.Info(path)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
-		}
-		metadata = e.Attributes.Meta()
-	} else {
-		metadata, err = conn.Metadata(path)
-		if err != nil {
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
+	// Fetch the data.
+	ec := 0
+	metadataMap := make(map[string]map[string]interface{})
+	for _, path := range paths {
+		if showMetaAttr {
+			e, err := conn.Info(path)
+			if err != nil {
+				ec = 1
+				cmdutil.ErrPrintf("%v: %v\n", path, err)
+				continue
+			}
+			metadataMap[path] = e.Attributes.Meta()
+		} else {
+			metadata, err := conn.Metadata(path)
+			if err != nil {
+				ec = 1
+				cmdutil.ErrPrintf("%v: %v\n", path, err)
+				continue
+			}
+			metadataMap[path] = metadata
 		}
 	}
 
-	prettyMetadata, err := marshaller.Marshal(metadata)
+	// Marshal the results
+	var result interface{} = metadataMap
+	if len(paths) == 1 {
+		// For a single path, it is enough to print the metadata object
+		result = metadataMap[paths[0]]
+	}
+	marshalledResult, err := marshaller.Marshal(result)
 	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+		cmdutil.ErrPrintf("error marshalling the meta results: %v\n", err)
+	} else {
+		cmdutil.Print(marshalledResult)
 	}
 
-	cmdutil.Print(prettyMetadata)
-
-	return exitCode{0}
+	// Return the exit code
+	return exitCode{ec}
 }

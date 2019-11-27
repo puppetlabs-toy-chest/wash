@@ -10,11 +10,11 @@ import (
 func infoCommand() *cobra.Command {
 	use, aliases := generateShellAlias("info")
 	infoCmd := &cobra.Command{
-		Use:     use + " <path>",
+		Use:     use + " <path> [<path>]...",
 		Aliases: aliases,
-		Short:   "Prints the entry's info at the specified path",
-		Long:    `Print all info Wash has about the specified path.`,
-		Args:    cobra.ExactArgs(1),
+		Short:   "Prints the entries' info at the specified paths",
+		Long:    `Print all info Wash has about the specified paths.`,
+		Args:    cobra.MinimumNArgs(1),
 		RunE:    toRunE(infoMain),
 	}
 	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
@@ -22,7 +22,7 @@ func infoCommand() *cobra.Command {
 }
 
 func infoMain(cmd *cobra.Command, args []string) exitCode {
-	path := args[0]
+	paths := args
 	output, err := cmd.Flags().GetString("output")
 	if err != nil {
 		panic(err.Error())
@@ -36,29 +36,43 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := cmdutil.NewClient()
 
-	entry, err := conn.Info(path)
-	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+	// Fetch the data. We also use a sorted map so that we can control
+	// how the information's displayed.
+	ec := 0
+	infoMap := make(map[string]orderedMap)
+	for _, path := range paths {
+		entry, err := conn.Info(path)
+		if err != nil {
+			ec = 1
+			cmdutil.ErrPrintf("%v: %v\n", path, err)
+			continue
+		}
+
+		entryMap := orderedMap{linkedhashmap.New()}
+		entryMap.Put("Path", entry.Path)
+		entryMap.Put("Name", entry.Name)
+		entryMap.Put("CName", entry.CName)
+		entryMap.Put("Actions", entry.Actions)
+		entryMap.Put("Attributes", entry.Attributes.ToMap(false))
+
+		infoMap[path] = entryMap
 	}
 
-	// Use a sorted map so that we can control how the information's displayed.
-	entryMap := orderedMap{linkedhashmap.New()}
-	entryMap.Put("Path", entry.Path)
-	entryMap.Put("Name", entry.Name)
-	entryMap.Put("CName", entry.CName)
-	entryMap.Put("Actions", entry.Actions)
-	entryMap.Put("Attributes", entry.Attributes.ToMap(false))
-
-	marshalledEntry, err := marshaller.Marshal(entryMap)
+	// Marshal the results
+	var result interface{} = infoMap
+	if len(paths) == 1 {
+		// For a single path, it is enough to print the info object
+		result = infoMap[paths[0]]
+	}
+	marshalledResult, err := marshaller.Marshal(result)
 	if err != nil {
-		cmdutil.ErrPrintf("%v\n", err)
-		return exitCode{1}
+		cmdutil.ErrPrintf("error marshalling the info results: %v\n", err)
+	} else {
+		cmdutil.Print(marshalledResult)
 	}
 
-	cmdutil.Print(marshalledEntry)
-
-	return exitCode{0}
+	// Return the exit code
+	return exitCode{ec}
 }
 
 // This wrapped type's here because linkedhashmap doesn't implement the
