@@ -63,7 +63,7 @@ func formatItem(item lsItem, longFormat bool) [][]string {
 			if entry.Attributes.HasMtime() {
 				mtimeStr = formatTime(entry.Attributes.Mtime())
 			} else {
-				mtimeStr = "<unknown>"
+				mtimeStr = "<mtime unknown>"
 			}
 			verbs := strings.Join(entry.Actions, ", ")
 			row = []string{cname(entry), mtimeStr, verbs}
@@ -109,7 +109,13 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	// Sort the items to ensure that the output's
 	// printed in the expected "errors", "files",
 	// and "dirs" order.
-	sort.Sort(lsItemSlice(items))
+	sort.Slice(items, func(i int, j int) bool {
+		itemOne := items[i]
+		itemTwo := items[j]
+
+		return (itemOne.Type() < itemTwo.Type()) ||
+			((itemOne.Type() == itemTwo.Type()) && (itemOne.path < itemTwo.path))
+	})
 
 	// Partition the items. This makes it easier to print them.
 	itemSlice := make(map[int][]lsItem)
@@ -167,9 +173,11 @@ type lsItem struct {
 	err      error
 }
 
-const errorItem = 0
-const fileItem = 1
-const dirItem = 2
+const (
+	errorItem = 0
+	fileItem  = 1
+	dirItem   = 2
+)
 
 func (item lsItem) Type() int {
 	if item.err != nil {
@@ -179,23 +187,4 @@ func (item lsItem) Type() int {
 		return fileItem
 	}
 	return dirItem
-}
-
-// Implement sort.Interface
-type lsItemSlice []lsItem
-
-func (items lsItemSlice) Len() int {
-	return len(items)
-}
-
-func (items lsItemSlice) Less(i, j int) bool {
-	itemOne := items[i]
-	itemTwo := items[j]
-
-	return (itemOne.Type() < itemTwo.Type()) ||
-		((itemOne.Type() == itemTwo.Type()) && (itemOne.path < itemTwo.path))
-}
-
-func (items lsItemSlice) Swap(i, j int) {
-	items[i], items[j] = items[j], items[i]
 }
