@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"sync"
+
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
@@ -35,27 +37,39 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 
 	conn := cmdutil.NewClient()
 
-	// Fetch the data. We also use a sorted map so that we can control
-	// how the information's displayed.
-	ec := 0
+	// Use a sorted map so that we can control how the information's
+	// displayed.
 	infoMap := make(map[string]orderedMap)
+
+	// Fetch the data
+	ec := 0
+	var infoMapMux sync.Mutex
+	var wg sync.WaitGroup
 	for _, path := range paths {
-		entry, err := conn.Info(path)
-		if err != nil {
-			ec = 1
-			cmdutil.ErrPrintf("%v: %v\n", path, err)
-			continue
-		}
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
 
-		entryMap := orderedMap{linkedhashmap.New()}
-		entryMap.Put("Path", entry.Path)
-		entryMap.Put("Name", entry.Name)
-		entryMap.Put("CName", entry.CName)
-		entryMap.Put("Actions", entry.Actions)
-		entryMap.Put("Attributes", entry.Attributes.ToMap(false))
+			entry, err := conn.Info(path)
+			if err != nil {
+				ec = 1
+				cmdutil.SafeErrPrintf("%v: %v\n", path, err)
+				return
+			}
 
-		infoMap[path] = entryMap
+			entryMap := orderedMap{linkedhashmap.New()}
+			entryMap.Put("Path", entry.Path)
+			entryMap.Put("Name", entry.Name)
+			entryMap.Put("CName", entry.CName)
+			entryMap.Put("Actions", entry.Actions)
+			entryMap.Put("Attributes", entry.Attributes.ToMap(false))
+
+			infoMapMux.Lock()
+			infoMap[path] = entryMap
+			infoMapMux.Unlock()
+		}(path)
 	}
+	wg.Wait()
 
 	// Marshal the results
 	var result interface{} = infoMap

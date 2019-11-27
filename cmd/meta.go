@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"sync"
+
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/spf13/cobra"
 )
@@ -39,29 +41,43 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	conn := cmdutil.NewClient()
+	metadataMap := make(map[string]map[string]interface{})
 
 	// Fetch the data.
 	ec := 0
-	metadataMap := make(map[string]map[string]interface{})
+	var metadataMapMux sync.Mutex
+	var wg sync.WaitGroup
 	for _, path := range paths {
-		if showMetaAttr {
-			e, err := conn.Info(path)
-			if err != nil {
-				ec = 1
-				cmdutil.ErrPrintf("%v: %v\n", path, err)
-				continue
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+
+			var metadata map[string]interface{}
+
+			if showMetaAttr {
+				e, err := conn.Info(path)
+				if err != nil {
+					ec = 1
+					cmdutil.SafeErrPrintf("%v: %v\n", path, err)
+					return
+				}
+				metadata = e.Attributes.Meta()
+			} else {
+				var err error
+				metadata, err = conn.Metadata(path)
+				if err != nil {
+					ec = 1
+					cmdutil.SafeErrPrintf("%v: %v\n", path, err)
+					return
+				}
 			}
-			metadataMap[path] = e.Attributes.Meta()
-		} else {
-			metadata, err := conn.Metadata(path)
-			if err != nil {
-				ec = 1
-				cmdutil.ErrPrintf("%v: %v\n", path, err)
-				continue
-			}
+
+			metadataMapMux.Lock()
 			metadataMap[path] = metadata
-		}
+			metadataMapMux.Unlock()
+		}(path)
 	}
+	wg.Wait()
 
 	// Marshal the results
 	var result interface{} = metadataMap

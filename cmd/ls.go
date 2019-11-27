@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -93,18 +94,26 @@ func lsMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	conn := cmdutil.NewClient()
+	items := make([]lsItem, len(paths))
 
 	// Fetch the required data
-	var items []lsItem
-	for _, path := range paths {
-		var item lsItem
-		item.path = path
-		item.entry, item.err = conn.Info(path)
-		if item.err == nil && item.Type() == dirItem {
-			item.children, item.err = conn.List(path)
-		}
-		items = append(items, item)
+	var wg sync.WaitGroup
+	for ix, path := range paths {
+		wg.Add(1)
+		go func(ix int, path string) {
+			defer wg.Done()
+
+			var item lsItem
+			item.path = path
+			item.entry, item.err = conn.Info(path)
+			if item.err == nil && item.Type() == dirItem {
+				item.children, item.err = conn.List(path)
+			}
+
+			items[ix] = item
+		}(ix, path)
 	}
+	wg.Wait()
 
 	// Sort the items to ensure that the output's
 	// printed in the expected "errors", "files",
