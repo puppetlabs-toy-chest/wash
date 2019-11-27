@@ -56,31 +56,26 @@ func deleteMain(cmd *cobra.Command, args []string) exitCode {
 		}
 	}
 
-	// Next, process each request in its own goroutine. We use a writeMux because
-	// ErrPrintf is not thread-safe.
+	// Next, process each request in parallel
+	ec := 0
 	var wg sync.WaitGroup
-	var anyFailed bool
-	var writeMux sync.Mutex
 	for _, path := range pathsToDelete {
 		wg.Add(1)
 		go func(path string) {
 			defer wg.Done()
 			deleted, err := conn.Delete(path)
-			writeMux.Lock()
-			defer writeMux.Unlock()
 			if err != nil {
-				cmdutil.ErrPrintf("%v\n", err)
-				anyFailed = true
-				return
-			}
-			if !deleted {
-				cmdutil.Printf("%v has been marked for deletion and will eventually be deleted\n", path)
+				ec = 1
+				cmdutil.SafeErrPrintf("%v: %v\n", path, err)
+			} else if deleted {
+				cmdutil.SafePrintf("%v has been deleted\n", path)
+			} else {
+				cmdutil.SafePrintf("%v has been marked for deletion and will eventually be deleted\n", path)
 			}
 		}(path)
 	}
 	wg.Wait()
-	if anyFailed {
-		return exitCode{1}
-	}
-	return exitCode{0}
+
+	// Return the exit code
+	return exitCode{ec}
 }
