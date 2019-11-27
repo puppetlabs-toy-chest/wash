@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 
+	monitoring "cloud.google.com/go/monitoring/apiv3"
 	"cloud.google.com/go/storage"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -12,6 +14,7 @@ import (
 
 type storageProjectClient struct {
 	*storage.Client
+	metrics   *monitoring.MetricClient
 	projectID string
 }
 
@@ -23,13 +26,20 @@ type storageDir struct {
 const storageScope = storage.ScopeReadOnly
 
 func newStorageDir(ctx context.Context, client *http.Client, projID string) (*storageDir, error) {
-	cli, err := storage.NewClient(context.Background(), option.WithHTTPClient(client))
+	clientContext := context.Background()
+	cli, err := storage.NewClient(clientContext, option.WithHTTPClient(client))
 	if err != nil {
 		return nil, err
 	}
+
+	metrics, err := monitoring.NewMetricClient(clientContext)
+	if err != nil {
+		activity.Record(ctx, "Unable to create metrics client for %v/storage: %v", projID, err)
+	}
+
 	s := &storageDir{
 		EntryBase:            plugin.NewEntry("storage"),
-		storageProjectClient: storageProjectClient{Client: cli, projectID: projID},
+		storageProjectClient: storageProjectClient{Client: cli, metrics: metrics, projectID: projID},
 	}
 	if _, err := plugin.List(ctx, s); err != nil {
 		s.MarkInaccessible(ctx, err)
