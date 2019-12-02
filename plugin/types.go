@@ -189,10 +189,16 @@ type SizedReader interface {
 	Size() int64
 }
 
-// Readable is an entry that has a fixed amount of content we can read.
+// BlockReadable is an entry with content that can be read in blocks
+type BlockReadable interface {
+	Entry
+	Read(ctx context.Context, size int64, offset int64) ([]byte, error)
+}
+
+// Readable is an entry with content that can be read
 type Readable interface {
 	Entry
-	Open(context.Context) (SizedReader, error)
+	Read(context.Context) ([]byte, error)
 }
 
 // Writable is an entry that can write data directly to the entry. It mirrors

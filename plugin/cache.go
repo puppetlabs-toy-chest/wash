@@ -208,20 +208,51 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 	return cachedEntries.(*EntryMap), nil
 }
 
-// CachedOpen caches a Readable object's Open method.
-// When using the reader returned by this method, use idempotent read operations
-// such as ReadAt or wrap it in a SectionReader. Using Read operations on the cached
-// reader will change it and make subsequent uses of the cached reader invalid.
-func cachedOpen(ctx context.Context, r Readable) (SizedReader, error) {
-	cachedContent, err := cachedDefaultOp(ctx, OpenOp, r, func() (interface{}, error) {
-		return r.Open(ctx)
+// cachedRead caches an entry's Read method
+func cachedRead(ctx context.Context, e Entry) (entryContent, error) {
+	cachedContent, err := cachedDefaultOp(ctx, ReadOp, e, func() (interface{}, error) {
+		switch signature := ReadAction().signature(e); signature {
+		case defaultSignature:
+			// Both external and core plugin entries that have the default Read signature
+			// implement the Readable interface, so we can go ahead and cast directly.
+			r := e.(Readable)
+			rawContent, err := r.Read(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return newEntryContent(rawContent), nil
+		case blockReadableSignature:
+			// Go doesn't allow overloaded functions, so external plugin entries will
+			// implement the BlockReadable interface via the blockRead method.
+			var readFunc func(ctx context.Context, size int64, offset int64) ([]byte, error)
+			switch t := e.(type) {
+			case externalPlugin:
+				// TODO: external plugin implementation here!
+			case BlockReadable:
+				readFunc = func(ctx context.Context, size int64, offset int64) ([]byte, error) {
+					return t.Read(ctx, size, offset)
+				}
+			default:
+				// We should never hit this code-path
+				panic("attempting to retrieve the content of a non-readable entry")
+			}
+			content := newBlockReadableEntryContent(readFunc)
+			if attr := e.attributes(); attr.HasSize() {
+				content.sz = attr.Size()
+			}
+			return content, nil
+		default:
+			// We should never hit this code-path
+			msg := fmt.Sprintf("unknown signature '%v' for read", signature)
+			panic(msg)
+		}
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return cachedContent.(SizedReader), nil
+	return cachedContent.(entryContent), nil
 }
 
 // cachedMetadata caches an entry's Metadata method

@@ -80,7 +80,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Equal(1, len(entry.methods))
 		suite.Contains(entry.methods, "list")
-		suite.Nil(entry.methods["list"])
+		suite.Nil(entry.methods["list"].result)
 	}
 }
 
@@ -94,9 +94,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
-		suite.Nil(entry.methods["list"])
+		suite.Nil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "stream")
-		suite.Nil(entry.methods["stream"])
+		suite.Nil(entry.methods["stream"].result)
 		suite.False(entry.isPrefetched())
 
 		methods := entry.supportedMethods()
@@ -129,9 +129,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
-		suite.NotNil(entry.methods["list"])
+		suite.NotNil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "read")
-		suite.Nil(entry.methods["read"])
+		suite.Nil(entry.methods["read"].result)
 		suite.True(entry.isPrefetched())
 	}
 }
@@ -290,7 +290,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	entry.setCacheTTLs(decodedTTLs)
 
 	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(ListOp))
-	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(OpenOp))
+	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(ReadOp))
 	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(MetadataOp))
 }
 
@@ -313,8 +313,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchem
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
 		},
 		schemaGraphs: make(map[string]*linkedhashmap.Map),
 	}
@@ -331,8 +331,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
 		},
 		schemaGraphs: make(map[string]*linkedhashmap.Map),
 		script:       mockScript,
@@ -361,9 +361,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfS
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
-			"read":   nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
+			"read":   methodInfo{},
 		},
 		schemaGraphs: make(map[string]*linkedhashmap.Map),
 		script:       mockScript,
@@ -387,8 +387,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
 		},
 		script: mockScript,
 	}
@@ -405,8 +405,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
 		},
 		script: mockScript,
 	}
@@ -423,8 +423,8 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
 		rawTypeID: "baz.fooTypeID",
-		methods: map[string]interface{}{
-			"schema": nil,
+		methods: map[string]methodInfo{
+			"schema": methodInfo{},
 		},
 		script: mockScript,
 	}
@@ -511,8 +511,12 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 		entryBase := NewEntry("foo")
 		expectedEntries := []Entry{
 			&externalPluginEntry{
-				EntryBase:    entryBase,
-				methods:      map[string]interface{}{"list": nil},
+				EntryBase: entryBase,
+				methods: map[string]methodInfo{
+					"list": methodInfo{
+						signature: defaultSignature,
+					},
+				},
 				script:       entry.script,
 				schemaGraphs: entry.schemaGraphs,
 				rawTypeID:    "bar",
@@ -523,7 +527,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestOpen() {
+func (suite *ExternalPluginEntryTestSuite) TestRead() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -539,20 +543,20 @@ func (suite *ExternalPluginEntryTestSuite) TestOpen() {
 	// Test that if InvokeAndWait errors, then Open returns its error
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
-	_, err := entry.Open(ctx)
+	_, err := entry.Read(ctx)
 	suite.EqualError(mockErr, err.Error())
 
 	// Test that Open wraps all of stdout into a SizedReader
 	stdout := "foo"
 	mockInvokeAndWait([]byte(stdout), nil)
-	rdr, err := entry.Open(ctx)
+	content, err := entry.Read(ctx)
 	if suite.NoError(err) {
-		expectedRdr := bytes.NewReader([]byte(stdout))
-		suite.Equal(expectedRdr, rdr)
+		expectedContent := []byte(stdout)
+		suite.Equal(expectedContent, content)
 	}
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
+func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
@@ -589,12 +593,9 @@ func (suite *ExternalPluginEntryTestSuite) TestListOpenWithMethodResults() {
 				}
 
 				if suite.Equal([]string{"read"}, SupportedActionsOf(children[0])) {
-					rdr, err := children[0].(Readable).Open(ctx)
+					content, err := children[0].(Readable).Read(ctx)
 					suite.NoError(err)
-					buf := make([]byte, rdr.Size())
-					_, err = rdr.ReadAt(buf, 0)
-					suite.NoError(err)
-					suite.Equal(someContent, string(buf))
+					suite.Equal(someContent, string(content))
 				}
 			}
 		}
@@ -631,8 +632,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 		suite.EqualError(err, `implementation of list must conform to `+
 			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
 
-		_, err = entries[0].(Readable).Open(ctx)
+		_, err = entries[0].(Readable).Read(ctx)
 		suite.EqualError(err, "Read method must provide a string, not [1 2]")
+		// TODO: Add a test for block readable here
 	}
 }
 
@@ -659,7 +661,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		methods:   map[string]interface{}{"metadata": nil},
+		methods:   map[string]methodInfo{"metadata": methodInfo{}},
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -695,7 +697,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSignal() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		methods:   map[string]interface{}{"signal": nil},
+		methods:   map[string]methodInfo{"signal": methodInfo{}},
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -723,7 +725,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
 	entry := &externalPluginEntry{
 		EntryBase: NewEntry("foo"),
-		methods:   map[string]interface{}{"delete": nil},
+		methods:   map[string]methodInfo{"delete": methodInfo{}},
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")

@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 )
@@ -22,12 +21,12 @@ func NewMetadataJSONFile(ctx context.Context, other Entry) (*MetadataJSONFile, e
 
 	if other.getTTLOf(MetadataOp) < 0 {
 		// Content is presumably easy to get, so use it to determine size.
-		content, err := meta.Open(ctx)
+		content, err := meta.Read(ctx)
 		if err != nil {
 			return nil, err
 		}
 
-		meta.Attributes().SetSize(uint64(content.Size()))
+		meta.Attributes().SetSize(uint64(len(content)))
 	}
 
 	return meta, nil
@@ -40,8 +39,8 @@ func (m *MetadataJSONFile) Schema() *EntrySchema {
 		IsSingleton()
 }
 
-// Open returns the metadata of the `other` entry as its content.
-func (m *MetadataJSONFile) Open(ctx context.Context) (SizedReader, error) {
+// Read returns the metadata of the `other` entry as its content.
+func (m *MetadataJSONFile) Read(ctx context.Context) ([]byte, error) {
 	meta, err := Metadata(ctx, m.other)
 	if err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func (m *MetadataJSONFile) Open(ctx context.Context) (SizedReader, error) {
 		return nil, err
 	}
 
-	return bytes.NewReader(prettyMeta), nil
+	return prettyMeta, nil
 }
 
 const metadataJSONDescription = `
