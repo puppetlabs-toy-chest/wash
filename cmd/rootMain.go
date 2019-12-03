@@ -59,6 +59,26 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	// Set plugin interactivity to false if execfile or rootCommandFlag were specified.
 	plugin.InitInteractive(execfile == "" && rootCommandFlag == "")
 
+	// If interactive and this process is in its own process group, then fork and run the original
+	// command as a new process that's not the leader of its process group. This is specifically to
+	// work with shells (zsh) that try to use their parent's process group, which would no longer be
+	// in the same session. By forking, we keep the original process group in its original session so
+	// the child shell can still modify it.
+	if plugin.IsInteractive() && os.Getpid() == unix.Getpgrp() {
+		comm := exec.Command(os.Args[0], os.Args[1:]...)
+		comm.Stdin = os.Stdin
+		comm.Stdout = os.Stdout
+		comm.Stderr = os.Stderr
+		if err := comm.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				return exitCode{exitErr.ExitCode()}
+			}
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		return exitCode{0}
+	}
+
 	// TODO: instead of running a server in-process, can we start one in a separate process that can
 	//       be shared between multiple invocations of `wash`?
 	plugins, serverOpts, err := serverOptsFor(cmd)
