@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -21,7 +20,16 @@ import (
 // rootCommandFlag is associated with the `-c` option of the root command, set in root.go.
 var rootCommandFlag string
 
-// Start the wash server, then present the default system shell.
+// Start the Wash server then present the default system shell. The server will be running in the
+// current process, while the shell will be in a separate child process. We'd like the server to be
+// able to prompt for input without interupting the shell (as the controller of the terminal) so
+// that plugins can prompt the user for input like e.g. security tokens.
+//
+// To allow prompts, we start the shell process then put the Wash server (daemon) in a new session
+// with `setsid`. As a new session, the daemon has a different controlling terminal and can
+// therefore prompt for input without having to control the shell's terminal. This approach was
+// inspired by https://blog.nelhage.com/2011/02/changing-ctty/.
+//
 // On exit, stop the server and return any errors.
 func rootMain(cmd *cobra.Command, args []string) exitCode {
 	// Configure logrus to emit simple text
@@ -137,79 +145,34 @@ Try 'help'`)
 	)
 	comm.Dir = mountpath
 
-	// Inspired by https://blog.nelhage.com/2011/02/changing-ctty/. After the child shell has
-	// started, we re-parent the Wash daemon to be in a child session of the shell so that when Wash
-	// prompts for input it's within the TTY of that terminal.
 	if startErr := comm.Start(); startErr != nil {
 		cmdutil.ErrPrintf("%v\n", startErr)
 		return exitCode{1}
 	}
 
-	codeCh := make(chan int)
-	go func() {
-		if runErr := comm.Wait(); runErr != nil {
-			if exitErr, ok := runErr.(*exec.ExitError); ok {
-				codeCh <- exitErr.ExitCode()
-			} else {
-				cmdutil.SafeErrPrintf("%v\n", runErr)
-				codeCh <- 1
+	// If interactive (when we might prompt the user for input, such as security tokens), create a
+	// new session. If not interactive, calling setsid is pointless and might fail.
+	if plugin.IsInteractive() {
+		if _, err := unix.Setsid(); err != nil {
+			cmdutil.ErrPrintf("Error moving Wash daemon to new session: %v", err)
+
+			if err := comm.Process.Kill(); err != nil {
+				cmdutil.ErrPrintf("Couldn't stop child shell: %v\n", err)
 			}
-		} else {
-			codeCh <- 0
+			return exitCode{1}
 		}
-		close(codeCh)
-	}()
+	}
 
 	var exit exitCode
-	killShellProcess := func() exitCode {
-		if err := comm.Process.Kill(); err != nil {
-			cmdutil.SafeErrPrintf("Couldn't stop child shell: %v\n", err)
-		}
-		return exitCode{1}
-	}
-
-	// The new shell will initially be part of our process group. We wait for it to become the leader
-	// of its own process group, then move Wash to be a new session under that process group.
-	washPid := os.Getpid()
-	pid := comm.Process.Pid
-	for {
-		time.Sleep(10 * time.Millisecond)
-
-		select {
-		case code := <-codeCh:
-			// Child shell stopped, so just exit with it's exit code.
-			exit.value = code
-			break
-		default:
-			// Fall-through
-		}
-
-		pgid, err := unix.Getpgid(pid)
-		if err != nil {
-			cmdutil.SafeErrPrintf("Error moving Wash daemon to new shell: %v\n", err)
-			return killShellProcess()
-		}
-
-		// Once the shell is the leader of its own process group, move Wash to that group and
-		// put it in a new session.
-		if pgid == pid {
-			if err := unix.Setpgid(washPid, pgid); err != nil {
-				cmdutil.SafeErrPrintf("Error moving Wash daemon to new shell: %v\n", err)
-				return killShellProcess()
-			}
-
-			if _, err := unix.Setsid(); err != nil {
-				cmdutil.SafeErrPrintf("Error starting new session for Wash daemon: %v\n", err)
-				return killShellProcess()
-			}
-
-			break
+	if runErr := comm.Wait(); runErr != nil {
+		if exitErr, ok := runErr.(*exec.ExitError); ok {
+			exit.value = exitErr.ExitCode()
+		} else {
+			cmdutil.ErrPrintf("%v\n", runErr)
+			exit.value = 1
 		}
 	}
 
-	if code, ok := <-codeCh; ok {
-		exit.value = code
-	}
 	if plugin.IsInteractive() {
 		cmdutil.Println("Goodbye!")
 	}

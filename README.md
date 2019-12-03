@@ -26,6 +26,8 @@ To build it, run `go build`. To test, run `go test ./...`.
 
 > Requires golang 1.12+.
 
+Acceptance tests are in the [test](test) directory. First build with `go build`, then run them using [BATS](https://github.com/bats-core/bats-core) with `PATH=.:$PATH bats test`.
+
 See the [core plugin docs](CORE_PLUGIN_DEVELOPMENT.md) if you're interested in core plugin development.
 
 ## Roadmap
