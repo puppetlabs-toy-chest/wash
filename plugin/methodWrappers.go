@@ -232,14 +232,7 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 
 	// The signal was successfully sent. Clear the entry's cache and its parent's
 	// cached list result to ensure that fresh data's loaded when needed
-	ClearCacheFor(s.id())
-	parentID, _ := splitID(s.id())
-	listOpName := defaultOpCodeToNameMap[ListOp]
-	entries, _ := cache.Get(listOpName, parentID)
-	if entries != nil {
-		cache.Delete(opKeyRegex(listOpName, parentID))
-	}
-
+	ClearCacheFor(s.id(), true)
 	return nil
 }
 
@@ -254,35 +247,21 @@ func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
 	// when needed. This includes:
 	//   * Clearing the entry and its children's cache.
 	//   * Updating the parent's cached list result.
-	ClearCacheFor(d.id())
-	parentID, cname := splitID(d.id())
-	listOpName := defaultOpCodeToNameMap[ListOp]
-	entries, _ := cache.Get(listOpName, parentID)
-	if entries == nil {
-		return
-	}
+	//
+	// If !deleted, the entry will eventually be deleted. However it's likely that
+	// Delete did update the entry (e.g. on VMs, Delete causes a state transition).
+	// Thus we also clear the parent's cached list result to ensure fresh data.
+	ClearCacheFor(d.id(), !deleted)
 	if deleted {
 		// The entry was deleted, so delete the entry from the parent's cached list
 		// result.
-		entries.(*EntryMap).Delete(cname)
-	} else {
-		// The entry will eventually be deleted. However it's likely that Delete
-		// did update the entry (e.g. on VMs, Delete causes a state transition).
-		// Thus, we clear the parent's cached list result to ensure fresh data.
-		//
-		// Note that this is symmetric with Signal. This makes sense because for
-		// some entries, deleting that entry is equivalent to sending a termination
-		// signal (e.g. EC2 instances).
-		cache.Delete(opKeyRegex(listOpName, parentID))
+		parentID, cname := splitID(d.id())
+		listOpName := defaultOpCodeToNameMap[ListOp]
+		entries, _ := cache.Get(listOpName, parentID)
+		if entries != nil {
+			entries.(*EntryMap).Delete(cname)
+		}
 	}
 
 	return
-}
-
-// returns (parentID, cname)
-func splitID(entryID string) (string, string) {
-	segments := strings.Split(entryID, "/")
-	parentID := strings.Join(segments[:len(segments)-1], "/")
-	cname := segments[len(segments)-1]
-	return parentID, cname
 }

@@ -88,13 +88,30 @@ func allOpKeysIncludingChildrenRegex(path string) *regexp.Regexp {
 }
 
 // ClearCacheFor removes entries from the cache that match or are children of the provided path.
-// If successful, returns an array of deleted keys.
+// If successful, returns an array of deleted keys. Optionally clear the list operation for the
+// parent to remove any attributes related to the specified entry.
 //
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
-func ClearCacheFor(path string) []string {
+func ClearCacheFor(path string, clearParentList bool) []string {
 	rx := allOpKeysIncludingChildrenRegex(path)
-	return cache.Delete(rx)
+	deleted := cache.Delete(rx)
+
+	if clearParentList {
+		parentID, _ := splitID(path)
+		listOpName := defaultOpCodeToNameMap[ListOp]
+		deleted = append(deleted, cache.Delete(opKeyRegex(listOpName, parentID))...)
+	}
+
+	return deleted
+}
+
+// returns (parentID, cname)
+func splitID(entryID string) (string, string) {
+	segments := strings.Split(entryID, "/")
+	parentID := strings.Join(segments[:len(segments)-1], "/")
+	cname := segments[len(segments)-1]
+	return parentID, cname
 }
 
 type opFunc func() (interface{}, error)
