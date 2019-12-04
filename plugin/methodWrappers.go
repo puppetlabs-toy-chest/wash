@@ -134,7 +134,7 @@ func List(ctx context.Context, p Parent) (*EntryMap, error) {
 // len(data) to check the amount of data that was actually read.
 //
 // If the offset is >= to the available content size, then data != nil, len(data) == 0,
-// and err == nil. Otherwise if len(data) < size, then err == nil.
+// and err == io.EOF. Otherwise if len(data) < size, then err == io.EOF.
 //
 // Note that Read is thread-safe.
 func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, err error) {
@@ -145,11 +145,13 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	if attr := e.attributes(); attr.HasSize() {
 		contentSize := int64(attr.Size())
 		if offset >= contentSize {
+			err = io.EOF
 			return
 		}
 		minSize := size + offset
 		if contentSize < minSize {
 			size = contentSize
+			err = io.EOF
 		}
 	}
 	content, contentErr := cachedRead(ctx, e)
@@ -158,7 +160,7 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 		return
 	}
 	data, readErr := content.read(ctx, size, offset)
-	if readErr != nil && readErr != io.EOF {
+	if readErr != nil {
 		err = readErr
 	}
 	return

@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"io"
 )
 
 // entryContent is the cached result of a Read invocation
@@ -26,11 +27,13 @@ func (c *entryContentImpl) read(_ context.Context, size int64, offset int64) (da
 	data = []byte{}
 	contentSize := int64(len(c.content))
 	if offset >= contentSize {
+		err = io.EOF
 		return
 	}
 	endIx := offset + size
 	if contentSize < endIx {
 		endIx = contentSize
+		err = io.EOF
 	}
 	data = c.content[offset:endIx]
 	return
