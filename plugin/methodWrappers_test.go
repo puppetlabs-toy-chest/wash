@@ -178,6 +178,23 @@ func (suite *MethodWrappersTestSuite) TestRead_ReadsTheEntryContent() {
 	}
 }
 
+func (suite *MethodWrappersTestSuite) TestRead_IgnoresIOEOFErrors() {
+	// This test-case only applies to BlockReadable entries
+	e := &methodWrappersTestsMockBlockReadableEntry{
+		newMethodWrappersTestsMockEntry("mockEntry"),
+	}
+	e.DisableDefaultCaching()
+	e.SetTestID("/foo")
+
+	ctx := context.Background()
+	e.On("Read", ctx, int64(10), int64(0)).Return([]byte("foo"), io.EOF)
+
+	data, err := Read(ctx, e, 10, 0)
+	if suite.NoError(err) {
+		suite.Equal([]byte("foo"), data)
+	}
+}
+
 func (suite *MethodWrappersTestSuite) TestRead_EntryHasSizeAttribute() {
 	rawContent := []byte("some raw content")
 	contentSize := int64(len(rawContent))
@@ -193,11 +210,13 @@ func (suite *MethodWrappersTestSuite) TestRead_EntryHasSizeAttribute() {
 
 	// Test that out-of-bounds offset does the right thing.
 	data, err := Read(ctx, e, 0, contentSize)
-	suite.Equal(io.EOF, err)
-	suite.Equal([]byte{}, data)
+	if suite.NoError(err) {
+		suite.Equal([]byte{}, data)
+	}
 	data, err = Read(ctx, e, 0, contentSize+1)
-	suite.Equal(io.EOF, err)
-	suite.Equal([]byte{}, data)
+	if suite.NoError(err) {
+		suite.Equal([]byte{}, data)
+	}
 
 	// Now test that the right "size" parameter is passed in to
 	// entryContent#read
@@ -215,12 +234,9 @@ func (suite *MethodWrappersTestSuite) TestRead_EntryHasSizeAttribute() {
 	for _, testCase := range testCases {
 		e.On("Read", ctx, testCase.expectedSize, testCase.offset).Return([]byte("success"), nil).Once()
 		actual, err := Read(context.Background(), e, testCase.size, testCase.offset)
-		if testCase.expectedSize != testCase.size {
-			suite.Equal(io.EOF, err)
-		} else {
-			suite.NoError(err)
+		if suite.NoError(err) {
+			suite.Equal([]byte("success"), actual)
 		}
-		suite.Equal([]byte("success"), actual)
 	}
 }
 

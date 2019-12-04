@@ -3,7 +3,6 @@ package plugin
 import (
 	"context"
 	"fmt"
-	"io"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -29,29 +28,23 @@ func (s *EntryContentTestSuite) TestEntryContentImpl() {
 		size     int64
 		offset   int64
 		expected []byte
-		err      error
 	}
 	testCases := []testCase{
 		// Test offset >= contentSize
-		testCase{size: 0, offset: contentSize, expected: []byte(""), err: io.EOF},
-		testCase{size: 0, offset: contentSize + 1, expected: []byte(""), err: io.EOF},
+		testCase{size: 0, offset: contentSize, expected: []byte("")},
+		testCase{size: 0, offset: contentSize + 1, expected: []byte("")},
 		// Test happy-cases
 		testCase{size: 0, offset: 0, expected: []byte("")},
 		testCase{size: 0, offset: 1, expected: []byte("")},
 		testCase{size: 4, offset: 2, expected: []byte("me r")},
 		testCase{size: contentSize, offset: 0, expected: rawContent},
 		// Test out-of-bounds sizes
-		testCase{size: contentSize + 1, offset: 0, expected: rawContent, err: io.EOF},
-		testCase{size: contentSize, offset: 1, expected: rawContent[1:], err: io.EOF},
+		testCase{size: contentSize + 1, offset: 0, expected: rawContent},
+		testCase{size: contentSize, offset: 1, expected: rawContent[1:]},
 	}
 	for _, testCase := range testCases {
 		actual, err := content.read(context.Background(), testCase.size, testCase.offset)
-		if testCase.err != nil {
-			s.Equal(testCase.err, err)
-		} else {
-			s.NoError(err)
-		}
-		if testCase.expected != nil {
+		if s.NoError(err) {
 			s.Equal(testCase.expected, actual)
 		}
 	}
