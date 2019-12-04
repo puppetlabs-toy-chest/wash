@@ -40,14 +40,16 @@ func (c *entryContentImpl) size() uint64 {
 	return uint64(len(c.content))
 }
 
+type blockReadFunc = func(context.Context, int64, int64) ([]byte, error)
+
 // blockReadableEntryContent is the implementation of entryContent that's
 // meant for BlockReadable entries. For now, it doesn't cache any content.
 type blockReadableEntryContent struct {
-	readFunc func(context.Context, int64, int64) ([]byte, error)
+	readFunc blockReadFunc
 	sz       uint64
 }
 
-func newBlockReadableEntryContent(readFunc func(context.Context, int64, int64) ([]byte, error)) *blockReadableEntryContent {
+func newBlockReadableEntryContent(readFunc blockReadFunc) *blockReadableEntryContent {
 	return &blockReadableEntryContent{
 		readFunc: readFunc,
 	}

@@ -437,17 +437,20 @@ func (m *cacheTestsMockBlockReadableEntry) Read(ctx context.Context, size int64,
 }
 
 func (suite *CacheTestSuite) TestCachedRead_BlockReadableCorePluginEntry() {
+	expectedRawContent := []byte("some raw content")
+
 	entry := &cacheTestsMockBlockReadableEntry{
 		cacheTestsMockEntry: newCacheTestsMockEntry("foo"),
 	}
 	entry.DisableDefaultCaching()
 	entry.SetTestID("/foo")
+	entry.Attributes().SetSize(uint64(len(expectedRawContent)))
 
 	ctx := context.Background()
-	expectedRawContent := []byte("some raw content")
 	entry.On("Read", ctx, int64(10), int64(0)).Return(expectedRawContent, nil).Once()
 
 	content, err := cachedRead(ctx, entry)
+	suite.Equal(entry.Attributes().Size(), content.size())
 	if suite.NoError(err) {
 		actualRawContent, err := content.read(ctx, 10, 0)
 		if suite.NoError(err) {

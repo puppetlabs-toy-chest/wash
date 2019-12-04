@@ -222,9 +222,11 @@ func cachedRead(ctx context.Context, e Entry) (entryContent, error) {
 			}
 			return newEntryContent(rawContent), nil
 		case blockReadableSignature:
-			// Go doesn't allow overloaded functions, so external plugin entries will
-			// implement the BlockReadable interface via the blockRead method.
-			var readFunc func(ctx context.Context, size int64, offset int64) ([]byte, error)
+			// Go doesn't allow overloaded functions, so the external plugin entry type
+			// cannot implement both BlockReadable#Read and Readable#Read. Thus, external
+			// plugins implement the BlockReadable interface via a separate blockRead
+			// method.
+			var readFunc blockReadFunc
 			switch t := e.(type) {
 			case externalPlugin:
 				// TODO: external plugin implementation here!

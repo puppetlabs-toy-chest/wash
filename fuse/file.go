@@ -56,6 +56,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 type fileHandle struct {
+	// This is expected to implement either plugin.Readable or plugin.BlockReadable
 	r  plugin.Entry
 	w  plugin.Writable
 	id string
