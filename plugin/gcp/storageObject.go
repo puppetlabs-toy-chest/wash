@@ -2,8 +2,10 @@ package gcp
 
 import (
 	"context"
+	"io/ioutil"
 
 	"cloud.google.com/go/storage"
+	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 )
 
@@ -30,33 +32,22 @@ func (s *storageObject) Schema() *plugin.EntrySchema {
 		SetMetaAttributeSchema(storage.ObjectAttrs{})
 }
 
-func (s *storageObject) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return &objectReader{ObjectHandle: s.ObjectHandle, size: int64(s.Attributes().Size())}, nil
+func (s *storageObject) Read(ctx context.Context, size int64, offset int64) ([]byte, error) {
+	rdr, err := s.NewRangeReader(context.Background(), offset, int64(size))
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rdr.Close(); err != nil {
+			activity.Record(ctx, "Error closing GCP storage object range reader: %v", err)
+		}
+	}()
+	return ioutil.ReadAll(rdr)
 }
 
 func (s *storageObject) Delete(ctx context.Context) (bool, error) {
 	err := s.ObjectHandle.Delete(ctx)
 	return true, err
-}
-
-type objectReader struct {
-	*storage.ObjectHandle
-	size int64
-}
-
-// This is a fairly inefficient implementation that always reads exactly what's asked for.
-// However most uses will probably read the content once and buffer it themselves.
-// TODO: buffer some so that we don't read lots of small chunks.
-func (r *objectReader) ReadAt(p []byte, off int64) (int, error) {
-	rdr, err := r.NewRangeReader(context.Background(), off, int64(len(p)))
-	if err != nil {
-		return 0, err
-	}
-	return rdr.Read(p)
-}
-
-func (r *objectReader) Size() int64 {
-	return r.size
 }
 
 const storageObjectDescription = `

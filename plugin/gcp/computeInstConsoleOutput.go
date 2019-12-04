@@ -2,7 +2,6 @@ package gcp
 
 import (
 	"context"
-	"strings"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -27,7 +26,7 @@ func (cl *computeInstanceConsoleOutput) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(cl, "console.out").IsSingleton()
 }
 
-func (cl *computeInstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (cl *computeInstanceConsoleOutput) Read(ctx context.Context) ([]byte, error) {
 	zone := getZone(cl.instance)
 	activity.Record(ctx,
 		"Getting output for instance %v in project %v, zone %v", cl.instance.Name, cl.service.projectID, zone)
@@ -37,5 +36,5 @@ func (cl *computeInstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedR
 		return nil, err
 	}
 
-	return strings.NewReader(outputResp.Contents), nil
+	return []byte(outputResp.Contents), nil
 }
