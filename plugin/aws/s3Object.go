@@ -2,8 +2,7 @@ package aws
 
 import (
 	"context"
-	"errors"
-	"io"
+	"io/ioutil"
 	"strconv"
 
 	"github.com/puppetlabs/wash/activity"
@@ -72,23 +71,24 @@ func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	return plugin.ToJSONObject(metadata), nil
 }
 
-func (o *s3Object) fetchContent(off int64) (io.ReadCloser, error) {
+func (o *s3Object) Read(ctx context.Context, size int64, offset int64) ([]byte, error) {
 	request := &s3Client.GetObjectInput{
 		Bucket: awsSDK.String(o.bucket),
 		Key:    awsSDK.String(o.key),
-		Range:  awsSDK.String("bytes=" + strconv.FormatInt(off, 10) + "-"),
+		Range:  awsSDK.String("bytes=" + strconv.FormatInt(offset, 10) + "-" + strconv.FormatInt(offset+size, 10)),
 	}
 
 	resp, err := o.client.GetObject(request)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			activity.Record(ctx, "Error closing S3 GetObject response body: %v", err)
+		}
+	}()
 
-	return resp.Body, nil
-}
-
-func (o *s3Object) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return &s3ObjectReader{o: o}, nil
+	return ioutil.ReadAll(resp.Body)
 }
 
 func (o *s3Object) Delete(ctx context.Context) (bool, error) {
@@ -97,46 +97,6 @@ func (o *s3Object) Delete(ctx context.Context) (bool, error) {
 		Key:    aws.String(o.key),
 	})
 	return true, err
-}
-
-// TODO: Optimize this class later. For now, the simple implementation is
-// enough to get `cat` working for small objects and, for large objects, enough
-// to get it to print something to stdout without having to wait for the entire
-// object to be downloaded.
-//
-// https://github.com/kahing/goofys/blob/master/internal/file.go has some prior
-// art we could use to optimize this.
-type s3ObjectReader struct {
-	o *s3Object
-}
-
-func (s *s3ObjectReader) closeContent(content io.ReadCloser) {
-	if err := content.Close(); err != nil {
-		activity.Record(context.Background(), "aws.s3ObjectReader.ReadAt: failed to close %v's content: %v", s.o.key, err)
-	}
-}
-
-func (s *s3ObjectReader) ReadAt(p []byte, off int64) (int, error) {
-	if off < 0 {
-		return 0, errors.New("aws.s3ObjectReader.ReadAt: negative offset")
-	}
-
-	if off >= s.Size() {
-		return 0, io.EOF
-	}
-
-	content, err := s.o.fetchContent(off)
-	if err != nil {
-		return 0, err
-	}
-	defer s.closeContent(content)
-
-	return content.Read(p)
-}
-
-func (s *s3ObjectReader) Size() int64 {
-	attr := plugin.Attributes(s.o)
-	return int64(attr.Size())
 }
 
 const s3ObjectDescription = `

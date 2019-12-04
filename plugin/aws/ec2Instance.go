@@ -233,7 +233,7 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 
 	awserr, ok := err.(awserr.Error)
 	if !ok {
-		// Open failed w/ some other error, which should be a
+		// Read failed w/ some other error, which should be a
 		// rare occurrence. Here we reset latestConsoleOutputOnce
 		// so that we check again for the latest console output the
 		// next time List's called, then return an error
@@ -252,7 +252,7 @@ func (inst *ec2Instance) checkLatestConsoleOutput(ctx context.Context) (*ec2Inst
 		return nil, nil
 	}
 
-	// Open failed due to some other AWS-related error. Assume this means
+	// Read failed due to some other AWS-related error. Assume this means
 	// that the instance _does_ have the latest console logs, but something
 	// went wrong with accessing them.
 	inst.hasLatestConsoleOutput = true
