@@ -41,7 +41,7 @@ func (clf *containerLogFile) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(clf, "log").IsSingleton()
 }
 
-func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (clf *containerLogFile) Read(ctx context.Context) ([]byte, error) {
 	opts := types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true}
 	rdr, err := clf.client.ContainerLogs(ctx, clf.containerName, opts)
 	if err != nil {
@@ -62,7 +62,7 @@ func (clf *containerLogFile) Open(ctx context.Context) (plugin.SizedReader, erro
 	}
 	activity.Record(ctx, "Read %v bytes of %v log", n, clf.containerName)
 
-	return bytes.NewReader(buf.Bytes()), nil
+	return buf.Bytes(), nil
 }
 
 func (clf *containerLogFile) Stream(ctx context.Context) (io.ReadCloser, error) {
