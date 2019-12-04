@@ -125,6 +125,16 @@ func (suite *MethodWrappersTestSuite) TestRead_PanicsOnNonReadableEntry() {
 	suite.Panics(panicFunc, "plugin.Read called on a non-readable entry")
 }
 
+func (suite *MethodWrappersTestSuite) TestRead_InvalidSizeAndOffset() {
+	e := newMethodWrappersTestsMockEntry("mockEntry")
+
+	_, err := Read(context.Background(), e, -1, 0)
+	suite.Regexp("negative.*size.*-1", err)
+
+	_, err = Read(context.Background(), e, 0, -1)
+	suite.Regexp("negative.*offset.*-1", err)
+}
+
 func (suite *MethodWrappersTestSuite) TestRead_ReturnsCachedReadError() {
 	// This test-case only applies to Readable entries
 	e := newMethodWrappersTestsMockEntry("mockEntry")
@@ -162,6 +172,21 @@ func (suite *MethodWrappersTestSuite) TestRead_ReturnsContentReadError() {
 
 	_, err := Read(ctx, e, 10, 0)
 	suite.Equal(expectedErr, err)
+}
+
+func (suite *MethodWrappersTestSuite) TestRead_PluginAPIReturnsMoreThanTheRequestedData() {
+	// This test-case only applies to BlockReadable entries
+	e := &methodWrappersTestsMockBlockReadableEntry{
+		newMethodWrappersTestsMockEntry("mockEntry"),
+	}
+	e.DisableDefaultCaching()
+	e.SetTestID("/foo")
+
+	ctx := context.Background()
+	e.On("Read", ctx, int64(1), int64(0)).Return([]byte("content"), nil)
+
+	_, err := Read(ctx, e, 1, 0)
+	suite.Regexp("requested.*1.*input.*1.*plugin.*7.*bytes", err)
 }
 
 func (suite *MethodWrappersTestSuite) TestRead_ReadsTheEntryContent() {

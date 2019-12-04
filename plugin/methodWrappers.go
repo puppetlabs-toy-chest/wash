@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/puppetlabs/wash/activity"
 )
 
 // InvalidInputErr indicates that the method invocation received invalid
@@ -141,7 +143,14 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	if !ReadAction().IsSupportedOn(e) {
 		panic("plugin.Read called on a non-readable entry")
 	}
+	if size < 0 {
+		return nil, fmt.Errorf("called with a negative size %v", size)
+	}
+	if offset < 0 {
+		return nil, fmt.Errorf("called with a negative offset %v", offset)
+	}
 	data = []byte{}
+	inputSize := size
 	if attr := e.attributes(); attr.HasSize() {
 		contentSize := int64(attr.Size())
 		if offset >= contentSize {
@@ -153,6 +162,8 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 			size = contentSize
 			err = io.EOF
 		}
+	} else if ReadAction().signature(e) == blockReadableSignature {
+		activity.Warnf(ctx, "size attribute not set for block-readable entry %v", e.id())
 	}
 	content, contentErr := cachedRead(ctx, e)
 	if contentErr != nil {
@@ -162,6 +173,9 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	data, readErr := content.read(ctx, size, offset)
 	if readErr != nil {
 		err = readErr
+	}
+	if actualSize := int64(len(data)); actualSize > size {
+		return nil, fmt.Errorf("requested %v bytes (input was %v), but plugin's API returned %v bytes", size, inputSize, actualSize)
 	}
 	return
 }
