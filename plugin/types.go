@@ -183,12 +183,6 @@ type Streamable interface {
 	Stream(context.Context) (io.ReadCloser, error)
 }
 
-// SizedReader returns a ReaderAt that can report its Size.
-type SizedReader interface {
-	io.ReaderAt
-	Size() int64
-}
-
 // BlockReadable is an entry with content that can be read in blocks
 type BlockReadable interface {
 	Entry

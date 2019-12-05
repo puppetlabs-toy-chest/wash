@@ -1,7 +1,6 @@
 package apifs
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
@@ -19,14 +18,16 @@ func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
 	}
 }
 
-func (f *file) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (f *file) Read(ctx context.Context) ([]byte, error) {
 	content, err := ioutil.ReadFile(f.path)
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(content), nil
+	return content, nil
 }
 
 func (f *file) Schema() *plugin.EntrySchema {
 	return nil
 }
+
+var _ = plugin.Readable(&file{})
