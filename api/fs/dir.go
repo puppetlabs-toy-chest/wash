@@ -44,3 +44,5 @@ func (d *dir) Schema() *plugin.EntrySchema {
 	// plugin.
 	return nil
 }
+
+var _ = plugin.Parent(&dir{})
