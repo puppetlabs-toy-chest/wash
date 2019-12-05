@@ -51,9 +51,9 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 function prompter() {
   local prompt_path
   if [ -x "$(command -v realpath)" ]; then
-    prompt_path=$(realpath --relative-base=$W $(pwd))
+    prompt_path=$(realpath --relative-base=$W "$(pwd)")
   else
-    prompt_path=$(basename $(pwd))
+    prompt_path=$(basename "$(pwd)")
   fi
   export PS1="\e[0;36mwash ${prompt_path}\e[0;32m ❯\e[m "
 }
