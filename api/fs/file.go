@@ -29,7 +29,7 @@ func (f *file) Read(ctx context.Context) ([]byte, error) {
 }
 
 func (f *file) Schema() *plugin.EntrySchema {
-	return nil
+	return plugin.NewEntrySchema(f, "file")
 }
 
 var _ = plugin.Readable(&file{})

@@ -23,6 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// InternalPlugins lists the plugins enabled by default in Wash.
 var InternalPlugins = map[string]plugin.Root{
 	"aws":        &aws.Root{},
 	"docker":     &docker.Root{},

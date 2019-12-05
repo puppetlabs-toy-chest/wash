@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Benchkram/errz"
+	apifs "github.com/puppetlabs/wash/api/fs"
 	"github.com/puppetlabs/wash/cmd/internal/config"
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
@@ -167,6 +168,12 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 	pluginConfig := make(map[string]map[string]interface{})
 	for name := range plugins {
 		pluginConfig[name] = viper.GetStringMap(name)
+	}
+
+	// Developer flag to enable a local filesystem for testing core functionality.
+	if localfsPath := os.Getenv("WASH_LOCALFS"); localfsPath != "" {
+		plugins["local"] = &apifs.Root{}
+		pluginConfig["local"] = map[string]interface{}{"basepath": localfsPath}
 	}
 
 	// Return the options
