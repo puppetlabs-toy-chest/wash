@@ -9,11 +9,23 @@ env:
   global:
   - PROJECT_NAME=wash
   - WASH_DISABLE_ANALYTICS=true
-  - HUGO_VERSION=0.57.1
   - GOLANGCI_LINT_VERSION=v1.19.1
+  - BATS_VERSION=v1.1.0
 jobs:
   include:
   - name: Test Go stable
+  - name: Acceptance tests
+    before_script:
+    - |
+      batstmp="$(mktemp -d bats-core-"${BATS_VERSION}".XXXXX)"
+      pushd "${batstmp}" &> /dev/null || return 11
+      curl -sSLO https://github.com/bats-core/bats-core/archive/"${BATS_VERSION}".zip
+      unzip -qo "${BATS_VERSION}".zip
+      sudo bash "${batstmp}"/bats-core-"${BATS_VERSION}"/install.sh /usr/local
+      popd &> /dev/null || return 12
+    - go build
+    script:
+    - PATH=.:$PATH bats test
   - name: Test Docker plugin
     before_script:
     - go install
@@ -24,9 +36,6 @@ jobs:
     before_script:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
     script: GOGC=20 golangci-lint run -v --concurrency 1 --deadline 3m # https://github.com/golangci/golangci-lint/issues/337#issuecomment-510136513
-  - name: Test that website builds
-    install: curl -sfL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz | tar -xzC $(go env GOPATH)/bin
-    script: hugo -s website
   - stage: deploy
     name: Deploy to GitHub Releases
     if: tag IS present
