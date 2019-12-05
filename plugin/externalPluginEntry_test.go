@@ -94,8 +94,10 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
+		suite.Equal(defaultSignature, entry.methods["list"].signature)
 		suite.Nil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "stream")
+		suite.Equal(defaultSignature, entry.methods["stream"].signature)
 		suite.Nil(entry.methods["stream"].result)
 		suite.False(entry.isPrefetched())
 
@@ -129,10 +131,38 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, entry.name())
 		suite.Contains(entry.methods, "list")
+		suite.Equal(defaultSignature, entry.methods["list"].signature)
 		suite.NotNil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "read")
 		suite.Nil(entry.methods["read"].result)
 		suite.True(entry.isPrefetched())
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryMethodTuple_Read() {
+	decodedEntry := decodedExternalPluginEntry{
+		Name:    "decodedEntry",
+		Methods: []interface{}{[]interface{}{"read", true}},
+	}
+
+	type testCase struct {
+		data              interface{}
+		expectedSignature methodSignature
+		expectedResult    interface{}
+	}
+	testCases := []testCase{
+		testCase{true, blockReadableSignature, nil},
+		testCase{false, defaultSignature, nil},
+		testCase{"foo", defaultSignature, "foo"},
+	}
+	for _, testCase := range testCases {
+		decodedEntry.Methods = []interface{}{[]interface{}{"read", testCase.data}}
+		entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
+		if suite.NoError(err) {
+			suite.NotNil(entry.methods["read"])
+			suite.Equal(testCase.expectedSignature, entry.methods["read"].signature)
+			suite.Equal(testCase.expectedResult, entry.methods["read"].result)
+		}
 	}
 }
 
@@ -540,16 +570,45 @@ func (suite *ExternalPluginEntryTestSuite) TestRead() {
 		mockScript.OnInvokeAndWait(ctx, "read", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
-	// Test that if InvokeAndWait errors, then Open returns its error
+	// Test that if InvokeAndWait errors, then Read returns its error
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Read(ctx)
 	suite.EqualError(mockErr, err.Error())
 
-	// Test that Open wraps all of stdout into a SizedReader
+	// Test that Read returns the invocation's stdout
 	stdout := "foo"
 	mockInvokeAndWait([]byte(stdout), nil)
 	content, err := entry.Read(ctx)
+	if suite.NoError(err) {
+		expectedContent := []byte(stdout)
+		suite.Equal(expectedContent, content)
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockInvokeAndWait := func(stdout []byte, err error) {
+		mockScript.OnInvokeAndWait(ctx, "read", entry, "10", "0").Return(mockInvocation(stdout), err).Once()
+	}
+
+	// Test that if InvokeAndWait errors, then blockRead returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockInvokeAndWait([]byte{}, mockErr)
+	_, err := entry.blockRead(ctx, 10, 0)
+	suite.EqualError(mockErr, err.Error())
+
+	// Test that blockRead returns the invocation's stdout
+	stdout := "foo"
+	mockInvokeAndWait([]byte(stdout), nil)
+	content, err := entry.blockRead(ctx, 10, 0)
 	if suite.NoError(err) {
 		expectedContent := []byte(stdout)
 		suite.Equal(expectedContent, content)

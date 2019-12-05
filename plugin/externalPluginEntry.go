@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,11 @@ type externalPlugin interface {
 	// interface.
 	schema() (*EntrySchema, error)
 	RawTypeID() string
+	// Go doesn't allow overloaded functions, so the external plugin entry type
+	// cannot implement both BlockReadable#Read and Readable#Read. Thus, external
+	// plugins implement the BlockReadable interface via a separate blockRead
+	// method.
+	blockRead(ctx context.Context, size int64, offset int64) ([]byte, error)
 }
 
 type decodedCacheTTLs struct {
@@ -51,7 +57,7 @@ type decodedExternalPluginEntry struct {
 	State              string           `json:"state"`
 }
 
-const entryMethodTypeError = "each method must be a string or tuple [<method>, <result>], not %v"
+const entryMethodTypeError = "each method must be a string or tuple [<method>, <result_or_signature>], not %v"
 
 func mungeToMethods(input []interface{}) (map[string]methodInfo, error) {
 	methods := make(map[string]methodInfo)
@@ -69,10 +75,24 @@ func mungeToMethods(input []interface{}) (map[string]methodInfo, error) {
 			if !ok {
 				return nil, fmt.Errorf(entryMethodTypeError, data)
 			}
-			methods[name] = methodInfo{
+			info := methodInfo{
 				signature: defaultSignature,
-				result:    data[1],
 			}
+			switch name {
+			default:
+				info.result = data[1]
+			case "read":
+				// Check if we have ["read", <block_readable?>] or ["read", <result>].
+				// The latter implies <block_readable> == false.
+				if block_readable, ok := data[1].(bool); ok {
+					if block_readable {
+						info.signature = blockReadableSignature
+					}
+				} else {
+					info.result = data[1]
+				}
+			}
+			methods[name] = info
 		default:
 			return nil, fmt.Errorf(entryMethodTypeError, data)
 		}
@@ -362,7 +382,13 @@ func (e *externalPluginEntry) Read(ctx context.Context) ([]byte, error) {
 	return inv.stdout.Bytes(), nil
 }
 
-// TODO: Implement blockRead
+func (e *externalPluginEntry) blockRead(ctx context.Context, size int64, offset int64) ([]byte, error) {
+	inv, err := e.script.InvokeAndWait(ctx, "read", e, strconv.FormatInt(size, 10), strconv.FormatInt(offset, 10))
+	if err != nil {
+		return nil, err
+	}
+	return inv.stdout.Bytes(), nil
+}
 
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	if !e.implements("metadata") {
