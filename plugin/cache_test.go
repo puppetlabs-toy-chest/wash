@@ -460,7 +460,36 @@ func (suite *CacheTestSuite) TestCachedRead_BlockReadableCorePluginEntry() {
 	}
 }
 
-// TODO: Add block readable external plugin entry test case
+func (suite *CacheTestSuite) TestCachedRead_BlockReadableExternalPluginEntry() {
+	expectedRawContent := []byte("some raw content")
+
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+		methods: map[string]methodInfo{
+			"read": methodInfo{
+				signature: blockReadableSignature,
+			},
+		},
+	}
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/foo")
+	entry.Attributes().SetSize(uint64(len(expectedRawContent)))
+
+	ctx := context.Background()
+	mockScript.OnInvokeAndWait(ctx, "read", entry, "10", "0").Return(mockInvocation(expectedRawContent), nil).Once()
+
+	content, err := cachedRead(ctx, entry)
+	suite.Equal(entry.Attributes().Size(), content.size())
+	if suite.NoError(err) {
+		actualRawContent, err := content.read(ctx, 10, 0)
+		if suite.NoError(err) {
+			suite.Equal(expectedRawContent, actualRawContent)
+			mockScript.AssertExpectations(suite.T())
+		}
+	}
+}
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockJSONObject := JSONObject{"foo": "bar"}
