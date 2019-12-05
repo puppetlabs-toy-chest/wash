@@ -9,13 +9,15 @@ import (
 )
 
 type file struct {
-	*fsnode
+	fsnode
 }
 
-func newFile(ctx context.Context, finfo os.FileInfo, path string) *file {
-	return &file{
-		newFSNode(ctx, finfo, path),
+func newFile(finfo os.FileInfo, path string) *file {
+	f := &file{
+		newFSNode(finfo, path),
 	}
+	f.DisableDefaultCaching()
+	return f
 }
 
 func (f *file) Read(ctx context.Context) ([]byte, error) {
