@@ -124,16 +124,37 @@ bash-3.2$ /path/to/myplugin.rb list /myplugin/foo ''
 ```
 
 ## read
-`<plugin_script> read <path> <state>`
+The default calling convention for `read` is
 
-When `read` is invoked, the script must output the entry's content.
+```
+<plugin_script> read <path> <state>
+```
+
+which should output the entry's content.
+
+If the plugin's API lets you read the entry's content in blocks, then you should implement the block-readable calling convention instead
+
+```
+<plugin_script> read <path> <state> <size> <offset>
+```
+
+which should output `<size>` bits of the entry's content starting at `<offset>`. Note that `<size>` and `<offset>` are 64-bit integers. You may assume valid input, i.e. that `0 <= <offset> < <size_attribute>` and that `0 <= <size> <= <size_attribute> - <offset>`.
 
 ### Examples
 
 ```
+# Default signature
 bash-3.2$ /path/to/myplugin.rb read /myplugin/foo ''
 Some content
 ```
+
+```
+# Block-readable signature
+bash-3.2$ /path/to/myplugin.rb read /myplugin/foo '' 3 0
+Som
+```
+
+where `Some content` is the entry's content.
 
 ## metadata
 `<plugin_script> metadata <path> <state>`
@@ -245,7 +266,9 @@ This section describes the JSON object representing a serialized entry. An entry
 
 * `name` is a string representing the entry's raw name.
 
-* `methods` is an array specifying the entry's implemented methods. Each element in the array can be a string representing the method's name, or a tuple of `[<method_name>, <method_result>]` indicating a prefetched result. The result should have the same format as `<method_name>`'s output in its calling convention. Note that prefetching is a useful way to avoid unnecessary plugin script invocations. If `read` is prefetched, then the entry's `size` attribute will be set to the prefetched content size.
+* `methods` is an array specifying the entry's implemented methods. Each element in the array can be a string representing the method's name, or a method-tuple of `[<method_name>, <method_result>]` indicating a prefetched result. The result should have the same format as `<method_name>`'s output in its calling convention. Note that prefetching is a useful way to avoid unnecessary plugin script invocations. If `read` is prefetched, then the entry's `size` attribute will be set to the prefetched content size.
+
+   **Note:** `read`'s method-tuple can also be specified as `["read", <block_readable?>]` where `<block_readable?>` is a Boolean value. Entries that implement `read`'s block-readable calling convention _must_ specify `read` as the method-tuple `["read", true]`. Similarly, entries that implement `read`'s default signature _can_ specify `read` as the method-tuple `["read", false]`, but this is not required. Finally a prefetched `read` result, i.e. a method-tuple of `["read", <content>]`, implies that `<block_readable?>` is false.
 
    **EXAMPLES**
    ```
@@ -255,8 +278,8 @@ This section describes the JSON object representing a serialized entry. An entry
    ]
    ```
 
-   With prefetching
    ```
+   # With prefetching
    [
      ["list", [
        {
@@ -271,7 +294,15 @@ This section describes the JSON object representing a serialized entry. An entry
    ]
    ```
 
-   Notice that `list`'s `<method_result>` matches what's outputted by a `list` invocation. Similarly, `read`'s `<method_result>` matches what's outputted by a `read` invocation.
+   Notice that `list`'s `<method_result>` matches what's outputted by a `list` invocation. Similarly, `read`'s `<method_result>` matches what's outputted by a `read` invocation. Also, Wash knows that `<block_readable?>` is false for this entry.
+
+   ```
+   # Block-readable entry
+   [
+     "list",
+     ["read", true]
+   ]
+   ```
 
 * `attributes` is an object specifying the entry's attributes. See the [attributes docs]({{ '/docs#attributes' | relative_url }}) for a list of all the supported Wash attributes.
 
