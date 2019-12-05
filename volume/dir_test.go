@@ -23,7 +23,7 @@ func (m *mockDirEntry) VolumeList(ctx context.Context, path string) (DirMap, err
 	return arger.Get(0).(DirMap), arger.Error(1)
 }
 
-func (m *mockDirEntry) VolumeOpen(context.Context, string) (plugin.SizedReader, error) {
+func (m *mockDirEntry) VolumeRead(context.Context, string) ([]byte, error) {
 	return nil, nil
 }
 

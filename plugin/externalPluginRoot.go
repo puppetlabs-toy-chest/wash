@@ -71,7 +71,7 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	r.externalPluginEntry.script = script
 
 	// Fill in the schema graph if provided
-	if rawSchema := r.methods["schema"]; rawSchema != nil {
+	if rawSchema := r.methods["schema"].result; rawSchema != nil {
 		marshalledSchema, err := json.Marshal(rawSchema)
 		if err != nil {
 			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))

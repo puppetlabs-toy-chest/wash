@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -46,11 +45,11 @@ func (cl *ec2InstanceConsoleOutput) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(cl, "console.out")
 }
 
-func (cl *ec2InstanceConsoleOutput) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (cl *ec2InstanceConsoleOutput) Read(ctx context.Context) ([]byte, error) {
 	output, err := cl.inst.cachedConsoleOutput(ctx, cl.latest)
 	if err != nil {
 		return nil, err
 	}
 
-	return bytes.NewReader(output.content), nil
+	return output.content, nil
 }

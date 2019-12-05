@@ -24,7 +24,7 @@ func newFile(name string, attr plugin.EntryAttributes, impl Interface, path stri
 	vf.impl = impl
 	vf.path = path
 	vf.SetAttributes(attr)
-	vf.SetTTLOf(plugin.OpenOp, 60*time.Second)
+	vf.SetTTLOf(plugin.ReadOp, 60*time.Second)
 
 	return vf
 }
@@ -33,9 +33,9 @@ func (v *file) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(v, "file").SetDescription(fileDescription)
 }
 
-// Open returns the content of the file as a SizedReader.
-func (v *file) Open(ctx context.Context) (plugin.SizedReader, error) {
-	return v.impl.VolumeOpen(ctx, v.path)
+// Read reads the content of the file
+func (v *file) Read(ctx context.Context) ([]byte, error) {
+	return v.impl.VolumeRead(ctx, v.path)
 }
 
 func (v *file) Stream(ctx context.Context) (io.ReadCloser, error) {

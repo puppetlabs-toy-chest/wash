@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +19,7 @@ import (
 
 type externalPlugin interface {
 	Entry
-	supportedMethods() []string
+	supportedMethods() map[string]methodInfo
 	// Entry#Schema's type-signature only makes sense for core plugins
 	// since core plugin schemas do not require any error-prone API
 	// calls. External plugin schemas can be prefetched (no error)
@@ -54,12 +53,14 @@ type decodedExternalPluginEntry struct {
 
 const entryMethodTypeError = "each method must be a string or tuple [<method>, <result>], not %v"
 
-func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
-	methods := make(map[string]interface{})
+func mungeToMethods(input []interface{}) (map[string]methodInfo, error) {
+	methods := make(map[string]methodInfo)
 	for _, val := range input {
 		switch data := val.(type) {
 		case string:
-			methods[data] = nil
+			methods[data] = methodInfo{
+				signature: defaultSignature,
+			}
 		case []interface{}:
 			if len(data) != 2 {
 				return nil, fmt.Errorf(entryMethodTypeError, data)
@@ -68,7 +69,10 @@ func mungeToMethods(input []interface{}) (map[string]interface{}, error) {
 			if !ok {
 				return nil, fmt.Errorf(entryMethodTypeError, data)
 			}
-			methods[name] = data[1]
+			methods[name] = methodInfo{
+				signature: defaultSignature,
+				result:    data[1],
+			}
 		default:
 			return nil, fmt.Errorf(entryMethodTypeError, data)
 		}
@@ -95,7 +99,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 	// Thus, it is reasonable for us to expect (and require) every entry to implement schema
 	// if the root implements it. It is also reasonable for us to expect (and require)
 	// every entry to _not_ implement schema if the root does not implement it.
-	if result, ok := methods["schema"]; ok {
+	if info, ok := methods["schema"]; ok {
 		if len(e.TypeID) == 0 {
 			return nil, fmt.Errorf("entry %v implements schema, but no type ID was provided", e.Name)
 		}
@@ -103,7 +107,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 			return nil, fmt.Errorf("entry %v (%v) implements schema, but the plugin root doesn't", e.Name, e.TypeID)
 		}
 		// schemaKnown || isRoot
-		if !isRoot && result != nil {
+		if !isRoot && info.result != nil {
 			return nil, fmt.Errorf(
 				"entry %v (%v) prefetched its schema. Only plugin roots support schema prefetching",
 				e.Name,
@@ -120,7 +124,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 
 	// If read content is static, it's likely it's not coming from a source that separately provides
 	// the size of that data. If not provided, update it since we know what it is.
-	if content, ok := methods["read"].(string); ok && !e.Attributes.HasSize() {
+	if content, ok := methods["read"].result.(string); ok && !e.Attributes.HasSize() {
 		e.Attributes.SetSize(uint64(len(content)))
 	}
 
@@ -146,18 +150,23 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 	}
 
 	// If some data originated from the parent via list, mark as prefetched.
-	if entry.methods["list"] != nil || entry.methods["read"] != nil {
+	if entry.methods["list"].result != nil || entry.methods["read"].result != nil {
 		entry.Prefetched()
 	}
 
 	return entry, nil
 }
 
+type methodInfo struct {
+	signature methodSignature
+	result    interface{}
+}
+
 // externalPluginEntry represents an external plugin entry
 type externalPluginEntry struct {
 	EntryBase
 	script    externalPluginScript
-	methods   map[string]interface{}
+	methods   map[string]methodInfo
 	state     string
 	rawTypeID string
 	// schemaKnown is set by the root. We use it to enforce the invariant
@@ -174,7 +183,7 @@ func (e *externalPluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 		e.SetTTLOf(ListOp, ttls.List*time.Second)
 	}
 	if ttls.Read != 0 {
-		e.SetTTLOf(OpenOp, ttls.Read*time.Second)
+		e.SetTTLOf(ReadOp, ttls.Read*time.Second)
 	}
 	if ttls.Metadata != 0 {
 		e.SetTTLOf(MetadataOp, ttls.Metadata*time.Second)
@@ -188,12 +197,8 @@ func (e *externalPluginEntry) implements(method string) bool {
 	return ok
 }
 
-func (e *externalPluginEntry) supportedMethods() []string {
-	keys := make([]string, 0, len(e.methods))
-	for k := range e.methods {
-		keys = append(keys, k)
-	}
-	return keys
+func (e *externalPluginEntry) supportedMethods() map[string]methodInfo {
+	return e.methods
 }
 
 func (e *externalPluginEntry) ChildSchemas() []*EntrySchema {
@@ -244,7 +249,10 @@ func (e *externalPluginEntry) schema() (*EntrySchema, error) {
 		// is a mismatch. Hopefully this should never happen.
 		es, _ := graph.Get(TypeID(e))
 		schemaMethods := es.(entrySchema).Actions
-		instanceMethods := e.supportedMethods()
+		instanceMethods := []string{}
+		for method := range e.supportedMethods() {
+			instanceMethods = append(instanceMethods, method)
+		}
 		sort.Strings(schemaMethods)
 		sort.Strings(instanceMethods)
 		mismatchErr := fmt.Errorf(
@@ -305,7 +313,7 @@ const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"en
 
 func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	var decodedEntries []decodedExternalPluginEntry
-	if impl, ok := e.methods["list"]; ok && impl != nil {
+	if impl := e.methods["list"].result; impl != nil {
 		// Entry statically implements list. Construct new entries based on that rather than invoking the script.
 		bits, err := json.Marshal(impl)
 		if err != nil {
@@ -339,10 +347,10 @@ func (e *externalPluginEntry) List(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
-	if impl, ok := e.methods["read"]; ok && impl != nil {
+func (e *externalPluginEntry) Read(ctx context.Context) ([]byte, error) {
+	if impl := e.methods["read"].result; impl != nil {
 		if content, ok := impl.(string); ok {
-			return strings.NewReader(content), nil
+			return []byte(content), nil
 		}
 		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
 	}
@@ -351,8 +359,10 @@ func (e *externalPluginEntry) Open(ctx context.Context) (SizedReader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(inv.stdout.Bytes()), nil
+	return inv.stdout.Bytes(), nil
 }
+
+// TODO: Implement blockRead
 
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	if !e.implements("metadata") {

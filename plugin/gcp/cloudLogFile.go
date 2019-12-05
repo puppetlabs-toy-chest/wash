@@ -10,7 +10,6 @@ import (
 
 	"github.com/puppetlabs/wash/activity"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
-	"github.com/puppetlabs/wash/plugin"
 	"google.golang.org/api/logging/v2"
 	"google.golang.org/api/option"
 )
@@ -57,7 +56,7 @@ func newCloudLogFile(
 	return clf, nil
 }
 
-func (clf *cloudLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (clf *cloudLogFile) Read(ctx context.Context) ([]byte, error) {
 	// 1000 matches gcloud's upper limit for fetching logs
 	entries, err := clf.fetchEntries(ctx, 1000, "")
 	if err != nil {
@@ -72,7 +71,7 @@ func (clf *cloudLogFile) Open(ctx context.Context) (plugin.SizedReader, error) {
 	}
 	activity.Record(ctx, "HEADERS: %v, ENTRIES: %v", headers, entries)
 	table := cmdutil.NewTableWithHeaders(headers, entries)
-	return strings.NewReader(table.Format()), nil
+	return []byte(table.Format()), nil
 }
 
 // Note that we use afterTimestamp instead of pageToken because the latter doesn't work well with

@@ -13,13 +13,13 @@ type defaultOpCode int8
 const (
 	// ListOp represents Parent#List
 	ListOp defaultOpCode = iota
-	// OpenOp represents Readable#Open
-	OpenOp
+	// ReadOp represents Readable/BlockReadable#Read
+	ReadOp
 	// MetadataOp represents Entry#Metadata
 	MetadataOp
 )
 
-var defaultOpCodeToNameMap = [3]string{"List", "Open", "Metadata"}
+var defaultOpCodeToNameMap = [3]string{"List", "Read", "Metadata"}
 
 /*
 EntryBase implements Entry, making it easy to create new entries.

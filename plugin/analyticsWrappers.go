@@ -14,11 +14,11 @@ func ListWithAnalytics(ctx context.Context, p Parent) (*EntryMap, error) {
 	return List(ctx, p)
 }
 
-// OpenWithAnalytics is a wrapper to plugin.Open. Use it when you need to report
-// a 'Read' invocation to analytics. Otherwise, use plugin.Open.
-func OpenWithAnalytics(ctx context.Context, r Readable) (SizedReader, error) {
-	submitMethodInvocation(ctx, r, "Read")
-	return Open(ctx, r)
+// ReadWithAnalytics is a wrapper to plugin.Read. Use it when you need to report
+// a 'Read' invocation to analytics. Otherwise, use plugin.Read.
+func ReadWithAnalytics(ctx context.Context, e Entry, size int64, offset int64) ([]byte, error) {
+	submitMethodInvocation(ctx, e, "Read")
+	return Read(ctx, e, size, offset)
 }
 
 // StreamWithAnalytics is a wrapper to s#Stream. Use it when you need to report a 'Stream'

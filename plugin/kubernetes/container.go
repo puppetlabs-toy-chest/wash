@@ -59,7 +59,7 @@ func (c *container) Schema() *plugin.EntrySchema {
 		SetMetaAttributeSchema(corev1.Container{})
 }
 
-func (c *container) Open(ctx context.Context) (plugin.SizedReader, error) {
+func (c *container) Read(ctx context.Context) ([]byte, error) {
 	logOptions := corev1.PodLogOptions{
 		Container: c.Name(),
 	}
@@ -75,7 +75,7 @@ func (c *container) Open(ctx context.Context) (plugin.SizedReader, error) {
 	}
 	activity.Record(ctx, "Read %v bytes of %v log", n, c.Name())
 
-	return bytes.NewReader(buf.Bytes()), nil
+	return buf.Bytes(), nil
 }
 
 func (c *container) Stream(ctx context.Context) (io.ReadCloser, error) {

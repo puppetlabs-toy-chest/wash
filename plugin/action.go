@@ -1,17 +1,27 @@
 package plugin
 
+type methodSignature int
+
+const (
+	unsupportedSignature methodSignature = iota
+	defaultSignature
+	blockReadableSignature
+)
+
 // Action represents a Wash action.
 type Action struct {
-	Name     string `json:"name"`
-	Protocol string `json:"protocol"`
+	Name                         string `json:"name"`
+	Protocol                     string `json:"protocol"`
+	corePluginEntrySignatureFunc func(e Entry) methodSignature
 }
 
 var actions = make(map[string]Action)
 
-func newAction(name string, protocol string) Action {
+func newAction(name string, protocol string, corePluginEntrySignatureFunc func(e Entry) methodSignature) Action {
 	a := Action{
-		Name:     name,
-		Protocol: protocol,
+		Name:                         name,
+		Protocol:                     protocol,
+		corePluginEntrySignatureFunc: corePluginEntrySignatureFunc,
 	}
 	actions[a.Name] = a
 	return a
@@ -20,22 +30,69 @@ func newAction(name string, protocol string) Action {
 // IsSupportedOn returns true if the action's supported
 // on the specified entry, false otherwise.
 func (a Action) IsSupportedOn(entry Entry) bool {
-	for _, action := range SupportedActionsOf(entry) {
-		if a.Name == action {
-			return true
-		}
-	}
-
-	return false
+	return a.signature(entry) != unsupportedSignature
 }
 
-var listAction = newAction("list", "Parent")
-var readAction = newAction("read", "Readable")
-var streamAction = newAction("stream", "Streamable")
-var writeAction = newAction("write", "Writable")
-var execAction = newAction("exec", "Execable")
-var deleteAction = newAction("delete", "Deletable")
-var signalAction = newAction("signal", "Signalable")
+func (a Action) signature(entry Entry) methodSignature {
+	switch t := entry.(type) {
+	case externalPlugin:
+		return t.supportedMethods()[a.Name].signature
+	default:
+		return a.corePluginEntrySignatureFunc(entry)
+	}
+}
+
+var listAction = newAction("list", "Parent", func(e Entry) methodSignature {
+	if _, ok := e.(Parent); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
+
+var readAction = newAction("read", "Readable", func(e Entry) methodSignature {
+	if _, ok := e.(Readable); ok {
+		return defaultSignature
+	}
+	if _, ok := e.(BlockReadable); ok {
+		return blockReadableSignature
+	}
+	return unsupportedSignature
+})
+
+var streamAction = newAction("stream", "Streamable", func(e Entry) methodSignature {
+	if _, ok := e.(Streamable); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
+
+var writeAction = newAction("write", "Writable", func(e Entry) methodSignature {
+	if _, ok := e.(Writable); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
+
+var execAction = newAction("exec", "Execable", func(e Entry) methodSignature {
+	if _, ok := e.(Execable); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
+
+var deleteAction = newAction("delete", "Deletable", func(e Entry) methodSignature {
+	if _, ok := e.(Deletable); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
+
+var signalAction = newAction("signal", "Signalable", func(e Entry) methodSignature {
+	if _, ok := e.(Signalable); ok {
+		return defaultSignature
+	}
+	return unsupportedSignature
+})
 
 // ListAction represents the list action
 func ListAction() Action {
@@ -87,45 +144,28 @@ func Actions() map[string]Action {
 // SupportedActionsOf returns all of the given
 // entry's supported actions.
 func SupportedActionsOf(entry Entry) []string {
+	var supportedActions []string
+
+	// Iterating over the actions and calling action.signature
+	// results in multiple type switches, which can unnecessarily
+	// slow down list. This implementation does the same thing
+	// but in a single type-switch.
 	switch t := entry.(type) {
 	case externalPlugin:
-		var supportedActions []string
-		for _, method := range t.supportedMethods() {
-			// This ensures that we don't return methods like "metadata"/"schema",
-			// which are not valid Wash actions.
-			if _, ok := actions[method]; ok {
-				supportedActions = append(supportedActions, method)
+		for _, action := range actions {
+			signature := t.supportedMethods()[action.Name].signature
+			if signature != unsupportedSignature {
+				supportedActions = append(supportedActions, action.Name)
 			}
 		}
-		return supportedActions
 	default:
-		actions := make([]string, 0)
-
-		// We could use reflection to simplify this. In fact, a previous version
-		// of the code did do that. The reason we removed it was b/c type assertion's
-		// a lot faster, and the resulting code isn't that bad, if a little verbose.
-		if _, ok := entry.(Parent); ok {
-			actions = append(actions, ListAction().Name)
+		for _, action := range actions {
+			signature := action.corePluginEntrySignatureFunc(entry)
+			if signature != unsupportedSignature {
+				supportedActions = append(supportedActions, action.Name)
+			}
 		}
-		if _, ok := entry.(Readable); ok {
-			actions = append(actions, ReadAction().Name)
-		}
-		if _, ok := entry.(Streamable); ok {
-			actions = append(actions, StreamAction().Name)
-		}
-		if _, ok := entry.(Writable); ok {
-			actions = append(actions, WriteAction().Name)
-		}
-		if _, ok := entry.(Execable); ok {
-			actions = append(actions, ExecAction().Name)
-		}
-		if _, ok := entry.(Deletable); ok {
-			actions = append(actions, DeleteAction().Name)
-		}
-		if _, ok := entry.(Signalable); ok {
-			actions = append(actions, SignalAction().Name)
-		}
-
-		return actions
 	}
+
+	return supportedActions
 }

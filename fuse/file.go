@@ -39,14 +39,8 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 
 	// Initiate content request and return a channel providing the results.
 	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
-		content, err := plugin.OpenWithAnalytics(ctx, updatedEntry.(plugin.Readable))
-		if err != nil {
-			activity.Warnf(ctx, "FUSE: Open %v errored: %v", f, err)
-			return nil, err
-		}
-
 		activity.Record(ctx, "FUSE: Opened %v", f)
-		fh.r = content
+		fh.r = updatedEntry
 	}
 
 	if plugin.WriteAction().IsSupportedOn(updatedEntry) {
@@ -62,7 +56,8 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 }
 
 type fileHandle struct {
-	r  io.ReaderAt
+	// This is expected to implement either plugin.Readable or plugin.BlockReadable
+	r  plugin.Entry
 	w  plugin.Writable
 	id string
 }
@@ -85,13 +80,12 @@ func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 }
 
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
-	buf := make([]byte, req.Size)
-	n, err := fh.r.ReadAt(buf, req.Offset)
+	data, err := plugin.ReadWithAnalytics(ctx, fh.r, int64(req.Size), req.Offset)
 	if err == io.EOF {
 		err = nil
 	}
-	activity.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", n, req.Size, req.Offset, fh.id, err)
-	resp.Data = buf[:n]
+	activity.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", len(data), req.Size, req.Offset, fh.id, err)
+	resp.Data = data
 	return err
 }
 

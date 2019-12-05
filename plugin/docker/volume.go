@@ -173,7 +173,7 @@ func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, er
 	return volpkg.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
-func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
+func (v *volume) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 	// Create a container that mounts a volume and waits. Use it to download a file.
 	cid, err := v.createContainer(ctx, []string{"sleep", "60"})
 	if err != nil {
@@ -211,7 +211,7 @@ func (v *volume) VolumeOpen(ctx context.Context, path string) (plugin.SizedReade
 	if err != nil {
 		return nil, err
 	}
-	return bytes.NewReader(bits), nil
+	return bits, nil
 }
 
 func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {

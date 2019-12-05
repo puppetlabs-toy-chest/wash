@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -179,6 +178,11 @@ func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
 func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	args := e.Called(ctx)
 	return args.Get(0).(JSONObject), args.Error(1)
+}
+
+func (e *cacheTestsMockEntry) Read(ctx context.Context) ([]byte, error) {
+	args := e.Called(ctx)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 type cachedDefaultOpFunc func(ctx context.Context, e Entry) (interface{}, error)
@@ -369,12 +373,94 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	}
 }
 
-func (suite *CacheTestSuite) TestCachedOpen() {
-	mockReader := strings.NewReader("foo")
-	suite.testCachedDefaultOp(OpenOp, "Open", mockReader, mockReader, func(ctx context.Context, e Entry) (interface{}, error) {
-		return cachedOpen(ctx, e.(Readable))
+func (suite *CacheTestSuite) TestCachedRead_DefaultOp() {
+	// This also tests a successful read of a ReadableCorePluginEntry
+	mockRawContent := []byte("some raw content")
+	mockContent := newEntryContent(mockRawContent)
+	suite.testCachedDefaultOp(ReadOp, "Read", mockRawContent, mockContent, func(ctx context.Context, e Entry) (interface{}, error) {
+		return cachedRead(ctx, e)
 	})
 }
+
+func (suite *CacheTestSuite) TestCachedRead_ReadableCorePluginEntry_ErroredRead() {
+	entry := newCacheTestsMockEntry("foo")
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	expectedErr := fmt.Errorf("an error")
+	entry.On("Read", ctx).Return([]byte{}, expectedErr)
+
+	_, err := cachedRead(ctx, entry)
+	suite.Equal(expectedErr, err)
+}
+
+func (suite *CacheTestSuite) TestCachedRead_ReadableExternalPluginEntry_SuccessfulRead() {
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		methods: map[string]methodInfo{
+			"read": methodInfo{signature: defaultSignature, result: "some raw content"},
+		},
+	}
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/foo")
+
+	expectedContent := newEntryContent([]byte("some raw content"))
+
+	actualContent, err := cachedRead(context.Background(), entry)
+	if suite.NoError(err) {
+		suite.Equal(expectedContent, actualContent)
+	}
+}
+
+func (suite *CacheTestSuite) TestCachedRead_ReadableExternalPluginEntry_ErroredRead() {
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		methods: map[string]methodInfo{
+			"read": methodInfo{signature: defaultSignature, result: []byte("invalid content")},
+		},
+	}
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/foo")
+
+	_, err := cachedRead(context.Background(), entry)
+	suite.Regexp("Read.*string", err.Error())
+}
+
+type cacheTestsMockBlockReadableEntry struct {
+	*cacheTestsMockEntry
+}
+
+func (m *cacheTestsMockBlockReadableEntry) Read(ctx context.Context, size int64, offset int64) ([]byte, error) {
+	args := m.Called(ctx, size, offset)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (suite *CacheTestSuite) TestCachedRead_BlockReadableCorePluginEntry() {
+	expectedRawContent := []byte("some raw content")
+
+	entry := &cacheTestsMockBlockReadableEntry{
+		cacheTestsMockEntry: newCacheTestsMockEntry("foo"),
+	}
+	entry.DisableDefaultCaching()
+	entry.SetTestID("/foo")
+	entry.Attributes().SetSize(uint64(len(expectedRawContent)))
+
+	ctx := context.Background()
+	entry.On("Read", ctx, int64(10), int64(0)).Return(expectedRawContent, nil).Once()
+
+	content, err := cachedRead(ctx, entry)
+	suite.Equal(entry.Attributes().Size(), content.size())
+	if suite.NoError(err) {
+		actualRawContent, err := content.read(ctx, 10, 0)
+		if suite.NoError(err) {
+			suite.Equal(expectedRawContent, actualRawContent)
+			entry.AssertExpectations(suite.T())
+		}
+	}
+}
+
+// TODO: Add block readable external plugin entry test case
 
 func (suite *CacheTestSuite) TestCachedMetadata() {
 	mockJSONObject := JSONObject{"foo": "bar"}

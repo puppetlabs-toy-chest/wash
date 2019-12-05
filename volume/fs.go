@@ -114,8 +114,8 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	return StatParseAll(buf, RootPath, path, d.maxdepth)
 }
 
-// VolumeOpen satisfies the Interface required by List to read file contents.
-func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, error) {
+// VolumeRead satisfies the Interface required by List to read file contents.
+func (d *FS) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
 
 	// Don't use Tty when outputting file content because it may convert LF to CRLF.
@@ -124,7 +124,7 @@ func (d *FS) VolumeOpen(ctx context.Context, path string) (plugin.SizedReader, e
 		activity.Record(ctx, "Exec error running 'cat %v' in VolumeOpen: %v", path, err)
 		return nil, err
 	}
-	return bytes.NewReader(buf.Bytes()), nil
+	return buf.Bytes(), nil
 }
 
 // VolumeStream satisfies the Interface required by List to stream file contents.

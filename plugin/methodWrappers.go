@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/puppetlabs/wash/activity"
 )
 
 // InvalidInputErr indicates that the method invocation received invalid
@@ -102,9 +104,9 @@ func Attributes(e Entry) EntryAttributes {
 		// We have no way to preserve this on the entry, and it likely wouldn't help because we often
 		// recreate the entry to ensure we have an accurate representation. So when the cache expires
 		// we revert to stating the size is unknown until the next read operation.
-		if val, _ := cache.Get(defaultOpCodeToNameMap[OpenOp], e.id()); val != nil {
-			rdr := val.(SizedReader)
-			attr.SetSize(uint64(rdr.Size()))
+		if val, _ := cache.Get(defaultOpCodeToNameMap[ReadOp], e.id()); val != nil {
+			content := val.(entryContent)
+			attr.SetSize(content.size())
 		}
 	}
 	return attr
@@ -129,14 +131,53 @@ func List(ctx context.Context, p Parent) (*EntryMap, error) {
 	return cachedList(ctx, p)
 }
 
-// Open reads the entry's content. Note that Open's results could be cached. Thus, when
-// using the reader returned by this method, use idempotent read operations such as ReadAt
-// or wrap it in a SectionReader. Using Read operations on the cached reader will change it
-// and make subsequent uses of the cached reader invalid.
+// Read reads up to size bits of the entry's content starting at the given offset.
+// It will panic if the entry does not support the read action. Callers can use
+// len(data) to check the amount of data that was actually read.
 //
-// TODO: Could we change this to Read? E.g. plugin.Read.
-func Open(ctx context.Context, r Readable) (SizedReader, error) {
-	return cachedOpen(ctx, r)
+// If the offset is >= to the available content size, then data != nil, len(data) == 0,
+// and err == io.EOF. Otherwise if len(data) < size, then err == io.EOF.
+//
+// Note that Read is thread-safe.
+func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, err error) {
+	if !ReadAction().IsSupportedOn(e) {
+		panic("plugin.Read called on a non-readable entry")
+	}
+	if size < 0 {
+		return nil, fmt.Errorf("called with a negative size %v", size)
+	}
+	if offset < 0 {
+		return nil, fmt.Errorf("called with a negative offset %v", offset)
+	}
+	data = []byte{}
+	inputSize := size
+	if attr := e.attributes(); attr.HasSize() {
+		contentSize := int64(attr.Size())
+		if offset >= contentSize {
+			err = io.EOF
+			return
+		}
+		minSize := size + offset
+		if contentSize < minSize {
+			size = contentSize
+			err = io.EOF
+		}
+	} else if ReadAction().signature(e) == blockReadableSignature {
+		activity.Warnf(ctx, "size attribute not set for block-readable entry %v", e.id())
+	}
+	content, contentErr := cachedRead(ctx, e)
+	if contentErr != nil {
+		err = contentErr
+		return
+	}
+	data, readErr := content.read(ctx, size, offset)
+	if readErr != nil {
+		err = readErr
+	}
+	if actualSize := int64(len(data)); actualSize > size {
+		return nil, fmt.Errorf("requested %v bytes (input was %v), but plugin's API returned %v bytes", size, inputSize, actualSize)
+	}
+	return
 }
 
 // Metadata returns the entry's metadata. Note that Metadata's results could be cached.
