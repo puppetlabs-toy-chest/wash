@@ -61,9 +61,9 @@ fi
 function prompter() {
   local prompt_path
   if [ -x "$(command -v realpath)" ]; then
-    prompt_path=$(realpath --relative-base=$W $(pwd))
+    prompt_path=$(realpath --relative-base=$W "$(pwd)")
   else
-    prompt_path=$(basename $(pwd))
+    prompt_path=$(basename "$(pwd)")
   fi
   PROMPT="%F{cyan}wash ${prompt_path}%F{green} ❯%f "
 }
