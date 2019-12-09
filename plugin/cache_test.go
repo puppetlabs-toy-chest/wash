@@ -170,11 +170,6 @@ func (e *cacheTestsMockEntry) Schema() *EntrySchema {
 	return nil
 }
 
-func (e *cacheTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
-	args := e.Called(ctx)
-	return args.Get(0).(SizedReader), args.Error(1)
-}
-
 func (e *cacheTestsMockEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	args := e.Called(ctx)
 	return args.Get(0).(JSONObject), args.Error(1)

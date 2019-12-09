@@ -73,11 +73,6 @@ func (m *methodWrappersTestsMockEntry) Delete(ctx context.Context) (bool, error)
 	return args.Get(0).(bool), args.Error(1)
 }
 
-func (m *methodWrappersTestsMockEntry) Open(ctx context.Context) (SizedReader, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(SizedReader), args.Error(1)
-}
-
 func (m *methodWrappersTestsMockEntry) Signal(ctx context.Context, signal string) error {
 	args := m.Called(ctx, signal)
 	return args.Error(0)
