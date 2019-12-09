@@ -40,6 +40,12 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	// Initiate content request and return a channel providing the results.
 	if plugin.ReadAction().IsSupportedOn(updatedEntry) {
 		activity.Record(ctx, "FUSE: Opened %v", f)
+		if attr := plugin.Attributes(updatedEntry); !attr.HasSize() {
+			// The entry's content size is unknown so open the file in direct
+			// IO mode. This enables FUSE to still read the entry's content so
+			// that built-in tools like cat and grep still work.
+			resp.Flags |= fuse.OpenDirectIO
+		}
 		fh.r = updatedEntry
 	}
 
@@ -82,6 +88,8 @@ func (fh fileHandle) Release(ctx context.Context, req *fuse.ReleaseRequest) erro
 func (fh fileHandle) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadResponse) error {
 	data, err := plugin.ReadWithAnalytics(ctx, fh.r, int64(req.Size), req.Offset)
 	if err == io.EOF {
+		// If we don't ignore this, then cat will display an input/output error message
+		// for entries with unknown content size.
 		err = nil
 	}
 	activity.Record(ctx, "FUSE: Read %v/%v bytes starting at %v from %v: %v", len(data), req.Size, req.Offset, fh.id, err)
