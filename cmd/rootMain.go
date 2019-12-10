@@ -21,6 +21,7 @@ import (
 // These *Flag variables are defined in root.go
 var rootCommandFlag string
 var rootVersionFlag bool
+var rootVerifyInstallFlag bool
 
 // Start the Wash server then present the default system shell. The server will be running in the
 // current process, while the shell will be in a separate child process. We'd like the server to be
@@ -66,6 +67,18 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	}
 	defer os.RemoveAll(rundir)
 
+	socketpath := filepath.Join(rundir, "api.sock")
+
+	if rootVerifyInstallFlag {
+		srv := server.ForVerifyInstall(mountpath, socketpath)
+		if err := srv.Start(); err != nil {
+			cmdutil.ErrPrintf("Install verification failed: %v\n", err)
+			return exitCode{1}
+		}
+		srv.Stop()
+		return exitCode{0}
+	}
+
 	var execfile string
 	if len(args) > 0 {
 		execfile = args[0]
@@ -101,7 +114,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	socketpath := filepath.Join(rundir, "api.sock")
 	srv := server.New(mountpath, socketpath, plugins, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
