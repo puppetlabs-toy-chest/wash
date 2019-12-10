@@ -26,7 +26,7 @@ import (
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var signalHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var signalHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
@@ -55,4 +55,4 @@ var signalHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 
 	activity.Record(ctx, "API: Signal %v %v", path, body.Signal)
 	return nil
-}
+}}

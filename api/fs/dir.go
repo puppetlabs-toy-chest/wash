@@ -9,13 +9,15 @@ import (
 )
 
 type dir struct {
-	*fsnode
+	fsnode
 }
 
-func newDir(ctx context.Context, finfo os.FileInfo, path string) *dir {
-	return &dir{
-		newFSNode(ctx, finfo, path),
+func newDir(finfo os.FileInfo, path string) *dir {
+	d := &dir{
+		newFSNode(finfo, path),
 	}
+	d.DisableDefaultCaching()
+	return d
 }
 
 func (d *dir) List(ctx context.Context) ([]plugin.Entry, error) {

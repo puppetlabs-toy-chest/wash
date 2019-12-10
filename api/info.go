@@ -22,7 +22,7 @@ import (
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var infoHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var infoHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
@@ -36,4 +36,4 @@ var infoHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", path, err))
 	}
 	return nil
-}
+}}

@@ -16,11 +16,11 @@ type fsnode struct {
 	path string
 }
 
-func newFSNode(ctx context.Context, finfo os.FileInfo, path string) *fsnode {
+func newFSNode(finfo os.FileInfo, path string) fsnode {
 	// TODO: finfo.Sys() contains more detailed file attributes,
 	// but it's platform-specific. We should eventually use it for
 	// a more complete implementation of apifs.
-	n := &fsnode{
+	n := fsnode{
 		EntryBase: plugin.NewEntry(finfo.Name()),
 		path:      path,
 	}
@@ -42,9 +42,9 @@ func NewEntry(ctx context.Context, path string) (plugin.Entry, error) {
 		return nil, err
 	}
 	if finfo.IsDir() {
-		return newDir(ctx, finfo, path), nil
+		return newDir(finfo, path), nil
 	}
-	return newFile(ctx, finfo, path), nil
+	return newFile(finfo, path), nil
 }
 
 // os.FileInfo is an interface. Its implementations do not export

@@ -30,7 +30,7 @@ type entryMetadata struct {
 //       200: entryMetadata
 //       404: errorResp
 //       500: errorResp
-var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var metadataHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
@@ -49,4 +49,4 @@ var metadataHandler handler = func(w http.ResponseWriter, r *http.Request) *erro
 		return unknownErrorResponse(fmt.Errorf("Could not marshal metadata for %v: %v", path, err))
 	}
 	return nil
-}
+}}

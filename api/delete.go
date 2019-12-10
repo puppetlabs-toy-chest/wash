@@ -23,7 +23,7 @@ import (
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var deleteHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var deleteHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
@@ -42,4 +42,4 @@ var deleteHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return unknownErrorResponse(fmt.Errorf("Could not marshal delete's result for %v: %v", path, err))
 	}
 	return nil
-}
+}}

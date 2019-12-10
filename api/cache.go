@@ -23,7 +23,7 @@ import (
 //     Responses:
 //       200:
 //       500: errorResp
-var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var cacheHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	path, errResp := getWashPathFromRequest(r)
 	if errResp != nil {
 		return errResp
@@ -37,4 +37,4 @@ var cacheHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRe
 		return unknownErrorResponse(fmt.Errorf("Could not marshal deleted keys for %v: %v", path, err))
 	}
 	return nil
-}
+}}

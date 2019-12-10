@@ -84,8 +84,8 @@ func mungeToMethods(input []interface{}) (map[string]methodInfo, error) {
 			case "read":
 				// Check if we have ["read", <block_readable?>] or ["read", <result>].
 				// The latter implies <block_readable> == false.
-				if block_readable, ok := data[1].(bool); ok {
-					if block_readable {
+				if blockReadable, ok := data[1].(bool); ok {
+					if blockReadable {
 						info.signature = blockReadableSignature
 					}
 				} else {

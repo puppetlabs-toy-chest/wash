@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/puppetlabs/wash/activity"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // swagger:parameters retrieveHistory getJournal
@@ -39,7 +40,7 @@ type historyParams struct {
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var historyHandler = handler{logOnly: true, fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	follow, err := getBoolParam(r.URL, "follow")
 	if err != nil {
 		return err
@@ -83,7 +84,7 @@ var historyHandler handler = func(w http.ResponseWriter, r *http.Request) *error
 		}
 	}
 	return nil
-}
+}}
 
 func writeHistory(ctx context.Context, enc *json.Encoder, history []activity.Journal) *errorResponse {
 	var act apitypes.Activity
@@ -115,7 +116,7 @@ func writeHistory(ctx context.Context, enc *json.Encoder, history []activity.Jou
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var historyEntryHandler = handler{logOnly: true, fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	history := activity.History()
 	index := mux.Vars(r)["index"]
 
@@ -133,6 +134,10 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 	}
 
 	journal := history[idx]
+	streamCleanup := func(cleanup func() error) {
+		<-r.Context().Done()
+		log.Printf("API: Journal %v closed by completed context: %v", journal, cleanup())
+	}
 
 	if follow {
 		// Ensure every write is a flush.
@@ -147,7 +152,7 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 		}
 
 		// Ensure the reader is closed when context stops.
-		streamCleanup(r.Context(), "Journal "+journal.String(), func() error {
+		go streamCleanup(func() error {
 			rdr.Cleanup()
 			return rdr.Stop()
 		})
@@ -172,11 +177,11 @@ var historyEntryHandler handler = func(w http.ResponseWriter, r *http.Request) *
 			return journalUnavailableResponse(journal.String(), err.Error())
 		}
 
-		streamCleanup(r.Context(), "Journal "+journal.String(), rdr.Close)
+		go streamCleanup(rdr.Close)
 
 		if _, err := io.Copy(w, rdr); err != nil {
 			return unknownErrorResponse(fmt.Errorf("Could not read journal %v: %v", journal, err))
 		}
 	}
 	return nil
-}
+}}

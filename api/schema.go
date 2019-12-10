@@ -33,7 +33,7 @@ type schemaResponse struct {
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var schemaHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var schemaHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
@@ -48,4 +48,4 @@ var schemaHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		return unknownErrorResponse(fmt.Errorf("Could not marshal schema for %v: %v", path, err))
 	}
 	return nil
-}
+}}

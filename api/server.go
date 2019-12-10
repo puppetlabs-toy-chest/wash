@@ -41,13 +41,22 @@ type octetResponse struct {
 	Reader io.Reader
 }
 
-type handler func(http.ResponseWriter, *http.Request) *errorResponse
+type handler struct {
+	fn      func(http.ResponseWriter, *http.Request) *errorResponse
+	logOnly bool
+}
 
 func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	activity.Record(r.Context(), "API: %v %v", r.Method, r.URL)
+	var record func(msg string, a ...interface{})
+	if handle.logOnly {
+		record = log.Printf
+	} else {
+		record = func(msg string, a ...interface{}) { activity.Record(r.Context(), msg, a...) }
+	}
+	record("API: %v %v", r.Method, r.URL)
 
-	if err := handle(w, r); err != nil {
-		activity.Record(r.Context(), "API: %v %v: %v", r.Method, r.URL, err)
+	if err := handle.fn(w, r); err != nil {
+		record("API: %v %v: %v", r.Method, r.URL, err)
 		w.WriteHeader(err.statusCode)
 
 		// NOTE: Do not set these headers in the middleware because not
@@ -60,7 +69,7 @@ func (handle handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Warnf("API: Failed writing error response: %v", err)
 		}
 	} else {
-		activity.Record(r.Context(), "API: %v %v complete", r.Method, r.URL)
+		record("API: %v %v complete", r.Method, r.URL)
 	}
 }
 
