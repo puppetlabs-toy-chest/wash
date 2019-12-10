@@ -12,13 +12,16 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	"github.com/puppetlabs/wash/cmd/internal/shell"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
+	"github.com/puppetlabs/wash/cmd/version"
 	"github.com/puppetlabs/wash/plugin"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// rootCommandFlag is associated with the `-c` option of the root command, set in root.go.
+// These root*Flag variables are defined in root.go
 var rootCommandFlag string
+var rootVersionFlag bool
+var rootVerifyInstallFlag bool
 
 // Start the Wash server then present the default system shell. The server will be running in the
 // current process, while the shell will be in a separate child process. We'd like the server to be
@@ -32,6 +35,11 @@ var rootCommandFlag string
 //
 // On exit, stop the server and return any errors.
 func rootMain(cmd *cobra.Command, args []string) exitCode {
+	if rootVersionFlag {
+		cmdutil.Println(version.BuildVersion)
+		return exitCode{0}
+	}
+
 	// Configure logrus to emit simple text
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 
@@ -58,6 +66,19 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	defer os.RemoveAll(rundir)
+
+	socketpath := filepath.Join(rundir, "api.sock")
+
+	if rootVerifyInstallFlag {
+		srv := server.ForVerifyInstall(mountpath, socketpath)
+		if err := srv.Start(); err != nil {
+			cmdutil.ErrPrintf("Verify install failed: %v\n", err)
+			return exitCode{1}
+		}
+		srv.Stop()
+		cmdutil.Printf("Verify install succeeded")
+		return exitCode{0}
+	}
 
 	var execfile string
 	if len(args) > 0 {
@@ -94,7 +115,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		cmdutil.ErrPrintf("%v\n", err)
 		return exitCode{1}
 	}
-	socketpath := filepath.Join(rundir, "api.sock")
 	srv := server.New(mountpath, socketpath, plugins, serverOpts)
 	if err := srv.Start(); err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)

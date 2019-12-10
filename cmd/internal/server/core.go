@@ -55,19 +55,38 @@ type controlChannels struct {
 
 // Server encapsulates a running wash server with both Socket and FUSE servers.
 type Server struct {
-	mountpoint      string
-	socket          string
-	opts            Opts
-	logFH           *os.File
-	api             controlChannels
-	fuse            controlChannels
-	plugins         map[string]plugin.Root
-	analyticsClient analytics.Client
+	mountpoint       string
+	socket           string
+	opts             Opts
+	logFH            *os.File
+	api              controlChannels
+	fuse             controlChannels
+	plugins          map[string]plugin.Root
+	analyticsClient  analytics.Client
+	forVerifyInstall bool
 }
 
-// New creates a new Server. Accepts a list of core plugins to load.
+// New creates a new Server. Accepts a list of plugins to load.
 func New(mountpoint string, socket string, plugins map[string]plugin.Root, opts Opts) *Server {
-	return &Server{mountpoint: mountpoint, socket: socket, plugins: plugins, opts: opts}
+	return &Server{
+		mountpoint: mountpoint,
+		socket:     socket,
+		plugins:    plugins,
+		opts:       opts,
+	}
+}
+
+// ForVerifyInstall creates a new Server that's meant to be used
+// for verifying a given Wash installation.
+func ForVerifyInstall(mountpoint string, socket string) *Server {
+	return &Server{
+		mountpoint:       mountpoint,
+		socket:           socket,
+		forVerifyInstall: true,
+		opts: Opts{
+			LogLevel: "warn",
+		},
+	}
 }
 
 // Start starts the server. It returns once the server is ready.
@@ -78,18 +97,21 @@ func (s *Server) Start() error {
 	}
 
 	registry := plugin.NewRegistry()
-	s.loadPlugins(registry)
-	if len(registry.Plugins()) == 0 {
-		return fmt.Errorf("No plugins loaded")
-	}
 
-	plugin.InitCache()
+	if !s.forVerifyInstall {
+		s.loadPlugins(registry)
+		if len(registry.Plugins()) == 0 {
+			return fmt.Errorf("No plugins loaded")
+		}
 
-	analyticsConfig, err := analytics.GetConfig()
-	if err != nil {
-		return err
+		plugin.InitCache()
+
+		analyticsConfig, err := analytics.GetConfig()
+		if err != nil {
+			return err
+		}
+		s.analyticsClient = analytics.NewClient(analyticsConfig)
 	}
-	s.analyticsClient = analytics.NewClient(analyticsConfig)
 
 	apiServerStopCh, apiServerStoppedCh, err := api.StartAPI(
 		registry,
@@ -113,19 +135,21 @@ func (s *Server) Start() error {
 	}
 	s.fuse = controlChannels{stopCh: fuseServerStopCh, stoppedCh: fuseServerStoppedCh}
 
-	if s.opts.CPUProfilePath != "" {
-		f, err := os.Create(s.opts.CPUProfilePath)
-		if err != nil {
-			log.Fatal(err)
+	if !s.forVerifyInstall {
+		if s.opts.CPUProfilePath != "" {
+			f, err := os.Create(s.opts.CPUProfilePath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			errz.Fatal(pprof.StartCPUProfile(f))
 		}
-		errz.Fatal(pprof.StartCPUProfile(f))
-	}
 
-	// Submit the initial start-up ping to GA. It's OK to do this synchronously
-	// because this is the first hit so the analytics client will not send it
-	// over the network.
-	if err := s.analyticsClient.Screenview("wash", analytics.Params{}); err != nil {
-		log.Infof("Failed to submit the initial start-up ping: %v", err)
+		// Submit the initial start-up ping to GA. It's OK to do this synchronously
+		// because this is the first hit so the analytics client will not send it
+		// over the network.
+		if err := s.analyticsClient.Screenview("wash", analytics.Params{}); err != nil {
+			log.Infof("Failed to submit the initial start-up ping: %v", err)
+		}
 	}
 
 	return nil
@@ -148,6 +172,10 @@ func (s *Server) stopFUSEServer() {
 }
 
 func (s *Server) shutdown() {
+	if s.forVerifyInstall {
+		return
+	}
+
 	if s.opts.CPUProfilePath != "" {
 		pprof.StopCPUProfile()
 	}

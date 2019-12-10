@@ -142,8 +142,10 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 		// Omit server from embedded cases because a daemon is already running.
 		addServerArgs(rootCmd, "warn")
 		addCommand(rootCmd, serverCommand())
-		// rootCommandFlag is used in rootMain.go.
+		// The root*Flag variables are declared in rootMain.go
 		rootCmd.Flags().StringVarP(&rootCommandFlag, "command", "c", "", "Run the supplied string and exit")
+		rootCmd.Flags().BoolVar(&rootVersionFlag, "version", false, "Print the Wash version")
+		rootCmd.Flags().BoolVar(&rootVerifyInstallFlag, "verify-install", false, "Verifies a given Wash installation")
 
 		// Omit validate because it's meant to be run independently to test a plugin and should not be
 		// part of normal shell interaction.
@@ -151,7 +153,6 @@ then starts your system shell with shortcuts configured for wash subcommands.`,
 	}
 	rootCmd = ensureGARegistration(rootCmd)
 
-	addCommand(rootCmd, versionCommand())
 	addCommand(rootCmd, metaCommand())
 	addCommand(rootCmd, lsCommand())
 	addCommand(rootCmd, execCommand())
