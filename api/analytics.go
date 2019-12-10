@@ -25,7 +25,7 @@ import (
 //     Responses:
 //       200:
 //       404: errorResp
-var screenviewHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var screenviewHandler = handler{logOnly: true, fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	var body apitypes.ScreenviewBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return badRequestResponse(fmt.Sprintf("Error unmarshalling the request body: %v", err))
@@ -37,4 +37,4 @@ var screenviewHandler handler = func(w http.ResponseWriter, r *http.Request) *er
 		return badRequestResponse(err.Error())
 	}
 	return nil
-}
+}}

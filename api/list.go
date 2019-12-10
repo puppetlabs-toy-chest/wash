@@ -34,7 +34,7 @@ type entryList struct {
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var listHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
@@ -71,4 +71,4 @@ var listHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 		return unknownErrorResponse(fmt.Errorf("Could not marshal list results for %v: %v", path, err))
 	}
 	return nil
-}
+}}

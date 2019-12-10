@@ -60,7 +60,7 @@ type execResponse struct {
 //       400: errorResp
 //       404: errorResp
 //       500: errorResp
-var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var execHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	ctx := r.Context()
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
@@ -123,4 +123,4 @@ var execHandler handler = func(w http.ResponseWriter, r *http.Request) *errorRes
 	sendPacket(ctx, enc, &packet)
 
 	return nil
-}
+}}

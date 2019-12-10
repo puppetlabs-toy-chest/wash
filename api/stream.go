@@ -25,7 +25,7 @@ import (
 //       200: octetResponse
 //       404: errorResp
 //       500: errorResp
-var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorResponse {
+var streamHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *errorResponse {
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
@@ -53,7 +53,10 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 	f.Flush()
 
 	// Ensure it's closed when the context is cancelled.
-	streamCleanup(ctx, "Stream "+path, rdr.Close)
+	go func() {
+		<-ctx.Done()
+		activity.Record(ctx, "API: Stream %v closed by completed context: %v", path, rdr.Close())
+	}()
 
 	// Ensure every write is a flush with streamableResponseWriter.
 	if _, err := io.Copy(&streamableResponseWriter{f}, rdr); err != nil {
@@ -61,4 +64,4 @@ var streamHandler handler = func(w http.ResponseWriter, r *http.Request) *errorR
 		activity.Record(ctx, "API: Streaming %v errored: %v", path, err)
 	}
 	return nil
-}
+}}
