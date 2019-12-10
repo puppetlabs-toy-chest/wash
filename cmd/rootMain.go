@@ -106,7 +106,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 			return exitCode{1}
 		}
 		srv.Stop()
-		cmdutil.Printf("Verify install succeeded")
+		cmdutil.Printf("Verify install succeeded\n")
 		return exitCode{0}
 	}
 
