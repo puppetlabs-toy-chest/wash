@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// These *Flag variables are defined in root.go
+// These root*Flag variables are defined in root.go
 var rootCommandFlag string
 var rootVersionFlag bool
 var rootVerifyInstallFlag bool
@@ -72,10 +72,11 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	if rootVerifyInstallFlag {
 		srv := server.ForVerifyInstall(mountpath, socketpath)
 		if err := srv.Start(); err != nil {
-			cmdutil.ErrPrintf("Install verification failed: %v\n", err)
+			cmdutil.ErrPrintf("Verify install failed: %v\n", err)
 			return exitCode{1}
 		}
 		srv.Stop()
+		cmdutil.Printf("Verify install succeeded")
 		return exitCode{0}
 	}
 
