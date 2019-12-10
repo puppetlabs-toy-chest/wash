@@ -43,6 +43,36 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 	// Configure logrus to emit simple text
 	log.SetFormatter(&log.TextFormatter{DisableTimestamp: true})
 
+	var execfile string
+	if len(args) > 0 {
+		execfile = args[0]
+	}
+
+	// Interactivity is true if a script (execfile) isn't specified, a command isn't specified, and
+	// we're not running verify-install. We skip verify-install so we don't try to fork right before
+	// running verification; verify-install should have no interactive behavior.
+	plugin.InitInteractive(execfile == "" && rootCommandFlag == "" && !rootVerifyInstallFlag)
+
+	// If interactive and this process is in its own process group, then fork and run the original
+	// command as a new process that's not the leader of its process group. This is specifically to
+	// work with shells (zsh) that try to use their parent's process group, which would no longer be
+	// in the same session. By forking, we keep the original process group in its original session so
+	// the child shell can still modify it.
+	if plugin.IsInteractive() && os.Getpid() == unix.Getpgrp() {
+		comm := exec.Command(os.Args[0], os.Args[1:]...)
+		comm.Stdin = os.Stdin
+		comm.Stdout = os.Stdout
+		comm.Stderr = os.Stderr
+		if err := comm.Run(); err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				return exitCode{exitErr.ExitCode()}
+			}
+			cmdutil.ErrPrintf("%v\n", err)
+			return exitCode{1}
+		}
+		return exitCode{0}
+	}
+
 	cachedir, ok := makeCacheDir()
 	if !ok {
 		return exitCode{1}
@@ -77,34 +107,6 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		}
 		srv.Stop()
 		cmdutil.Printf("Verify install succeeded")
-		return exitCode{0}
-	}
-
-	var execfile string
-	if len(args) > 0 {
-		execfile = args[0]
-	}
-
-	// Set plugin interactivity to false if execfile or rootCommandFlag were specified.
-	plugin.InitInteractive(execfile == "" && rootCommandFlag == "")
-
-	// If interactive and this process is in its own process group, then fork and run the original
-	// command as a new process that's not the leader of its process group. This is specifically to
-	// work with shells (zsh) that try to use their parent's process group, which would no longer be
-	// in the same session. By forking, we keep the original process group in its original session so
-	// the child shell can still modify it.
-	if plugin.IsInteractive() && os.Getpid() == unix.Getpgrp() {
-		comm := exec.Command(os.Args[0], os.Args[1:]...)
-		comm.Stdin = os.Stdin
-		comm.Stdout = os.Stdout
-		comm.Stderr = os.Stderr
-		if err := comm.Run(); err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				return exitCode{exitErr.ExitCode()}
-			}
-			cmdutil.ErrPrintf("%v\n", err)
-			return exitCode{1}
-		}
 		return exitCode{0}
 	}
 
