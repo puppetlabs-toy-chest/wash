@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"time"
 
 	"bazil.org/fuse"
@@ -244,8 +245,17 @@ func ServeFuseFS(
 
 			log.Infof("FUSE: Unmounting %v", mountpoint)
 			if err = fuse.Unmount(mountpoint); err != nil {
-				log.Warnf("FUSE: Shutdown failed: %v", err.Error())
+				log.Warnf("FUSE: Shutdown failed: %v", err)
 				log.Warnf("FUSE: Manual cleanup required: umount %v", mountpoint)
+
+				// Retry in a loop until no longer blocked buy an open handle.
+				// All errors are `*os.PathError`, so we just match a known error string.
+				// Note that casing of the error message differs on macOS and Linux.
+				for ; err != nil && strings.HasSuffix(strings.ToLower(err.Error()), "resource busy"); err = fuse.Unmount(mountpoint) {
+					log.Debugf("FUSE: Unmount failed: %v", err)
+					time.Sleep(3 * time.Second)
+				}
+				log.Debugf("FUSE: Unmount: %v", err)
 			}
 			log.Infof("FUSE: Unmount complete")
 		case <-serverExitedCh:
