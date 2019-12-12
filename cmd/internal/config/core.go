@@ -64,18 +64,24 @@ func DefaultFile() string {
 	return defaultFileRel
 }
 
+// DefaultFileAbsPath returns the default config file's absolute
+// path
+func DefaultFileAbsPath() string {
+	if defaultFileAbs == "" {
+		panic("config.DefaultFileAbsPath: default file not set. Please call config.Init()")
+	}
+	return defaultFileAbs
+}
+
 // ReadFrom reads the config from the specified file.
 // If file == DefaultFile(), then ReadFrom wil not return
 // an error if file does not exist.
 func ReadFrom(file string) error {
 	if file == DefaultFile() {
-		if defaultFileAbs == "" {
-			panic("config.ReadFrom: default file not set. Please call config.Init()")
-		}
-		if _, err := os.Stat(defaultFileAbs); os.IsNotExist(err) {
+		file = DefaultFileAbsPath()
+		if _, err := os.Stat(file); os.IsNotExist(err) {
 			return nil
 		}
-		file = defaultFileAbs
 	}
 	content, err := ioutil.ReadFile(file)
 	if err != nil {

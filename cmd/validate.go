@@ -47,6 +47,8 @@ method.`,
 }
 
 func validateMain(cmd *cobra.Command, args []string) exitCode {
+	plugin.InitInteractive(false)
+
 	// Validate that 'plugin' is a valid plugin and load it
 	plugins, serverOpts, err := serverOptsFor(cmd)
 	if err != nil {
