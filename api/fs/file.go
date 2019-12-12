@@ -32,4 +32,9 @@ func (f *file) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(f, "file")
 }
 
+func (f *file) Write(ctx context.Context, p []byte) error {
+	return ioutil.WriteFile(f.path, p, 0640)
+}
+
 var _ = plugin.Readable(&file{})
+var _ = plugin.Writable(&file{})

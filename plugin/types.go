@@ -183,24 +183,27 @@ type Streamable interface {
 	Stream(context.Context) (io.ReadCloser, error)
 }
 
-// BlockReadable is an entry with content that can be read in blocks
+// BlockReadable is an entry with data that can be read in blocks.
 type BlockReadable interface {
 	Entry
 	Read(ctx context.Context, size int64, offset int64) ([]byte, error)
 }
 
-// Readable is an entry with content that can be read
+// Readable is an entry with data that can be read.
 type Readable interface {
 	Entry
 	Read(context.Context) ([]byte, error)
 }
 
-// Writable is an entry that can write data directly to the entry. It mirrors
-// the WriterAt interface with an added context for handling the lifecycle of
-// remote write operations.
+// Writable is an entry that we can write new data to. What that means can be
+// implementation-specific; it could be overwriting a file, submitting a
+// configuration change to an API, or writing data to a queue. It doesn't
+// support a concept of a partial write.
+//
+// It's up to the implementer to decide how much data integrity to guarantee.
 type Writable interface {
 	Entry
-	Write(context.Context, int64, []byte) (int, error)
+	Write(context.Context, []byte) error
 }
 
 // Deletable is an entry that can be deleted. Entries that implement Delete
