@@ -13,6 +13,14 @@
     {% endif %}
     <meta charset="UTF-8">
 
+    <!-- Add asciinema-player -->
+    <link rel="stylesheet" href="{{ '/assets/css/asciinema-player.css' | relative_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/asciinema-player-custom.css' | relative_url }}">
+    <script src="{{ '/assets/js/asciinema-player.js' | relative_url }}"></script>
+
+    <!-- Add jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
 {% seo %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#157878">
@@ -37,24 +45,7 @@
 
           <li>
             <span class="nav-header">
-              <a href="{{ '/posts' | relative_url }}" class="center-vertical">News</a>
-            </span>
-            <ul>
-              {% for post in site.posts limit: 3 %}
-                <li><a href="{{ post.url | remove: "/index.html" | relative_url }}">{{ post.title }}</a> <small>{{ post.date | date: "%Y-%m-%d" }}</small></li>
-              {% endfor %}
-            </ul>
-          </li>
-
-          <li>
-            <span class="nav-header">
-              <a href="{{ '/contributing' | relative_url }}" class="center-vertical">Contributing</a>
-            </span>
-          </li>
-
-          <li>
-            <span class="nav-header">
-              <a href="{{ '/installing_wash' | relative_url }}" class="center-vertical">Installing Wash</a>
+              <a href="{{ '/getting_started' | relative_url }}" class="center-vertical">Getting Started</a>
             </span>
           </li>
 
@@ -68,6 +59,23 @@
             <span class="nav-header">
               <a href="{{ '/release_announcements' | relative_url }}" class="center-vertical">Release Announcements</a>
             </span>
+          </li>
+
+          <li>
+            <span class="nav-header">
+              <a href="{{ '/contributing' | relative_url }}" class="center-vertical">Contributing</a>
+            </span>
+          </li>
+
+          <li>
+            <span class="nav-header">
+              <a href="{{ '/posts' | relative_url }}" class="center-vertical">News</a>
+            </span>
+            <ul>
+              {% for post in site.posts limit: 3 %}
+                <li><a href="{{ post.url | remove: "/index.html" | relative_url }}">{{ post.title }}</a> <small>{{ post.date | date: "%Y-%m-%d" }}</small></li>
+              {% endfor %}
+            </ul>
           </li>
 
           <li>

@@ -1,0 +1,10 @@
+<asciinema-player src="{{ '/assets/screencasts/' | append: include.name | append: '.cast' | relative_url }}" font-size="medium" loop="true" poster="npt:{{ include.poster }}"></asciinema-player>
+{{% if include.annotation != '' %}}
+<blockquote>
+<p>
+<strong>
+{{ include.annotation }}
+</strong>
+</p>
+</blockquote>
+{{% endif %}}

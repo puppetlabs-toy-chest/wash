@@ -34,3 +34,15 @@ Then run it and [redoc-cli](https://github.com/Rebilly/ReDoc/blob/master/cli/REA
 swagger generate spec > docs/docs/api.json
 npx redoc-cli bundle docs/docs/api.json -o docs/docs/api.html --options.nativeScrollbars
 ```
+
+## Extending the screencasts
+
+You'll need to install [asciinema](https://asciinema.org/docs/installation) and [doitlive](https://github.com/sloria/doitlive).
+
+All screencast scripts are located in `_screencasts/<category>/<script>`. To record a screencast, start-up a Wash shell then in that shell run
+
+```
+/path/to/_screencasts/record.sh <script>
+```
+
+`_screencasts/record.sh` will save the recorded screencast to `assets/<category>/<script_name>.cast`.

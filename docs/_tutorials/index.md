@@ -1,7 +1,7 @@
 ---
 title: Tutorials
 ---
-**Note:** Make sure you've [installed Wash]({{ '/installing_wash' | relative_url }}) before going any further.
+**Note:** Make sure you've [installed Wash]({{ '/getting_started' | relative_url }}) before going any further.
 
 This series of hands-on tutorials introduces you to Wash. Each tutorial assumes that you have the [test environment set-up](00_test_environment), and that you have an understanding of Wash’s key abstractions. If you're unfamiliar with Wash, start with the [Fundamentals](01_fundamentals/plugins-actions-entries). You can complete the tutorials in any order. If you're not sure where to start, here are a few good options: 
 

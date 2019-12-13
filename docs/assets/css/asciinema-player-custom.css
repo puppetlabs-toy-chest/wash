@@ -1,0 +1,7 @@
+.asciinema-player-wrapper {
+  /*
+  Set the text-align to left so that the player still
+  looks good for smaller widths
+  */
+  text-align: left;
+}
