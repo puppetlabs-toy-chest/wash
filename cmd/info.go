@@ -100,7 +100,7 @@ func (mp orderedMap) MarshalJSON() ([]byte, error) {
 }
 
 // We implement MarshalYAML to preserve each key's ordering.
-func (mp orderedMap) MarshalYAML() (interface{}, error) {
+func (mp orderedMap) MarshalYAML() ([]byte, error) {
 	var yamlMap goyaml.MapSlice
 	mp.Each(func(key interface{}, value interface{}) {
 		yamlMap = append(yamlMap, goyaml.MapItem{
@@ -108,5 +108,5 @@ func (mp orderedMap) MarshalYAML() (interface{}, error) {
 			Value: value,
 		})
 	})
-	return yamlMap, nil
+	return goyaml.Marshal(yamlMap)
 }
