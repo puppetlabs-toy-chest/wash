@@ -15,7 +15,6 @@ func infoCommand() *cobra.Command {
 		Use:     use + " <path> [<path>]...",
 		Aliases: aliases,
 		Short:   "Prints the entries' info at the specified paths",
-		Args:    cobra.MinimumNArgs(1),
 		RunE:    toRunE(infoMain),
 	}
 	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
@@ -24,6 +23,9 @@ func infoCommand() *cobra.Command {
 
 func infoMain(cmd *cobra.Command, args []string) exitCode {
 	paths := args
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
 	output, err := cmd.Flags().GetString("output")
 	if err != nil {
 		panic(err.Error())
@@ -58,7 +60,6 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 			}
 
 			entryMap := orderedMap{linkedhashmap.New()}
-			entryMap.Put("Path", entry.Path)
 			entryMap.Put("Name", entry.Name)
 			entryMap.Put("CName", entry.CName)
 			entryMap.Put("Actions", entry.Actions)
