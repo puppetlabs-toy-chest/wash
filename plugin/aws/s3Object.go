@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"strconv"
@@ -78,7 +79,7 @@ func (o *s3Object) Read(ctx context.Context, size int64, offset int64) ([]byte, 
 		Range:  awsSDK.String("bytes=" + strconv.FormatInt(offset, 10) + "-" + strconv.FormatInt(offset+size, 10)),
 	}
 
-	resp, err := o.client.GetObject(request)
+	resp, err := o.client.GetObjectWithContext(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,24 @@ func (o *s3Object) Read(ctx context.Context, size int64, offset int64) ([]byte, 
 		}
 	}()
 
+	activity.Record(ctx, "S3 object read response: %+v", *resp)
 	return ioutil.ReadAll(resp.Body)
+}
+
+func (o *s3Object) Write(ctx context.Context, p []byte) error {
+	request := &s3Client.PutObjectInput{
+		Bucket: awsSDK.String(o.bucket),
+		Key:    awsSDK.String(o.key),
+		Body:   bytes.NewReader(p),
+	}
+
+	resp, err := o.client.PutObjectWithContext(ctx, request)
+	if err != nil {
+		return err
+	}
+
+	activity.Record(ctx, "S3 object write response: %+v", *resp)
+	return nil
 }
 
 func (o *s3Object) Delete(ctx context.Context) (bool, error) {
