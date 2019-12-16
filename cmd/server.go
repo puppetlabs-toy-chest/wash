@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -13,23 +14,13 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/puppetlabs/wash/plugin/aws"
-	"github.com/puppetlabs/wash/plugin/docker"
-	"github.com/puppetlabs/wash/plugin/gcp"
-	"github.com/puppetlabs/wash/plugin/kubernetes"
+	"gopkg.in/yaml.v2"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var internalPlugins = map[string]plugin.Root{
-	"aws":        &aws.Root{},
-	"docker":     &docker.Root{},
-	"gcp":        &gcp.Root{},
-	"kubernetes": &kubernetes.Root{},
-}
 
 func serverCommand() *cobra.Command {
 	serverCmd := &cobra.Command{
@@ -103,31 +94,54 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		return nil, server.Opts{}, err
 	}
 
-	// Unmarshal the external plugins, if any are specified
-	var externalPlugins []plugin.ExternalPluginSpec
-	if err := viper.UnmarshalKey("external-plugins", &externalPlugins); err != nil {
-		return nil, server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
-	}
-
-	// Load internal plugins that are not specifically excluded.
-	enabledPlugins := viper.GetStringSlice("plugins")
 	plugins := make(map[string]plugin.Root)
-	if len(enabledPlugins) > 0 {
-		for _, name := range enabledPlugins {
-			if plug, ok := internalPlugins[name]; ok {
+
+	// Check the internal plugins
+	if viper.IsSet("plugins") || viper.IsSet("external-plugins") {
+		for _, name := range viper.GetStringSlice("plugins") {
+			if plug, ok := server.InternalPlugins[name]; ok {
 				plugins[name] = plug
 			} else {
 				log.Warnf("Requested unknown plugin %s", name)
 			}
 		}
-	} else {
-		// Copy internalPlugins so we don't mutate it.
-		for name, plug := range internalPlugins {
+	} else if !plugin.IsInteractive() {
+		// This is an edge-case for a user but a common case for
+		// CI. Thus, load all the plugins so that we don't break
+		// the latter. Note that we copy server.InternalPlugins
+		// so that we don't mutate it.
+		log.Warnf("Running non-interactively without having set the 'plugins'/'external-plugins' keys in %v. Loading all core plugins by default", configFile)
+		for name, plug := range server.InternalPlugins {
 			plugins[name] = plug
+		}
+	} else {
+		// Assume first-time user. First, we prompt them to get a list
+		// of plugins that they wish to enable. Next, we write the
+		// enabled plugins back to their specified config file.
+		plugins, err = promptEnabledPlugins()
+		if err != nil {
+			return nil, server.Opts{}, err
+		}
+		enabledPlugins := []string{}
+		for plugin := range plugins {
+			enabledPlugins = append(enabledPlugins, plugin)
+		}
+		viper.Set("plugins", enabledPlugins)
+		cmdutil.Printf("The %v core plugins have been enabled.\n", strings.Join(enabledPlugins, ", "))
+		if err := writeEnabledPlugins(enabledPlugins, configFile); err != nil {
+			log.Warnf("Failed to write-back the list of enabled plugins to %v: %v\n\n", configFile, err)
+		} else {
+			// The write was successful
+			cmdutil.Printf("You can disable them by modifying the 'plugins' key in your config\nfile (%v), and then restarting the shell\n\n", configFile)
 		}
 	}
 
-	// Ensure external plugins are valid scripts and convert them to plugin.Root types.
+	// Check the external plugins. First unmarshal their spec, ensure that
+	// they're valid scripts, then convert them to plugin.Root types.
+	var externalPlugins []plugin.ExternalPluginSpec
+	if err := viper.UnmarshalKey("external-plugins", &externalPlugins); err != nil {
+		return nil, server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
+	}
 	for _, spec := range externalPlugins {
 		intPlugin, err := spec.Load()
 		if err != nil {
@@ -142,9 +156,9 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		plugins[name] = intPlugin
 	}
 
-	config := make(map[string]map[string]interface{})
+	pluginConfig := make(map[string]map[string]interface{})
 	for name := range plugins {
-		config[name] = viper.GetStringMap(name)
+		pluginConfig[name] = viper.GetStringMap(name)
 	}
 
 	// Return the options
@@ -152,6 +166,57 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		CPUProfilePath: viper.GetString("cpuprofile"),
 		LogFile:        viper.GetString("logfile"),
 		LogLevel:       viper.GetString("loglevel"),
-		PluginConfig:   config,
+		PluginConfig:   pluginConfig,
 	}, nil
+}
+
+func promptEnabledPlugins() (map[string]plugin.Root, error) {
+	// Prompt them for the list of enabled plugins. This should look something
+	// like
+	//     Do you use docker? y
+	//     aws? y
+	//     kubernetes? y
+	//     ...
+	//
+	plugins := make(map[string]plugin.Root)
+	firstPlugin := true
+	for name, plug := range server.InternalPlugins {
+		var prompt string
+		if firstPlugin {
+			firstPlugin = false
+			prompt = fmt.Sprintf("Do you use %v (y/n)?", name)
+		} else {
+			prompt = fmt.Sprintf("%v?", name)
+		}
+		input, err := cmdutil.Prompt(prompt, cmdutil.YesOrNoP)
+		if err != nil {
+			return nil, err
+		}
+		if enabled := input.(bool); enabled {
+			plugins[name] = plug
+		}
+	}
+	return plugins, nil
+}
+
+// precondition: configFile does not have a "plugins" key
+func writeEnabledPlugins(enabledPlugins []string, configFile string) error {
+	if configFile == config.DefaultFile() {
+		configFile = config.DefaultFileAbsPath()
+	}
+	marshalledEnabledPlugins, err := yaml.Marshal(map[string][]string{"plugins": enabledPlugins})
+	if err != nil {
+		return err
+	}
+	// Note that we do a raw append of "plugins: <enabled_plugins>" to preserve any
+	// existing data, including comments. The append should be OK because we know that
+	// the config file doesn't have a "plugins" key, so adding it will not mess anything
+	// up.
+	f, err := os.OpenFile(configFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(marshalledEnabledPlugins)
+	return err
 }

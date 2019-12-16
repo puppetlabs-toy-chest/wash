@@ -43,13 +43,12 @@ func deleteMain(cmd *cobra.Command, args []string) exitCode {
 			deletionConfirmed = true
 		} else {
 			msg := fmt.Sprintf("remove %v?", path)
-			input, err := plugin.Prompt(msg)
+			input, err := cmdutil.Prompt(msg, cmdutil.YesOrNoP)
 			if err != nil {
 				cmdutil.ErrPrintf("failed to get confirmation: %v", err)
 				return exitCode{1}
 			}
-			// Assume confirmation if input starts with "y" or "Y". This matches rm.
-			deletionConfirmed = len(input) > 0 && (input[0] == 'y' || input[0] == 'Y')
+			deletionConfirmed = input.(bool)
 		}
 		if deletionConfirmed {
 			pathsToDelete = append(pathsToDelete, path)

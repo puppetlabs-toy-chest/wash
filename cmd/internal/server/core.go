@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,9 +15,20 @@ import (
 	"github.com/puppetlabs/wash/api"
 	"github.com/puppetlabs/wash/fuse"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/aws"
+	"github.com/puppetlabs/wash/plugin/docker"
+	"github.com/puppetlabs/wash/plugin/gcp"
+	"github.com/puppetlabs/wash/plugin/kubernetes"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var InternalPlugins = map[string]plugin.Root{
+	"aws":        &aws.Root{},
+	"docker":     &docker.Root{},
+	"gcp":        &gcp.Root{},
+	"kubernetes": &kubernetes.Root{},
+}
 
 // Opts exposes additional configuration for server operation.
 type Opts struct {
@@ -233,8 +245,8 @@ func (s *Server) Stop() {
 func (s *Server) loadPlugins(registry *plugin.Registry) {
 	log.Debug("Loading plugins")
 	var wg sync.WaitGroup
-	var fail sync.Once
-	anyFailed := false
+	var mux sync.Mutex
+	var failedPlugins []string
 
 	for name, root := range s.plugins {
 		log.Infof("Loading %v", name)
@@ -243,15 +255,23 @@ func (s *Server) loadPlugins(registry *plugin.Registry) {
 			if err := registry.RegisterPlugin(root, s.opts.PluginConfig[name]); err != nil {
 				// %+v is a convention used by some errors to print additional context such as a stack trace
 				log.Warnf("%v failed to load: %+v", name, err)
-				fail.Do(func() { anyFailed = true })
+				if _, ok := InternalPlugins[name]; ok {
+					mux.Lock()
+					failedPlugins = append(failedPlugins, name)
+					mux.Unlock()
+				}
 			}
 			wg.Done()
 		}(name, root)
 	}
 
 	wg.Wait()
-	if anyFailed {
-		log.Warnf("Plugins you haven't configured can be disabled by adding a 'plugins' entry to wash.yaml.\nSee https://puppetlabs.github.io/wash/docs/#wash-yaml for details.\nWash will still expose a 'stub' plugin root so that you can view its documentation via 'docs <plugin>' (for core plugins only). However, you'll need to restart the Wash daemon in order to properly reload a failed plugin.\n")
+	if len(failedPlugins) > 0 {
+		log.Warnf(
+			"You can use 'docs <plugin>' (e.g. 'docs %v') to view set-up instructions for %v. However, you'll need to exit then restart the shell in order to properly reload them.\n",
+			failedPlugins[0],
+			strings.Join(failedPlugins, ", "),
+		)
 	}
 	log.Debug("Finished loading plugins")
 }

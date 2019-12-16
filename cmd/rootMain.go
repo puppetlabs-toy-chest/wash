@@ -126,7 +126,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 
 	if plugin.IsInteractive() {
 		cmdutil.Println(`Welcome to Wash!
-  Wash includes several built-in commands: wexec, find, list, meta, tail.
+  Wash includes several built-in commands: ls, wexec, find, meta, tail.
   See commands run with wash via 'whistory', and logs with 'whistory <id>'.
 Try 'help'`)
 	}
