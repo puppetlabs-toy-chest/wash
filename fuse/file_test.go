@@ -59,6 +59,26 @@ func (suite *fileTestSuite) TestOpen() {
 	}
 }
 
+func (suite *fileTestSuite) TestOpen_SizeFromRead() {
+	m := plugintest.NewMockReadWrite()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
+
+	f := newFile(nil, m)
+	var req fuse.OpenRequest
+	var resp fuse.OpenResponse
+	handle, err := f.Open(suite.ctx, &req, &resp)
+	suite.NoError(err)
+	suite.Equal(fuse.OpenDirectIO, resp.Flags)
+	suite.Equal(f, handle)
+
+	var attr fuse.Attr
+	err = f.Attr(suite.ctx, &attr)
+	suite.NoError(err)
+	suite.Equal(uint64(5), attr.Size)
+
+	m.AssertExpectations(suite.T())
+}
+
 func (suite *fileTestSuite) TestOpen_WithSize() {
 	m := plugintest.NewMockRead()
 	m.Attributes().SetSize(1)
@@ -79,6 +99,7 @@ func (suite *fileTestSuite) TestOpen_WithSize() {
 
 func (suite *fileTestSuite) TestOpen_ReadNoSize() {
 	m := plugintest.NewMockRead()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadOnly}
@@ -91,7 +112,9 @@ func (suite *fileTestSuite) TestOpen_ReadNoSize() {
 	var attr fuse.Attr
 	err = f.Attr(suite.ctx, &attr)
 	suite.NoError(err)
-	suite.Equal(uint64(0), attr.Size)
+	suite.Equal(uint64(5), attr.Size)
+
+	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestOpen_WriteNoSize() {
@@ -113,6 +136,7 @@ func (suite *fileTestSuite) TestOpen_WriteNoSize() {
 
 func (suite *fileTestSuite) TestOpenAndRelease() {
 	m := plugintest.NewMockReadWrite()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadWrite}
@@ -126,6 +150,8 @@ func (suite *fileTestSuite) TestOpenAndRelease() {
 		suite.NoError(err)
 		suite.Empty(f.writers)
 	}
+
+	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestOpenAndRelease_WriteOnly() {
@@ -147,6 +173,7 @@ func (suite *fileTestSuite) TestOpenAndRelease_WriteOnly() {
 
 func (suite *fileTestSuite) TestOpenAndFlush() {
 	m := plugintest.NewMockReadWrite()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadWrite}
@@ -160,10 +187,13 @@ func (suite *fileTestSuite) TestOpenAndFlush() {
 		suite.Empty(f.writers)
 		suite.Nil(f.data)
 	}
+
+	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestOpenAndFlushRelease() {
 	m := plugintest.NewMockReadWrite()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadWrite}
@@ -178,6 +208,8 @@ func (suite *fileTestSuite) TestOpenAndFlushRelease() {
 		suite.Empty(f.writers)
 		suite.Nil(f.data)
 	}
+
+	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestAttrWithReaders() {

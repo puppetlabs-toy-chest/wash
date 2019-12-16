@@ -23,7 +23,7 @@ type file struct {
 	writers map[fuse.HandleID]struct{}
 	// Only valid if len(writers) > 0
 	data []byte
-	// Size for content during writing
+	// Size for content during writing or with unspecified size attribute
 	size uint64
 }
 
@@ -57,8 +57,9 @@ func (f *file) fillAttr(a *fuse.Attr) {
 	attr := plugin.Attributes(f.entry)
 	applyAttr(a, attr, getFileMode(f.entry))
 
-	if len(f.writers) != 0 {
-		// Use whatever size we know locally.
+	if len(f.writers) != 0 || !attr.HasSize() {
+		// Use whatever size we know locally. Retrieving content can be expensive so we settle for
+		// including size only when it's been retreived previously by opening the file.
 		a.Size = f.size
 	}
 }
@@ -111,6 +112,13 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 			// The entry's content size is unknown so open the file in direct IO mode. This enables FUSE
 			// to still read the entry's content so that built-in tools like cat and grep still work.
 			resp.Flags |= fuse.OpenDirectIO
+
+			// Also set the size for editors that won't read anything on an apparently empty file. This
+			// doesn't help with cat/grep because they check attributes before opening the file.
+			f.size, err = plugin.Size(ctx, entry)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return f, nil

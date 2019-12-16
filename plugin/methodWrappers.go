@@ -166,6 +166,19 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	return
 }
 
+// Size returns the size of readable content (if we can determine it).
+func Size(ctx context.Context, e Entry) (uint64, error) {
+	if !ReadAction().IsSupportedOn(e) {
+		panic("plugin.Read called on a non-readable entry")
+	}
+
+	data, err := cachedRead(ctx, e)
+	if err != nil {
+		return 0, err
+	}
+	return data.size(), nil
+}
+
 // Metadata returns the entry's metadata. Note that Metadata's results could be cached.
 func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
 	return cachedMetadata(ctx, e)
