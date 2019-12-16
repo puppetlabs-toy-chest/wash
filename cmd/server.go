@@ -98,8 +98,7 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 
 	// Check the internal plugins
 	if viper.IsSet("plugins") || viper.IsSet("external-plugins") {
-		enabledPlugins := viper.GetStringSlice("plugins")
-		for _, name := range enabledPlugins {
+		for _, name := range viper.GetStringSlice("plugins") {
 			if plug, ok := server.InternalPlugins[name]; ok {
 				plugins[name] = plug
 			} else {
@@ -119,61 +118,17 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		// Assume first-time user. First, we prompt them to get a list
 		// of plugins that they wish to enable. Next, we write the
 		// enabled plugins back to their specified config file.
+		plugins, err = promptEnabledPlugins()
+		if err != nil {
+			return nil, server.Opts{}, err
+		}
 		enabledPlugins := []string{}
-
-		// Prompt them for the list of enabled plugins. This should look something
-		// like
-		//     Do you use docker? y
-		//     aws? y
-		//     kubernetes? y
-		//     ...
-		//
-		firstPlugin := true
-		for name, plug := range server.InternalPlugins {
-			var prompt string
-			if firstPlugin {
-				firstPlugin = false
-				prompt = fmt.Sprintf("Do you use %v (y/n)?", name)
-			} else {
-				prompt = fmt.Sprintf("%v?", name)
-			}
-			input, err := cmdutil.Prompt(prompt, cmdutil.YesOrNoP)
-			if err != nil {
-				return nil, server.Opts{}, err
-			}
-			if enabled := input.(bool); enabled {
-				enabledPlugins = append(enabledPlugins, name)
-				plugins[name] = plug
-			}
+		for plugin := range plugins {
+			enabledPlugins = append(enabledPlugins, plugin)
 		}
+		viper.Set("plugins", enabledPlugins)
 		cmdutil.Printf("The %v core plugins have been enabled.\n", strings.Join(enabledPlugins, ", "))
-
-		// Now write the enabled plugins back to the specified config file. Note that we
-		// do a raw append of "plugins: <enabled_plugins>" to preserve any existing data,
-		// including comments. The append should be OK because we know that the config
-		// file doesn't have a "plugins" key, so adding it will not mess anything up.
-		//
-		// Note that making this a function makes the code a bit easier to read. Inlining
-		// it results in some nested if/else statements.
-		writeEnabledPlugins := func() error {
-			configFileAbsPath := configFile
-			if configFileAbsPath == config.DefaultFile() {
-				configFileAbsPath = config.DefaultFileAbsPath()
-			}
-			viper.Set("plugins", enabledPlugins)
-			marshalledEnabledPlugins, err := yaml.Marshal(map[string][]string{"plugins": enabledPlugins})
-			if err != nil {
-				return err
-			}
-			f, err := os.OpenFile(configFileAbsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			_, err = f.Write(marshalledEnabledPlugins)
-			return err
-		}
-		if err := writeEnabledPlugins(); err != nil {
+		if err := writeEnabledPlugins(enabledPlugins, configFile); err != nil {
 			log.Warnf("Failed to write-back the list of enabled plugins to %v: %v\n\n", configFile, err)
 		} else {
 			// The write was successful
@@ -213,4 +168,55 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 		LogLevel:       viper.GetString("loglevel"),
 		PluginConfig:   pluginConfig,
 	}, nil
+}
+
+func promptEnabledPlugins() (map[string]plugin.Root, error) {
+	// Prompt them for the list of enabled plugins. This should look something
+	// like
+	//     Do you use docker? y
+	//     aws? y
+	//     kubernetes? y
+	//     ...
+	//
+	plugins := make(map[string]plugin.Root)
+	firstPlugin := true
+	for name, plug := range server.InternalPlugins {
+		var prompt string
+		if firstPlugin {
+			firstPlugin = false
+			prompt = fmt.Sprintf("Do you use %v (y/n)?", name)
+		} else {
+			prompt = fmt.Sprintf("%v?", name)
+		}
+		input, err := cmdutil.Prompt(prompt, cmdutil.YesOrNoP)
+		if err != nil {
+			return nil, err
+		}
+		if enabled := input.(bool); enabled {
+			plugins[name] = plug
+		}
+	}
+	return plugins, nil
+}
+
+// precondition: configFile does not have a "plugins" key
+func writeEnabledPlugins(enabledPlugins []string, configFile string) error {
+	if configFile == config.DefaultFile() {
+		configFile = config.DefaultFileAbsPath()
+	}
+	marshalledEnabledPlugins, err := yaml.Marshal(map[string][]string{"plugins": enabledPlugins})
+	if err != nil {
+		return err
+	}
+	// Note that we do a raw append of "plugins: <enabled_plugins>" to preserve any
+	// existing data, including comments. The append should be OK because we know that
+	// the config file doesn't have a "plugins" key, so adding it will not mess anything
+	// up.
+	f, err := os.OpenFile(configFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write(marshalledEnabledPlugins)
+	return err
 }
