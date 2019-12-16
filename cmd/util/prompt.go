@@ -16,13 +16,14 @@ var YesOrNoP InputParser = func(input string) (confirmed interface{}, err error)
 }
 
 // Prompt prints the supplied message, waits for input on stdin,
-// then passes the input over to the supplied parser.
+// then passes the input over to the supplied parser. The actual
+// prompt displayed to the user is "{msg} ".
 func Prompt(msg string, parser InputParser) (interface{}, error) {
 	stderrMux.Lock()
 	defer stderrMux.Unlock()
 
 	var input string
-	fmt.Fprintf(Stderr, "%s: ", msg)
+	fmt.Fprintf(Stderr, "%s ", msg)
 	_, err := fmt.Scanln(&input)
 	if err != nil {
 		return nil, err
