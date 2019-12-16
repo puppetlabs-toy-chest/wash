@@ -50,6 +50,11 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	plugin.InitInteractive(false)
 
 	// Validate that 'plugin' is a valid plugin and load it
+	//
+	// Note that we use serverOptsFor as an easy way to setup
+	// logging and get the list of configured plugins; we don't
+	// actually need all of the server options like cpu profile
+	// path.
 	plugins, serverOpts, err := serverOptsFor(cmd)
 	if err != nil {
 		cmdutil.ErrPrintf("%v\n", err)
