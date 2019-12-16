@@ -15,7 +15,6 @@ func infoCommand() *cobra.Command {
 		Use:     use + " <path> [<path>]...",
 		Aliases: aliases,
 		Short:   "Prints the entries' info at the specified paths",
-		Args:    cobra.MinimumNArgs(1),
 		RunE:    toRunE(infoMain),
 	}
 	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
@@ -24,6 +23,9 @@ func infoCommand() *cobra.Command {
 
 func infoMain(cmd *cobra.Command, args []string) exitCode {
 	paths := args
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
 	output, err := cmd.Flags().GetString("output")
 	if err != nil {
 		panic(err.Error())
@@ -39,7 +41,7 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 
 	// Use a sorted map so that we can control how the information's
 	// displayed.
-	infoMap := make(map[string]orderedMap)
+	infoMap := infoResultMap{}
 
 	// Fetch the data
 	ec := 0
@@ -58,7 +60,6 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 			}
 
 			entryMap := orderedMap{linkedhashmap.New()}
-			entryMap.Put("Path", entry.Path)
 			entryMap.Put("Name", entry.Name)
 			entryMap.Put("CName", entry.CName)
 			entryMap.Put("Actions", entry.Actions)
@@ -88,6 +89,22 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 	return exitCode{ec}
 }
 
+// This wrapped type's here to implement MarshalYAML because the (default)
+// JSON unmarshalling causes the orderedMap values to be marshalled as a
+// map[string]interface. This loses their insertion order.
+type infoResultMap map[string]orderedMap
+
+func (mp infoResultMap) MarshalYAML() ([]byte, error) {
+	var yamlMap goyaml.MapSlice
+	for path, infoResult := range mp {
+		yamlMap = append(yamlMap, goyaml.MapItem{
+			Key:   path,
+			Value: infoResult.toMapSlice(),
+		})
+	}
+	return goyaml.Marshal(yamlMap)
+}
+
 // This wrapped type's here because linkedhashmap doesn't implement the
 // json.Marshaler and yaml.Marshaler interfaces.
 type orderedMap struct {
@@ -99,7 +116,11 @@ func (mp orderedMap) MarshalJSON() ([]byte, error) {
 }
 
 // We implement MarshalYAML to preserve each key's ordering.
-func (mp orderedMap) MarshalYAML() (interface{}, error) {
+func (mp orderedMap) MarshalYAML() ([]byte, error) {
+	return goyaml.Marshal(mp.toMapSlice())
+}
+
+func (mp orderedMap) toMapSlice() goyaml.MapSlice {
 	var yamlMap goyaml.MapSlice
 	mp.Each(func(key interface{}, value interface{}) {
 		yamlMap = append(yamlMap, goyaml.MapItem{
@@ -107,5 +128,5 @@ func (mp orderedMap) MarshalYAML() (interface{}, error) {
 			Value: value,
 		})
 	})
-	return yamlMap, nil
+	return yamlMap
 }

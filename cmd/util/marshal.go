@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	goyaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -23,9 +22,63 @@ const (
 // Marshaller is a type that marshals a given value
 type Marshaller func(interface{}) ([]byte, error)
 
+// YamlMarshaler is a type that can be marshalled into
+// YAML
+type YamlMarshaler interface {
+	MarshalYAML() ([]byte, error)
+}
+
+// TextMarshaler is a type that can be marshaled into
+// Text output.
+//
+// For structured data, text output prefixes each line with the
+// entire key path (using .KEY for map indexing and .N for array
+// indexing) to make it more greppable. For example, given something
+// like
+//
+//     AppArmorProfile:
+//       Args:
+//         - redis-server
+//       Config:
+//         AttachStdout: false
+//         Cmd:
+//           - redis-server
+//
+// Its Text output would be:
+//
+//     AppArmorProfile:
+//     Args.0: redis-server
+//     Config.AttachStdout: false
+//     Config.Cmd.0: redis-server
+//
+type TextMarshaler interface {
+	MarshalTEXT() ([]byte, error)
+}
+
 // NewMarshaller returns a marshaller that marshals values
-// into the specified format. Currently, only JSON or YAML
+// into the specified format. Currently only JSON or YAML
 // are supported.
+//
+// All non-JSON marshallers have a default implementation
+// of
+//
+//   "Marshal to JSON" =>
+//   "Unmarshal the JSON" =>
+//   "Marshal to <format>"
+//
+// (the first two steps are effectively "Marshal to a
+// a JSON [map/array/value] Go type" so that people don't have
+// to implement multiple Marshaler interfaces).
+//
+// For types that have their own MarshalJSON implementation,
+// this could be a problem because the "Unmarshal the JSON"
+// step unmarshals the data into a different type (so that
+// the custom MarshalJSON implementation is not called).
+// Thus, these types may need to implement the format-specific
+// Marshaler interfaces:
+//   * For YAML, this is cmdutil.YamlMarshaler
+//   * For TEXT, this is cmdutil.TextMarshaler
+//
 func NewMarshaller(format string) (Marshaller, error) {
 	switch format {
 	case JSON:
@@ -35,8 +88,8 @@ func NewMarshaller(format string) (Marshaller, error) {
 	case YAML:
 		return Marshaller(func(v interface{}) ([]byte, error) {
 			switch t := v.(type) {
-			case goyaml.Marshaler:
-				return goyaml.Marshal(t)
+			case YamlMarshaler:
+				return t.MarshalYAML()
 			default:
 				// yaml.Marshal marshals v to JSON then converts that JSON to YAML.
 				return yaml.Marshal(v)
@@ -58,18 +111,18 @@ func (m Marshaller) Marshal(v interface{}) (string, error) {
 	return string(bytes), nil
 }
 
-// toText generates a textual representation of structured data that prefixes each line with the
-// entire key path (using .KEY for map indexing and .N for array indexing) to make it more
-// greppable. Uses textBuilder to recursively construct the output.
-//
-// Sample output:
-//     AppArmorProfile:
-//     Args.0: redis-server
-//     Config.AttachStdout: false
-//     Config.Cmd.0: redis-server
 func toText(v interface{}) ([]byte, error) {
-	s, e := textBuilder(v, "")
-	return []byte(s), e
+	switch t := v.(type) {
+	case TextMarshaler:
+		return t.MarshalTEXT()
+	default:
+		goType, err := marshalToJSONGoType(v)
+		if err != nil {
+			return nil, err
+		}
+		s, e := textBuilder(goType, "")
+		return []byte(s), e
+	}
 }
 
 type keyValue struct {
@@ -115,4 +168,15 @@ func textBuilder(v interface{}, prefix string) (string, error) {
 	default:
 		return fmt.Sprintf(prefix+": %v", val), nil
 	}
+}
+
+// return value should be a map/array/primitive value type
+func marshalToJSONGoType(v interface{}) (interface{}, error) {
+	jsonBytes, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var goType interface{}
+	err = json.Unmarshal(jsonBytes, &goType)
+	return goType, err
 }
