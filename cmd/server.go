@@ -127,12 +127,20 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 			enabledPlugins = append(enabledPlugins, plugin)
 		}
 		viper.Set("plugins", enabledPlugins)
-		cmdutil.Printf("The %v core plugins have been enabled.\n", strings.Join(enabledPlugins, ", "))
+		if len(enabledPlugins) > 0 {
+			cmdutil.Printf("The %v core plugins have been enabled.\n", strings.Join(enabledPlugins, ", "))
+		} else {
+			cmdutil.Printf("No core plugins have been enabled.\n")
+		}
 		if err := writeEnabledPlugins(enabledPlugins, configFile); err != nil {
 			log.Warnf("Failed to write-back the list of enabled plugins to %v: %v\n\n", configFile, err)
 		} else {
 			// The write was successful
-			cmdutil.Printf("You can disable them by modifying the 'plugins' key in your config\nfile (%v), and then restarting the shell\n\n", configFile)
+			action := "disable"
+			if len(enabledPlugins) <= 0 {
+				action = "enable"
+			}
+			cmdutil.Printf("You can %v them by modifying the 'plugins' key in your config\nfile (%v), and then restarting the shell\n\n", action, configFile)
 		}
 	}
 
