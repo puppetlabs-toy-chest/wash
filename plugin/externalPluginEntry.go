@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -390,6 +391,30 @@ func (e *externalPluginEntry) blockRead(ctx context.Context, size int64, offset 
 	return inv.stdout.Bytes(), nil
 }
 
+func (e *externalPluginEntry) Write(ctx context.Context, p []byte) error {
+	// Start the command.
+	inv := e.script.NewInvocation(ctx, "write", e)
+	inv.command.SetStdout(&inv.stdout)
+	inv.command.SetStderr(&inv.stderr)
+	inv.command.SetStdin(bytes.NewReader(p))
+
+	activity.Record(ctx, "Invoking %v", inv.command)
+	err := inv.command.Run()
+	exitCode := inv.command.ExitCode()
+	if exitCode < 0 {
+		return newInvokeError(err.Error(), inv)
+	}
+
+	activity.Record(ctx, "stdout: %v", inv.stdout.String())
+	if inv.stderr.Len() != 0 {
+		activity.Record(ctx, "stderr: %v", inv.stderr.String())
+	}
+	if exitCode != 0 {
+		return newInvokeError(fmt.Sprintf("script returned a non-zero exit code of %v", exitCode), inv)
+	}
+	return nil
+}
+
 func (e *externalPluginEntry) Metadata(ctx context.Context) (JSONObject, error) {
 	if !e.implements("metadata") {
 		// The entry does not override the "Metadata" method so invoke
@@ -562,7 +587,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 	go func() {
 		err := cmdObj.Wait()
 		execCmd.CloseStreamsWithError(nil)
-		exitCode := cmdObj.ProcessState().ExitCode()
+		exitCode := cmdObj.ExitCode()
 		if exitCode < 0 {
 			execCmd.SetExitCodeErr(err)
 		} else {
@@ -573,7 +598,7 @@ func (e *externalPluginEntry) Exec(ctx context.Context, cmd string, args []strin
 }
 
 type stdoutStreamer struct {
-	cmd    *internal.Command
+	cmd    internal.Command
 	stdout io.ReadCloser
 }
 

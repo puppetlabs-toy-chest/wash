@@ -19,7 +19,7 @@ type externalPluginScript interface {
 }
 
 type invocation struct {
-	command        *internal.Command
+	command        internal.Command
 	stdout, stderr bytes.Buffer
 }
 
@@ -57,7 +57,7 @@ func (s externalPluginScriptImpl) InvokeAndWait(
 	inv.command.SetStderr(&inv.stderr)
 	activity.Record(ctx, "Invoking %v", inv.command)
 	err := inv.command.Run()
-	exitCode := inv.command.ProcessState().ExitCode()
+	exitCode := inv.command.ExitCode()
 	if exitCode < 0 {
 		return inv, newInvokeError(err.Error(), inv)
 	}

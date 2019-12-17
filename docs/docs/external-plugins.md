@@ -7,6 +7,7 @@ title: External Plugins
     - [init](#init)
     - [list](#list)
     - [read](#read)
+    - [write](#write)
     - [metadata](#metadata)
     - [stream](#stream)
     - [exec](#exec)
@@ -155,6 +156,19 @@ Som
 ```
 
 where `Some content` is the entry's content.
+
+## write
+`<plugin_script> write <path> <state>`
+
+When `write` is invoked, the script must read from `stdin` to get the content to write to the entry.
+
+### Examples
+
+```
+bash-3.2$ echo 'new content' | /path/to/myplugin.rb write /myplugin/foo ''
+```
+
+results in changing the entry's content to `new content`.
 
 ## metadata
 `<plugin_script> metadata <path> <state>`

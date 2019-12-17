@@ -29,6 +29,7 @@ title: Docs
 * [Actions](#actions)
   * [list](#list)
   * [read](#read)
+  * [write](#write)
   * [stream](#stream)
   * [exec](#exec)
   * [delete](#delete)
@@ -245,7 +246,7 @@ gcp/Wash/storage/some-wash-stuff
 ```
 
 ### read
-The `read` action lets you view an entry’s content. Thus, any command that reads a file also works with these entries.
+The `read` action lets you read data from an entry. Thus, any command that reads a file also works with these entries.
 
 #### Examples
 ```
@@ -258,6 +259,19 @@ echo "Hello, world!"
 ```
 wash . ❯ grep "Hello" gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
 echo "Hello, world!"
+```
+
+### write
+The `write` action lets you write data to an entry. Thus, any command that writes a file also works with these entries.
+
+#### Examples
+```
+wash . ❯ echo 'exit 1' >> gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
+wash . ❯ cat gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
+#!/bin/sh
+
+echo "Hello, world!"
+exit 1
 ```
 
 ### stream
