@@ -29,7 +29,7 @@ var cacheHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *err
 		return errResp
 	}
 
-	deleted := plugin.ClearCacheFor(path)
+	deleted := plugin.ClearCacheFor(path, true)
 	activity.Record(r.Context(), "API: Cache DELETE %v %+v", path, deleted)
 
 	jsonEncoder := json.NewEncoder(w)

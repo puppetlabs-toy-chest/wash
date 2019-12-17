@@ -266,7 +266,6 @@ func (suite *MethodWrappersTestSuite) TestSignal_SendsSignalAndUpdatesCache() {
 	e.On("Signal", ctx, "start").Return(nil)
 
 	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
-	suite.cache.On("Get", "List", "/foo").Return(newEntryMap(), nil)
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
 	// Also test case-insensitivity here
@@ -331,7 +330,6 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_Updates
 	e.On("Delete", mock.Anything).Return(false, nil)
 
 	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
-	suite.cache.On("Get", "List", "/foo").Return(newEntryMap(), nil)
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
 	deleted, err := Delete(context.Background(), e)
@@ -353,7 +351,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_NoCache
 	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
 		suite.False(deleted)
-		suite.cache.AssertNotCalled(suite.T(), "Delete", opKeyRegex("List", "/foo"))
+		suite.cache.AssertCalled(suite.T(), "Delete", opKeyRegex("List", "/foo"))
 	}
 }
 

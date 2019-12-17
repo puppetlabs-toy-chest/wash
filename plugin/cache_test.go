@@ -140,9 +140,20 @@ func (suite *CacheTestSuite) TestClearCache() {
 	path := "/a"
 	rx := allOpKeysIncludingChildrenRegex(path)
 
-	suite.cache.On("Delete", rx).Return([]string{"/a"})
-	deleted := ClearCacheFor(path)
-	suite.Equal([]string{"/a"}, deleted)
+	suite.cache.On("Delete", rx).Return([]string{path})
+	deleted := ClearCacheFor(path, false)
+	suite.Equal([]string{path}, deleted)
+}
+
+func (suite *CacheTestSuite) TestClearCache_WithParent() {
+	path := "/a/b"
+	rxEntry := allOpKeysIncludingChildrenRegex(path)
+	rxParent := opKeyRegex(defaultOpCodeToNameMap[ListOp], "/a")
+
+	suite.cache.On("Delete", rxEntry).Return([]string{"List:/a/b", "Read:/a/b"})
+	suite.cache.On("Delete", rxParent).Return([]string{"List:/a"})
+	deleted := ClearCacheFor(path, true)
+	suite.Equal([]string{"List:/a/b", "Read:/a/b", "List:/a"}, deleted)
 }
 
 type cacheTestsMockEntry struct {
