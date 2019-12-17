@@ -37,9 +37,9 @@ Project maintainers are not actively working on all of these things, but any of 
 ### Primitives
 
 * [ ] file/directory upload _(prereq for executing commands that aren't just one-liners)_
-* [ ] edit a resource _(e.g. edit a file representing a k8s ConfigMap, and upon write save it via the k8s api)_
-* [ ] delete a resource _(e.g. `rm`-ing a file in an S3 bucket deletes it)_
-* [ ] signal handling to represent basic verbs _(e.g. sending a TERM to an EC2 instance will terminate it)_
+* [x] edit a resource _(e.g. edit a file representing a k8s ConfigMap, and upon write save it via the k8s api)_
+* [x] delete a resource _(e.g. `rm`-ing a file in an S3 bucket deletes it)_
+* [x] signal handling to represent basic verbs _(e.g. sending a TERM to an EC2 instance will terminate it)_
 * [ ] copy / move / rename _(how should this work?)_
 * [ ] make `stream` able to "go back in time" _(e.g. support `tail -100 -f` style of "look-back")_
 
@@ -52,7 +52,7 @@ Project maintainers are not actively working on all of these things, but any of 
 ### CLI tools
 
 * [ ] colorized output for `ls`, similar to `exa -l`
-* [ ] make `ls` emit something useful when used against non-`wash` resources
+* [x] make `ls` emit something useful when used against non-`wash` resources
 * [ ] `exec` should work in parallel across multiple target resources
 * [ ] build an interactive shell that works over `exec` _(need to update plugins API to support this, most likely)_
 * [ ] a version of `top` that works using `wash` primitives to get information to display from multiple targets
