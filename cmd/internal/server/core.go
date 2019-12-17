@@ -113,7 +113,7 @@ func (s *Server) Start() error {
 	if !s.forVerifyInstall {
 		s.loadPlugins(registry)
 		if len(registry.Plugins()) == 0 {
-			return fmt.Errorf("No plugins loaded")
+			return fmt.Errorf("no plugins loaded. If you're planning on using Wash just for its external plugins, then go to https://puppetlabs.github.io/wash/docs/external-plugins#adding-an-external-plugin for details on how to add them")
 		}
 
 		plugin.InitCache()
