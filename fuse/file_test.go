@@ -173,7 +173,7 @@ func (suite *fileTestSuite) TestOpenAndRelease_WriteOnly() {
 
 func (suite *fileTestSuite) TestOpenAndFlush() {
 	m := plugintest.NewMockReadWrite()
-	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
+	m.Attributes().SetSize(5)
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadWrite}
@@ -187,13 +187,11 @@ func (suite *fileTestSuite) TestOpenAndFlush() {
 		suite.Empty(f.writers)
 		suite.Nil(f.data)
 	}
-
-	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestOpenAndFlushRelease() {
 	m := plugintest.NewMockReadWrite()
-	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
+	m.Attributes().SetSize(5)
 
 	f := newFile(nil, m)
 	req := fuse.OpenRequest{Flags: fuse.OpenReadWrite}
@@ -208,8 +206,6 @@ func (suite *fileTestSuite) TestOpenAndFlushRelease() {
 		suite.Empty(f.writers)
 		suite.Nil(f.data)
 	}
-
-	m.AssertExpectations(suite.T())
 }
 
 func (suite *fileTestSuite) TestAttrWithReaders() {
@@ -282,7 +278,8 @@ func (suite *fileTestSuite) TestRead() {
 
 func (suite *fileTestSuite) TestWrite() {
 	m := plugintest.NewMockWrite()
-	m.On("Write", suite.ctx, []byte("hello")).Return(nil).Once()
+	// Called for Flush and ReleaseFlush.
+	m.On("Write", suite.ctx, []byte("hello")).Return(nil).Twice()
 
 	f := newFile(nil, m)
 	var resp fuse.OpenResponse
@@ -309,6 +306,7 @@ func (suite *fileTestSuite) TestWrite() {
 
 func (suite *fileTestSuite) TestTruncateAndWrite() {
 	m := plugintest.NewMockReadWrite()
+	m.Attributes().SetSize(4)
 	m.On("Write", suite.ctx, []byte("hello")).Return(nil).Once()
 
 	f := newFile(nil, m)
@@ -338,6 +336,54 @@ func (suite *fileTestSuite) TestTruncateAndWrite() {
 	m.AssertExpectations(suite.T())
 }
 
+func (suite *fileTestSuite) TestGrowAndWrite() {
+	m := plugintest.NewMockReadWrite()
+	m.Attributes().SetSize(4)
+	m.On("Write", suite.ctx, append([]byte("hello"), make([]byte, 5)...)).Return(nil).Once()
+
+	f := newFile(nil, m)
+	var resp fuse.OpenResponse
+	handle, err := f.Open(suite.ctx, &fuse.OpenRequest{Flags: fuse.OpenWriteOnly}, &resp)
+	if !suite.NoError(err) || !suite.assertFileHandle(handle) {
+		suite.FailNow("Unusable handle")
+	}
+
+	setReq := fuse.SetattrRequest{Valid: fuse.SetattrHandle | fuse.SetattrSize, Handle: 1, Size: 10}
+	var setResp fuse.SetattrResponse
+	err = f.Setattr(suite.ctx, &setReq, &setResp)
+	suite.NoError(err)
+
+	writeReq := fuse.WriteRequest{Offset: 0, Data: []byte("hello"), Handle: 1}
+	var writeResp fuse.WriteResponse
+	err = handle.(fs.HandleWriter).Write(suite.ctx, &writeReq, &writeResp)
+	suite.NoError(err)
+	suite.Equal(5, writeResp.Size)
+
+	err = handle.(fs.HandleFlusher).Flush(suite.ctx, &fuse.FlushRequest{Handle: 1})
+	suite.NoError(err)
+
+	err = handle.(fs.HandleReleaser).Release(suite.ctx, &fuse.ReleaseRequest{Handle: 1})
+	suite.NoError(err)
+
+	m.AssertExpectations(suite.T())
+}
+
+func (suite *fileTestSuite) TestPartialWrite() {
+	m := plugintest.NewMockWrite()
+
+	f := newFile(nil, m)
+	var resp fuse.OpenResponse
+	handle, err := f.Open(suite.ctx, &fuse.OpenRequest{Flags: fuse.OpenWriteOnly}, &resp)
+	if !suite.NoError(err) || !suite.assertFileHandle(handle) {
+		suite.FailNow("Unusable handle")
+	}
+
+	writeReq := fuse.WriteRequest{Offset: 2, Data: []byte("11"), Handle: 1}
+	var writeResp fuse.WriteResponse
+	err = handle.(fs.HandleWriter).Write(suite.ctx, &writeReq, &writeResp)
+	suite.Error(err)
+}
+
 func (suite *fileTestSuite) TestReadWrite_Smaller() {
 	m := plugintest.NewMockBlockReadWrite()
 	m.Attributes().SetSize(5)
@@ -363,15 +409,46 @@ func (suite *fileTestSuite) TestReadWrite_Smaller() {
 	suite.NoError(err)
 	suite.Equal(2, writeResp.Size)
 
-	// Test this for correct size mid-write. After flush, the reported size will be
-	// whatever future calls to List return.
+	// Test this for correct size mid-write. After release, the reported size will be whatever
+	// future calls to List return.
 	var attr fuse.Attr
 	err = f.Attr(suite.ctx, &attr)
 	suite.NoError(err)
 	suite.Equal(uint64(4), attr.Size)
 
+	err = handle.(fs.HandleReleaser).Release(suite.ctx, &fuse.ReleaseRequest{ReleaseFlags: fuse.ReleaseFlush, Handle: 1})
+	suite.NoError(err)
+
+	m.AssertExpectations(suite.T())
+}
+
+func (suite *fileTestSuite) TestReadWrite_PartialWriteOnly() {
+	m := plugintest.NewMockReadWrite()
+	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
+	m.On("Write", suite.ctx, []byte("he11o")).Return(nil).Once()
+
+	f := newFile(nil, m)
+	var resp fuse.OpenResponse
+	handle, err := f.Open(suite.ctx, &fuse.OpenRequest{Flags: fuse.OpenWriteOnly}, &resp)
+	if !suite.NoError(err) || !suite.assertFileHandle(handle) {
+		suite.FailNow("Unusable handle")
+	}
+
+	writeReq := fuse.WriteRequest{Offset: 2, Data: []byte("11"), Handle: 1}
+	var writeResp fuse.WriteResponse
+	err = handle.(fs.HandleWriter).Write(suite.ctx, &writeReq, &writeResp)
+	suite.NoError(err)
+	suite.Equal(2, writeResp.Size)
+
 	err = handle.(fs.HandleFlusher).Flush(suite.ctx, &fuse.FlushRequest{Handle: 1})
 	suite.NoError(err)
+
+	// Test this for correct size mid-write. After release, the reported size will be whatever
+	// future calls to List return. Before flush, we haven't checked the actual size.
+	var attr fuse.Attr
+	err = f.Attr(suite.ctx, &attr)
+	suite.NoError(err)
+	suite.Equal(uint64(5), attr.Size)
 
 	err = handle.(fs.HandleReleaser).Release(suite.ctx, &fuse.ReleaseRequest{Handle: 1})
 	suite.NoError(err)

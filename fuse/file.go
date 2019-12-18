@@ -25,6 +25,8 @@ type file struct {
 	data []byte
 	// Size for content during writing or with unspecified size attribute
 	size uint64
+	// Tracks whether we still need to query plugin.Size for the entry's size before using size
+	sizeValid bool
 }
 
 func newFile(p *dir, e plugin.Entry) *file {
@@ -78,7 +80,14 @@ func getFileMode(entry plugin.Entry) os.FileMode {
 
 var _ = fs.NodeOpener(&file{})
 
-// Open a file for reading or writing.
+// Open an entry for reading or writing. Several patterns exist for how to interact with entries.
+// - An entry that only supports Read can only be opened ReadOnly.
+// - An entry that supports both Read and Write can be opened in any mode.
+// - An entry that only supports Write can only be opened WriteOnly.
+//
+// When writing and flushing a file, we may call Read on the entry (if it supports Read) even if
+// opened WriteOnly. That only happens when performing a partial write, or when its Size attribute
+// isn't set and there are no calls to Setattr to define the file size.
 func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenResponse) (fs.Handle, error) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
@@ -96,19 +105,18 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	writable := plugin.WriteAction().IsSupportedOn(f.entry)
 	switch {
 	case req.Flags.IsReadOnly() && !readable:
-		activity.Record(ctx, "FUSE: Open read-only unsupported on %v", f)
+		activity.Warnf(ctx, "FUSE: Open read-only unsupported on %v", f)
 		return nil, fuse.ENOTSUP
 	case req.Flags.IsWriteOnly() && !writable:
-		activity.Record(ctx, "FUSE: Open write-only unsupported on %v", f)
+		activity.Warnf(ctx, "FUSE: Open write-only unsupported on %v", f)
 		return nil, fuse.ENOTSUP
 	case req.Flags.IsReadWrite() && (!readable || !writable):
-		activity.Record(ctx, "FUSE: Open read-write unsupported on %v", f)
+		activity.Warnf(ctx, "FUSE: Open read-write unsupported on %v", f)
 		return nil, fuse.ENOTSUP
 	}
 
 	if req.Flags.IsReadOnly() || req.Flags.IsReadWrite() {
-		attr := plugin.Attributes(entry)
-		if !attr.HasSize() {
+		if attr := plugin.Attributes(entry); !attr.HasSize() {
 			// The entry's content size is unknown so open the file in direct IO mode. This enables FUSE
 			// to still read the entry's content so that built-in tools like cat and grep still work.
 			resp.Flags |= fuse.OpenDirectIO
@@ -119,8 +127,16 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 			if err != nil {
 				return nil, err
 			}
+		} else {
+			f.size = attr.Size()
 		}
+
+		f.sizeValid = true
+	} else if !readable {
+		// Reported size is irrelevant for write-only entries.
+		f.sizeValid = true
 	}
+
 	return f, nil
 }
 
@@ -128,6 +144,7 @@ var _ = fs.HandleReleaser(&file{})
 
 func (f *file) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
 	if req.ReleaseFlags&fuse.ReleaseFlush != 0 {
+		activity.Record(ctx, "FUSE: Invoking Flush for Release on %v", f)
 		err := f.Flush(ctx, &fuse.FlushRequest{
 			Header:    req.Header,
 			Handle:    req.Handle,
@@ -135,6 +152,18 @@ func (f *file) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
 		})
 		if err != nil {
 			return err
+		}
+	}
+
+	if _, ok := f.writers[req.Handle]; ok {
+		delete(f.writers, req.Handle)
+
+		if len(f.writers) == 0 {
+			// If we just released the last writer, release the data buffer to conserve memory and
+			// invalidate cache on the entry and its parent so we get updated content and size on the
+			// next request. Leave size so we can use it for future attribute requests.
+			f.data = nil
+			plugin.ClearCacheFor(plugin.ID(f.entry), true)
 		}
 	}
 
@@ -187,7 +216,7 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 	if newLen := int(newLen); newLen > len(f.data) {
 		f.data = append(f.data, make([]byte, newLen-len(f.data))...)
 	}
-	// Write-only entries are assumed not to have a size.
+	// Size is irrelevant for write-only entries.
 	if plugin.ReadAction().IsSupportedOn(f.entry) && f.size < uint64(newLen) {
 		f.size = uint64(newLen)
 	}
@@ -199,7 +228,7 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 
 func (f *file) load(ctx context.Context, start, end int64) ([]byte, error) {
 	if !plugin.ReadAction().IsSupportedOn(f.entry) {
-		activity.Record(ctx, "FUSE: Non-contiguous writes (at %v) unsupported on %v", start, f)
+		activity.Warnf(ctx, "FUSE: Non-contiguous writes (at %v) unsupported on %v", start, f)
 		return nil, fuse.ENOTSUP
 	}
 
@@ -214,7 +243,6 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 	activity.Record(ctx, "FUSE: Flush %v: %+v", f, *req)
-	var releasedWriter bool
 
 	// If this handle had an open writer, write current data.
 	if _, ok := f.writers[req.Handle]; ok {
@@ -224,28 +252,36 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 			panic("Size was not kept up-to-date with changes to data.")
 		}
 
-		if uint64(dataLen) < f.size {
-			// Missing some data, load the remainder before writing.
-			data, err := f.load(ctx, dataLen, int64(f.size))
+		if !f.sizeValid {
+			// If this is a readable entry that's opened WriteOnly and hasn't been truncated, we haven't
+			// determined its size. Get it now so we can buffer as needed.
+			size, err := plugin.Size(ctx, f.entry)
 			if err != nil {
 				return err
 			}
+			f.size = size
+			f.sizeValid = true
+		}
+
+		if uint64(dataLen) < f.size {
+			// Missing some data, load the remainder before writing.
+			data, err := f.load(ctx, dataLen, int64(f.size))
+			if err != nil && err != io.EOF {
+				return err
+			}
 			f.data = append(f.data, data...)
+
+			// If still too small then something increased the size beyond the original.
+			// Fill with null characters.
+			if sz := uint64(len(f.data)); sz < f.size {
+				f.data = append(f.data, make([]byte, f.size-sz)...)
+			}
 		}
 
 		if err := plugin.WriteWithAnalytics(ctx, f.entry.(plugin.Writable), f.data); err != nil {
+			activity.Warnf(ctx, "FUSE: Error writing %v: %v", f, err)
 			return err
 		}
-		delete(f.writers, req.Handle)
-		releasedWriter = true
-	}
-
-	if len(f.writers) == 0 && releasedWriter {
-		// Ensure data is released. Leave size so we can use it for future attribute requests.
-		f.data = nil
-
-		// Invalidate cache on the entry and its parent. Need to get updated content and size.
-		plugin.ClearCacheFor(plugin.ID(f.entry), true)
 	}
 	return nil
 }
@@ -270,14 +306,8 @@ func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 		// Update known size. If the caller tries to increase the size of a Write-only entry, Flush
 		// will error because we won't be able to read to fill it in. We choose to error instead of
 		// filling with null data because there's no obvious use-case for supporting it.
-		if f.size != req.Size {
-			f.size = req.Size
-		}
-
-		// Shrink data if too large. Filling if too small is left for Write/Flush to deal with.
-		if uint64(len(f.data)) > f.size {
-			f.data = f.data[:f.size]
-		}
+		f.size = req.Size
+		f.sizeValid = true
 	}
 
 	f.fillAttr(&resp.Attr)

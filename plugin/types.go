@@ -184,6 +184,8 @@ type Streamable interface {
 }
 
 // BlockReadable is an entry with data that can be read in blocks.
+// A BlockReadable entry must set its Size attribute. If you don't set it, the
+// file size will be reported as 0 and reads will return an empty file.
 type BlockReadable interface {
 	Entry
 	Read(ctx context.Context, size int64, offset int64) ([]byte, error)
@@ -199,6 +201,10 @@ type Readable interface {
 // implementation-specific; it could be overwriting a file, submitting a
 // configuration change to an API, or writing data to a queue. It doesn't
 // support a concept of a partial write.
+//
+// Writable can be implemented with or without Readable/BlockReadable. If an
+// entry is only Writable, then only full writes (starting from offset 0) are
+// allowed, anything else initiated by the filesystem will result in an error.
 //
 // It's up to the implementer to decide how much data integrity to guarantee.
 type Writable interface {
