@@ -166,10 +166,14 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	return
 }
 
-// Size returns the size of readable content (if we can determine it).
+// Size returns the size of readable data for an entry. It may call Read to do so.
 func Size(ctx context.Context, e Entry) (uint64, error) {
+	if attr := e.attributes(); attr.HasSize() {
+		return attr.Size(), nil
+	}
+
 	if !ReadAction().IsSupportedOn(e) {
-		panic("plugin.Read called on a non-readable entry")
+		return 0, nil
 	}
 
 	data, err := cachedRead(ctx, e)

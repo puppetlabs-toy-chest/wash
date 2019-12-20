@@ -34,8 +34,8 @@ type MockRead struct {
 
 // NewMockRead creates a new "mock" entry for reads.
 func NewMockRead() *MockRead {
-	m := &MockRead{MockBase{EntryBase: plugin.NewEntry("mock")}}
-	m.SetTestID("/mock")
+	m := &MockRead{MockBase{EntryBase: plugin.NewEntry("mockr")}}
+	m.SetTestID("/mockr")
 	return m
 }
 
@@ -53,8 +53,8 @@ type MockWrite struct {
 
 // NewMockWrite creates a new "mock" entry for writes.
 func NewMockWrite() *MockWrite {
-	m := &MockWrite{MockBase{EntryBase: plugin.NewEntry("mock")}}
-	m.SetTestID("/mock")
+	m := &MockWrite{MockBase{EntryBase: plugin.NewEntry("mockw")}}
+	m.SetTestID("/mockw")
 	return m
 }
 
@@ -72,8 +72,8 @@ type MockReadWrite struct {
 
 // NewMockReadWrite creates a new "mock" entry for reads and writes.
 func NewMockReadWrite() *MockReadWrite {
-	m := &MockReadWrite{MockBase{EntryBase: plugin.NewEntry("mock")}}
-	m.SetTestID("/mock")
+	m := &MockReadWrite{MockBase{EntryBase: plugin.NewEntry("mockrw")}}
+	m.SetTestID("/mockrw")
 	return m
 }
 
@@ -97,8 +97,8 @@ type MockBlockReadWrite struct {
 
 // NewMockBlockReadWrite creates a new "mock" entry for (block) reads and writes.
 func NewMockBlockReadWrite() *MockBlockReadWrite {
-	m := &MockBlockReadWrite{MockBase{EntryBase: plugin.NewEntry("mock")}}
-	m.SetTestID("/mock")
+	m := &MockBlockReadWrite{MockBase{EntryBase: plugin.NewEntry("mockbrw")}}
+	m.SetTestID("/mockbrw")
 	return m
 }
 

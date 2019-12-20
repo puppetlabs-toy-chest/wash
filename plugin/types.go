@@ -15,7 +15,15 @@ or referenced via the API - and tools for controlling how its data is cached.
 Implementing the Parent interface displays that resource as a directory on the filesystem.
 Anything that does not implement Parent will be displayed as a file.
 
-The Readable interface gives a file its contents when read via the filesystem.
+The Readable interface allows reading data from an entry via the filesystem. The Writable
+interface allows sending data to the entry.
+
+Wash distinguishes between two different patterns for things you can read and write. It considers
+a "file-like" entry to be one with a defined size (so the `size` attribute is set when listing the
+entry). Reading and writing a "file-like" entry edits the contents. Something that can be read and
+written but doesn't define size has different characteristics. Reading and writing are not
+symmetrical: if you write to it then read from it, you may not see what you just wrote. So these
+non-file-like entries error if you try to open them with a ReadWrite handle.
 
 All of the above, as well as other types - Execable, Stream - provide additional functionality
 via the HTTP API.

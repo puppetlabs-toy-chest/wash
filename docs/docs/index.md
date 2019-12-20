@@ -264,6 +264,8 @@ echo "Hello, world!"
 ### write
 The `write` action lets you write data to an entry. Thus, any command that writes a file also works with these entries.
 
+Note that Wash distinguishes between file-like and non-file-like entries. An entry is file-like if it's readable and writable and defines its size; you can edit it like a file. If it doesn't define a size then it's non-file-like, and trying to open it with a ReadWrite handle will error; reads from it may not return data you previously wrote to it.
+
 #### Examples
 ```
 wash . ❯ echo 'exit 1' >> gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
