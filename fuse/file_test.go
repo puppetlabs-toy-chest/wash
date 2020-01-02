@@ -26,7 +26,7 @@ func (suite *fileTestSuite) TearDownTest() {
 	plugin.UnsetTestCache()
 }
 
-func (suite *fileTestSuite) TestOpen_File() {
+func (suite *fileTestSuite) TestOpen_FileLikeEntry_OpenFlags() {
 	var req fuse.OpenRequest
 	var resp fuse.OpenResponse
 
@@ -38,8 +38,9 @@ func (suite *fileTestSuite) TestOpen_File() {
 	mrw := plugintest.NewMockReadWrite()
 	mrw.Attributes().SetSize(1)
 
-	// expectErrs corresponds to expectations on fields in flags.
 	flags := []fuse.OpenFlags{fuse.OpenReadOnly, fuse.OpenWriteOnly, fuse.OpenReadWrite}
+	// expectErrs corresponds to expectations on fields in `flags`. For example, a read-only entry
+	// would not error when opened read-only, but would error when opened write-only or read-write.
 	for m, expectErrs := range map[plugin.Entry][]bool{
 		m:   []bool{true, true, true},
 		mr:  []bool{false, true, true},
@@ -60,7 +61,7 @@ func (suite *fileTestSuite) TestOpen_File() {
 	}
 }
 
-func (suite *fileTestSuite) TestOpen_NonFile() {
+func (suite *fileTestSuite) TestOpen_NonFileLikeEntry_OpenFlags() {
 	var req fuse.OpenRequest
 	var resp fuse.OpenResponse
 
@@ -93,7 +94,7 @@ func (suite *fileTestSuite) TestOpen_NonFile() {
 	mock.AssertExpectationsForObjects(suite.T(), mr, mw, mrw)
 }
 
-func (suite *fileTestSuite) TestOpen_NonFileDirect() {
+func (suite *fileTestSuite) TestOpen_NonFileLikeEntry_Direct() {
 	m := plugintest.NewMockReadWrite()
 	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
@@ -119,7 +120,7 @@ func (suite *fileTestSuite) TestOpen_NonFileDirect() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestOpen_FileBuffered() {
+func (suite *fileTestSuite) TestOpen_FileLikeEntry_Buffered() {
 	m := plugintest.NewMockReadWrite()
 	m.Attributes().SetSize(1)
 
@@ -275,7 +276,7 @@ func (suite *fileTestSuite) assertFileHandle(handle fs.Handle) bool {
 		suite.Implements((*fs.HandleReleaser)(nil), handle)
 }
 
-func (suite *fileTestSuite) TestRead_NonFile() {
+func (suite *fileTestSuite) TestRead_NonFileLikeEntry() {
 	m := plugintest.NewMockRead()
 	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
 
@@ -302,7 +303,7 @@ func (suite *fileTestSuite) TestRead_NonFile() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestRead_File() {
+func (suite *fileTestSuite) TestRead_FileLikeEntry() {
 	m := plugintest.NewMockRead()
 	m.Attributes().SetSize(5)
 	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
@@ -330,7 +331,7 @@ func (suite *fileTestSuite) TestRead_File() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestWrite_NonFile() {
+func (suite *fileTestSuite) TestWrite_NonFileLikeEntry() {
 	m := plugintest.NewMockWrite()
 	// Called on first Flush only.
 	m.On("Write", suite.ctx, []byte("hello")).Return(nil).Once()
@@ -358,7 +359,7 @@ func (suite *fileTestSuite) TestWrite_NonFile() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestWrite_File() {
+func (suite *fileTestSuite) TestWrite_FileLikeEntry() {
 	m := plugintest.NewMockWrite()
 	m.Attributes().SetSize(5)
 	// Called on both Flush and Release+Flush only.
@@ -387,7 +388,7 @@ func (suite *fileTestSuite) TestWrite_File() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestTruncateAndWrite_File() {
+func (suite *fileTestSuite) TestTruncateAndWrite_FileLikeEntry() {
 	m := plugintest.NewMockReadWrite()
 	m.Attributes().SetSize(4)
 	m.On("Write", suite.ctx, []byte("hello")).Return(nil).Once()
@@ -419,7 +420,7 @@ func (suite *fileTestSuite) TestTruncateAndWrite_File() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestGrowAndWrite_File() {
+func (suite *fileTestSuite) TestGrowAndWrite_FileLikeEntry() {
 	m := plugintest.NewMockReadWrite()
 	m.Attributes().SetSize(4)
 	m.On("Write", suite.ctx, append([]byte("hello"), make([]byte, 5)...)).Return(nil).Once()
@@ -451,7 +452,7 @@ func (suite *fileTestSuite) TestGrowAndWrite_File() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestPartialWrite_NonFile() {
+func (suite *fileTestSuite) TestPartialWrite_NonFileLikeEntry() {
 	m := plugintest.NewMockWrite()
 	m.On("Write", suite.ctx, []byte{0, 0, '1', '1'}).Return(nil).Once()
 
@@ -473,7 +474,7 @@ func (suite *fileTestSuite) TestPartialWrite_NonFile() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestPartialWrite_File() {
+func (suite *fileTestSuite) TestPartialWrite_FileLikeEntry() {
 	m := plugintest.NewMockWrite()
 	m.Attributes().SetSize(3)
 
@@ -490,7 +491,7 @@ func (suite *fileTestSuite) TestPartialWrite_File() {
 	suite.Error(err)
 }
 
-func (suite *fileTestSuite) TestReadWrite_FileSmaller() {
+func (suite *fileTestSuite) TestReadWrite_FileLikeEntry_Smaller() {
 	m := plugintest.NewMockBlockReadWrite()
 	m.Attributes().SetSize(5)
 	m.On("Read", suite.ctx, int64(2), int64(0)).Return([]byte("he"), nil).Once()
@@ -528,7 +529,7 @@ func (suite *fileTestSuite) TestReadWrite_FileSmaller() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestReadWrite_FilePartialWriteOnly() {
+func (suite *fileTestSuite) TestReadWrite_FileLikeEntry_PartialWriteOnly() {
 	m := plugintest.NewMockReadWrite()
 	m.Attributes().SetSize(5)
 	m.On("Read", suite.ctx).Return([]byte("hello"), nil).Once()
@@ -563,7 +564,7 @@ func (suite *fileTestSuite) TestReadWrite_FilePartialWriteOnly() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestReadWrite_FileLarger() {
+func (suite *fileTestSuite) TestReadWrite_FileLikeEntry_Larger() {
 	m := plugintest.NewMockBlockReadWrite()
 	m.Attributes().SetSize(5)
 	m.On("Read", suite.ctx, int64(2), int64(0)).Return([]byte("he"), nil).Once()
@@ -598,7 +599,7 @@ func (suite *fileTestSuite) TestReadWrite_FileLarger() {
 	m.AssertExpectations(suite.T())
 }
 
-func (suite *fileTestSuite) TestWriteRead_NonFile() {
+func (suite *fileTestSuite) TestWriteRead_NonFileLikeEntry() {
 	m := plugintest.NewMockReadWrite()
 	m.On("Write", suite.ctx, []byte("hello there")).Return(nil).Once()
 	m.On("Read", suite.ctx).Return([]byte("not what I expected"), nil).Once()

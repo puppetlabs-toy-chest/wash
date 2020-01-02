@@ -162,9 +162,9 @@ where `Some content` is the entry's content.
 
 When `write` is invoked, the script must read from `stdin` to get the content to write to the entry.
 
-Wash distinguishes between two different patterns for things you can read and write. It considers a "file-like" entry to be one with a defined size (so the `size` attribute is set when listing the entry). Reading and writing a "file-like" entry edits the contents.
+Wash distinguishes between two different patterns for things you can read and write. It considers a "file-like" entry to be one with a defined size (so the `size` attribute is set when listing the entry). Reading and writing a "file-like" entry edits the contents. The data passed to `stdin` is meant to be the entire content of the file.
 
-Something that can be read and written but doesn't define size has different characteristics. Reading and writing are not symmetrical: if you write to it then read from it, you may not see what you just wrote. So these non-file-like entries error if you try to open them with a ReadWrite handle.
+Something that can be read and written but doesn't define size has different characteristics. Reading and writing are not symmetrical: if you write to it then read from it, you may not see what you just wrote. So these non-file-like entries error if you try to open them with a ReadWrite handle. If your plugin implements non-file-like write-semantics, remember to document how they work in the plugin schema's description.
 
 ### Examples
 

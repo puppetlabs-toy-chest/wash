@@ -23,7 +23,9 @@ a "file-like" entry to be one with a defined size (so the `size` attribute is se
 entry). Reading and writing a "file-like" entry edits the contents. Something that can be read and
 written but doesn't define size has different characteristics. Reading and writing are not
 symmetrical: if you write to it then read from it, you may not see what you just wrote. So these
-non-file-like entries error if you try to open them with a ReadWrite handle.
+non-file-like entries error if you try to open them with a ReadWrite handle. If your plugin
+implements non-file-like write-semantics, remember to document how they work in the plugin schema's
+description.
 
 All of the above, as well as other types - Execable, Stream - provide additional functionality
 via the HTTP API.
@@ -213,8 +215,6 @@ type Readable interface {
 // Writable can be implemented with or without Readable/BlockReadable. If an
 // entry is only Writable, then only full writes (starting from offset 0) are
 // allowed, anything else initiated by the filesystem will result in an error.
-//
-// It's up to the implementer to decide how much data integrity to guarantee.
 type Writable interface {
 	Entry
 	Write(context.Context, []byte) error

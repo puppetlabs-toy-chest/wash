@@ -19,19 +19,23 @@ import (
 // currently writing.
 // - a *file-like* entry declares a `Size` in its `Attributes`
 //   - reads and writes are symmetric; the kernel page cache will be used, and the file size
-//     represents the current local state of the file
-//   - when writing, `data` represents the local state of the file; changes to its size will be
-//     reflected in `data` and reads will be served from it. The file's size will be `len(data)`.
-//     Unchanged sections will be filled from `plugin.Read` as needed.
+//     represents the current local content size of the file
+//   - when writing, `data` represents the local content of the file; changes to its size will
+//     usually be reflected in `data` and reads will be served from it
+//   - the file's size will be `readSize`; `data` will be resized as-needed to delay loading data
+//     from `plugin.Read` until it's needed (either a `Flush` or non-contiguous `Write`) and
+//     differences between `readSize` and `len(data)` will be resolved when `Flush` is called to
+//     avoid unnecessary calls to `plugin.Read` when overwriting a file
 //   - when not writing, data is read directly from `plugin.Read`
 // - a *non-file-like* entry has `Size` unset
 //   - read always pulls from `plugin.Read` and writes are buffered independently
 //   - `data` stores only the data to be written, and is not initialized from `plugin.Read`
 //   - the file's size will be reported as its readable size; it will not reflect calls to `write`
 //
-// Note that writes only result in calling `plugin.Write` when a file handle is closed. Writing
-// with multiple handles will be protected by `mux`, but all writes will operate on the same `data`
-// and the first handle close will trigger `plugin.Write`.
+// Note that writes only result in calling `plugin.Write` when a file handle is closed by the OS
+// (triggering a call to `Flush` as noted in https://libfuse.github.io/doxygen/structfuse__operations.html#ad4ec9c309072a92dd82ddb20efa4ab14)
+// Writing with multiple handles will be protected by `mux`, but all writes will operate on the
+// same `data` and the first handle close will trigger `plugin.Write`.
 //
 // `readSize` will always be initialized from either the `Size` attribute, or if unset then the
 // length of data available to read.
@@ -53,14 +57,15 @@ func newFile(p *dir, e plugin.Entry) *file {
 	return &file{fuseNode: newFuseNode("f", p, e), writers: make(map[fuse.HandleID]struct{})}
 }
 
-func (f *file) isFileLike() bool {
+func (f *file) isFileLikeEntry() bool {
 	attr := plugin.Attributes(f.entry)
 	return attr.HasSize()
 }
 
-// If currently writing a file-like object, we should use local state to fulfil many requests.
-func (f *file) useLocalState() bool {
-	return len(f.writers) != 0 && f.isFileLike()
+// If currently writing a file-like object, we should use local content to fulfil many requests.
+// Returning false means the entry is not file-like OR we're not writing to it.
+func (f *file) useLocalContent() bool {
+	return len(f.writers) != 0 && f.isFileLikeEntry()
 }
 
 var _ = fs.Node(&file{})
@@ -70,7 +75,7 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 
-	if !f.useLocalState() {
+	if !f.useLocalContent() {
 		// Fetch updated attributes only if we're not currently writing to it.
 		entry, err := f.refind(ctx)
 		if err != nil {
@@ -87,16 +92,16 @@ func (f *file) Attr(ctx context.Context, a *fuse.Attr) error {
 
 func (f *file) fillAttr(a *fuse.Attr) {
 	attr := plugin.Attributes(f.entry)
-	applyAttr(a, attr, getFileMode(f.entry))
+	applyAttr(a, attr, defaultMode(f.entry))
 
-	if f.useLocalState() || !attr.HasSize() {
+	if f.useLocalContent() || !f.isFileLikeEntry() {
 		// Use whatever size we know locally. Retrieving content can be expensive so we settle for
 		// including size only when it's been retreived previously by opening the file.
 		a.Size = f.readSize
 	}
 }
 
-func getFileMode(entry plugin.Entry) os.FileMode {
+func defaultMode(entry plugin.Entry) os.FileMode {
 	var mode os.FileMode
 	if plugin.WriteAction().IsSupportedOn(entry) {
 		mode |= 0220
@@ -122,8 +127,8 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	defer f.mux.Unlock()
 	activity.Record(ctx, "FUSE: Open %v: %+v", f, *req)
 
-	if !f.useLocalState() {
-		// Check for an updated entry in case it has static state.
+	if !f.useLocalContent() {
+		// Check for an updated entry in case it has static content, like for preloaded external plugin entries.
 		entry, err := f.refind(ctx)
 		if err != nil {
 			activity.Warnf(ctx, "FUSE: Open errored %v, %v", f, err)
@@ -146,19 +151,19 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		return nil, fuse.ENOTSUP
 	}
 
-	if !f.isFileLike() && req.Flags.IsReadWrite() {
+	if !f.isFileLikeEntry() && req.Flags.IsReadWrite() {
 		// Error ReadWrite on non-file-like entries because it probably won't work well.
 		activity.Warnf(ctx, "FUSE: Open Read/Write is not supported on non-file-like entry %v", f)
 		return nil, fuse.ENOTSUP
 	}
 
-	if !f.isFileLike() {
+	if !f.isFileLikeEntry() {
 		// Open the file in direct IO mode to avoid the kernel page cache. This also enables FUSE to
 		// still read the entry's content so that built-in tools like cat and grep still work.
 		resp.Flags |= fuse.OpenDirectIO
 	}
 
-	if f.isFileLike() || req.Flags.IsReadOnly() {
+	if f.isFileLikeEntry() || req.Flags.IsReadOnly() {
 		// Get the entry's readable size if we expect to do any reads or keep a local representation.
 		size, err := plugin.Size(ctx, f.entry)
 		if err != nil {
@@ -213,7 +218,7 @@ func (f *file) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 	f.mux.Lock()
 	defer f.mux.Unlock()
 
-	if f.useLocalState() {
+	if f.useLocalContent() {
 		fuseutil.HandleRead(req, resp, f.data)
 	} else {
 		data, err := plugin.ReadWithAnalytics(ctx, f.entry, int64(req.Size), req.Offset)
@@ -238,7 +243,7 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 	// Ensure handle is in list of writers.
 	f.writers[req.Handle] = struct{}{}
 
-	if f.isFileLike() {
+	if f.isFileLikeEntry() {
 		// If starting write beyond the current length, read to fill it in.
 		if start := int64(len(f.data)); req.Offset > start {
 			data, err := f.load(ctx, start, req.Offset)
@@ -256,7 +261,7 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 	}
 
 	// If file-like, then update readable size to reflect the expanded buffer.
-	if f.isFileLike() && f.readSize < uint64(newLen) {
+	if f.isFileLikeEntry() && f.readSize < uint64(newLen) {
 		f.readSize = uint64(newLen)
 	}
 
@@ -266,6 +271,10 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 }
 
 func (f *file) load(ctx context.Context, start, end int64) ([]byte, error) {
+	if !f.isFileLikeEntry() {
+		panic("load called on non-file-like entry")
+	}
+
 	if !plugin.ReadAction().IsSupportedOn(f.entry) {
 		activity.Warnf(ctx, "FUSE: Non-contiguous writes (at %v) unsupported on %v", start, f)
 		return nil, fuse.ENOTSUP
@@ -289,7 +298,7 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 
 	// If this handle had an open writer, write current data.
 	dataLen := int64(len(f.data))
-	if f.isFileLike() {
+	if f.isFileLikeEntry() {
 		// Only file-like entries keep data and readSize in sync.
 		if uint64(dataLen) > f.readSize {
 			panic("Size was not kept up-to-date with changes to data.")
@@ -303,8 +312,9 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 			}
 			f.data = append(f.data, data...)
 
-			// If still too small then something increased the size beyond the original.
-			// Fill with null characters.
+			// If a call to `Setattr` was used to increase the file's size, then `load` will have
+			// returned EOF and the loaded data would not be enough to increase the local content buffer
+			// to `readSize`. Fill the rest with null characters.
 			if sz := uint64(len(f.data)); sz < f.readSize {
 				f.data = append(f.data, make([]byte, f.readSize-sz)...)
 			}
@@ -318,7 +328,7 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 
 	// Non-file-like entries start from scratch on each Write operation, and have their cache
 	// invalidated whenever we write to them because we can't accurately model their readable data.
-	if !f.isFileLike() {
+	if !f.isFileLikeEntry() {
 		f.releaseWriter(req.Handle)
 	}
 	return nil
@@ -338,10 +348,11 @@ func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 			return fuse.ENOTSUP
 		}
 
-		// Ensure handle is in list of writers.
+		// Ensure handle is in list of writers because we need to operate on a local copy of the data,
+		// and changing the file size is similar to initiating a write.
 		f.writers[req.Handle] = struct{}{}
 
-		if f.isFileLike() {
+		if f.isFileLikeEntry() {
 			// Update known size.
 			f.readSize = req.Size
 		} else {

@@ -30,7 +30,7 @@ When making changes to Wash's APIs, remember to update the inline swagger docume
 
 ### Local filesystem testing
 
-A developer-only plugin is included in Wash that references the local filesystem. It can be enabled by setting the `WASH_LOCALFS` environment variable to local file path to mount before starting Wash. This can be useful for testing changes to core functionality like the `fuse` or `api` modules.
+A developer-only plugin is included in Wash that references the local filesystem. It can be enabled by setting the `WASH_LOCALFS` environment variable to the local file path to mount before starting Wash. This can be useful for testing changes to core functionality like the `fuse` or `api` modules.
 
 ## Submitting Changes
 Fork the repo, make changes, file a Pull Request.
