@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"path"
 	"regexp"
@@ -325,7 +324,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 }
 
 func mockInvocation(stdout []byte) invocation {
-	return invocation{command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
+	return &invocationImpl{Command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
 }
 
 // TODO: Add tests for Schema, including when schemaGraph is provided (prefetched)
@@ -661,28 +660,24 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	}
 }
 
-type mockCommand struct {
+type mockedInvocation struct {
+	internal.Command
 	mock.Mock
 }
 
-func (m *mockCommand) Start() error               { return m.Called().Error(0) }
-func (m *mockCommand) Run() error                 { return m.Called().Error(0) }
-func (m *mockCommand) Terminate()                 { m.Called() }
-func (m *mockCommand) Wait() error                { return m.Called().Error(0) }
-func (m *mockCommand) SetStdout(stdout io.Writer) { m.Called(stdout) }
-func (m *mockCommand) SetStderr(stderr io.Writer) { m.Called(stderr) }
-func (m *mockCommand) SetStdin(stdin io.Reader)   { m.Called(stdin) }
-func (m *mockCommand) StdoutPipe() (io.ReadCloser, error) {
-	args := m.Called()
-	return args.Get(0).(io.ReadCloser), args.Error(1)
+func (m *mockedInvocation) RunAndWait(ctx context.Context) error {
+	return m.Called(ctx).Error(0)
 }
-func (m *mockCommand) StderrPipe() (io.ReadCloser, error) {
-	args := m.Called()
-	return args.Get(0).(io.ReadCloser), args.Error(1)
-}
-func (m *mockCommand) ExitCode() int { return m.Called().Int(0) }
 
-var _ = internal.Command(&mockCommand{})
+func (m *mockedInvocation) Stdout() *bytes.Buffer {
+	return m.Called().Get(0).(*bytes.Buffer)
+}
+
+func (m *mockedInvocation) Stderr() *bytes.Buffer {
+	return m.Called().Get(0).(*bytes.Buffer)
+}
+
+var _ = invocation(&mockedInvocation{})
 
 func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 	mockScript := &mockExternalPluginScript{path: "plugin_script"}
@@ -694,74 +689,22 @@ func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 	data := []byte("something to write")
 
 	ctx := context.Background()
-	mockCmd := &mockCommand{}
-	inv := invocation{command: mockCmd}
-	mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(inv).Once()
-	mockCmd.On("SetStdout", &inv.stdout).Once()
-	mockCmd.On("SetStderr", &inv.stderr).Once()
-	mockCmd.On("SetStdin", bytes.NewReader(data)).Once()
-	mockCmd.On("ExitCode").Return(0).Once()
+	mockRunAndWait := func(err error) {
+		mockInv := &mockedInvocation{Command: internal.NewCommand(ctx, "")}
+		mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(mockInv).Once()
+		mockInv.On("RunAndWait", ctx).Return(err).Once()
+	}
+
+	// Test that if RunAndWait errors, then Write returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockRunAndWait(mockErr)
+	err := entry.Write(ctx, data)
+	suite.EqualError(mockErr, err.Error())
 
 	// Test that invocation succeeds
-	mockCmd.On("Run").Return(fmt.Errorf("execution error"))
-	err := entry.Write(ctx, data)
+	mockRunAndWait(nil)
+	err = entry.Write(ctx, data)
 	suite.NoError(err)
-
-	mock.AssertExpectationsForObjects(suite.T(), mockScript, mockCmd)
-}
-
-func (suite *ExternalPluginEntryTestSuite) TestWrite_Error() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
-		script:    mockScript,
-	}
-	entry.SetTestID("/foo")
-	data := []byte("something to write")
-
-	ctx := context.Background()
-	mockCmd := &mockCommand{}
-	inv := invocation{command: mockCmd}
-	mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(inv).Once()
-	mockCmd.On("SetStdout", &inv.stdout).Once()
-	mockCmd.On("SetStderr", &inv.stderr).Once()
-	mockCmd.On("SetStdin", bytes.NewReader(data)).Once()
-	mockCmd.On("ExitCode").Return(-1).Once()
-
-	// Test that if Run errors, then Write returns its error
-	mockCmd.On("Run").Return(fmt.Errorf("execution error"))
-	err := entry.Write(ctx, data)
-	suite.Error(err)
-	suite.Regexp(regexp.MustCompile("execution error\n.+"), err.Error())
-
-	mock.AssertExpectationsForObjects(suite.T(), mockScript, mockCmd)
-}
-
-func (suite *ExternalPluginEntryTestSuite) TestWrite_Exited() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
-		script:    mockScript,
-	}
-	entry.SetTestID("/foo")
-	data := []byte("something to write")
-
-	ctx := context.Background()
-	mockCmd := &mockCommand{}
-	inv := invocation{command: mockCmd}
-	mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(inv).Once()
-	mockCmd.On("SetStdout", &inv.stdout).Once()
-	mockCmd.On("SetStderr", &inv.stderr).Once()
-	mockCmd.On("SetStdin", bytes.NewReader(data)).Once()
-	mockCmd.On("ExitCode").Return(1).Once()
-
-	// Test that if Run errors, then Write returns its error
-	mockCmd.On("Run").Return(nil)
-	err := entry.Write(ctx, data)
-	suite.Error(err)
-	suite.Regexp(regexp.MustCompile("script returned a non-zero exit code of 1\n.+"), err.Error())
-
-	mock.AssertExpectationsForObjects(suite.T(), mockScript, mockCmd)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
