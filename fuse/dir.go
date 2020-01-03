@@ -2,6 +2,7 @@ package fuse
 
 import (
 	"context"
+	"os"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -13,7 +14,7 @@ import (
 // ==== FUSE Directory Interface ====
 
 type dir struct {
-	*fuseNode
+	fuseNode
 }
 
 var _ fs.Node = (*dir)(nil)
@@ -93,4 +94,30 @@ func (d *dir) ReadDirAll(ctx context.Context) ([]fuse.Dirent, error) {
 	})
 	activity.Record(ctx, "FUSE: Listed in %v: %+v", d, res)
 	return res, nil
+}
+
+func (d *dir) Attr(ctx context.Context, a *fuse.Attr) error {
+	// FUSE caches nodes for a long time, meaning there's a chance that
+	// f's attributes are outdated. 'refind' requests the entry from its
+	// parent to ensure it has updated attributes.
+	entry, err := d.refind(ctx)
+	if err != nil {
+		activity.Warnf(ctx, "FUSE: Attr errored %v, %v", d, err)
+		return err
+	}
+	// NOTE: We could set f.entry to entry, but doing so would require
+	// a separate mutex which may hinder performance. Since updating f.entry
+	// is not strictly necessary for the other FUSE operations, we choose to
+	// leave it alone.
+
+	applyAttr(a, plugin.Attributes(entry), os.ModeDir|0550)
+	// Attr is not a particularly interesting call and happens a lot. Log it to debug like other
+	// activity, but leave it out of activity because it introduces history entries for lots of
+	// miscellaneous shell activity.
+	if d.parent == nil {
+		log.Tracef("FUSE: Attr %v", d)
+	} else {
+		log.Debugf("FUSE: Attr %v: %+v", d, *a)
+	}
+	return nil
 }

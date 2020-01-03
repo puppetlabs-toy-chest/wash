@@ -45,6 +45,17 @@ func (s *storageObject) Read(ctx context.Context, size int64, offset int64) ([]b
 	return ioutil.ReadAll(rdr)
 }
 
+func (s *storageObject) Write(ctx context.Context, p []byte) error {
+	wr := s.ObjectHandle.NewWriter(ctx)
+	if _, err := wr.Write(p); err != nil {
+		wr.Close()
+		return err
+	}
+
+	// When Close fails we can assume the object update failed.
+	return wr.Close()
+}
+
 func (s *storageObject) Delete(ctx context.Context) (bool, error) {
 	err := s.ObjectHandle.Delete(ctx)
 	return true, err

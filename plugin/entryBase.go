@@ -122,6 +122,11 @@ func (e *EntryBase) Name() string {
 	return e.name()
 }
 
+// String returns a unique identifier for the entry suitable for logging and error messages.
+func (e *EntryBase) String() string {
+	return e.id()
+}
+
 // Attributes returns a pointer to the entry's attributes. Use it
 // to individually set the entry's attributes
 func (e *EntryBase) Attributes() *EntryAttributes {

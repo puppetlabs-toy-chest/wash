@@ -15,7 +15,17 @@ or referenced via the API - and tools for controlling how its data is cached.
 Implementing the Parent interface displays that resource as a directory on the filesystem.
 Anything that does not implement Parent will be displayed as a file.
 
-The Readable interface gives a file its contents when read via the filesystem.
+The Readable interface allows reading data from an entry via the filesystem. The Writable
+interface allows sending data to the entry.
+
+Wash distinguishes between two different patterns for things you can read and write. It considers
+a "file-like" entry to be one with a defined size (so the `size` attribute is set when listing the
+entry). Reading and writing a "file-like" entry edits the contents. Something that can be read and
+written but doesn't define size has different characteristics. Reading and writing are not
+symmetrical: if you write to it then read from it, you may not see what you just wrote. So these
+non-file-like entries error if you try to open them with a ReadWrite handle. If your plugin
+implements non-file-like write-semantics, remember to document how they work in the plugin schema's
+description.
 
 All of the above, as well as other types - Execable, Stream - provide additional functionality
 via the HTTP API.
@@ -183,24 +193,31 @@ type Streamable interface {
 	Stream(context.Context) (io.ReadCloser, error)
 }
 
-// BlockReadable is an entry with content that can be read in blocks
+// BlockReadable is an entry with data that can be read in blocks.
+// A BlockReadable entry must set its Size attribute. If you don't set it, the
+// file size will be reported as 0 and reads will return an empty file.
 type BlockReadable interface {
 	Entry
 	Read(ctx context.Context, size int64, offset int64) ([]byte, error)
 }
 
-// Readable is an entry with content that can be read
+// Readable is an entry with data that can be read.
 type Readable interface {
 	Entry
 	Read(context.Context) ([]byte, error)
 }
 
-// Writable is an entry that can write data directly to the entry. It mirrors
-// the WriterAt interface with an added context for handling the lifecycle of
-// remote write operations.
+// Writable is an entry that we can write new data to. What that means can be
+// implementation-specific; it could be overwriting a file, submitting a
+// configuration change to an API, or writing data to a queue. It doesn't
+// support a concept of a partial write.
+//
+// Writable can be implemented with or without Readable/BlockReadable. If an
+// entry is only Writable, then only full writes (starting from offset 0) are
+// allowed, anything else initiated by the filesystem will result in an error.
 type Writable interface {
 	Entry
-	Write(context.Context, int64, []byte) (int, error)
+	Write(context.Context, []byte) error
 }
 
 // Deletable is an entry that can be deleted. Entries that implement Delete

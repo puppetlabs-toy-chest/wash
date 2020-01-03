@@ -83,6 +83,11 @@ func (m *methodWrappersTestsMockEntry) Read(ctx context.Context) ([]byte, error)
 	return args.Get(0).([]byte), args.Error(1)
 }
 
+func (m *methodWrappersTestsMockEntry) Write(ctx context.Context, p []byte) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
 func newMethodWrappersTestsMockEntry(name string) *methodWrappersTestsMockEntry {
 	e := &methodWrappersTestsMockEntry{
 		EntryBase: NewEntry(name),
@@ -242,6 +247,44 @@ func (suite *MethodWrappersTestSuite) TestRead_EntryHasSizeAttribute() {
 		}
 		suite.Equal([]byte("success"), actual)
 	}
+}
+
+func (suite *MethodWrappersTestSuite) TestSize() {
+	ctx := context.Background()
+
+	basic := newMockEntry("/mock")
+	size, err := Size(ctx, basic)
+	suite.NoError(err)
+	suite.Zero(size)
+
+	basic.Attributes().SetSize(2)
+	size, err = Size(ctx, basic)
+	suite.NoError(err)
+	suite.Equal(uint64(2), size)
+
+	readable := newMethodWrappersTestsMockEntry("/mock")
+	readable.On("Read", ctx).Return([]byte{0}, nil).Once()
+	size, err = Size(ctx, readable)
+	suite.NoError(err)
+	suite.Equal(uint64(1), size)
+
+	readable.Attributes().SetSize(2)
+	size, err = Size(ctx, readable)
+	suite.NoError(err)
+	suite.Equal(uint64(2), size)
+
+	readable.AssertExpectations(suite.T())
+}
+
+func (suite *MethodWrappersTestSuite) TestWrite() {
+	ctx := context.Background()
+	data := []byte("something")
+
+	writable := newMethodWrappersTestsMockEntry("/mock")
+	writable.On("Write", ctx, data).Return(nil).Once()
+	err := Write(ctx, writable, data)
+	suite.NoError(err)
+	writable.AssertExpectations(suite.T())
 }
 
 func (suite *MethodWrappersTestSuite) TestSignal_ReturnsSignalError() {

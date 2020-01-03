@@ -166,6 +166,23 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	return
 }
 
+// Size returns the size of readable data for an entry. It may call Read to do so.
+func Size(ctx context.Context, e Entry) (uint64, error) {
+	if attr := e.attributes(); attr.HasSize() {
+		return attr.Size(), nil
+	}
+
+	if !ReadAction().IsSupportedOn(e) {
+		return 0, nil
+	}
+
+	data, err := cachedRead(ctx, e)
+	if err != nil {
+		return 0, err
+	}
+	return data.size(), nil
+}
+
 // Metadata returns the entry's metadata. Note that Metadata's results could be cached.
 func Metadata(ctx context.Context, e Entry) (JSONObject, error) {
 	return cachedMetadata(ctx, e)
@@ -182,8 +199,8 @@ func Stream(ctx context.Context, s Streamable) (io.ReadCloser, error) {
 }
 
 // Write sends the supplied buffer to the entry.
-func Write(ctx context.Context, a Writable, offset int64, b []byte) (int, error) {
-	return a.Write(ctx, offset, b)
+func Write(ctx context.Context, a Writable, b []byte) error {
+	return a.Write(ctx, b)
 }
 
 // Signal signals the entry with the specified signal

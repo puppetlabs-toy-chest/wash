@@ -28,6 +28,10 @@ It should always be safe to run `go get -u=patch` to pickup patches.
 
 When making changes to Wash's APIs, remember to update the inline swagger documentation. Instructions for regenerating the API docs are [here](./website/README.md#regenerate-swagger-docs).
 
+### Local filesystem testing
+
+A developer-only plugin is included in Wash that references the local filesystem. It can be enabled by setting the `WASH_LOCALFS` environment variable to the local file path to mount before starting Wash. This can be useful for testing changes to core functionality like the `fuse` or `api` modules.
+
 ## Submitting Changes
 Fork the repo, make changes, file a Pull Request.
 

@@ -55,18 +55,16 @@ func getIDs() (uint32, uint32) {
 var uid, gid = getIDs()
 
 type fuseNode struct {
-	ftype             string
-	parent            *dir
-	entry             plugin.Entry
-	entryCreationTime time.Time
+	ftype  string
+	parent *dir
+	entry  plugin.Entry
 }
 
-func newFuseNode(ftype string, parent *dir, entry plugin.Entry) *fuseNode {
-	return &fuseNode{
-		ftype:             ftype,
-		parent:            parent,
-		entry:             entry,
-		entryCreationTime: time.Now(),
+func newFuseNode(ftype string, parent *dir, entry plugin.Entry) fuseNode {
+	return fuseNode{
+		ftype:  ftype,
+		parent: parent,
+		entry:  entry,
 	}
 }
 
@@ -75,7 +73,7 @@ func (f *fuseNode) String() string {
 }
 
 // Applies attributes where non-default, and sets defaults otherwise.
-func (f *fuseNode) applyAttr(a *fuse.Attr, attr *plugin.EntryAttributes, defaultMode os.FileMode) {
+func applyAttr(a *fuse.Attr, attr plugin.EntryAttributes, defaultMode os.FileMode) {
 	// Setting a.Valid to 1 second avoids frequent Attr calls.
 	a.Valid = 1 * time.Second
 
@@ -141,44 +139,6 @@ func (f *fuseNode) refind(ctx context.Context) (plugin.Entry, error) {
 		return f.entry, nil
 	}
 	return plugin.FindEntry(ctx, parent, segments)
-}
-
-func (f *fuseNode) Attr(ctx context.Context, a *fuse.Attr) error {
-	// Attr is not a particularly interesting call and happens a lot. Log it to debug like other
-	// activity, but leave it out of activity because it introduces history entries for lots of
-	// miscellaneous shell activity.
-	log.Debugf("FUSE: Attr %v", f)
-
-	// FUSE caches nodes for a long time, meaning there's a chance that
-	// f's attributes are outdated. 'refind' requests the entry from its
-	// parent to ensure it has updated attributes.
-	updatedEntry, err := f.refind(ctx)
-	if err != nil {
-		activity.Warnf(ctx, "FUSE: Attr errored %v, %v", f, err)
-		return err
-	}
-	attr := plugin.Attributes(updatedEntry)
-	// NOTE: We could set f.entry to updatedEntry, but doing so would require
-	// a separate mutex which may hinder performance. Since updating f.entry
-	// is not strictly necessary for the other FUSE operations, we choose to
-	// leave it alone.
-
-	var mode os.FileMode
-	if plugin.ListAction().IsSupportedOn(updatedEntry) {
-		mode = os.ModeDir | 0550
-	} else {
-		if plugin.WriteAction().IsSupportedOn(updatedEntry) {
-			mode |= 0220
-		}
-		if plugin.ReadAction().IsSupportedOn(updatedEntry) ||
-			plugin.StreamAction().IsSupportedOn(updatedEntry) {
-			mode |= 0440
-		}
-	}
-
-	f.applyAttr(a, &attr, mode)
-	log.Debugf("FUSE: Attr finished %v", f)
-	return nil
 }
 
 // ServeFuseFS starts serving a fuse filesystem that lists the registered plugins.

@@ -29,6 +29,7 @@ title: Docs
 * [Actions](#actions)
   * [list](#list)
   * [read](#read)
+  * [write](#write)
   * [stream](#stream)
   * [exec](#exec)
   * [delete](#delete)
@@ -245,7 +246,7 @@ gcp/Wash/storage/some-wash-stuff
 ```
 
 ### read
-The `read` action lets you view an entry’s content. Thus, any command that reads a file also works with these entries.
+The `read` action lets you read data from an entry. Thus, any command that reads a file also works with these entries.
 
 #### Examples
 ```
@@ -258,6 +259,34 @@ echo "Hello, world!"
 ```
 wash . ❯ grep "Hello" gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
 echo "Hello, world!"
+```
+
+### write
+The `write` action lets you write data to an entry. Thus, any command that writes a file also works with these entries.
+
+Note that Wash distinguishes between file-like and non-file-like entries. An entry is file-like if it's readable and writable and defines its size; you can edit it like a file.
+
+If it doesn't define a size then it's non-file-like, and trying to open it with a ReadWrite handle will error; reads from it may not return data you previously wrote to it. You should check its documentation with the `docs` command for that entry's write semantics. We also recommend not using editors with these entries to avoid weird behavior.
+
+#### Examples
+Modifying a file stored in Google Cloud Storage
+```
+wash . ❯ echo 'exit 1' >> gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
+wash . ❯ cat gcp/Wash/storage/some-wash-stuff/an\ example\ folder/static.sh
+#!/bin/sh
+
+echo "Hello, world!"
+exit 1
+```
+
+Writing a message to a hypothetical message queue where each write publishes a message and each read consumes a message
+```
+wash > echo 'message 1' >> myqueue
+wash > echo 'message 2' >> myqueue
+wash > cat myqueue
+message 1
+wash > cat myqueue
+message 2
 ```
 
 ### stream

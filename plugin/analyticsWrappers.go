@@ -30,9 +30,9 @@ func StreamWithAnalytics(ctx context.Context, s Streamable) (io.ReadCloser, erro
 
 // WriteWithAnalytics is a wrapper to w#Write. Use it when you need to report an 'Write'
 // invocation to analytics. Otherwise, use w#Write.
-func WriteWithAnalytics(ctx context.Context, w Writable, off int64, b []byte) (int, error) {
+func WriteWithAnalytics(ctx context.Context, w Writable, b []byte) error {
 	submitMethodInvocation(ctx, w, "Write")
-	return Write(ctx, w, off, b)
+	return Write(ctx, w, b)
 }
 
 // ExecWithAnalytics is a wrapper to e#Exec. Use it when you need to report an 'Exec'

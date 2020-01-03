@@ -43,9 +43,8 @@ func (m *mockExternalPluginScript) NewInvocation(
 	entry *externalPluginEntry,
 	args ...string,
 ) invocation {
-	// A stub's still necessary to satisfy the externalPluginScript
-	// interface
-	panic("mockExternalPluginScript#NewInvocation called by tests")
+	retValues := m.Called(ctx, method, entry, args)
+	return retValues.Get(0).(invocation)
 }
 
 // We make ctx an interface{} so that this method could
@@ -325,7 +324,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 }
 
 func mockInvocation(stdout []byte) invocation {
-	return invocation{command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
+	return &invocationImpl{Command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
 }
 
 // TODO: Add tests for Schema, including when schemaGraph is provided (prefetched)
@@ -659,6 +658,53 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 			}
 		}
 	}
+}
+
+type mockedInvocation struct {
+	internal.Command
+	mock.Mock
+}
+
+func (m *mockedInvocation) RunAndWait(ctx context.Context) error {
+	return m.Called(ctx).Error(0)
+}
+
+func (m *mockedInvocation) Stdout() *bytes.Buffer {
+	return m.Called().Get(0).(*bytes.Buffer)
+}
+
+func (m *mockedInvocation) Stderr() *bytes.Buffer {
+	return m.Called().Get(0).(*bytes.Buffer)
+}
+
+var _ = invocation(&mockedInvocation{})
+
+func (suite *ExternalPluginEntryTestSuite) TestWrite() {
+	mockScript := &mockExternalPluginScript{path: "plugin_script"}
+	entry := &externalPluginEntry{
+		EntryBase: NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+	data := []byte("something to write")
+
+	ctx := context.Background()
+	mockRunAndWait := func(err error) {
+		mockInv := &mockedInvocation{Command: internal.NewCommand(ctx, "")}
+		mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(mockInv).Once()
+		mockInv.On("RunAndWait", ctx).Return(err).Once()
+	}
+
+	// Test that if RunAndWait errors, then Write returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockRunAndWait(mockErr)
+	err := entry.Write(ctx, data)
+	suite.EqualError(mockErr, err.Error())
+
+	// Test that invocation succeeds
+	mockRunAndWait(nil)
+	err = entry.Write(ctx, data)
+	suite.NoError(err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
