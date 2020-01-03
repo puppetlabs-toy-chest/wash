@@ -35,8 +35,7 @@ func newEC2InstanceConsoleOutput(ctx context.Context, inst *ec2Instance, latest 
 		SetCrtime(output.mtime).
 		SetMtime(output.mtime).
 		SetCtime(output.mtime).
-		SetAtime(output.mtime).
-		SetSize(uint64(len(output.content)))
+		SetAtime(output.mtime)
 
 	return cl, nil
 }

@@ -14,22 +14,10 @@ type MetadataJSONFile struct {
 // NewMetadataJSONFile creates a new MetadataJSONFile. If caching Metadata on the `other` entry is
 // disabled, it will use that to compute the file size upfront.
 func NewMetadataJSONFile(ctx context.Context, other Entry) (*MetadataJSONFile, error) {
-	meta := &MetadataJSONFile{
+	return &MetadataJSONFile{
 		EntryBase: NewEntry("metadata.json"),
 		other:     other,
-	}
-
-	if other.getTTLOf(MetadataOp) < 0 {
-		// Content is presumably easy to get, so use it to determine size.
-		content, err := meta.Read(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		meta.Attributes().SetSize(uint64(len(content)))
-	}
-
-	return meta, nil
+	}, nil
 }
 
 // Schema defines the schema of a metadata.json file.
