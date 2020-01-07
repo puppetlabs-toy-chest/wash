@@ -64,3 +64,32 @@ ol ol {
     list-style-type: lower-roman;
   }
 }
+
+.intro-normal {
+  margin: 0;
+  font-size: 28px;
+}
+
+h1 + .intro-normal {
+  margin-top: 30px;
+}
+
+.intro-large {
+  margin: 0;
+  font-size: 36px;
+}
+
+.intro-large + ul {
+  margin-top: -20px;
+}
+
+.demo-select {
+  margin-bottom: -5px;
+}
+
+.demo-select select {
+  background-color: black;
+  color: #d3d3d3;
+  font-size: 20px;
+  font-weight: bolder;
+}

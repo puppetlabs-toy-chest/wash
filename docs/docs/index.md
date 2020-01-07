@@ -1,6 +1,7 @@
 ---
 title: Docs
 ---
+* [External plugins](external-plugins)
 * [Analytics](#analytics)
   * [What data does Wash collect?](#what-data-does-wash-collect)
   * [Why does Wash collect data?](#why-does-wash-collect-data)
@@ -41,7 +42,6 @@ title: Docs
   * [atime](#atime)
   * [size](#size)
   * [mode](#mode)
-* [External plugins](external-plugins)
 * [Server API](api)
 
 ## Analytics

@@ -3,6 +3,8 @@ title: External Plugins
 ---
 
 - [Adding an external plugin](#adding-an-external-plugin)
+- [Example Plugins](#example-plugins)
+- [Libraries](#libraries)
 - [Calling conventions](#calling-conventions)
     - [init](#init)
     - [list](#list)
@@ -18,8 +20,6 @@ title: External Plugins
     - [Entry schema graph JSON object](#entry-schema-graph-json-object)
     - [Errors](#errors)
 - [Entry schema](#entry-schemas)
-- [Libraries](#libraries)
-- [Example Plugins](#example-plugins)
 
 # Adding an external plugin
 Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the _absolute_ path to the plugin script. An example `wash.yaml` config adding the `puppetwash` plugin is shown below:
@@ -29,6 +29,20 @@ Add the plugin to your `wash.yaml` file under the `external-plugins` key, and sp
 external-plugins:
     - script: '/Users/enis.inan/GitHub/puppetwash/puppetwash.rb'
 ```
+
+**Note:** You'll need to restart the Wash shell to enable any new plugins.
+
+# Example Plugins
+
+* [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once without having to clone them
+* [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves
+* [Puppetwash](https://github.com/puppetlabs/puppetwash) - view your Puppet (Enterprise) instances and information about the managed nodes
+* [AWS IoT](https://gitlab.com/nwops/wash-iot) - view your AWS IoT devices and their shadow data
+* [Spotify](https://github.com/binford2k/wash-spotifyfs) - view your Spotify playlists and tracks
+
+# Libraries
+
+* [Wash gem](https://github.com/puppetlabs/wash-ruby)
 
 # Calling conventions
 This section illustrates the calling conventions for each plugin script invocation. All calling conventions have the following general format
@@ -526,15 +540,3 @@ Entry schemas are a _optional_ type-level overview of your plugin's hierarchy. T
 These questions can be generalized to any Wash entry.
 
 Entry schemas are a useful way to document your plugin without having to maintain a README. They are also useful for optimizing `find`, especially when `find` is used for metadata filtering. Without entry schemas, for example, an EC2 instance query like `find aws -meta '.tags[?]' '.key' termination_date` would cause `find` to recurse into every entry in the `aws` plugin, including non-EC2 instance entries like S3 objects. With entry schemas, however, `find` would only recurse into those entries that will eventually lead to an EC2 instance. The latter is a significantly faster (and less expensive) operation, especially for large infrastructures.
-
-# Libraries
-
-* [Wash gem](https://github.com/puppetlabs/wash-ruby)
-
-# Example Plugins
-
-* [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once without having to clone them
-* [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves
-* [Puppetwash](https://github.com/puppetlabs/puppetwash) - view your Puppet (Enterprise) instances and information about the managed nodes
-* [AWS IoT](https://gitlab.com/nwops/wash-iot) - view your AWS IoT devices and their shadow data
-* [Spotify](https://github.com/binford2k/wash-spotifyfs) - view your Spotify playlists and tracks
