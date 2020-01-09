@@ -102,26 +102,28 @@ func ForVerifyInstall(mountpoint string, socket string) *Server {
 	}
 }
 
-// Start starts the server. It returns once the server is ready.
-func (s *Server) Start() error {
+// Start starts the server. It returns once the server is ready. The Boolean
+// value is true if all plugins were successfully loaded
+func (s *Server) Start() (bool, error) {
 	var err error
 	if s.logFH, err = s.opts.SetupLogging(); err != nil {
-		return err
+		return false, err
 	}
 
 	registry := plugin.NewRegistry()
 
+	successfullyLoadedPlugins := true
 	if !s.forVerifyInstall {
-		s.loadPlugins(registry)
+		successfullyLoadedPlugins = s.loadPlugins(registry)
 		if len(registry.Plugins()) == 0 {
-			return fmt.Errorf("no plugins loaded. If you're planning on using Wash just for its external plugins, then go to https://puppetlabs.github.io/wash/docs/external-plugins#adding-an-external-plugin for details on how to add them")
+			return successfullyLoadedPlugins, fmt.Errorf("no plugins loaded. If you're planning on using Wash just for its external plugins, then go to https://puppetlabs.github.io/wash/docs/external-plugins")
 		}
 
 		plugin.InitCache()
 
 		analyticsConfig, err := analytics.GetConfig()
 		if err != nil {
-			return err
+			return successfullyLoadedPlugins, err
 		}
 		s.analyticsClient = analytics.NewClient(analyticsConfig)
 	}
@@ -133,7 +135,7 @@ func (s *Server) Start() error {
 		s.analyticsClient,
 	)
 	if err != nil {
-		return err
+		return successfullyLoadedPlugins, err
 	}
 	s.api = controlChannels{stopCh: apiServerStopCh, stoppedCh: apiServerStoppedCh}
 
@@ -144,7 +146,7 @@ func (s *Server) Start() error {
 	)
 	if err != nil {
 		s.stopAPIServer()
-		return err
+		return successfullyLoadedPlugins, err
 	}
 	s.fuse = controlChannels{stopCh: fuseServerStopCh, stoppedCh: fuseServerStoppedCh}
 
@@ -165,7 +167,7 @@ func (s *Server) Start() error {
 		}
 	}
 
-	return nil
+	return successfullyLoadedPlugins, nil
 }
 
 func (s *Server) stopAPIServer() {
@@ -243,7 +245,7 @@ func (s *Server) Stop() {
 	s.shutdown()
 }
 
-func (s *Server) loadPlugins(registry *plugin.Registry) {
+func (s *Server) loadPlugins(registry *plugin.Registry) bool {
 	log.Debug("Loading plugins")
 	var wg sync.WaitGroup
 	var mux sync.Mutex
@@ -275,4 +277,5 @@ func (s *Server) loadPlugins(registry *plugin.Registry) {
 		)
 	}
 	log.Debug("Finished loading plugins")
+	return len(failedPlugins) <= 0
 }

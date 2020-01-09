@@ -101,7 +101,7 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 
 	if rootVerifyInstallFlag {
 		srv := server.ForVerifyInstall(mountpath, socketpath)
-		if err := srv.Start(); err != nil {
+		if _, err := srv.Start(); err != nil {
 			cmdutil.ErrPrintf("Verify install failed: %v\n", err)
 			return exitCode{1}
 		}
@@ -118,17 +118,15 @@ func rootMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	srv := server.New(mountpath, socketpath, plugins, serverOpts)
-	if err := srv.Start(); err != nil {
+	successfullyLoadedPlugins, err := srv.Start()
+	if err != nil {
 		cmdutil.ErrPrintf("Unable to start server: %v\n", err)
 		return exitCode{1}
 	}
 	defer srv.Stop()
 
-	if plugin.IsInteractive() {
-		cmdutil.Println(`Welcome to Wash!
-  Wash includes several built-in commands: ls, wexec, find, meta, tail.
-  See commands run with wash via 'whistory', and logs with 'whistory <id>'.
-Try 'help'`)
+	if plugin.IsInteractive() && successfullyLoadedPlugins {
+		cmdutil.Println("Welcome to Wash! Try 'docs .'")
 	}
 
 	if !symlinkWash(rundir) {

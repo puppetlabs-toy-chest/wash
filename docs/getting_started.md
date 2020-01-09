@@ -31,7 +31,6 @@ Wash is distributed as a single binary; the only prerequisite is `libfuse`. Here
     * If anything fails, then check out the [known issues page]({{ '/known_issues' | relative_url }}) to see if the failure(s) correspond to any of the known issues. Otherwise, please don't hesitate to ask us on [slack](https://puppetcommunity.slack.com/app_redirect?channel=wash) for help (or file an [issue](https://github.com/puppetlabs/wash/issues))! Note that you can use `wash --verify-install` to test any fixes.
 
 * You're good to go! Try running `wash` to start up the shell[^1]
-    * If you plan on extending Wash, then check out the [external plugin docs]({{ '/docs/external-plugins' | relative_url }}).
 
 **Note:** Wash collects anonymous data about how you use it. See the [analytics docs]({{ '/docs#analytics' | relative_url }}) for more details.
 

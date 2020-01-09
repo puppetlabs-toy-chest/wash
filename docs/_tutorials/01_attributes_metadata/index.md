@@ -1,7 +1,9 @@
 ---
-title: Understanding attributes and metadata
+title: A deeper dive into attributes and metadata
+main: true
+sections: []
 ---
-This tutorial covers attributes and metadata, which are primarily used for filtering entries with the `find` command. The `find` command is introduced in [Filtering entries with find]({{ '/tutorials/02_find' | relative_url }}).
+This tutorial covers attributes and metadata in more detail.
 
 # Metadata
 All entries are completely described by their metadata. An entry’s metadata is a key-value map containing everything you’ll ever need to know about the entry. You can use the `meta` command to view an entry’s metadata.
@@ -290,11 +292,10 @@ You might have found Exercise 3 similar to Exercise 2. This was on purpose. The 
 # Attributes
 Some metadata properties like creation time (`crtime`), last modified time (`mtime`), and content size (`size`) are common across entries. These common properties make up an entry’s attributes. From its definition, we see that an entry’s attributes are a subset of its metadata.
 
-You can use `winfo` to view an entry’s attributes.
+You can use `winfo` to view a condensed version of the entry’s attributes.
 
 ```
 wash . ❯ winfo docker/containers/wash_tutorial_redis_1
-Path: /Users/enis.inan/Library/Caches/wash/mnt184960766/docker/containers/wash_tutorial_redis_1
 Name: wash_tutorial_redis_1
 CName: wash_tutorial_redis_1
 Actions:
@@ -384,4 +385,4 @@ Comparing this output with the `meta` command’s output in the Metadata section
 
 # Next steps
 
-Now that you've learned about attributes and metadata, you can move on to learn about viewing a [plugin's documentation](documentation).
+Click [here](../) to go back to the tutorials page.
