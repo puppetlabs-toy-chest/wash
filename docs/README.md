@@ -12,7 +12,7 @@ bundle install --path vendor/bundle
 
 To start a local development server
 ```
-bundle exec jekyll server --baseurl /wash
+bundle exec jekyll server
 ```
 
 Go to `http://localhost:4000/wash/` to see the site running. Changes will be picked up automatically without restarting the server.
