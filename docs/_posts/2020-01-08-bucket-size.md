@@ -11,7 +11,7 @@ If you [Google it](https://www.google.com/search?q=size+of+s3+bucket), you'll fi
 ```
 aws s3 ls --summarize --human-readable --recursive s3://bucket/folder
 ```
-or something similar. As the comments mention, this gets excrutiatingly slow for buckets with a lot of files because it's doing an API to get the size of each object.
+or something similar. As the comments mention, this gets excrutiatingly slow for buckets with a lot of files because it's doing an API call to get the size of each object.
 
 Scrolling down far enough on serverfault/stackoverflow will get you a much more efficient method
 ```
