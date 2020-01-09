@@ -74,6 +74,7 @@ func (p *project) Delete(ctx context.Context) (bool, error) {
 func (p *project) Schema() *plugin.EntrySchema {
 	schema := plugin.NewEntrySchema(p, "project")
 	schema.SetMetaAttributeSchema(crm.Project{})
+	schema.SetDescription(projectDescription)
 	return schema
 }
 
@@ -87,3 +88,7 @@ func (p *project) ChildSchemas() []*plugin.EntrySchema {
 		(&cloudRunDir{}).Schema(),
 	}
 }
+
+const projectDescription = `
+This is a GCP project.
+`
