@@ -75,12 +75,36 @@ h1 + .intro-normal {
 }
 
 .intro-large {
+  font-weight: bold;
   margin: 0;
   font-size: 36px;
 }
 
 .intro-large + ul {
   margin-top: -20px;
+}
+
+.flex-row {
+  display: flex
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.center {
+  text-align: center;
+}
+
+.pad-left {
+  padding-left: 1.5rem;
+}
+
+.version {
+  font-size: 20px;
+  white-space: nowrap;
+  text-decoration: underline;
 }
 
 .demo-select {
