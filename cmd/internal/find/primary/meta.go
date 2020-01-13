@@ -67,6 +67,9 @@ var Meta = Parser.add(&Primary{
 })
 
 const metaDetailedDescription = `
+NOTE: https://puppetlabs.github.io/wash/tutorials/02_find/meta-primary
+contains a hands-on tutorial of the meta primary.
+
 The meta primary constructs a predicate on the entry's metadata. By
 default, this is the meta attribute. If you'd like to construct the
 predicate on the entry's full metadata, then set the "fullmeta" option.
