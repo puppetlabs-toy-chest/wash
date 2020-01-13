@@ -10,7 +10,7 @@ func TestLoadExternalPlugin(t *testing.T) {
 	spec := ExternalPluginSpec{Script: "testdata/external.sh"}
 	root, err := spec.Load()
 	assert.NoError(t, err)
-	assert.Equal(t, "external", root.name())
+	assert.Equal(t, "external", root.eb().name)
 }
 
 func TestLoadExternalPluginNoExec(t *testing.T) {

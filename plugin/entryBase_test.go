@@ -13,7 +13,7 @@ type EntryBaseTestSuite struct {
 }
 
 func (suite *EntryBaseTestSuite) assertOpTTL(e EntryBase, op defaultOpCode, opName string, expectedTTL time.Duration) {
-	actualTTL := e.getTTLOf(op)
+	actualTTL := e.ttl[op]
 	suite.Equal(
 		expectedTTL,
 		actualTTL,
@@ -35,15 +35,12 @@ func (suite *EntryBaseTestSuite) TestNewEntry() {
 	e := NewEntry("foo")
 
 	e.SetAttributes(initialAttr)
-	suite.Equal(initialAttr, e.attr)
+	suite.Equal(initialAttr, e.attributes)
 
 	suite.Equal("foo", e.Name())
 	suite.assertOpTTL(e, ListOp, "List", 15*time.Second)
 	suite.assertOpTTL(e, ReadOp, "Read", 15*time.Second)
 	suite.assertOpTTL(e, MetadataOp, "Metadata", 15*time.Second)
-
-	e.setID("/foo")
-	suite.Equal("/foo", e.id())
 
 	e.SetTTLOf(ListOp, 40*time.Second)
 	suite.assertOpTTL(e, ListOp, "List", 40*time.Second)
@@ -75,7 +72,7 @@ func (suite *EntryBaseTestSuite) TestSetSlashReplacer() {
 	)
 
 	e.SetSlashReplacer(':')
-	suite.Equal(e.slashReplacer(), ':')
+	suite.Equal(e.slashReplacer, ':')
 }
 
 func TestEntryBase(t *testing.T) {

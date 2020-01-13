@@ -181,7 +181,7 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 		// Including the entry's ID allows plugin authors to use any Cached* methods defined on the
 		// children after their creation. This is necessary when the child's Cached* methods are used
 		// to calculate its attributes. Note that the child's ID is set in cachedOp.
-		entries, err := p.List(context.WithValue(ctx, parentID, p.id()))
+		entries, err := p.List(context.WithValue(ctx, parentID, p.eb().id))
 		if err != nil {
 			return nil, err
 		}
@@ -192,16 +192,16 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 
 			if duplicateEntry, ok := searchedEntries.mp[cname]; ok {
 				return nil, DuplicateCNameErr{
-					ParentID:                 p.id(),
-					FirstChildName:           duplicateEntry.name(),
-					FirstChildSlashReplacer:  duplicateEntry.slashReplacer(),
-					SecondChildName:          entry.name(),
-					SecondChildSlashReplacer: entry.slashReplacer(),
+					ParentID:                 p.eb().id,
+					FirstChildName:           duplicateEntry.eb().name,
+					FirstChildSlashReplacer:  duplicateEntry.eb().slashReplacer,
+					SecondChildName:          entry.eb().name,
+					SecondChildSlashReplacer: entry.eb().slashReplacer,
 					CName:                    cname,
 				}
 			}
 
-			if entry.isInaccessible() {
+			if entry.eb().isInaccessible {
 				// Skip entries that are expected to be inaccessible.
 				continue
 			}
@@ -210,7 +210,7 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 
 			// Ensure ID is set on all entries so that we can use it for caching later in places
 			// where the context doesn't include the parent's ID.
-			setChildID(p.id(), entry)
+			setChildID(p.eb().id, entry)
 
 			passAlongWrappedTypes(p, entry)
 		}
@@ -254,7 +254,7 @@ func cachedRead(ctx context.Context, e Entry) (entryContent, error) {
 				panic("attempting to retrieve the content of a non-readable entry")
 			}
 			content := newBlockReadableEntryContent(readFunc)
-			if attr := e.attributes(); attr.HasSize() {
+			if attr := e.eb().attributes; attr.HasSize() {
 				content.sz = attr.Size()
 			}
 			return content, nil
@@ -288,7 +288,7 @@ func cachedMetadata(ctx context.Context, e Entry) (JSONObject, error) {
 // Common helper for CachedList, CachedOpen and CachedMetadata
 func cachedDefaultOp(ctx context.Context, opCode defaultOpCode, entry Entry, op opFunc) (interface{}, error) {
 	opName := defaultOpCodeToNameMap[opCode]
-	ttl := entry.getTTLOf(opCode)
+	ttl := entry.eb().ttl[opCode]
 
 	return cachedOp(ctx, opName, entry, ttl, op)
 }
@@ -307,19 +307,19 @@ func cachedOp(ctx context.Context, opName string, entry Entry, ttl time.Duration
 		return op()
 	}
 
-	if entry.id() == "" {
+	if entry.eb().id == "" {
 		// Try to set the ID based on parent ID
 		if obj := ctx.Value(parentID); obj != nil {
 			setChildID(obj.(string), entry)
 		} else {
-			panic(fmt.Sprintf("Cached op %v on %v had no cache ID and context did not include parent ID", opName, entry.name()))
+			panic(fmt.Sprintf("Cached op %v on %v had no cache ID and context did not include parent ID", opName, entry.eb().name))
 		}
 	}
 
-	return cache.GetOrUpdate(opName, entry.id(), ttl, false, op)
+	return cache.GetOrUpdate(opName, entry.eb().id, ttl, false, op)
 }
 
 func setChildID(parentID string, child Entry) {
 	id := strings.TrimRight(parentID, "/") + "/" + CName(child)
-	child.setID(id)
+	child.eb().id = id
 }

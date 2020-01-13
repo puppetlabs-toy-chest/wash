@@ -53,16 +53,8 @@ import (
 type Entry interface {
 	Metadata(ctx context.Context) (JSONObject, error)
 	Schema() *EntrySchema
-	name() string
-	attributes() EntryAttributes
-	slashReplacer() rune
-	id() string
-	setID(id string)
-	getTTLOf(op defaultOpCode) time.Duration
-	wrappedTypes() map[interface{}]*JSONSchema
-	setWrappedTypes(map[interface{}]*JSONSchema)
-	isPrefetched() bool
-	isInaccessible() bool
+	// eb => entryBase
+	eb() *EntryBase
 }
 
 /*

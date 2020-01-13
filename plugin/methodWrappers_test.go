@@ -102,9 +102,9 @@ func (suite *MethodWrappersTestSuite) TestAttributes() {
 	suite.cache.On("Get", mock.Anything, mock.Anything).Return(nil, nil)
 
 	e := newMethodWrappersTestsMockEntry("mockEntry")
-	e.attr = EntryAttributes{}
-	e.attr.SetCtime(time.Now())
-	suite.Equal(e.attr, Attributes(e))
+	e.eb().attributes = EntryAttributes{}
+	e.eb().attributes.SetCtime(time.Now())
+	suite.Equal(e.eb().attributes, Attributes(e))
 }
 
 func (suite *MethodWrappersTestSuite) TestPrefetched() {
@@ -308,7 +308,7 @@ func (suite *MethodWrappersTestSuite) TestSignal_SendsSignalAndUpdatesCache() {
 	e.On("Schema").Return((*EntrySchema)(nil))
 	e.On("Signal", ctx, "start").Return(nil)
 
-	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.eb().id)).Return([]string{})
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
 	// Also test case-insensitivity here
@@ -372,7 +372,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_Updates
 	e.SetTestID("/foo/bar")
 	e.On("Delete", mock.Anything).Return(false, nil)
 
-	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.eb().id)).Return([]string{})
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
 	deleted, err := Delete(context.Background(), e)
@@ -405,7 +405,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_DeletedEntry_UpdatesCache() {
 
 	entryMap := newEntryMap()
 	entryMap.mp["bar"] = e
-	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.id())).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.eb().id)).Return([]string{})
 	suite.cache.On("Get", "List", "/foo").Return(entryMap, nil)
 
 	deleted, err := Delete(context.Background(), e)

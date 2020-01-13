@@ -40,7 +40,7 @@ func schema(e Entry) (*EntrySchema, error) {
 		for _, root := range t.pluginRoots {
 			childSchema, err := Schema(root)
 			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve the %v plugin's schema: %v", root.name(), err)
+				return nil, fmt.Errorf("failed to retrieve the %v plugin's schema: %v", root.eb().name, err)
 			}
 			if childSchema == nil {
 				// The plugin doesn't have a schema, which means it's an external plugin.
@@ -251,7 +251,7 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		}
 		// The ID here is meaningless. We only set it so that TypeID can get the
 		// plugin name
-		child.entry.setID(s.entry.id())
+		child.entry.eb().id = s.entry.eb().id
 		childTypeID := TypeID(child.entry)
 		s.entrySchema.Children = append(s.Children, childTypeID)
 		if _, ok := graph.Get(childTypeID); ok {
@@ -274,15 +274,15 @@ func passAlongWrappedTypes(p Parent, child Entry) {
 	if root, ok := child.(HasWrappedTypes); ok {
 		wrappedTypes = root.WrappedTypes()
 	} else {
-		wrappedTypes = p.wrappedTypes()
+		wrappedTypes = p.eb().wrappedTypes
 	}
-	child.setWrappedTypes(wrappedTypes)
+	child.eb().wrappedTypes = wrappedTypes
 }
 
 // Helper that wraps the common code shared by the SetMeta*Schema methods
 func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
 	typeMappings := make(map[reflect.Type]*jsonschema.Type)
-	for t, s := range s.entry.wrappedTypes() {
+	for t, s := range s.entry.eb().wrappedTypes {
 		typeMappings[reflect.TypeOf(t)] = s.Type
 	}
 	r := jsonschema.Reflector{
@@ -314,7 +314,7 @@ func pluginName(e Entry) string {
 	// via something like "Schema(registry) => TypeID(Root)", where
 	// CachedList(registry) was not yet called. This can happen if, for
 	// example, the user starts the Wash shell and runs `stree`.
-	trimmedID := strings.Trim(e.id(), "/")
+	trimmedID := strings.Trim(e.eb().id, "/")
 	if trimmedID == "" {
 		switch e.(type) {
 		case Root:

@@ -160,7 +160,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Pa
 	if err := root.Init(nil); suite.NoError(err) && suite.NotNil(root.schemaGraphs) {
 		// Ensure that the graph of root.schemaGraphs[type_id] has "type_id" as its
 		// first item. We pick an arbitrary type ID here
-		typeID := namespace(root.name(), "aws.profile")
+		typeID := namespace(root.eb().name, "aws.profile")
 		graph := root.schemaGraphs[typeID]
 		if suite.NotNil(graph) {
 			it := graph.Iterator()

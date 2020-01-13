@@ -225,12 +225,12 @@ func (suite *CacheTestSuite) TestCachedOp() {
 	opTTL := 5 * time.Second
 	op := func() (interface{}, error) { return "result", nil }
 	generateValueMatcher := suite.makeGenerateValueMatcher("result")
-	suite.cache.On("GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
+	suite.cache.On("GetOrUpdate", opName, entry.eb().id, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return("result", nil).Once()
 	v, err := CachedOp(context.Background(), opName, entry, opTTL, op)
 	if suite.NoError(err) {
 		suite.Equal("result", v)
 	}
-	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher))
+	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.eb().id, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
 func (suite *CacheTestSuite) TestDuplicateCNameErr() {
@@ -290,12 +290,12 @@ func (suite *CacheTestSuite) testCachedDefaultOp(
 	entry.SetTTLOf(op, opTTL)
 	entry.On(opName, mock.Anything).Return(opValue, nil)
 	generateValueMatcher := suite.makeGenerateValueMatcher(mungedOpValue)
-	suite.cache.On("GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mungedOpValue, nil).Once()
+	suite.cache.On("GetOrUpdate", opName, entry.eb().id, opTTL, false, mock.MatchedBy(generateValueMatcher)).Return(mungedOpValue, nil).Once()
 	v, err = cachedDefaultOp(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(mungedOpValue, v)
 	}
-	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.id(), opTTL, false, mock.MatchedBy(generateValueMatcher))
+	suite.cache.AssertCalled(suite.T(), "GetOrUpdate", opName, entry.eb().id, opTTL, false, mock.MatchedBy(generateValueMatcher))
 }
 
 func toMap(children []Entry) map[string]Entry {
@@ -360,8 +360,8 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	children, err := cachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(toMap(mockChildren), children.mp) {
-			suite.Equal("/foo#child1", children.mp["foo#child1"].id())
-			suite.Equal("/child2", children.mp["child2"].id())
+			suite.Equal("/foo#child1", children.mp["foo#child1"].eb().id)
+			suite.Equal("/child2", children.mp["child2"].eb().id)
 		}
 	}
 
@@ -373,8 +373,8 @@ func (suite *CacheTestSuite) TestCachedListSetEntryID() {
 	children, err = cachedList(ctx, entry)
 	if suite.NoError(err) {
 		if suite.Equal(toMap(mockChildren), children.mp) {
-			suite.Equal("/parent/foo#child1", children.mp["foo#child1"].id())
-			suite.Equal("/parent/child2", children.mp["child2"].id())
+			suite.Equal("/parent/foo#child1", children.mp["foo#child1"].eb().id)
+			suite.Equal("/parent/child2", children.mp["child2"].eb().id)
 		}
 	}
 }

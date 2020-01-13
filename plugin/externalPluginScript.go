@@ -113,6 +113,6 @@ func (s externalPluginScriptImpl) NewInvocation(
 	return &invocationImpl{Command: internal.NewCommand(
 		ctx,
 		s.Path(),
-		append([]string{method, entry.id(), entry.state}, args...)...,
+		append([]string{method, entry.eb().id, entry.state}, args...)...,
 	)}
 }
