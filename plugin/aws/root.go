@@ -186,8 +186,11 @@ func (r *Root) List(ctx context.Context) ([]plugin.Entry, error) {
 const rootDescription = `
 This is the AWS plugin root. The AWS plugin reads the AWS_SHARED_CREDENTIALS_FILE
 environment variable or $HOME/.aws/credentials and AWS_CONFIG_FILE environment
-variable or $HOME/.aws/config to find profiles and configure the SDK. The profiles
-it lists can be limited by adding
+variable or $HOME/.aws/config to find profiles and configure the SDK. See
+https://docs.aws.amazon.com/sdk-for-php/v3/developer-guide/guide_credentials_profiles.html
+for more details on how to setup AWS profiles.
+
+You can limit the loaded profiles by adding
 
 aws:
   profiles: [profile_1, profile_2]

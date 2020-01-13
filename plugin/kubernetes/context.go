@@ -28,7 +28,9 @@ func newK8Context(name string, client *k8s.Clientset, config *rest.Config, defau
 }
 
 func (c *k8context) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(c, "context")
+	return plugin.
+		NewEntrySchema(c, "context").
+		SetDescription(contextDescription)
 }
 
 func (c *k8context) ChildSchemas() []*plugin.EntrySchema {
@@ -56,3 +58,7 @@ func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 	activity.Record(ctx, "Listing namespaces: %+v", namespaces)
 	return namespaces, nil
 }
+
+const contextDescription = `
+This is a Kubernetes context.
+`

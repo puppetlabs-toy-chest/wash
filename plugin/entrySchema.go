@@ -32,7 +32,9 @@ func schema(e Entry) (*EntrySchema, error) {
 		// error. Thus, it needs to be treated differently from the other core
 		// plugins. Here, the logic is to merge each root's schema graph with the
 		// registry's schema graph.
-		schema := NewEntrySchema(t, registrySchemaLabel).IsSingleton()
+		schema := NewEntrySchema(t, registrySchemaLabel).
+			IsSingleton().
+			SetDescription(registryDescription)
 		schema.graph = linkedhashmap.New()
 		schema.graph.Put(TypeID(t), &schema.entrySchema)
 		for _, root := range t.pluginRoots {

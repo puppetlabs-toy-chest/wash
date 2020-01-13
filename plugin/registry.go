@@ -129,3 +129,8 @@ func (r *stubRoot) ChildSchemas() []*EntrySchema {
 func (r *stubRoot) List(context.Context) ([]Entry, error) {
 	return []Entry{}, nil
 }
+
+const registryDescription = `
+Welcome to Wash, a UNIX-like shell that lets you manage all your entries as if
+they were files and directories. This entry represents the Wash root.
+`

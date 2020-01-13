@@ -62,7 +62,7 @@ func serverMain(cmd *cobra.Command, args []string) exitCode {
 		return exitCode{1}
 	}
 	srv := server.New(mountpoint, config.Socket, plugins, serverOpts)
-	if err := srv.Start(); err != nil {
+	if _, err := srv.Start(); err != nil {
 		log.Warn(err)
 		return exitCode{1}
 	}

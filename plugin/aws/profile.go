@@ -64,7 +64,9 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 }
 
 func (p *profile) Schema() *plugin.EntrySchema {
-	return plugin.NewEntrySchema(p, "profile")
+	return plugin.
+		NewEntrySchema(p, "profile").
+		SetDescription(profileDescription)
 }
 
 func (p *profile) ChildSchemas() []*plugin.EntrySchema {
@@ -114,3 +116,7 @@ func (p *profile) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 
 	return plugin.ToJSONObject(metadata), nil
 }
+
+const profileDescription = `
+This is an AWS profile.
+`

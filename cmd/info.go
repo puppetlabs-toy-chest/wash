@@ -14,7 +14,7 @@ func infoCommand() *cobra.Command {
 	infoCmd := &cobra.Command{
 		Use:     use + " <path> [<path>]...",
 		Aliases: aliases,
-		Short:   "Prints the entries' info at the specified paths",
+		Short:   "Wash's version of 'stat'. Prints the entries' info at the specified paths",
 		RunE:    toRunE(infoMain),
 	}
 	infoCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")

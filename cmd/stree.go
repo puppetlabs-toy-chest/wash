@@ -39,7 +39,7 @@ func streeMain(cmd *cobra.Command, args []string) exitCode {
 			return exitCode{1}
 		}
 		if schema == nil {
-			cmdutil.ErrPrintf("%v: schema unknown\n", path)
+			cmdutil.ErrPrintf("%v: 'stree' requires entry schema support\n", path)
 			continue
 		}
 		schemas[path] = schema
