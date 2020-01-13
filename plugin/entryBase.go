@@ -37,14 +37,15 @@ to do something like
 		SetMeta(meta)
 */
 type EntryBase struct {
-	name           string
-	attributes     EntryAttributes
-	slashReplacer  rune
-	id             string
-	ttl            [3]time.Duration
-	wrappedTypes   SchemaMap
-	isPrefetched   bool
-	isInaccessible bool
+	name                     string
+	attributes               EntryAttributes
+	specifiedPartialMetadata JSONObject
+	slashReplacer            rune
+	id                       string
+	ttl                      [3]time.Duration
+	wrappedTypes             SchemaMap
+	isPrefetched             bool
+	isInaccessible           bool
 }
 
 // NewEntry creates a new entry
@@ -63,16 +64,21 @@ func NewEntry(name string) EntryBase {
 	return e
 }
 
+func (e *EntryBase) partialMetadata() JSONObject {
+	if e.specifiedPartialMetadata != nil {
+		return e.specifiedPartialMetadata
+	}
+	return e.attributes.ToMap()
+}
+
 // ENTRY INTERFACE
 
-// Metadata returns the entry's meta attribute (see plugin.EntryAttributes).
-// Override this if e has additional metadata.
+// Metadata returns the entry's partial metadata. Override this if e has
+// additional metadata.
 func (e *EntryBase) Metadata(ctx context.Context) (JSONObject, error) {
 	// Disable Metadata's caching in case the plugin author forgot to do this
 	e.DisableCachingFor(MetadataOp)
-
-	attr := e.attributes
-	return attr.Meta(), nil
+	return e.partialMetadata(), nil
 }
 
 func (e *EntryBase) eb() *EntryBase {
@@ -105,6 +111,18 @@ func (e *EntryBase) Attributes() *EntryAttributes {
 // when you've already pre-computed them.
 func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 	e.attributes = attr
+	return e
+}
+
+// SetPartialMetadata sets the entry's partial metadata. This is typically the
+// raw object that's returned by the plugin API's List endpoint, or a wrapper
+// that includes the raw object + some additional information. For example, if
+// the entry represents a Docker container, then obj would be a Container struct.
+// If the entry represents a Docker volume, then obj would be a Volume struct.
+//
+// SetPartialMetadata will panic if obj does not serialize to a JSON object.
+func (e *EntryBase) SetPartialMetadata(obj interface{}) *EntryBase {
+	e.specifiedPartialMetadata = ToJSONObject(obj)
 	return e
 }
 

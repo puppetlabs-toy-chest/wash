@@ -31,16 +31,17 @@ func newFirestoreDocument(client *firestore.Client, parent string, snapshot *fir
 		data:      snapshot.Data(),
 	}
 
-	doc.Attributes().
+	metadata := firestoreDocumentMetadata{
+		snapshot.CreateTime,
+		snapshot.UpdateTime,
+		snapshot.ReadTime,
+		snapshot.Data(),
+	}
+	doc.SetPartialMetadata(metadata).
+		Attributes().
 		SetCrtime(snapshot.CreateTime).
 		SetCtime(snapshot.UpdateTime).
-		SetMtime(snapshot.UpdateTime).
-		SetMeta(firestoreDocumentMetadata{
-			snapshot.CreateTime,
-			snapshot.UpdateTime,
-			snapshot.ReadTime,
-			snapshot.Data(),
-		})
+		SetMtime(snapshot.UpdateTime)
 
 	return doc
 }
@@ -65,7 +66,7 @@ func (doc *firestoreDocument) Delete(ctx context.Context) (bool, error) {
 
 func (doc *firestoreDocument) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(doc, "document").
-		SetMetaAttributeSchema(firestoreDocumentMetadata{}).
+		SetPartialMetadataSchema(firestoreDocumentMetadata{}).
 		SetDescription(firestoreDocumentDescription)
 }
 

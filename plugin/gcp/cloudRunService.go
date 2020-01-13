@@ -26,9 +26,9 @@ func newCloudRunService(service *run.Service, apiService cloudRunProjectAPIServi
 		panic(fmt.Sprintf("Timestamp for %v was not expected format RFC3339: %v", crs, service.Metadata.CreationTimestamp))
 	}
 	crs.
+		SetPartialMetadata(service).
 		Attributes().
-		SetCrtime(crtime).
-		SetMeta(service)
+		SetCrtime(crtime)
 	return crs
 }
 
@@ -52,7 +52,7 @@ func (crs *cloudRunService) Delete(ctx context.Context) (bool, error) {
 }
 func (crs *cloudRunService) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(crs, "service").
-		SetMetaAttributeSchema(run.Service{})
+		SetPartialMetadataSchema(run.Service{})
 }
 
 func (crs *cloudRunService) ChildSchemas() []*plugin.EntrySchema {

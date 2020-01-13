@@ -23,12 +23,12 @@ func newStorageObjectPrefix(bucket *storage.BucketHandle,
 		prefix:    prefix,
 	}
 	if attrs != nil {
-		pre.Attributes().
+		pre.SetPartialMetadata(attrs).
+			Attributes().
 			SetCrtime(attrs.Created).
 			SetCtime(attrs.Updated).
 			SetMtime(attrs.Updated).
-			SetSize(uint64(attrs.Size)).
-			SetMeta(attrs)
+			SetSize(uint64(attrs.Size))
 	}
 	return pre
 }
@@ -46,7 +46,7 @@ func (s *storageObjectPrefix) Delete(ctx context.Context) (bool, error) {
 func (s *storageObjectPrefix) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(s, "prefix").
 		SetDescription(storageObjectPrefixDescription).
-		SetMetaAttributeSchema(storage.ObjectAttrs{})
+		SetPartialMetadataSchema(storage.ObjectAttrs{})
 }
 
 func (s *storageObjectPrefix) ChildSchemas() []*plugin.EntrySchema {

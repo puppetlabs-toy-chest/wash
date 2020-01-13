@@ -6,7 +6,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.profile"
@@ -18,7 +18,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.resourcesDir"
@@ -30,7 +30,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Dir",
@@ -43,7 +43,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Bucket"
@@ -55,7 +55,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -68,7 +68,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -82,7 +82,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -92,7 +92,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstancesDir"
@@ -104,7 +104,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2Instance"
@@ -117,7 +117,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -131,7 +131,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -141,7 +141,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -151,7 +151,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -164,7 +164,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -178,7 +178,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -190,7 +190,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstancesDir"
@@ -202,7 +202,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2Instance"
@@ -215,7 +215,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -229,7 +229,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -239,7 +239,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -249,7 +249,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -262,7 +262,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -276,7 +276,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -289,7 +289,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -303,7 +303,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -313,7 +313,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -323,7 +323,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -336,7 +336,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -350,7 +350,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -362,7 +362,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -374,7 +374,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -386,7 +386,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2Instance"
@@ -399,7 +399,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -413,7 +413,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -423,7 +423,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -433,7 +433,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -446,7 +446,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -460,7 +460,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -472,7 +472,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.resourcesDir"
@@ -484,7 +484,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Dir",
@@ -497,7 +497,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Bucket"
@@ -509,7 +509,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -522,7 +522,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -536,7 +536,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -546,7 +546,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstancesDir"
@@ -558,7 +558,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2Instance"
@@ -571,7 +571,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -585,7 +585,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -595,7 +595,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -605,7 +605,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -618,7 +618,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -632,7 +632,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -644,7 +644,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Dir",
@@ -657,7 +657,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Bucket"
@@ -669,7 +669,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -682,7 +682,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -696,7 +696,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -706,7 +706,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstancesDir"
@@ -718,7 +718,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2Instance"
@@ -731,7 +731,7 @@
                 "list",
                 "exec"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.ec2InstanceConsoleOutput",
@@ -745,7 +745,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -755,7 +755,7 @@
             "actions": [
                 "read"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         },
@@ -765,7 +765,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -778,7 +778,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -792,7 +792,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -804,7 +804,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -817,7 +817,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -831,7 +831,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -843,7 +843,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3Bucket"
@@ -855,7 +855,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -868,7 +868,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -882,7 +882,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -895,7 +895,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -907,7 +907,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.s3ObjectPrefix",
@@ -921,7 +921,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -933,7 +933,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -946,7 +946,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -960,7 +960,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -972,7 +972,7 @@
             "actions": [
                 "list"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": [
                 "fooPlugin::aws.volume.dir",
@@ -986,7 +986,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }
@@ -999,7 +999,7 @@
                 "read",
                 "stream"
             ],
-            "meta_attribute_schema": null,
+            "partial_metadata_schema": null,
             "metadata_schema": null,
             "children": null
         }

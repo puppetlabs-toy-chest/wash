@@ -218,6 +218,15 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithPartialMetadata() {
+	decodedEntry := newMockDecodedEntry("name")
+	decodedEntry.PartialMetadata = JSONObject{}
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
+	if suite.NoError(err) {
+		suite.Equal(JSONObject{}, entry.partialMetadata())
+	}
+}
+
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_DoesNotImplementSchema() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
@@ -466,7 +475,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 		"methods": ["list"],
 		"children": ["baz.barTypeID"],
 		"singleton": true,
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "object"
 		},
 		"metadata_schema": null
@@ -476,7 +485,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 		"methods": ["list"],
 		"children": ["baz.barTypeID"],
 		"singleton": false,
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "object",
 			"properties": {
 				"foo": {
@@ -750,10 +759,10 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 		script:    mockScript,
 	}
 	expectedMeta := JSONObject{"foo": "bar"}
-	entry.Attributes().SetMeta(expectedMeta)
+	entry.SetPartialMetadata(expectedMeta)
 
 	// If metadata is not implemented, then e.Metadata should return
-	// EntryBase#Metadata, which returns the meta attribute.
+	// EntryBase#Metadata, which returns the partial metadata.
 	meta, err := entry.Metadata(context.Background())
 	if suite.NoError(err) {
 		suite.Equal(expectedMeta, meta)
@@ -1093,7 +1102,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 	suite.Regexp("associated", err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetaAttributeSchema() {
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidPartialMetadataSchema() {
 	entry := &externalPluginEntry{
 		rawTypeID: "foo",
 	}
@@ -1104,14 +1113,14 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 	"foo":{
 		"label": "fooLabel",
 		"methods": ["read"],
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "array"
 		}
 	}
 }
 `)
 	_, err := unmarshalSchemaGraph(entry, stdout)
-	suite.Regexp("invalid.*meta.*attribute.*object.*schema.*array", err)
+	suite.Regexp("invalid.*partial.*metadata.*object.*schema.*array", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetadataSchema() {

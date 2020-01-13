@@ -47,8 +47,7 @@ func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Confi
 	}
 
 	cntnr.
-		Attributes().
-		SetMeta(plugin.ToJSONObject(c))
+		SetPartialMetadata(c)
 
 	return cntnr, nil
 }
@@ -56,7 +55,7 @@ func newContainer(ctx context.Context, client *k8s.Clientset, config *rest.Confi
 func (c *container) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "container").
-		SetMetaAttributeSchema(corev1.Container{})
+		SetPartialMetadataSchema(corev1.Container{})
 }
 
 func (c *container) Read(ctx context.Context) ([]byte, error) {

@@ -21,11 +21,11 @@ type storageBucket struct {
 
 func newStorageBucket(client storageProjectClient, bucket *storage.BucketAttrs) *storageBucket {
 	stor := &storageBucket{EntryBase: plugin.NewEntry(bucket.Name), storageProjectClient: client}
-	stor.Attributes().
+	stor.SetPartialMetadata(bucket).
+		Attributes().
 		SetCrtime(bucket.Created).
 		SetCtime(bucket.Created).
-		SetMtime(bucket.Created).
-		SetMeta(bucket)
+		SetMtime(bucket.Created)
 	return stor
 }
 
@@ -86,7 +86,7 @@ func (s *storageBucket) Delete(ctx context.Context) (bool, error) {
 
 func (s *storageBucket) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(s, "bucket").
-		SetMetaAttributeSchema(storage.BucketAttrs{}).
+		SetPartialMetadataSchema(storage.BucketAttrs{}).
 		SetMetadataSchema(fullMeta{}).
 		SetDescription(storageBucketDescription)
 }

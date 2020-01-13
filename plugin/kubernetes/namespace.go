@@ -28,14 +28,14 @@ func newNamespace(name string, meta *corev1.Namespace, c *k8s.Clientset, cfg *re
 		newPVCSDir(ns),
 	}
 	// TODO: Figure out other attributes that we could set here, if any.
-	ns.Attributes().SetMeta(meta)
+	ns.SetPartialMetadata(meta)
 	return ns
 }
 
 func (n *namespace) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(n, "namespace").
-		SetMetaAttributeSchema(corev1.Namespace{}).
+		SetPartialMetadataSchema(corev1.Namespace{}).
 		SetDescription(namespaceDescription)
 }
 

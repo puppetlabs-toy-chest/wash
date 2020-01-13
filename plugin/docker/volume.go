@@ -39,12 +39,12 @@ func newVolume(c *client.Client, v *types.Volume) (*volume, error) {
 	vol.client = c
 	vol.SetTTLOf(plugin.ListOp, volpkg.ListTTL)
 	vol.
+		SetPartialMetadata(v).
 		Attributes().
 		SetCrtime(startTime).
 		SetMtime(startTime).
 		SetCtime(startTime).
-		SetAtime(startTime).
-		SetMeta(v)
+		SetAtime(startTime)
 
 	return vol, nil
 }
@@ -53,7 +53,7 @@ func (v *volume) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(v, "volume").
 		SetDescription(volumeDescription).
-		SetMetaAttributeSchema(types.Volume{})
+		SetPartialMetadataSchema(types.Volume{})
 }
 
 func (v *volume) ChildSchemas() []*plugin.EntrySchema {

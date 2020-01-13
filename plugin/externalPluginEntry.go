@@ -55,6 +55,7 @@ type decodedExternalPluginEntry struct {
 	CacheTTLs          decodedCacheTTLs `json:"cache_ttls"`
 	InaccessibleReason string           `json:"inaccessible_reason"`
 	Attributes         EntryAttributes  `json:"attributes"`
+	PartialMetadata    JSONObject       `json:"partial_metadata"`
 	State              string           `json:"state"`
 }
 
@@ -157,6 +158,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 		rawTypeID:   e.TypeID,
 	}
 	entry.SetAttributes(e.Attributes)
+	entry.SetPartialMetadata(e.PartialMetadata)
 	entry.setCacheTTLs(e.CacheTTLs)
 	if e.InaccessibleReason != "" {
 		entry.MarkInaccessible(ctx, fmt.Errorf(e.InaccessibleReason))
@@ -688,8 +690,8 @@ func unmarshalSchemaGraph(e externalPlugin, stdout []byte) (*linkedhashmap.Map, 
 		if isSignalable && len(node.Signals) <= 0 {
 			return fmt.Errorf("signalable entries must include their supported signals")
 		}
-		if node.MetaAttributeSchema != nil && node.MetaAttributeSchema.Type.Type != "object" {
-			return fmt.Errorf("invalid value for the meta attribute schema: expected a JSON object schema but got %v", node.MetaAttributeSchema.Type.Type)
+		if node.PartialMetadataSchema != nil && node.PartialMetadataSchema.Type.Type != "object" {
+			return fmt.Errorf("invalid value for the partial metadata schema: expected a JSON object schema but got %v", node.PartialMetadataSchema.Type.Type)
 		}
 		if node.MetadataSchema != nil && node.MetadataSchema.Type.Type != "object" {
 			return fmt.Errorf("invalid value for the metadata schema: expected a JSON object schema but got %v", node.MetadataSchema.Type.Type)

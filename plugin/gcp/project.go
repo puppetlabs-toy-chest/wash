@@ -25,7 +25,7 @@ func newProject(p *crm.Project, client *http.Client) *project {
 		name = p.ProjectId
 	}
 	proj := &project{EntryBase: plugin.NewEntry(name), client: client, id: p.ProjectId}
-	proj.Attributes().SetMeta(p)
+	proj.SetPartialMetadata(p)
 	return proj
 }
 
@@ -73,7 +73,7 @@ func (p *project) Delete(ctx context.Context) (bool, error) {
 
 func (p *project) Schema() *plugin.EntrySchema {
 	schema := plugin.NewEntrySchema(p, "project")
-	schema.SetMetaAttributeSchema(crm.Project{})
+	schema.SetPartialMetadataSchema(crm.Project{})
 	schema.SetDescription(projectDescription)
 	return schema
 }

@@ -39,13 +39,13 @@ func newS3Object(o *s3Client.Object, name string, bucket string, key string, cli
 	// logic of validating a negative size
 	mtime := awsSDK.TimeValue(o.LastModified)
 	s3Obj.
+		SetPartialMetadata(o).
 		Attributes().
 		SetCrtime(mtime).
 		SetMtime(mtime).
 		SetCtime(mtime).
 		SetAtime(mtime).
-		SetSize(uint64(awsSDK.Int64Value(o.Size))).
-		SetMeta(o)
+		SetSize(uint64(awsSDK.Int64Value(o.Size)))
 
 	return s3Obj
 }
@@ -54,7 +54,7 @@ func (o *s3Object) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(o, "object").
 		SetDescription(s3ObjectDescription).
-		SetMetaAttributeSchema(s3Client.Object{}).
+		SetPartialMetadataSchema(s3Client.Object{}).
 		SetMetadataSchema(s3Client.HeadObjectOutput{})
 }
 

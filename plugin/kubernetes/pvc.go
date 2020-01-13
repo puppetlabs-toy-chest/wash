@@ -38,12 +38,12 @@ func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, 
 
 	vol.SetTTLOf(plugin.ListOp, volume.ListTTL)
 	vol.
+		SetPartialMetadata(p).
 		Attributes().
 		SetCrtime(p.CreationTimestamp.Time).
 		SetMtime(p.CreationTimestamp.Time).
 		SetCtime(p.CreationTimestamp.Time).
-		SetAtime(p.CreationTimestamp.Time).
-		SetMeta(p)
+		SetAtime(p.CreationTimestamp.Time)
 
 	return vol
 }
@@ -52,7 +52,7 @@ func (v *pvc) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(v, "persistentvolumeclaim").
 		SetDescription(pvcDescription).
-		SetMetaAttributeSchema(corev1.PersistentVolumeClaim{})
+		SetPartialMetadataSchema(corev1.PersistentVolumeClaim{})
 }
 
 func (v *pvc) ChildSchemas() []*plugin.EntrySchema {

@@ -61,10 +61,13 @@ func newEC2Instance(ctx context.Context, inst *ec2Client.Instance, session *sess
 	ec2Instance.id = id
 	ec2Instance.session = session
 	ec2Instance.client = client
+
+	attributes, metadata := getAttributesAndMetadata(inst)
 	ec2Instance.
 		SetTTLOf(plugin.ListOp, 30*time.Second).
 		DisableCachingFor(plugin.MetadataOp).
-		SetAttributes(getAttributes(inst))
+		SetAttributes(attributes).
+		SetPartialMetadata(metadata)
 
 	return ec2Instance
 }
@@ -118,7 +121,7 @@ type ec2InstanceMetadata struct {
 	LastModifiedTime time.Time
 }
 
-func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
+func getAttributesAndMetadata(inst *ec2Client.Instance) (plugin.EntryAttributes, plugin.JSONObject) {
 	attr := plugin.EntryAttributes{}
 
 	// AWS does not include the EC2 instance's crtime in its
@@ -141,25 +144,24 @@ func getAttributes(inst *ec2Client.Instance) plugin.EntryAttributes {
 		}
 	}
 
+	attr.
+		SetCrtime(crtime).
+		SetMtime(mtime)
+
 	meta := plugin.ToJSONObject(ec2InstanceMetadata{
 		Instance:         inst,
 		CreationTime:     crtime,
 		LastModifiedTime: mtime,
 	})
 
-	attr.
-		SetCrtime(crtime).
-		SetMtime(mtime).
-		SetMeta(meta)
-
-	return attr
+	return attr, meta
 }
 
 func (inst *ec2Instance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(inst, "instance").
 		SetDescription(ec2InstanceDescription).
-		SetMetaAttributeSchema(ec2InstanceMetadata{}).
+		SetPartialMetadataSchema(ec2InstanceMetadata{}).
 		AddSignal("start", "Starts the EC2 instance").
 		AddSignal("stop", "Stops the EC2 instance").
 		AddSignal("hibernate", "Hibernates the EC2 instance").

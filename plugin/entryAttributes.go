@@ -47,8 +47,7 @@ to do something like
 	attr := plugin.EntryAttributes{}
 	attr.
 		SetCrtime(crtime).
-		SetMtime(mtime).
-		SetMeta(meta)
+		SetMtime(mtime)
 	entry.SetAttributes(attr)
 */
 type EntryAttributes struct {
@@ -60,7 +59,6 @@ type EntryAttributes struct {
 	hasMode bool
 	size    uint64
 	hasSize bool
-	meta    JSONObject
 }
 
 // We can't just export EntryAttributes' fields because there's no way
@@ -179,36 +177,9 @@ func (a *EntryAttributes) SetSize(size uint64) *EntryAttributes {
 	return a
 }
 
-// Meta returns the entry's meta attribute. If a.SetMeta(obj) was called,
-// then this returns obj serialized to JSONObject. Otherwise, it returns
-// a.ToMap(false).
-//
-// NOTE: The meta attribute is a subset of the entry's full metadata, which
-// is what e.Metadata returns. It is typically provided by the plugin API's
-// List endpoint.
-func (a *EntryAttributes) Meta() JSONObject {
-	if a.meta == nil {
-		return a.ToMap(false)
-	}
-
-	return a.meta
-}
-
-// SetMeta sets the entry's meta attribute to obj. This is typically the
-// raw object that's returned by the plugin API's List endpoint, or a wrapper
-// that includes the raw object + some additional information. For example, if
-// the entry represents a Docker container, then obj would be a Container struct.
-// If the entry represents a Docker volume, then obj would be a Volume struct.
-//
-// SetMeta will panic if obj does not serialize to a JSON object.
-func (a *EntryAttributes) SetMeta(obj interface{}) *EntryAttributes {
-	a.meta = ToJSONObject(obj)
-	return a
-}
-
 // ToMap converts the entry's attributes to a map, which makes it easier to write
 // generic code on them.
-func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
+func (a *EntryAttributes) ToMap() map[string]interface{} {
 	mp := make(map[string]interface{})
 	if a.HasAtime() {
 		mp["atime"] = a.Atime()
@@ -230,9 +201,6 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 	if a.HasSize() {
 		mp["size"] = a.Size()
 	}
-	if includeMeta {
-		mp["meta"] = a.Meta()
-	}
 	return mp
 }
 
@@ -241,7 +209,7 @@ func (a *EntryAttributes) ToMap(includeMeta bool) map[string]interface{} {
 // when they're referenced as interface{} objects. See
 // https://stackoverflow.com/a/21394657 for more details.
 func (a EntryAttributes) MarshalJSON() ([]byte, error) {
-	m := a.ToMap(true)
+	m := a.ToMap()
 	// Override Mode to use a re-marshalable representation.
 	if a.HasMode() {
 		m["mode"] = a.Mode()
@@ -297,13 +265,6 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 			return attrMungeError("size", err)
 		}
 		a.SetSize(sz)
-	}
-	if rawMeta, ok := mp["meta"]; ok {
-		meta, isObj := rawMeta.(JSONObject)
-		if !isObj {
-			return fmt.Errorf("meta is not a JSON object")
-		}
-		a.SetMeta(meta)
 	}
 	return nil
 }
