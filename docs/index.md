@@ -2,7 +2,22 @@
 title: <b>Wash</b>
 ---
 
-<p class="intro-normal">A UNIX-like shell for managing your cloud native and non-cloud native things. <a href="{{ '/getting_started' | relative_url }}"><strong>Get started today</strong></a></p>
+<div class="flex-row">
+  <p class="intro-normal">A UNIX-like shell for managing your cloud native and non-cloud native things.</p>
+  <div class="flex-column pad-left">
+    <a class="intro-normal center btn" href="{{ '/getting_started' | relative_url }}">GET&nbsp;STARTED</a>
+    <!-- update css and javascript -->
+    <a class="intro-normal center version">Last release: unknown</a>
+  </div>
+</div>
+<script type="text/javascript">
+$.get("https://api.github.com/repos/puppetlabs/wash/releases/latest", function(data) {
+  $('.version')
+    .text("Last release: " + $.timeago(data.published_at))
+    .attr("href", "https://github.com/puppetlabs/wash/releases/tag/" + data.tag_name)
+    .attr("title", "Version " + data.tag_name)
+});
+</script>
 
 <p class="intro-large">With Wash</p>
 
