@@ -4,13 +4,13 @@ title: <b>Wash</b>
 
 <p class="intro-normal">A UNIX-like shell for managing your cloud native and non-cloud native things. <a href="{{ '/getting_started' | relative_url }}"><strong>Get started today</strong></a></p>
 
-<p class="intro-large"><strong>With Wash</strong></p>
+<p class="intro-large">With Wash</p>
 
 * <p class="intro-normal">You can use <code>ls</code> to list, <code>cat</code> to read, and <code>wexec</code> to run commands on all your things. No more switching between confusing CLI tools.</p>
 * <p class="intro-normal">You can use <code>find</code> to filter anything on anything. No more complicated query DSLs.</p>
 * <p class="intro-normal">You can <code>cd</code> through a vendor's API. No more navigating complex console UIs.</p>
 
-<p class="intro-large"><strong>See for yourself</strong></p>
+<p class="intro-large">See for yourself</p>
 
 <!-- Display the demos -->
 <div class="demo-select">
