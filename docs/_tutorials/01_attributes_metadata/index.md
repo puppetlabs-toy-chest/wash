@@ -3,7 +3,8 @@ title: A deeper dive into attributes and metadata
 main: true
 sections: []
 ---
-This tutorial covers attributes and metadata in more detail.
+
+{% include test_environment_reminder.md %}
 
 # Metadata
 All entries are completely described by their metadata. An entry’s metadata is a key-value map containing everything you’ll ever need to know about the entry. You can use the `meta` command to view an entry’s metadata.

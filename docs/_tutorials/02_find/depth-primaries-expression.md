@@ -3,6 +3,8 @@ title: Understanding depth, primaries and expression syntax
 ---
 **Note:** If you’ve used BSD/GNU’s `find` command, then much of the stuff in this tutorial will be familiar to you.
 
+{% include test_environment_reminder.md %}
+
 The `find` command recursively descends a given path, printing out all of its subchildren.
 
 ```

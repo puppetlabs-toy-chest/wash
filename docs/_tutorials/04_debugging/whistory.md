@@ -1,6 +1,8 @@
 ---
 title: whistory
 ---
+{% include test_environment_reminder.md %}
+
 Use the `whistory` command to view a history of all executed commands that have interacted with the Wash server.
 
 ```

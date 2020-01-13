@@ -1,6 +1,8 @@
 ---
 title: Metadata filtering with the meta primary
 ---
+{% include test_environment_reminder.md %}
+
 This tutorial gives a detailed overview of the `meta` primary. The `meta` primary lets you filter entries on their metadata properties, which is useful when you want to filter entries on a non-Wash attribute property. Examples of such properties include vendor-specific things like an AWS EC2 instance’s VPC ID or a GCP compute instance’s service accounts. They also include properties that don't yet exist as Wash attributes, such as a VM or container’s state, labels, and tags.
 
 The `meta` primary is its own mini-DSL (domain specific language). Each `meta` primary expression consists of:

@@ -1,0 +1,1 @@
+**Note:** Make sure you've set up the [test environment]({{ '/tutorials/00_test_environment' | relative_url }}) so you can follow along in the tutorial.
