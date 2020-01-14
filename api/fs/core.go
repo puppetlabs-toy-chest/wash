@@ -26,11 +26,11 @@ func newFSNode(finfo os.FileInfo, path string) fsnode {
 	}
 	n.
 		DisableDefaultCaching().
+		SetPartialMetadata(newFileInfo(finfo)).
 		Attributes().
 		SetMtime(finfo.ModTime()).
 		SetMode(finfo.Mode()).
-		SetSize(uint64(finfo.Size())).
-		SetMeta(plugin.ToJSONObject(newFileInfo(finfo)))
+		SetSize(uint64(finfo.Size()))
 	return n
 }
 

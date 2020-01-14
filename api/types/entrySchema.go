@@ -234,16 +234,16 @@ func (s *EntrySchema) SetActions(actions []string) *EntrySchema {
 	return s
 }
 
-// MetaAttributeSchema returns the entry's meta attribute
+// PartialMetadataSchema returns the entry's partial metadata
 // schema
-func (s *EntrySchema) MetaAttributeSchema() *plugin.JSONSchema {
-	return s.EntrySchema.MetaAttributeSchema
+func (s *EntrySchema) PartialMetadataSchema() *plugin.JSONSchema {
+	return s.EntrySchema.PartialMetadataSchema
 }
 
-// SetMetaAttributeSchema sets the entry's meta attribute
+// SetPartialMetadataSchema sets the entry's meta attribute
 // schema to s. This should only be called by the tests
-func (s *EntrySchema) SetMetaAttributeSchema(schema *plugin.JSONSchema) {
-	s.EntrySchema.MetaAttributeSchema = schema
+func (s *EntrySchema) SetPartialMetadataSchema(schema *plugin.JSONSchema) {
+	s.EntrySchema.PartialMetadataSchema = schema
 }
 
 // MetadataSchema returns the entry's metadata schema

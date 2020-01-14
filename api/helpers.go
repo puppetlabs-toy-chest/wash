@@ -22,6 +22,7 @@ func toAPIEntry(e plugin.Entry) apitypes.Entry {
 		CName:      plugin.CName(e),
 		Actions:    plugin.SupportedActionsOf(e),
 		Attributes: plugin.Attributes(e),
+		Metadata:   plugin.PartialMetadata(e),
 	}
 }
 
