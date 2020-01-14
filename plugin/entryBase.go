@@ -68,13 +68,17 @@ func (e *EntryBase) partialMetadata() JSONObject {
 	if e.specifiedPartialMetadata != nil {
 		return e.specifiedPartialMetadata
 	}
+	// This case strictly enforces the "attributes are a subset of the
+	// (partial) metadata" invariant. Here, if no partial metadata was
+	// set, then we assume that attributes == partialMetadata.
 	return e.attributes.ToMap()
 }
 
 // ENTRY INTERFACE
 
 // Metadata returns the entry's partial metadata. Override this if e has
-// additional metadata.
+// additional metadata properties that couldn't be included in the partial
+// metadata because doing so would have slowed down parent#List.
 func (e *EntryBase) Metadata(ctx context.Context) (JSONObject, error) {
 	// Disable Metadata's caching in case the plugin author forgot to do this
 	e.DisableCachingFor(MetadataOp)
@@ -119,6 +123,9 @@ func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
 // that includes the raw object + some additional information. For example, if
 // the entry represents a Docker container, then obj would be a Container struct.
 // If the entry represents a Docker volume, then obj would be a Volume struct.
+//
+// In general, the partial metadata is the subset of metadata that can be fetched
+// "quickly" s.t. parent#List isn't slowed down.
 //
 // SetPartialMetadata will panic if obj does not serialize to a JSON object.
 func (e *EntryBase) SetPartialMetadata(obj interface{}) *EntryBase {
