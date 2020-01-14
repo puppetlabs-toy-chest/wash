@@ -244,7 +244,7 @@ State:
   Status: running
 ```
 
-**Note:** We’re using the full metadata because a Docker container's `meta` attribute doesn't have enough interesting properties for a meaningful tutorial. In general, you'd _always_ want to use the `meta` attribute’s value instead of the full metadata because filtering on the former is much faster: `O(1)` vs. `O(N)`, where `N` is the number of visited entries.
+**Note:** We’re using the full metadata because a Docker container's partial metadata doesn't have enough interesting properties for a meaningful tutorial. In general, you'd _always_ want to use the partial metadata’s value instead of the full metadata because filtering on the former is much faster: `O(1)` vs. `O(N)`, where `N` is the number of visited entries.
 
 Now say we wanted to filter on a Docker container's platform. From the `meta` output, we see that `Platform` is the desired property, and the value of that property is a `String`. The latter means that we will be using a `String Predicate`. Thus, the `meta` primary expression would look something like
 
@@ -300,13 +300,21 @@ So the `find` invocation is something like:
 
 Try it out and see if it works.
 
-That wraps up our discussion on the meta primary’s DSL. We’ll conclude this tutorial by giving you a general overview of how to construct a meta primary expression. Assuming you have a general idea of the specific property that you want to filter on, then here’s what you should do:
+That wraps up our discussion on the meta primary’s DSL. We’ll now give you a general overview of how to construct a meta primary expression. Assuming you have a general idea of the specific property that you want to filter on, then here’s what you should do:
 
-1. Find a representative entry that you can use to construct your expression. In our examples, we chose the `wash_tutorial_redis` container.
+1. Find a representative entry that you can use to construct your expression. Our examples filtered Docker containers so they chose the `wash_tutorial_redis` container as the representative entry.
 
-2. Check that entry’s `meta` attribute value via `meta --attribute` and see if the desired property is there. If it is, then figure out the property value’s type and construct the appropriate predicate. Remember that you can use `find --help meta` to view the `meta` primary’s full documentation.
+2. Check that entry’s partial metadata value via `meta --partial` and see if the desired property is there. If it is, then figure out the property value’s type and construct the appropriate predicate. Remember that you can use `find --help meta` to view the `meta` primary’s full documentation.
 
-3. If the `meta` attribute does not contain the desired property, then you’ll have to check the entry’s full metadata via `meta`. If the full metadata contains the property, then refer to Step 2 and be sure to pass the `-fullmeta` option to `find`’s invocation so that `find` knows that it’ll need to fetch the entry’s full metadata. If the full metadata does not contain the property, then you’ll have to contact the plugin author(s) and ask them if they could include your property’s value in the entry’s metadata.
+3. If the partial metadata does not contain the desired property, then you’ll have to check the entry’s full metadata via `meta`. If the full metadata contains the property, then refer to Step 2 and be sure to pass the `-fullmeta` option to `find`’s invocation so that `find` knows that it’ll need to fetch the entry’s full metadata. If the full metadata does not contain the property, then you’ll have to contact the plugin author(s) and ask them if they could include your property’s value in the entry’s metadata.
+
+**Note:** The meta primary should be used in conjunction with the `kind` primary so that
+
+* `find` can take full advantage of entry schema optimizations, which is especially useful when the entry's schema doesn't include metadata schemas.
+
+* Your meta primary expressions become more expressive because people can see what's being filtered. For example, in `find docker -fullmeta -k '*container' -meta '.hostConfig.restartPolicy.maximumRetryCount' -1`, the `-k '*container'` makes it obvious that the expression's filtering Docker containers. Without the `-k '*container'` bit, you'd have to dig through entry metadatas to figure this information out.
+
+Type `find --help kind` to see the `kind` primary's documentation. The meta primary's documentation also contains some good examples of the `kind` primary in action.
 
 # Exercises
 
@@ -334,7 +342,7 @@ That wraps up our discussion on the meta primary’s DSL. We’ll conclude this 
 
         {% include exercise_answer.html answer="<code>-meta '.mounts[?]' '.name' wash_tutorial_redis -a '.type' volume</code>" %}
 
-2. This exercise is broken up into several parts. Each part will ask you to find entries that satisfy a specific set of criteria. Your job is to provide the appropriate `find` invocation that accomplishes the given task. For example, a valid answer for "Find all EC2 instances with the `project` tag in a given profile" would be `find aws/<profile> -k '*ec2*instance' -meta '.tags[?]' '.key' project`. Hint: The `meta` attribute should contain what you need.
+2. This exercise is broken up into several parts. Each part will ask you to find entries that satisfy a specific set of criteria. Your job is to provide the appropriate `find` invocation that accomplishes the given task. For example, a valid answer for "Find all EC2 instances with the `project` tag in a given profile" would be `find aws/<profile> -k '*ec2*instance' -meta '.tags[?]' '.key' project`. Hint: The partial metadata should contain what you need.
 
    **Note:** Even if you're not using a given plugin, we recommend that you take a look at these answers to see the full extent of the `meta` primary's power.
 

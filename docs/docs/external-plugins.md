@@ -193,7 +193,7 @@ results in changing the entry's content to `new content`.
 
 When `metadata` is invoked, the script must output a JSON object representing the entry's metadata.
 
-**Note:** Only implement `metadata` if there is additional information about your entry that is not provided by the `meta` attribute.
+**Note:** Only implement `metadata` if the entry has additional metadata properties that couldn't be included in the partial metadata because doing so would have slowed down parent#List.
 
 ### Examples
 
@@ -342,10 +342,15 @@ This section describes the JSON object representing a serialized entry. An entry
   ```
   {
     "mtime": 1551942012,
-    "meta": {
-      "LastModifiedTime": 1551942012,
-      "Foo": "Bar",
-    }
+  }
+  ```
+
+* `partial_metadata` is an object specifying the entry's partial metadata. The attributes should be a subset of this.
+
+  **EXAMPLES**
+  ```
+  {
+    "foo_key": "foo_value",
   }
   ```
 
@@ -378,6 +383,9 @@ Below is an example entry JSON object showcasing all the possible keys at once.
   "attributes": {
     "mtime": 1551942012
   },
+  "partial_metadata": {
+    "foo_key": "foo_value",
+  }
   "state": "\"{\"klass\":\"Foo\"}\"",
   "cache_ttls": {
     "read": 10
@@ -444,7 +452,7 @@ The entry schema JSON object supports the following keys. Only the `label` and `
 
   A given signal is valid iff it matches a supported signal's _name_ OR a supported signal group's _regex_. See the [signal action docs]({{ '/docs#signal' | relative_url }}) for a list of common signal names. You should try to reuse these names where applicable.
 
-* `meta_attribute_schema` is a serialized JSON schema representing the entry's `meta` attribute schema.
+* `partial_metadata_schema` is a serialized JSON schema representing the entry's `partial metadata` schema.
 
 * `metadata_schema` is a serialized JSON schema representing the entry's `metadata` schema.
 
@@ -460,7 +468,7 @@ The entry schema JSON object supports the following keys. Only the `label` and `
   }
   ```
 
-  Note that this JSON schema implies that the entry's `meta` attribute OR `metadata` can include any property of any type.
+  Note that this JSON schema implies that the entry's `partial metadata` OR `metadata` can include any property of any type.
 
 Below is an example entry schema JSON object showcasing all the possible keys at once.
 
@@ -476,7 +484,7 @@ Below is an example entry schema JSON object showcasing all the possible keys at
   "children": [
     "bar_type_id"
   ],
-  "meta_attribute_schema": {
+  "partial_metadata_schema": {
     "patternProperties": {
       ".*": {
         "type": "string"

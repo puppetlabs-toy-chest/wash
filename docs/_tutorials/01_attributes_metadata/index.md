@@ -240,11 +240,69 @@ As you can see, a Docker container is described by quite a few properties. For e
 
 We see that the values for each of these properties is also included. For example, the value of the `Platform` property is `linux`, which tells us that this container is a Linux container.
 
+Every entry also includes its _partial metadata_. The partial metadata is the subset of metadata that can be fetched "quickly" such that listing the parent's children doesn't take too long. It is typically set to the raw JSON object returned by a plugin API's `list` endpoint. For example, a Docker container’s partial metadata is the container JSON object returned by Docker’s `/containers/json` endpoint. Wash hits that endpoint when you attempt to `ls` the `docker/containers` directory.
+
+You can use the `meta` command’s `--partial` option to view an entry’s partial metadata.
+
+```
+wash . ❯ meta --partial docker/containers/wash_tutorial_redis_1
+Command: docker-entrypoint.sh redis-server --appendonly yes
+Created: 1570228205
+HostConfig:
+  NetworkMode: wash_tutorial_default
+Id: b7773fcfb315c3d230226f2f13aebd309473730342ba23df3a19251147eb98c9
+Image: redis:buster
+ImageID: sha256:01a52b3b5cd14dffaff0908e242d11275a682cc8fe3906a0a7ec6f36fbe001f5
+Labels:
+  com.docker.compose.config-hash: 8c4cc3f3d32489df4e753d5e5fba27ad5f5c139b3858a4df71ef50c0b09b9238
+  com.docker.compose.container-number: "1"
+  com.docker.compose.oneoff: "False"
+  com.docker.compose.project: wash_tutorial
+  com.docker.compose.service: redis
+  com.docker.compose.version: 1.24.1
+Mounts:
+- Destination: /data
+  Driver: local
+  Mode: rw
+  Name: wash_tutorial_redis
+  Propagation: ""
+  RW: true
+  Source: /var/lib/docker/volumes/wash_tutorial_redis/_data
+  Type: volume
+Names:
+- /wash_tutorial_redis_1
+NetworkSettings:
+  Networks:
+    wash_tutorial_default:
+      Aliases: null
+      DriverOpts: null
+      EndpointID: e87c4268fb2aa8e3e5425e28537711d96d11f475726f9ec6f06aa933992c63b5
+      Gateway: 172.23.0.1
+      GlobalIPv6Address: ""
+      GlobalIPv6PrefixLen: 0
+      IPAMConfig: null
+      IPAddress: 172.23.0.3
+      IPPrefixLen: 16
+      IPv6Gateway: ""
+      Links: null
+      MacAddress: 02:42:ac:17:00:03
+      NetworkID: 7b2574661bec274e0b23a52b942389734f6d76112bb6fc0017e3446273b38885
+Ports:
+- IP: 0.0.0.0
+  PrivatePort: 6379
+  PublicPort: 6379
+  Type: tcp
+State: running
+Status: Up 3 hours
+```
+
+Comparing this output with the previous `meta` output, we see that a Docker container’s partial metadata includes far fewer properties than its metadata. That’s because Docker’s `containers/json` endpoint’s response doesn’t include all of a given container’s properties, and fetching those other properties would significantly slow down `ls docker/containers`.
+
 ## Exercises
 
 {% include exercise_reminder.md %}
 
-1. Using the above meta output, what are the values of the following properties?
+1. Using the _first_ meta output, what are the values of the following properties?
     1. `SizeRootFs`
     1. `Created`
     1. `State.StartedAt`
@@ -310,64 +368,6 @@ Attributes:
 ```
 
 Here, we see that a Docker container has the `atime`, `crtime`, `ctime` and `mtime` attributes, and that for this particular container, these attributes are all set to `2019-10-04T15:30:05-07:00`.
-
-Every entry also includes a special `meta` attribute. The `meta` attribute is the subset of the entry’s metadata that the plugin’s API returns when you attempt to list that entry’s parent (think of it as the entry’s ‘partial’ metadata). For example, a Docker container’s `meta` attribute is the raw JSON object returned by Docker’s `/containers/json` endpoint. Wash hits that endpoint when you attempt to `ls` the `docker/containers` directory.
-
-You can use the `meta` command’s `--attribute` option to view an entry’s `meta` attribute.
-
-```
-wash . ❯ meta --attribute docker/containers/wash_tutorial_redis_1
-Command: docker-entrypoint.sh redis-server --appendonly yes
-Created: 1570228205
-HostConfig:
-  NetworkMode: wash_tutorial_default
-Id: b7773fcfb315c3d230226f2f13aebd309473730342ba23df3a19251147eb98c9
-Image: redis:buster
-ImageID: sha256:01a52b3b5cd14dffaff0908e242d11275a682cc8fe3906a0a7ec6f36fbe001f5
-Labels:
-  com.docker.compose.config-hash: 8c4cc3f3d32489df4e753d5e5fba27ad5f5c139b3858a4df71ef50c0b09b9238
-  com.docker.compose.container-number: "1"
-  com.docker.compose.oneoff: "False"
-  com.docker.compose.project: wash_tutorial
-  com.docker.compose.service: redis
-  com.docker.compose.version: 1.24.1
-Mounts:
-- Destination: /data
-  Driver: local
-  Mode: rw
-  Name: wash_tutorial_redis
-  Propagation: ""
-  RW: true
-  Source: /var/lib/docker/volumes/wash_tutorial_redis/_data
-  Type: volume
-Names:
-- /wash_tutorial_redis_1
-NetworkSettings:
-  Networks:
-    wash_tutorial_default:
-      Aliases: null
-      DriverOpts: null
-      EndpointID: e87c4268fb2aa8e3e5425e28537711d96d11f475726f9ec6f06aa933992c63b5
-      Gateway: 172.23.0.1
-      GlobalIPv6Address: ""
-      GlobalIPv6PrefixLen: 0
-      IPAMConfig: null
-      IPAddress: 172.23.0.3
-      IPPrefixLen: 16
-      IPv6Gateway: ""
-      Links: null
-      MacAddress: 02:42:ac:17:00:03
-      NetworkID: 7b2574661bec274e0b23a52b942389734f6d76112bb6fc0017e3446273b38885
-Ports:
-- IP: 0.0.0.0
-  PrivatePort: 6379
-  PublicPort: 6379
-  Type: tcp
-State: running
-Status: Up 3 hours
-```
-
-Comparing this output with the `meta` command’s output in the Metadata section, we see that a Docker container’s `meta` attribute includes far fewer properties than its metadata. That’s because Docker’s `containers/json` endpoint’s response doesn’t include all of a given container’s information.
 
 ## Exercises
 
