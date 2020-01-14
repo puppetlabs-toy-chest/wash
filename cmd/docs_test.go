@@ -37,7 +37,7 @@ func (suite *DocsTestSuite) TestStringifySupportedAttributes() {
 	suite.Regexp(fmt.Sprintf("crtime.*creation time.*%v", toRegexStr(entry.Attributes.Crtime())), supportedAttributes)
 	suite.Regexp(fmt.Sprintf("size.*%v", entry.Attributes.Size()), supportedAttributes)
 	suite.Regexp("meta foo", supportedAttributes)
-	suite.Regexp("meta --attribute foo", supportedAttributes)
+	suite.Regexp("meta --partial foo", supportedAttributes)
 	suite.Regexp("find --help", supportedAttributes)
 }
 

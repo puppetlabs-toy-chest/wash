@@ -63,7 +63,7 @@ func infoMain(cmd *cobra.Command, args []string) exitCode {
 			entryMap.Put("Name", entry.Name)
 			entryMap.Put("CName", entry.CName)
 			entryMap.Put("Actions", entry.Actions)
-			entryMap.Put("Attributes", entry.Attributes.ToMap(false))
+			entryMap.Put("Attributes", entry.Attributes.ToMap())
 
 			infoMapMux.Lock()
 			infoMap[path] = entryMap
