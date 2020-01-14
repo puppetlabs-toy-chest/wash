@@ -40,7 +40,7 @@ func schema(e Entry) (*EntrySchema, error) {
 		for _, root := range t.pluginRoots {
 			childSchema, err := Schema(root)
 			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve the %v plugin's schema: %v", root.name(), err)
+				return nil, fmt.Errorf("failed to retrieve the %v plugin's schema: %v", root.eb().name, err)
 			}
 			if childSchema == nil {
 				// The plugin doesn't have a schema, which means it's an external plugin.
@@ -68,14 +68,14 @@ func schema(e Entry) (*EntrySchema, error) {
 }
 
 type entrySchema struct {
-	Label               string         `json:"label"`
-	Description         string         `json:"description,omitempty"`
-	Singleton           bool           `json:"singleton"`
-	Signals             []SignalSchema `json:"signals,omitempty"`
-	Actions             []string       `json:"actions"`
-	MetaAttributeSchema *JSONSchema    `json:"meta_attribute_schema"`
-	MetadataSchema      *JSONSchema    `json:"metadata_schema"`
-	Children            []string       `json:"children"`
+	Label                 string         `json:"label"`
+	Description           string         `json:"description,omitempty"`
+	Singleton             bool           `json:"singleton"`
+	Signals               []SignalSchema `json:"signals,omitempty"`
+	Actions               []string       `json:"actions"`
+	PartialMetadataSchema *JSONSchema    `json:"partial_metadata_schema"`
+	MetadataSchema        *JSONSchema    `json:"metadata_schema"`
+	Children              []string       `json:"children"`
 }
 
 // EntrySchema represents an entry's schema. Use plugin.NewEntrySchema
@@ -88,8 +88,8 @@ type EntrySchema struct {
 	//
 	// This pattern was obtained from https://stackoverflow.com/a/11129474
 	entrySchema
-	metaAttributeSchemaObj interface{}
-	metadataSchemaObj      interface{}
+	partialMetadataSchemaObj interface{}
+	metadataSchemaObj        interface{}
 	// Store the entry so that we can compute its type ID and, if the entry's
 	// a core plugin entry, enumerate its child schemas when marshaling its
 	// schema.
@@ -108,9 +108,9 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 			Label:   label,
 			Actions: SupportedActionsOf(e),
 		},
-		// The meta attribute's empty by default
-		metaAttributeSchemaObj: struct{}{},
-		entry:                  e,
+		// The partial metadata's empty by default
+		partialMetadataSchemaObj: struct{}{},
+		entry:                    e,
 	}
 	return s
 }
@@ -195,15 +195,15 @@ func (s *EntrySchema) addSignalSchema(name string, regex string, description str
 	return s
 }
 
-// SetMetaAttributeSchema sets the meta attribute's schema. obj is an empty struct
-// that will be marshalled into a JSON schema. SetMetaSchema will panic
-// if obj is not a struct.
-func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
+// SetPartialMetadataSchema sets the partial metadata's schema. obj is an empty
+// struct that will be marshalled into a JSON schema. SetPartialMetadataSchema
+// will panic if obj is not a struct.
+func (s *EntrySchema) SetPartialMetadataSchema(obj interface{}) *EntrySchema {
 	// We need to know if s.entry has any wrapped types in order to correctly
 	// compute the schema. However that information is known when s.fill() is
 	// called. Thus, we'll set the schema object to obj so s.fill() can properly
 	// calculate the schema.
-	s.metaAttributeSchemaObj = obj
+	s.partialMetadataSchemaObj = obj
 	return s
 }
 
@@ -211,20 +211,20 @@ func (s *EntrySchema) SetMetaAttributeSchema(obj interface{}) *EntrySchema {
 // marshalled into a JSON schema. SetMetadataSchema will panic if obj is not a struct.
 //
 // NOTE: Only use SetMetadataSchema if you're overriding Entry#Metadata. Otherwise, use
-// SetMetaAttributeSchema.
+// SetPartialMetadataSchema.
 func (s *EntrySchema) SetMetadataSchema(obj interface{}) *EntrySchema {
-	// See the comments in SetMetaAttributeSchema to understand why this line's necessary
+	// See the comments in SetPartialMetadataSchema to understand why this line's necessary
 	s.metadataSchemaObj = obj
 	return s
 }
 
 func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
-	// Fill-in the meta attribute + metadata schemas
+	// Fill-in the partial metadata + metadata schemas
 	var err error
-	if s.metaAttributeSchemaObj != nil {
-		s.entrySchema.MetaAttributeSchema, err = s.schemaOf(s.metaAttributeSchemaObj)
+	if s.partialMetadataSchemaObj != nil {
+		s.entrySchema.PartialMetadataSchema, err = s.schemaOf(s.partialMetadataSchemaObj)
 		if err != nil {
-			s.fillPanicf("bad value passed into SetMetaAttributeSchema: %v", err)
+			s.fillPanicf("bad value passed into SetPartialMetadataSchema: %v", err)
 		}
 	}
 	if s.metadataSchemaObj != nil {
@@ -251,7 +251,7 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		}
 		// The ID here is meaningless. We only set it so that TypeID can get the
 		// plugin name
-		child.entry.setID(s.entry.id())
+		child.entry.eb().id = s.entry.eb().id
 		childTypeID := TypeID(child.entry)
 		s.entrySchema.Children = append(s.Children, childTypeID)
 		if _, ok := graph.Get(childTypeID); ok {
@@ -274,15 +274,15 @@ func passAlongWrappedTypes(p Parent, child Entry) {
 	if root, ok := child.(HasWrappedTypes); ok {
 		wrappedTypes = root.WrappedTypes()
 	} else {
-		wrappedTypes = p.wrappedTypes()
+		wrappedTypes = p.eb().wrappedTypes
 	}
-	child.setWrappedTypes(wrappedTypes)
+	child.eb().wrappedTypes = wrappedTypes
 }
 
 // Helper that wraps the common code shared by the SetMeta*Schema methods
 func (s *EntrySchema) schemaOf(obj interface{}) (*JSONSchema, error) {
 	typeMappings := make(map[reflect.Type]*jsonschema.Type)
-	for t, s := range s.entry.wrappedTypes() {
+	for t, s := range s.entry.eb().wrappedTypes {
 		typeMappings[reflect.TypeOf(t)] = s.Type
 	}
 	r := jsonschema.Reflector{
@@ -314,7 +314,7 @@ func pluginName(e Entry) string {
 	// via something like "Schema(registry) => TypeID(Root)", where
 	// CachedList(registry) was not yet called. This can happen if, for
 	// example, the user starts the Wash shell and runs `stree`.
-	trimmedID := strings.Trim(e.id(), "/")
+	trimmedID := strings.Trim(e.eb().id, "/")
 	if trimmedID == "" {
 		switch e.(type) {
 		case Root:

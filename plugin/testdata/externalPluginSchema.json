@@ -5,7 +5,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -27,7 +27,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -49,7 +49,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -72,7 +72,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -94,7 +94,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -160,7 +160,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -184,7 +184,7 @@
             "read",
             "stream"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "required": [
                 "ETag",
@@ -373,7 +373,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -395,7 +395,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -418,7 +418,7 @@
             "list",
             "exec"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "required": [
                 "AmiLaunchIndex",
@@ -1143,7 +1143,7 @@
         "methods": [
             "read"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -1161,7 +1161,7 @@
         "label": "metadata.json",
         "singleton": true,
         "methods": [],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -1181,7 +1181,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -1204,7 +1204,7 @@
         "methods": [
             "list"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",
@@ -1228,7 +1228,7 @@
             "read",
             "stream"
         ],
-        "meta_attribute_schema": {
+        "partial_metadata_schema": {
             "$schema": "http://json-schema.org/draft-04/schema#",
             "additionalProperties": false,
             "type": "object",

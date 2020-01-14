@@ -61,7 +61,7 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 	//     * <attribute> (<full_name_of_attribute>)
 	//
 	//   <description that talks about attributes/metadata and shows off 'meta'>
-	if len(entry.Attributes.ToMap(false)) > 0 {
+	if len(entry.Attributes.ToMap()) > 0 {
 		addSection(docs, stringifySupportedAttributes(path, entry))
 	}
 
@@ -111,7 +111,7 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 func stringifySupportedAttributes(path string, entry apitypes.Entry) string {
 	var supportedAttributes strings.Builder
 	supportedAttributes.WriteString("SUPPORTED ATTRIBUTES\n")
-	for attr, value := range entry.Attributes.ToMap(false) {
+	for attr, value := range entry.Attributes.ToMap() {
 		supportedAttributes.WriteString(fmt.Sprintf("* %v", attr))
 		var fullAttrName string
 		switch attr {
@@ -135,10 +135,10 @@ func stringifySupportedAttributes(path string, entry apitypes.Entry) string {
 		fmt.Sprintf("you ever need to know about the entry. You can use"),
 		fmt.Sprintf("    meta %s", path),
 		fmt.Sprintf("to view the metadata and"),
-		fmt.Sprintf("    meta --attribute %s", path),
-		fmt.Sprintf("to view the (partial) metadata. You can use 'find' to filter entries on their"),
-		fmt.Sprintf("attributes and metadata. Type 'find --help' to see all the properties that you"),
-		fmt.Sprintf("can filter on."),
+		fmt.Sprintf("    meta --partial %s", path),
+		fmt.Sprintf("to view the partial metadata. You can use 'find' to filter entries on their"),
+		fmt.Sprintf("attributes and metadata. Type 'find --help' to see all the properties that"),
+		fmt.Sprintf("you can filter on."),
 	}
 	supportedAttributes.WriteString(strings.Join(metadataLines, "\n"))
 	return supportedAttributes.String()

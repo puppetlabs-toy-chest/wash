@@ -21,7 +21,7 @@ func NewRegistry() *Registry {
 		EntryBase: NewEntry("/"),
 		plugins:   make(map[string]Root),
 	}
-	r.setID("/")
+	r.eb().id = "/"
 	r.DisableDefaultCaching()
 
 	return r
@@ -41,23 +41,23 @@ func (r *Registry) RegisterPlugin(root Root, config map[string]interface{}) erro
 	registerPlugin := func(initSucceeded bool) {
 		r.mux.Lock()
 		if initSucceeded {
-			if !pluginNameRegex.MatchString(root.name()) {
-				msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.name())
+			if !pluginNameRegex.MatchString(root.eb().name) {
+				msg := fmt.Sprintf("r.RegisterPlugin: invalid plugin name %v. The plugin name must consist of alphanumeric characters, or a hyphen", root.eb().name)
 				panic(msg)
 			}
 
-			if _, ok := r.plugins[root.name()]; ok {
-				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.name())
+			if _, ok := r.plugins[root.eb().name]; ok {
+				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's already been registered", root.eb().name)
 				panic(msg)
 			}
 
 			if DeleteAction().IsSupportedOn(root) {
-				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's root implements delete", root.name())
+				msg := fmt.Sprintf("r.RegisterPlugin: the %v plugin's root implements delete", root.eb().name)
 				panic(msg)
 			}
 		}
 
-		r.plugins[root.name()] = root
+		r.plugins[root.eb().name] = root
 		r.pluginRoots = append(r.pluginRoots, root)
 		r.mux.Unlock()
 	}

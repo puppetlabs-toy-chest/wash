@@ -31,9 +31,9 @@ func newCloudFunction(function *cloudfunctions.CloudFunction, service cloudFunct
 		panic(fmt.Sprintf("Timestamp for %v was not expected format RFC3339: %v", cf, function.UpdateTime))
 	}
 	cf.
+		SetPartialMetadata(function).
 		Attributes().
-		SetMtime(mtime).
-		SetMeta(function)
+		SetMtime(mtime)
 	return cf
 }
 
@@ -52,7 +52,7 @@ func (cf *cloudFunction) Delete(ctx context.Context) (bool, error) {
 
 func (cf *cloudFunction) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(cf, "cloud_function").
-		SetMetaAttributeSchema(cloudfunctions.CloudFunction{})
+		SetPartialMetadataSchema(cloudfunctions.CloudFunction{})
 }
 
 func (cf *cloudFunction) ChildSchemas() []*plugin.EntrySchema {

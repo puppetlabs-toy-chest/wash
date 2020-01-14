@@ -39,12 +39,12 @@ func newContainer(inst types.Container, client *client.Client) *container {
 
 	startTime := time.Unix(inst.Created, 0)
 	cont.
+		SetPartialMetadata(inst).
 		Attributes().
 		SetCrtime(startTime).
 		SetMtime(startTime).
 		SetCtime(startTime).
-		SetAtime(startTime).
-		SetMeta(inst)
+		SetAtime(startTime)
 
 	return cont
 }
@@ -62,7 +62,7 @@ func (c *container) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 func (c *container) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "container").
-		SetMetaAttributeSchema(types.Container{}).
+		SetPartialMetadataSchema(types.Container{}).
 		SetMetadataSchema(types.ContainerJSON{}).
 		AddSignal("start", "Starts the container. Equivalent to 'docker start <container>'").
 		AddSignal("stop", "Stops the container. Equivalent to 'docker stop <container>'").

@@ -37,15 +37,15 @@ to do something like
 		SetMeta(meta)
 */
 type EntryBase struct {
-	entryName       string
-	attr            EntryAttributes
-	slashReplacerCh rune
-	// washID represents the entry's wash ID. It is set in CachedList.
-	washID          string
-	ttl             [3]time.Duration
-	wrappedTypesMap SchemaMap
-	prefetched      bool
-	inaccessible    bool
+	name                     string
+	attributes               EntryAttributes
+	specifiedPartialMetadata JSONObject
+	slashReplacer            rune
+	id                       string
+	ttl                      [3]time.Duration
+	wrappedTypes             SchemaMap
+	isPrefetched             bool
+	isInaccessible           bool
 }
 
 // NewEntry creates a new entry
@@ -55,8 +55,8 @@ func NewEntry(name string) EntryBase {
 	}
 
 	e := EntryBase{
-		entryName:       name,
-		slashReplacerCh: '#',
+		name:          name,
+		slashReplacer: '#',
 	}
 	for op := range e.ttl {
 		e.SetTTLOf(defaultOpCode(op), 15*time.Second)
@@ -64,52 +64,29 @@ func NewEntry(name string) EntryBase {
 	return e
 }
 
+func (e *EntryBase) partialMetadata() JSONObject {
+	if e.specifiedPartialMetadata != nil {
+		return e.specifiedPartialMetadata
+	}
+	// This case strictly enforces the "attributes are a subset of the
+	// (partial) metadata" invariant. Here, if no partial metadata was
+	// set, then we assume that attributes == partialMetadata.
+	return e.attributes.ToMap()
+}
+
 // ENTRY INTERFACE
 
-// Metadata returns the entry's meta attribute (see plugin.EntryAttributes).
-// Override this if e has additional metadata.
+// Metadata returns the entry's partial metadata. Override this if e has
+// additional metadata properties that couldn't be included in the partial
+// metadata because doing so would have slowed down parent#List.
 func (e *EntryBase) Metadata(ctx context.Context) (JSONObject, error) {
 	// Disable Metadata's caching in case the plugin author forgot to do this
 	e.DisableCachingFor(MetadataOp)
-
-	attr := e.attributes()
-	return attr.Meta(), nil
+	return e.partialMetadata(), nil
 }
 
-func (e *EntryBase) name() string {
-	return e.entryName
-}
-
-func (e *EntryBase) attributes() EntryAttributes {
-	return e.attr
-}
-
-func (e *EntryBase) slashReplacer() rune {
-	return e.slashReplacerCh
-}
-
-func (e *EntryBase) id() string {
-	return e.washID
-}
-
-func (e *EntryBase) setID(id string) {
-	e.washID = id
-}
-
-func (e *EntryBase) getTTLOf(op defaultOpCode) time.Duration {
-	return e.ttl[op]
-}
-
-func (e *EntryBase) wrappedTypes() SchemaMap {
-	return e.wrappedTypesMap
-}
-
-func (e *EntryBase) setWrappedTypes(wrappedTypes SchemaMap) {
-	e.wrappedTypesMap = wrappedTypes
-}
-
-func (e *EntryBase) isPrefetched() bool {
-	return e.prefetched
+func (e *EntryBase) eb() *EntryBase {
+	return e
 }
 
 // OTHER METHODS USED TO FACILITATE PLUGIN DEVELOPMENT
@@ -119,37 +96,48 @@ func (e *EntryBase) isPrefetched() bool {
 // plugin.NewEntry. You should use e.Name() when making
 // the appropriate API calls within your plugin.
 func (e *EntryBase) Name() string {
-	return e.name()
+	return e.name
 }
 
 // String returns a unique identifier for the entry suitable for logging and error messages.
 func (e *EntryBase) String() string {
-	return e.id()
+	return e.id
 }
 
 // Attributes returns a pointer to the entry's attributes. Use it
 // to individually set the entry's attributes
 func (e *EntryBase) Attributes() *EntryAttributes {
-	return &e.attr
+	return &e.attributes
 }
 
 // SetAttributes sets the entry's attributes. Use it to set
 // the entry's attributes in a single operation, which is useful
 // when you've already pre-computed them.
 func (e *EntryBase) SetAttributes(attr EntryAttributes) *EntryBase {
-	e.attr = attr
+	e.attributes = attr
 	return e
 }
 
-func (e *EntryBase) isInaccessible() bool {
-	return e.inaccessible
+// SetPartialMetadata sets the entry's partial metadata. This is typically the
+// raw object that's returned by the plugin API's List endpoint, or a wrapper
+// that includes the raw object + some additional information. For example, if
+// the entry represents a Docker container, then obj would be a Container struct.
+// If the entry represents a Docker volume, then obj would be a Volume struct.
+//
+// In general, the partial metadata is the subset of metadata that can be fetched
+// "quickly" s.t. parent#List isn't slowed down.
+//
+// SetPartialMetadata will panic if obj does not serialize to a JSON object.
+func (e *EntryBase) SetPartialMetadata(obj interface{}) *EntryBase {
+	e.specifiedPartialMetadata = ToJSONObject(obj)
+	return e
 }
 
 // MarkInaccessible sets the inaccessible attribute and logs a message about why the entry is
 // inaccessible.
 func (e *EntryBase) MarkInaccessible(ctx context.Context, err error) {
-	activity.Record(ctx, "Omitting %v: %v", e.id(), err)
-	e.inaccessible = true
+	activity.Record(ctx, "Omitting %v: %v", e.id, err)
+	e.isInaccessible = true
 }
 
 // Prefetched marks the entry as a prefetched entry. A prefetched entry
@@ -158,7 +146,7 @@ func (e *EntryBase) MarkInaccessible(ctx context.Context, err error) {
 // files are good examples of prefetched entries (see the volume
 // package for more details).
 func (e *EntryBase) Prefetched() *EntryBase {
-	e.prefetched = true
+	e.isPrefetched = true
 	return e
 }
 
@@ -172,7 +160,7 @@ func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 		panic("e.SetSlashReplacer called with '/'")
 	}
 
-	e.slashReplacerCh = char
+	e.slashReplacer = char
 	return e
 }
 
@@ -204,7 +192,7 @@ func (e *EntryBase) SetTestID(id string) {
 		panic("SetTestID can be only be called by the tests")
 	}
 
-	e.setID(id)
+	e.id = id
 }
 
 func notRunningTests() bool {

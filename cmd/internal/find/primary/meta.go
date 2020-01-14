@@ -70,58 +70,19 @@ const metaDetailedDescription = `
 NOTE: https://puppetlabs.github.io/wash/tutorials/02_find/meta-primary
 contains a hands-on tutorial of the meta primary.
 
-The meta primary constructs a predicate on the entry's metadata. By
-default, this is the meta attribute. If you'd like to construct the
-predicate on the entry's full metadata, then set the "fullmeta" option.
-Be careful when you do this, because find will make O(N) API requests
-to retrieve this information (N = the number of visited entries). As a
-precaution, the "fullmeta" option is only supported on entries with
-schemas.
+NOTE: The EXAMPLES section contains some real-world examples of the meta
+primary in action.
 
-Meta is a specialized filter, so you should only use it if you need to
-filter your entries on a property that isn't captured by the common Wash
-attributes. For example, the meta primary can be used to filter EC2
-instances on a specific tag. It can be used to filter Docker containers
-with a specified label. In general, the meta primary can be used to filter
-on any property that's specified in the entry's meta attribute. See the
-EXAMPLES section for some interesting real-world examples.
-
-NOTE: The meta primary should be used in conjunction with the kind primary.
-The latter's useful for explicitly specifying the kind of entries you're
-filtering on, which enables find to take full advantage of entry schema
-optimizations. This is especially useful when the entry's schema doesn't
-include metadata schemas (possible for external plugins). The kind primary's
-also useful for making meta queries more expressive. See the EXAMPLES section
-for more details on what this looks like.
-
-NOTE: If your plugin's API is not subscription based (like AWS) or if
-individual API requests are cheap, then feel free to always set the
-"fullmeta" option for more complete filtering. This is very useful when
-your plugin API's over a Unix socket.
-
-NOTE: You can use the meta command to construct meta primary queries.
-Here's how. First, find a representative entry that you'll be filtering.
-For example, if you are filtering EC2 instances, then your representative
-entry would be an EC2 instance. Next, invoke "meta <entry_path> -a" to
-see that entry's meta attribute. Check the output to see if it contains
-the properties you'd like to filter on. If yes, then construct the
-predicate. If no, then invoke "meta <entry_path>" to see the entry's
-full metadata, and check its output to see if it contains your properties.
-If the properties are there, and the O(N) API requests made by "fullmeta"
-aren't an issue, then construct the predicate and be sure to set the
-"fullmeta" option when invoking "wash find". Otherwise, contact the plugin
-author to see if they can add those properties to the entry's full metadata
-or, preferably, the meta attribute.
-
-NOTE: If the current meta primary predicates aren't enough to suit your
-needs, then please file an issue or feel free to add one yourself!
+NOTE: By default, the meta primary constructs predicates on the entry's
+partial metadata. You can set the -fullmeta option to use the full
+metadata instead.
 
 USAGE:
 (-m|-meta) (-empty | KeySequence PredicateExpression)
 
-If -empty is specified, then returns true if the entry's meta attribute
-is empty. Otherwise, returns true if the meta value specified by the key
-sequence satisfies the given predicate expression.
+If -empty is specified, then returns true if the entry's metadata is empty.
+Otherwise, returns true if the meta value specified by the key sequence
+satisfies the given predicate expression.
 
 KEY SEQUENCES:
 A key sequence consists of a key token followed by zero or more "chunks".
@@ -520,7 +481,7 @@ This section contains various, real-world examples of the meta primary's usage. 
 you have an interesting example that you'd like to include here, then please feel
 free to submit a PR!
 
-In these examples, let "m" be the value of the entry's 'meta' attribute.
+In these examples, let "m" be the value of the entry's metadata.
 
 -meta '.tags[?]' .key termination_date -a .value +0h
 -m '.tags[?]' .key termination_date -a .value +0h

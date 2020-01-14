@@ -20,12 +20,12 @@ type pubsubTopic struct {
 	topic  *pubsub.Topic
 }
 
-type pubsubTopicAttrMeta struct {
+type pubsubTopicPartialMeta struct {
 	PublishSettings pubsub.PublishSettings
 }
 
 type pubsubTopicMetadata struct {
-	pubsubTopicAttrMeta
+	pubsubTopicPartialMeta
 	TopicConfig   pubsub.TopicConfig
 	Subscriptions []string
 }
@@ -36,9 +36,7 @@ func newPubsubTopic(client *pubsub.Client, topic *pubsub.Topic) *pubsubTopic {
 		client:    client,
 		topic:     topic,
 	}
-	top.
-		Attributes().
-		SetMeta(pubsubTopicAttrMeta{PublishSettings: topic.PublishSettings})
+	top.SetPartialMetadata(pubsubTopicPartialMeta{PublishSettings: topic.PublishSettings})
 
 	// This may be somewhat hacky, but it ensures the goroutines for publishing get cleaned up eventually.
 	// Writeable can optionally also implement io.Closer to do cleanup when we're done writing,
@@ -67,9 +65,9 @@ func (t *pubsubTopic) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 	}
 
 	return plugin.ToJSONObject(pubsubTopicMetadata{
-		pubsubTopicAttrMeta: pubsubTopicAttrMeta{PublishSettings: t.topic.PublishSettings},
-		TopicConfig:         cfg,
-		Subscriptions:       subs,
+		pubsubTopicPartialMeta: pubsubTopicPartialMeta{PublishSettings: t.topic.PublishSettings},
+		TopicConfig:            cfg,
+		Subscriptions:          subs,
 	}), nil
 }
 
@@ -150,7 +148,7 @@ func (t *pubsubTopic) Write(ctx context.Context, b []byte) error {
 
 func (t *pubsubTopic) Schema() *plugin.EntrySchema {
 	return plugin.NewEntrySchema(t, "topic").
-		SetMetaAttributeSchema(&pubsubTopicAttrMeta{}).
+		SetPartialMetadataSchema(&pubsubTopicPartialMeta{}).
 		SetMetadataSchema(&pubsubTopicMetadata{}).
 		SetDescription(pubsubTopicDescription)
 }

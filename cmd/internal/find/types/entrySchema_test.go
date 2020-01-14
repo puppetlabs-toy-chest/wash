@@ -155,7 +155,7 @@ func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_Complex() {
 	suite.assertKeepResult(result, false, "A/B/E/C", "A/B/E/C/F", "A/C", "A/C/F")
 }
 
-func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_MetadataSchema_DefaultsToMetaAttributeSchema() {
+func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_MetadataSchema_DefaultsToPartialMetadataSchema() {
 	s := suite.readFixture("metadata")
 	p := suite.makeMetadataSchemaP("A", "object", "foo")
 	result := evaluateNodesToKeep(s, p, NewOptions())
@@ -163,7 +163,7 @@ func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_MetadataSchema_Defaul
 	suite.assertKeepResult(result, false, "A/B", "A/C")
 }
 
-func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_MetadataSchema_FullmetaSet_NilMetadataSchema_FallsbackToMetaAttributeSchema() {
+func (suite *EntrySchemaTestSuite) TestEvaluateNodesToKeep_MetadataSchema_FullmetaSet_NilMetadataSchema_FallsbackToPartialMetadataSchema() {
 	opts := NewOptions()
 	opts.Fullmeta = true
 	s := suite.readFixture("metadata")

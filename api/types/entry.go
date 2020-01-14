@@ -12,6 +12,7 @@ type Entry struct {
 	Name       string                 `json:"name"`
 	CName      string                 `json:"cname"`
 	Attributes plugin.EntryAttributes `json:"attributes"`
+	Metadata   plugin.JSONObject      `json:"metadata"`
 }
 
 // Supports returns true if e supports the given action, false

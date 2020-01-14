@@ -40,9 +40,9 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 	}
 	comp.
 		DisableCachingFor(plugin.MetadataOp).
+		SetPartialMetadata(inst).
 		Attributes().
-		SetCrtime(crtime).
-		SetMeta(inst)
+		SetCrtime(crtime)
 	return comp
 }
 
@@ -70,7 +70,7 @@ func (c *computeInstance) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(c, "instance").
 		SetDescription(computeInstDescription).
-		SetMetaAttributeSchema(compute.Instance{}).
+		SetPartialMetadataSchema(compute.Instance{}).
 		AddSignal("start", "Starts the instance").
 		AddSignal("stop", "Stops the instance").
 		AddSignal("reset", "Resets the instance, similar to doing a hard-reset on your computer")

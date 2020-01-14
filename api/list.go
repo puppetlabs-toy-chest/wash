@@ -23,6 +23,7 @@ type entryList struct {
 // Lists children of a path
 //
 // Returns a list of Entry objects describing children of the given path.
+// The "metadata" key is set to the partial metadata.
 //
 //     Produces:
 //     - application/json

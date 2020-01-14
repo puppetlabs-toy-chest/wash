@@ -26,10 +26,10 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 	pd.ns = ns
 
 	pd.
+		SetPartialMetadata(p).
 		Attributes().
 		SetCrtime(p.CreationTimestamp.Time).
-		SetAtime(p.CreationTimestamp.Time).
-		SetMeta(plugin.ToJSONObject(p))
+		SetAtime(p.CreationTimestamp.Time)
 
 	return pd, nil
 }
@@ -37,7 +37,7 @@ func newPod(ctx context.Context, client *k8s.Clientset, config *rest.Config, ns 
 func (p *pod) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(p, "pod").
-		SetMetaAttributeSchema(corev1.Pod{})
+		SetPartialMetadataSchema(corev1.Pod{})
 }
 
 func (p *pod) ChildSchemas() []*plugin.EntrySchema {

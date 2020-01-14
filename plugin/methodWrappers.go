@@ -45,7 +45,7 @@ func Name(e Entry) string {
 	// interface is so plugin authors don't override it. It ensures
 	// that whatever name they pass into plugin.NewEntry is the
 	// name received by Wash.
-	return e.name()
+	return e.eb().name
 }
 
 /*
@@ -65,16 +65,16 @@ e.SetSlashReplacer(<char>) to change the default slash replacer from
 a '#' to <char>.
 */
 func CName(e Entry) string {
-	if len(e.name()) == 0 {
-		panic("plugin.CName: e.name() is empty")
+	if len(e.eb().name) == 0 {
+		panic("plugin.CName: e.eb().name is empty")
 	}
 	// We make the CName a separate function instead of embedding it
 	// in the Entry interface because doing so prevents plugin authors
 	// from overriding it.
 	return strings.Replace(
-		e.name(),
+		e.eb().name,
 		"/",
-		string(e.slashReplacer()),
+		string(e.eb().slashReplacer),
 		-1,
 	)
 }
@@ -86,22 +86,22 @@ func CName(e Entry) string {
 // NOTE: <plugin_name> is really <plugin_cname>. However since <plugin_name>
 // can never contain a '/', <plugin_cname> reduces to <plugin_name>.
 func ID(e Entry) string {
-	if e.id() == "" {
-		msg := fmt.Sprintf("plugin.ID: entry %v (cname %v) has no ID", e.name(), CName(e))
+	if e.eb().id == "" {
+		msg := fmt.Sprintf("plugin.ID: entry %v (cname %v) has no ID", e.eb().name, CName(e))
 		panic(msg)
 	}
-	return e.id()
+	return e.eb().id
 }
 
 // Attributes returns the entry's attributes.
 func Attributes(e Entry) EntryAttributes {
-	return e.attributes()
+	return e.eb().attributes
 }
 
 // IsPrefetched returns whether an entry has data that was added during creation that it would
 // like to have updated.
 func IsPrefetched(e Entry) bool {
-	return e.isPrefetched()
+	return e.eb().isPrefetched
 }
 
 // Schema returns the entry's schema.
@@ -137,7 +137,7 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 	}
 	data = []byte{}
 	inputSize := size
-	if attr := e.attributes(); attr.HasSize() {
+	if attr := e.eb().attributes; attr.HasSize() {
 		contentSize := int64(attr.Size())
 		if offset >= contentSize {
 			err = io.EOF
@@ -149,7 +149,7 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 			err = io.EOF
 		}
 	} else if ReadAction().signature(e) == blockReadableSignature {
-		activity.Warnf(ctx, "size attribute not set for block-readable entry %v", e.id())
+		activity.Warnf(ctx, "size attribute not set for block-readable entry %v", e.eb().id)
 	}
 	content, contentErr := cachedRead(ctx, e)
 	if contentErr != nil {
@@ -168,7 +168,7 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 
 // Size returns the size of readable data for an entry. It may call Read to do so.
 func Size(ctx context.Context, e Entry) (uint64, error) {
-	if attr := e.attributes(); attr.HasSize() {
+	if attr := e.eb().attributes; attr.HasSize() {
 		return attr.Size(), nil
 	}
 
@@ -181,6 +181,12 @@ func Size(ctx context.Context, e Entry) (uint64, error) {
 		return 0, err
 	}
 	return data.size(), nil
+}
+
+// PartialMetadata returns the entry's partial metadata, a subset of the entry's
+// metadata that is typically provided by the plugin API's List endpoint.
+func PartialMetadata(e Entry) JSONObject {
+	return e.eb().partialMetadata()
 }
 
 // Metadata returns the entry's metadata. Note that Metadata's results could be cached.
@@ -249,7 +255,7 @@ func Signal(ctx context.Context, s Signalable, signal string) error {
 
 	// The signal was successfully sent. Clear the entry's cache and its parent's
 	// cached list result to ensure that fresh data's loaded when needed
-	ClearCacheFor(s.id(), true)
+	ClearCacheFor(s.eb().id, true)
 	return nil
 }
 
@@ -268,11 +274,11 @@ func Delete(ctx context.Context, d Deletable) (deleted bool, err error) {
 	// If !deleted, the entry will eventually be deleted. However it's likely that
 	// Delete did update the entry (e.g. on VMs, Delete causes a state transition).
 	// Thus we also clear the parent's cached list result to ensure fresh data.
-	ClearCacheFor(d.id(), !deleted)
+	ClearCacheFor(d.eb().id, !deleted)
 	if deleted {
 		// The entry was deleted, so delete the entry from the parent's cached list
 		// result.
-		parentID, cname := splitID(d.id())
+		parentID, cname := splitID(d.eb().id)
 		listOpName := defaultOpCodeToNameMap[ListOp]
 		entries, _ := cache.Get(listOpName, parentID)
 		if entries != nil {

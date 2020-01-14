@@ -76,7 +76,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(decodedEntry.Name, entry.name)
 		suite.Equal(1, len(entry.methods))
 		suite.Contains(entry.methods, "list")
 		suite.Nil(entry.methods["list"].result)
@@ -91,14 +91,14 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(decodedEntry.Name, entry.name)
 		suite.Contains(entry.methods, "list")
 		suite.Equal(defaultSignature, entry.methods["list"].signature)
 		suite.Nil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "stream")
 		suite.Equal(defaultSignature, entry.methods["stream"].signature)
 		suite.Nil(entry.methods["stream"].result)
-		suite.False(entry.isPrefetched())
+		suite.False(entry.isPrefetched)
 
 		methods := entry.supportedMethods()
 		suite.Equal(2, len(methods))
@@ -115,7 +115,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_Support
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(decodedEntry.Name, entry.name)
 	}
 }
 
@@ -128,13 +128,13 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name())
+		suite.Equal(decodedEntry.Name, entry.name)
 		suite.Contains(entry.methods, "list")
 		suite.Equal(defaultSignature, entry.methods["list"].signature)
 		suite.NotNil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "read")
 		suite.Nil(entry.methods["read"].result)
-		suite.True(entry.isPrefetched())
+		suite.True(entry.isPrefetched)
 	}
 }
 
@@ -202,7 +202,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	decodedEntry.SlashReplacer = ":"
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(':', entry.slashReplacer())
+		suite.Equal(':', entry.slashReplacer)
 	}
 }
 
@@ -214,7 +214,16 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	if suite.NoError(err) {
 		expectedAttr := EntryAttributes{}
 		expectedAttr.SetCtime(t)
-		suite.Equal(expectedAttr, entry.attr)
+		suite.Equal(expectedAttr, entry.attributes)
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithPartialMetadata() {
+	decodedEntry := newMockDecodedEntry("name")
+	decodedEntry.PartialMetadata = JSONObject{}
+	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
+	if suite.NoError(err) {
+		suite.Equal(JSONObject{}, entry.partialMetadata())
 	}
 }
 
@@ -302,7 +311,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithInac
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.True(entry.isInaccessible())
+		suite.True(entry.isInaccessible)
 	}
 }
 
@@ -318,9 +327,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 	}
 	entry.setCacheTTLs(decodedTTLs)
 
-	suite.Equal(decodedTTLs.List*time.Second, entry.getTTLOf(ListOp))
-	suite.Equal(decodedTTLs.Read*time.Second, entry.getTTLOf(ReadOp))
-	suite.Equal(decodedTTLs.Metadata*time.Second, entry.getTTLOf(MetadataOp))
+	suite.Equal(decodedTTLs.List*time.Second, entry.ttl[ListOp])
+	suite.Equal(decodedTTLs.Read*time.Second, entry.ttl[ReadOp])
+	suite.Equal(decodedTTLs.Metadata*time.Second, entry.ttl[MetadataOp])
 }
 
 func mockInvocation(stdout []byte) invocation {
@@ -466,7 +475,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 		"methods": ["list"],
 		"children": ["baz.barTypeID"],
 		"singleton": true,
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "object"
 		},
 		"metadata_schema": null
@@ -476,7 +485,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 		"methods": ["list"],
 		"children": ["baz.barTypeID"],
 		"singleton": false,
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "object",
 			"properties": {
 				"foo": {
@@ -750,10 +759,10 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 		script:    mockScript,
 	}
 	expectedMeta := JSONObject{"foo": "bar"}
-	entry.Attributes().SetMeta(expectedMeta)
+	entry.SetPartialMetadata(expectedMeta)
 
 	// If metadata is not implemented, then e.Metadata should return
-	// EntryBase#Metadata, which returns the meta attribute.
+	// EntryBase#Metadata, which returns the partial metadata.
 	meta, err := entry.Metadata(context.Background())
 	if suite.NoError(err) {
 		suite.Equal(expectedMeta, meta)
@@ -1093,7 +1102,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 	suite.Regexp("associated", err)
 }
 
-func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetaAttributeSchema() {
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidPartialMetadataSchema() {
 	entry := &externalPluginEntry{
 		rawTypeID: "foo",
 	}
@@ -1104,14 +1113,14 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 	"foo":{
 		"label": "fooLabel",
 		"methods": ["read"],
-		"meta_attribute_schema": {
+		"partial_metadata_schema": {
 			"type": "array"
 		}
 	}
 }
 `)
 	_, err := unmarshalSchemaGraph(entry, stdout)
-	suite.Regexp("invalid.*meta.*attribute.*object.*schema.*array", err)
+	suite.Regexp("invalid.*partial.*metadata.*object.*schema.*array", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetadataSchema() {

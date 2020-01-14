@@ -16,12 +16,12 @@ type storageObject struct {
 
 func newStorageObject(name string, object *storage.ObjectHandle, attrs *storage.ObjectAttrs) *storageObject {
 	obj := &storageObject{EntryBase: plugin.NewEntry(name), ObjectHandle: object}
-	obj.Attributes().
+	obj.SetPartialMetadata(attrs).
+		Attributes().
 		SetCrtime(attrs.Created).
 		SetCtime(attrs.Updated).
 		SetMtime(attrs.Updated).
-		SetSize(uint64(attrs.Size)).
-		SetMeta(attrs)
+		SetSize(uint64(attrs.Size))
 	return obj
 }
 
@@ -29,7 +29,7 @@ func (s *storageObject) Schema() *plugin.EntrySchema {
 	return plugin.
 		NewEntrySchema(s, "object").
 		SetDescription(storageObjectDescription).
-		SetMetaAttributeSchema(storage.ObjectAttrs{})
+		SetPartialMetadataSchema(storage.ObjectAttrs{})
 }
 
 func (s *storageObject) Read(ctx context.Context, size int64, offset int64) ([]byte, error) {

@@ -13,13 +13,13 @@ func metaCommand() *cobra.Command {
 		Short: "Prints the metadata of the given entries",
 		Long: `Prints the metadata of the given entries. By default, meta prints the
 full metadata as returned by the metadata endpoint. Specify the
---attribute flag to instead print the meta attribute, a (possibly)
+--partial flag to instead print the partial metadata, a (possibly)
 reduced set of metadata that's returned when entries are enumerated.`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: toRunE(metaMain),
 	}
 	metaCmd.Flags().StringP("output", "o", "yaml", "Set the output format (json, yaml, or text)")
-	metaCmd.Flags().BoolP("attribute", "a", false, "Print the meta attribute instead of the full metadata")
+	metaCmd.Flags().BoolP("partial", "p", false, "Print the partial metadata instead")
 	return metaCmd
 }
 
@@ -29,7 +29,7 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 	if err != nil {
 		panic(err.Error())
 	}
-	showMetaAttr, err := cmd.Flags().GetBool("attribute")
+	showPartialMetadata, err := cmd.Flags().GetBool("partial")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -54,14 +54,14 @@ func metaMain(cmd *cobra.Command, args []string) exitCode {
 
 			var metadata map[string]interface{}
 
-			if showMetaAttr {
+			if showPartialMetadata {
 				e, err := conn.Info(path)
 				if err != nil {
 					ec = 1
 					cmdutil.SafeErrPrintf("%v: %v\n", path, err)
 					return
 				}
-				metadata = e.Attributes.Meta()
+				metadata = e.Metadata
 			} else {
 				var err error
 				metadata, err = conn.Metadata(path)

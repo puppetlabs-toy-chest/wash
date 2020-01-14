@@ -48,7 +48,6 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 		return unmarshaledTime
 	}
 	attr := EntryAttributes{}
-	attr.meta = JSONObject{}
 	doUnmarshalJSONTests := func() {
 		attrJSON, err := json.Marshal(attr)
 		suite.NoError(err)
@@ -61,81 +60,71 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 
 	// ToMap - used for listing attributes - and JSON marshaling may have different representations.
 	expectedMp := make(map[string]interface{})
-	expectedMp["meta"] = JSONObject{}
 
 	// Tests for Atime
 	suite.Equal(false, attr.HasAtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	t := timeNow()
 	attr.SetAtime(t)
 	expectedMp["atime"] = t
 	suite.Equal(t, attr.Atime())
 	suite.Equal(true, attr.HasAtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
 	// Tests for Mtime
 	suite.Equal(false, attr.HasMtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	t = timeNow()
 	attr.SetMtime(t)
 	expectedMp["mtime"] = t
 	suite.Equal(t, attr.Mtime())
 	suite.Equal(true, attr.HasMtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
 	// Tests for Ctime
 	suite.Equal(false, attr.HasCtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	t = timeNow()
 	attr.SetCtime(t)
 	expectedMp["ctime"] = t
 	suite.Equal(t, attr.Ctime())
 	suite.Equal(true, attr.HasCtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
 	// Tests for Crtime
 	suite.Equal(false, attr.HasCrtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	t = timeNow()
 	attr.SetCrtime(t)
 	expectedMp["crtime"] = t
 	suite.Equal(t, attr.Crtime())
 	suite.Equal(true, attr.HasCrtime())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
 	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	m := os.FileMode(0777 | os.ModeCharDevice | os.ModeDir)
 	attr.SetMode(m)
 	expectedMp["mode"] = m.String()
 	suite.Equal(m, attr.Mode())
 	suite.Equal(true, attr.HasMode())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
 	// Tests for Size
 	suite.Equal(false, attr.HasSize())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	sz := uint64(10)
 	attr.SetSize(sz)
 	expectedMp["size"] = sz
 	suite.Equal(sz, attr.Size())
 	suite.Equal(true, attr.HasSize())
-	suite.Equal(expectedMp, attr.ToMap(true))
-	doUnmarshalJSONTests()
-
-	// Tests for Meta
-	suite.Equal(JSONObject{}, attr.Meta())
-	meta := JSONObject{"foo": "bar"}
-	attr.SetMeta(meta)
-	expectedMp["meta"] = meta
-	suite.Equal(meta, attr.Meta())
-	suite.Equal(expectedMp, attr.ToMap(true))
+	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 }
 

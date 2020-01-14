@@ -83,7 +83,7 @@ func evaluateNodesToKeep(s *EntrySchema, p EntrySchemaPredicate, opts Options) m
 			return
 		}
 		// Set the metadata schema prior to evaluating the predicate
-		metadataSchema := s.MetaAttributeSchema()
+		metadataSchema := s.PartialMetadataSchema()
 		if opts.Fullmeta && s.MetadataSchema() != nil {
 			metadataSchema = s.MetadataSchema()
 		}
