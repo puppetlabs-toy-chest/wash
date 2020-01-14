@@ -55,5 +55,5 @@ func (s *storageObjectPrefix) ChildSchemas() []*plugin.EntrySchema {
 
 const storageObjectPrefixDescription = `
 This represents a common prefix shared by multiple Storage objects. See
-the bucket's description for more details on why we have this kind of entry.
+the bucket's docs for more details on why we have this kind of entry.
 `

@@ -118,6 +118,6 @@ func (o *s3Object) Delete(ctx context.Context) (bool, error) {
 }
 
 const s3ObjectDescription = `
-This is an S3 object. See the bucket's description for more details on
+This is an S3 object. See the bucket's docs for more details on
 why we have this kind of entry.
 `
