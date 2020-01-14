@@ -62,6 +62,6 @@ func (s *storageObject) Delete(ctx context.Context) (bool, error) {
 }
 
 const storageObjectDescription = `
-This is a Storage object. See the bucket's description for more details
+This is a Storage object. See the bucket's docs for more details
 on why we have this kind of entry.
 `

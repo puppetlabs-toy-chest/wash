@@ -53,5 +53,5 @@ func (d *s3ObjectPrefix) Delete(ctx context.Context) (bool, error) {
 
 const s3ObjectPrefixDescription = `
 This represents a common prefix shared by multiple S3 objects. See the
-bucket's description for more details on why we have this kind of entry.
+bucket's docs for more details on why we have this kind of entry.
 `
