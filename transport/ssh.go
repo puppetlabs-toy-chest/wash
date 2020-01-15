@@ -198,10 +198,8 @@ type Identity struct {
 // from config as enumerated in https://github.com/kevinburke/ssh_config/blob/0.5/validators.go.
 //
 // The known hosts file will be ignored if StrictHostKeyChecking=no, such as in
-// ```
-// Host *.compute.amazonaws.com
-//   StrictHostKeyChecking no
-// ```
+//   Host *.compute.amazonaws.com
+//     StrictHostKeyChecking no
 func ExecSSH(ctx context.Context, id Identity, cmd []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	// find port, username, etc from .ssh/config
 	conf, err := getConnInfo(ctx, id)
