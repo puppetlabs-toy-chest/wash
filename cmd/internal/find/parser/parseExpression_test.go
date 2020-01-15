@@ -171,6 +171,11 @@ func (s *ParseExpressionTestSuite) TestParseExpressionSchemaPEval() {
 	s.RNSTC("! -true", "", schema)
 	s.RNSTC("! ( -true -o -false )", "", schema)
 	s.RSTC("! ( -true -a -false )", "", schema)
+	// Test that the schemaP for schema-agnostic primaries will always return
+	// true even if the primary's negated. The 'name' primary is a representative
+	// schema-agnostic primary.
+	s.RSTC("-name 'foo'", "", schema)
+	s.RSTC("! -name 'foo'", "", schema)
 }
 
 func (s *ParseExpressionTestSuite) TestParseExpressionSchemaP_CustomNegation() {

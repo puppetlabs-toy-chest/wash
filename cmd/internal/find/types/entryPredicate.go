@@ -18,10 +18,21 @@ type EntryPredicate interface {
 func ToEntryP(p func(e Entry) bool) EntryPredicate {
 	return &entryPredicate{
 		p: p,
-		schemaP: ToEntrySchemaP(func(s *EntrySchema) bool {
+		schemaP: schemaAgnosticSchemaP{entrySchemaPredicateFunc(func(s *EntrySchema) bool {
 			return true
-		}),
+		})},
 	}
+}
+
+// schemaAgnosticSchemaP is a schemaP function that always returns true.
+// We make it a separate type to override entrySchemaPredicateFunc#Negate
+// to ensure that the "true" function isn't negated to false
+type schemaAgnosticSchemaP struct {
+	entrySchemaPredicateFunc
+}
+
+func (p1 schemaAgnosticSchemaP) Negate() predicate.Predicate {
+	return p1
 }
 
 // EntryPredicateParser parses Entry predicates
