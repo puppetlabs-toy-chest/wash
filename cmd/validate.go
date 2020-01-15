@@ -15,6 +15,7 @@ import (
 	"github.com/jedib0t/go-pretty/progress"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/external"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +78,7 @@ func validateMain(cmd *cobra.Command, args []string) exitCode {
 	root, ok := plugins[plug]
 	if !ok {
 		// See if it's a script we can run as an external plugin instead
-		spec := plugin.ExternalPluginSpec{Script: plug}
+		spec := external.PluginSpec{Script: plug}
 		root, err = spec.Load()
 		if err != nil {
 			pluginNames := make([]string, 0, len(plugins))

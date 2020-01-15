@@ -229,7 +229,7 @@ func cachedList(ctx context.Context, p Parent) (*EntryMap, error) {
 func cachedRead(ctx context.Context, e Entry) (entryContent, error) {
 	cachedContent, err := cachedDefaultOp(ctx, ReadOp, e, func() (interface{}, error) {
 		switch signature := ReadAction().signature(e); signature {
-		case defaultSignature:
+		case DefaultSignature:
 			// Both external and core plugin entries that have the default Read signature
 			// implement the Readable interface, so we can go ahead and cast directly.
 			r := e.(Readable)
@@ -238,12 +238,12 @@ func cachedRead(ctx context.Context, e Entry) (entryContent, error) {
 				return nil, err
 			}
 			return newEntryContent(rawContent), nil
-		case blockReadableSignature:
+		case BlockReadableSignature:
 			var readFunc blockReadFunc
 			switch t := e.(type) {
 			case externalPlugin:
 				readFunc = func(ctx context.Context, size int64, offset int64) ([]byte, error) {
-					return t.blockRead(ctx, size, offset)
+					return t.BlockRead(ctx, size, offset)
 				}
 			case BlockReadable:
 				readFunc = func(ctx context.Context, size int64, offset int64) ([]byte, error) {

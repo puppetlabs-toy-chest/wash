@@ -99,6 +99,12 @@ func (e *EntryBase) Name() string {
 	return e.name
 }
 
+// ID returns the entry's ID. It won't panic on an empty string. See ID() for more detail.
+// This exists primarily to support the `external` package.
+func (e *EntryBase) ID() string {
+	return e.id
+}
+
 // String returns a unique identifier for the entry suitable for logging and error messages.
 func (e *EntryBase) String() string {
 	return e.id
@@ -140,6 +146,11 @@ func (e *EntryBase) MarkInaccessible(ctx context.Context, err error) {
 	e.isInaccessible = true
 }
 
+// IsInaccessible returns whether the entry is inaccessible.
+func (e *EntryBase) IsInaccessible() bool {
+	return e.isInaccessible
+}
+
 // Prefetched marks the entry as a prefetched entry. A prefetched entry
 // is an entry that was fetched as part of a batch operation that
 // fetched multiple levels of hierarchy at once. Volume directories and
@@ -168,6 +179,11 @@ func (e *EntryBase) SetSlashReplacer(char rune) *EntryBase {
 func (e *EntryBase) SetTTLOf(op defaultOpCode, ttl time.Duration) *EntryBase {
 	e.ttl[op] = ttl
 	return e
+}
+
+// TTLOf returns the TTL set for the specified op
+func (e *EntryBase) TTLOf(op defaultOpCode) time.Duration {
+	return e.ttl[op]
 }
 
 // DisableCachingFor disables caching for the specified op

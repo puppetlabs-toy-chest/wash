@@ -1,4 +1,4 @@
-package plugin
+package external
 
 import (
 	"bytes"
@@ -8,19 +8,19 @@ import (
 	"strings"
 
 	"github.com/puppetlabs/wash/activity"
-	"github.com/puppetlabs/wash/plugin/internal"
+	"github.com/puppetlabs/wash/plugin"
 )
 
-// externalPluginScript represents an external plugin's script
-type externalPluginScript interface {
+// pluginScript represents an external plugin's script
+type pluginScript interface {
 	Path() string
-	InvokeAndWait(ctx context.Context, method string, entry *externalPluginEntry, args ...string) (invocation, error)
-	NewInvocation(ctx context.Context, method string, entry *externalPluginEntry, args ...string) invocation
+	InvokeAndWait(ctx context.Context, method string, entry *pluginEntry, args ...string) (invocation, error)
+	NewInvocation(ctx context.Context, method string, entry *pluginEntry, args ...string) invocation
 }
 
-// An internal.Command object that stores output in separate stdout and stderr buffers.
+// A Command object that stores output in separate stdout and stderr buffers.
 type invocation interface {
-	internal.Command
+	Command
 	// RunAndWait should run the command, ensuring stdout and stderr are buffered, and return
 	// any errors or non-zero exit codes that result from running the command.
 	RunAndWait(context.Context) error
@@ -29,7 +29,7 @@ type invocation interface {
 }
 
 type invocationImpl struct {
-	internal.Command
+	Command
 	stdout, stderr bytes.Buffer
 }
 
@@ -89,7 +89,7 @@ func (s externalPluginScriptImpl) Path() string {
 func (s externalPluginScriptImpl) InvokeAndWait(
 	ctx context.Context,
 	method string,
-	entry *externalPluginEntry,
+	entry *pluginEntry,
 	args ...string,
 ) (invocation, error) {
 	inv := s.NewInvocation(ctx, method, entry, args...)
@@ -100,19 +100,19 @@ func (s externalPluginScriptImpl) InvokeAndWait(
 func (s externalPluginScriptImpl) NewInvocation(
 	ctx context.Context,
 	method string,
-	entry *externalPluginEntry,
+	entry *pluginEntry,
 	args ...string,
 ) invocation {
 	if method == "init" {
-		return &invocationImpl{Command: internal.NewCommand(ctx, s.Path(), append([]string{"init"}, args...)...)}
+		return &invocationImpl{Command: NewCommand(ctx, s.Path(), append([]string{"init"}, args...)...)}
 	}
 	if entry == nil {
 		msg := fmt.Sprintf("s.NewInvocation called with method '%v' and entry == nil", method)
 		panic(msg)
 	}
-	return &invocationImpl{Command: internal.NewCommand(
+	return &invocationImpl{Command: NewCommand(
 		ctx,
 		s.Path(),
-		append([]string{method, entry.eb().id, entry.state}, args...)...,
+		append([]string{method, plugin.ID(entry), entry.state}, args...)...,
 	)}
 }

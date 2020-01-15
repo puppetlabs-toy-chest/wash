@@ -38,6 +38,8 @@ import (
 	"context"
 	"io"
 	"time"
+
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
 // Entry is the interface for things that are representable by Wash's filesystem. This includes
@@ -234,4 +236,26 @@ type Deletable interface {
 type Signalable interface {
 	Entry
 	Signal(context.Context, string) error
+}
+
+// This interface exists to break the circular dependency between plugin and external.
+// The external plugin implementation is in its own module so it can use other modules
+// that implement new features and have dependencies on this module.
+type externalPlugin interface {
+	MethodSignature(string) MethodSignature
+	// Entry#Schema's type-signature only makes sense for core plugins
+	// since core plugin schemas do not require any error-prone API
+	// calls. External plugin schemas can be prefetched (no error)
+	// or obtained by shelling out (error-prone). Since the latter
+	// operation is error prone, the type-signature of external plugin
+	// schemas will include an error object. Since this is something
+	// specific to external plugins, it makes sense to include the
+	// error-prone version of schema here, in the Entry interface.
+	SchemaGraph() (*linkedhashmap.Map, error)
+	RawTypeID() string
+	// Go doesn't allow overloaded functions, so the external plugin entry type
+	// cannot implement both BlockReadable#Read and Readable#Read. Thus, external
+	// plugins implement the BlockReadable interface via a separate BlockRead
+	// method.
+	BlockRead(ctx context.Context, size int64, offset int64) ([]byte, error)
 }

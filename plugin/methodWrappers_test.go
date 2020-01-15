@@ -114,10 +114,19 @@ func (suite *MethodWrappersTestSuite) TestPrefetched() {
 	suite.True(IsPrefetched(e))
 }
 
+type mockNonReadable struct {
+	EntryBase
+}
+
+// Schema returns a simple schema.
+func (m *mockNonReadable) Schema() *EntrySchema {
+	return nil
+}
+
 func (suite *MethodWrappersTestSuite) TestRead_PanicsOnNonReadableEntry() {
 	// Use an external plugin entry because they're easier to setup
 	panicFunc := func() {
-		entry := &externalPluginEntry{
+		entry := &mockNonReadable{
 			EntryBase: NewEntry("foo"),
 		}
 		_, _ = Read(context.Background(), entry, 10, 0)

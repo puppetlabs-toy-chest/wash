@@ -148,7 +148,7 @@ func Read(ctx context.Context, e Entry, size int64, offset int64) (data []byte, 
 			size = contentSize
 			err = io.EOF
 		}
-	} else if ReadAction().signature(e) == blockReadableSignature {
+	} else if ReadAction().signature(e) == BlockReadableSignature {
 		activity.Warnf(ctx, "size attribute not set for block-readable entry %v", e.eb().id)
 	}
 	content, contentErr := cachedRead(ctx, e)

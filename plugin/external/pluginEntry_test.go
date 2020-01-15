@@ -1,9 +1,8 @@
-package plugin
+package external
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -13,34 +12,34 @@ import (
 	"time"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
-	"github.com/puppetlabs/wash/plugin/internal"
+	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
 
-type mockExternalPluginScript struct {
+type mockPluginScript struct {
 	mock.Mock
 	path string
 }
 
-func (m *mockExternalPluginScript) Path() string {
+func (m *mockPluginScript) Path() string {
 	return m.path
 }
 
-func (m *mockExternalPluginScript) InvokeAndWait(
+func (m *mockPluginScript) InvokeAndWait(
 	ctx context.Context,
 	method string,
-	entry *externalPluginEntry,
+	entry *pluginEntry,
 	args ...string,
 ) (invocation, error) {
 	retValues := m.Called(ctx, method, entry, args)
 	return retValues.Get(0).(invocation), retValues.Error(1)
 }
 
-func (m *mockExternalPluginScript) NewInvocation(
+func (m *mockPluginScript) NewInvocation(
 	ctx context.Context,
 	method string,
-	entry *externalPluginEntry,
+	entry *pluginEntry,
 	args ...string,
 ) invocation {
 	retValues := m.Called(ctx, method, entry, args)
@@ -50,10 +49,10 @@ func (m *mockExternalPluginScript) NewInvocation(
 // We make ctx an interface{} so that this method could
 // be used when the caller generates a context using e.g.
 // context.Background()
-func (m *mockExternalPluginScript) OnInvokeAndWait(
+func (m *mockPluginScript) OnInvokeAndWait(
 	ctx interface{},
 	method string,
-	entry *externalPluginEntry,
+	entry *pluginEntry,
 	args ...string,
 ) *mock.Call {
 	return m.On("InvokeAndWait", ctx, method, entry, args)
@@ -76,7 +75,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.Name, plugin.Name(entry))
 		suite.Equal(1, len(entry.methods))
 		suite.Contains(entry.methods, "list")
 		suite.Nil(entry.methods["list"].result)
@@ -91,14 +90,14 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.Name, entry.Name())
 		suite.Contains(entry.methods, "list")
-		suite.Equal(defaultSignature, entry.methods["list"].signature)
+		suite.Equal(plugin.DefaultSignature, entry.methods["list"].signature)
 		suite.Nil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "stream")
-		suite.Equal(defaultSignature, entry.methods["stream"].signature)
+		suite.Equal(plugin.DefaultSignature, entry.methods["stream"].signature)
 		suite.Nil(entry.methods["stream"].result)
-		suite.False(entry.isPrefetched)
+		suite.False(plugin.IsPrefetched(entry))
 
 		methods := entry.supportedMethods()
 		suite.Equal(2, len(methods))
@@ -115,7 +114,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_Support
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.Name, entry.Name())
 	}
 }
 
@@ -128,13 +127,13 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(decodedEntry.Name, entry.name)
+		suite.Equal(decodedEntry.Name, entry.Name())
 		suite.Contains(entry.methods, "list")
-		suite.Equal(defaultSignature, entry.methods["list"].signature)
+		suite.Equal(plugin.DefaultSignature, entry.methods["list"].signature)
 		suite.NotNil(entry.methods["list"].result)
 		suite.Contains(entry.methods, "read")
 		suite.Nil(entry.methods["read"].result)
-		suite.True(entry.isPrefetched)
+		suite.True(plugin.IsPrefetched(entry))
 	}
 }
 
@@ -146,13 +145,13 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryMethodTu
 
 	type testCase struct {
 		data              interface{}
-		expectedSignature methodSignature
+		expectedSignature plugin.MethodSignature
 		expectedResult    interface{}
 	}
 	testCases := []testCase{
-		testCase{true, blockReadableSignature, nil},
-		testCase{false, defaultSignature, nil},
-		testCase{"foo", defaultSignature, "foo"},
+		testCase{true, plugin.BlockReadableSignature, nil},
+		testCase{false, plugin.DefaultSignature, nil},
+		testCase{"foo", plugin.DefaultSignature, "foo"},
 	}
 	for _, testCase := range testCases {
 		decodedEntry.Methods = []interface{}{[]interface{}{"read", testCase.data}}
@@ -186,14 +185,12 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithCach
 	decodedEntry.CacheTTLs = decodedCacheTTLs{List: 1}
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		expectedTTLs := NewEntry("foo").ttl
-		expectedTTLs[ListOp] = decodedEntry.CacheTTLs.List * time.Second
-		suite.Equal(expectedTTLs, entry.EntryBase.ttl)
+		suite.Equal(decodedEntry.CacheTTLs.List*time.Second, entry.TTLOf(plugin.ListOp))
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlashReplacer() {
-	decodedEntry := newMockDecodedEntry("name")
+	decodedEntry := newMockDecodedEntry("name/")
 	decodedEntry.SlashReplacer = "a string"
 	suite.Panics(
 		func() { _, _ = decodedEntry.toExternalPluginEntry(context.Background(), false, false) },
@@ -202,7 +199,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSlas
 	decodedEntry.SlashReplacer = ":"
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(':', entry.slashReplacer)
+		suite.Equal("name:", plugin.CName(entry))
 	}
 }
 
@@ -212,18 +209,18 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithAttr
 	decodedEntry.Attributes.SetCtime(t)
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		expectedAttr := EntryAttributes{}
+		expectedAttr := plugin.EntryAttributes{}
 		expectedAttr.SetCtime(t)
-		suite.Equal(expectedAttr, entry.attributes)
+		suite.Equal(expectedAttr, plugin.Attributes(entry))
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithPartialMetadata() {
 	decodedEntry := newMockDecodedEntry("name")
-	decodedEntry.PartialMetadata = JSONObject{}
+	decodedEntry.PartialMetadata = plugin.JSONObject{}
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.Equal(JSONObject{}, entry.partialMetadata())
+		suite.Equal(plugin.JSONObject{}, plugin.PartialMetadata(entry))
 	}
 }
 
@@ -298,7 +295,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	if suite.NoError(err) {
 		suite.True(entry.schemaKnown)
-		suite.Equal("foo", rawTypeID(entry))
+		suite.Equal("foo", entry.RawTypeID())
 	}
 }
 
@@ -311,7 +308,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithInac
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
-		suite.True(entry.isInaccessible)
+		suite.True(entry.IsInaccessible())
 	}
 }
 
@@ -322,34 +319,34 @@ func (suite *ExternalPluginEntryTestSuite) TestSetCacheTTLs() {
 		Metadata: 20,
 	}
 
-	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	entry := pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 	}
 	entry.setCacheTTLs(decodedTTLs)
 
-	suite.Equal(decodedTTLs.List*time.Second, entry.ttl[ListOp])
-	suite.Equal(decodedTTLs.Read*time.Second, entry.ttl[ReadOp])
-	suite.Equal(decodedTTLs.Metadata*time.Second, entry.ttl[MetadataOp])
+	suite.Equal(decodedTTLs.List*time.Second, entry.TTLOf(plugin.ListOp))
+	suite.Equal(decodedTTLs.Read*time.Second, entry.TTLOf(plugin.ReadOp))
+	suite.Equal(decodedTTLs.Metadata*time.Second, entry.TTLOf(plugin.MetadataOp))
 }
 
 func mockInvocation(stdout []byte) invocation {
-	return &invocationImpl{Command: internal.NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
+	return &invocationImpl{Command: NewCommand(context.Background(), ""), stdout: *bytes.NewBuffer(stdout)}
 }
 
 // TODO: Add tests for Schema, including when schemaGraph is provided (prefetched)
 // and when it is not provided
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_DoesNotImplementSchema_ReturnsNil() {
-	entry := &externalPluginEntry{}
-	s, err := entry.schema()
+	entry := &pluginEntry{}
+	s, err := entry.SchemaGraph()
 	if suite.NoError(err) {
 		suite.Nil(s)
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchemaGraphWasProvided() {
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -359,15 +356,15 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_PanicsIfNoSchem
 	entry.SetTestID("/fooPlugin")
 
 	suite.Panics(
-		func() { _, _ = entry.schema() },
+		func() { _, _ = entry.SchemaGraph() },
 		"e.Schema(): entry schemas were prefetched, but no schema graph was provided for /foo (type ID fooTypeID)",
 	)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchema() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -376,28 +373,27 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsTheSchem
 		script:       mockScript,
 	}
 	entry.SetTestID("/fooPlugin")
+	var schema plugin.EntrySchema
+	schema.Actions = []string{"schema"}
 	graph := linkedhashmap.New()
 	graph.Put(
-		TypeID(entry),
-		entrySchema{
-			Actions: []string{"schema"},
-		},
+		plugin.TypeID(entry),
+		schema,
 	)
-	entry.schemaGraphs[TypeID(entry)] = graph
+	entry.schemaGraphs[plugin.TypeID(entry)] = graph
 
-	s, err := entry.schema()
+	graph, err := entry.SchemaGraph()
 	if suite.NoError(err) {
-		suite.Equal(entry.schemaGraphs[TypeID(entry)], s.graph)
-		suite.Equal(s.entrySchema.Actions, []string{"schema"})
+		suite.Equal(entry.schemaGraphs[plugin.TypeID(entry)], graph)
 		// Make sure that Wash did not shell out to the plugin script
 		mockScript.AssertNotCalled(suite.T(), "InvokeAndWait")
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfSchemaAndInstanceMethodsDontMatch() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -407,23 +403,23 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_Prefetched_ReturnsErrorIfS
 		script:       mockScript,
 	}
 	entry.SetTestID("/fooPlugin")
+	var schema plugin.EntrySchema
+	schema.Actions = []string{"list", "exec"}
 	graph := linkedhashmap.New()
 	graph.Put(
-		TypeID(entry),
-		entrySchema{
-			Actions: []string{"list", "exec"},
-		},
+		plugin.TypeID(entry),
+		schema,
 	)
-	entry.schemaGraphs[TypeID(entry)] = graph
+	entry.schemaGraphs[plugin.TypeID(entry)] = graph
 
-	_, err := entry.schema()
+	_, err := entry.SchemaGraph()
 	suite.Regexp("schema.*methods.*exec.*list.*instance.*methods.*read.*schema", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsErrorIfInvocationFails() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -434,14 +430,14 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 
 	invokeErr := fmt.Errorf("invocation failed")
 	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte{}), invokeErr).Once()
-	_, err := entry.schema()
+	_, err := entry.SchemaGraph()
 	suite.Regexp("foo.*fooTypeID.*invocation.*failed", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsErrorIfUnmarshallingFails() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -451,15 +447,15 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_ReturnsError
 	entry.SetTestID("/fooPlugin")
 
 	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte("\"foo\"")), nil).Once()
-	_, err := entry.schema()
+	_, err := entry.SchemaGraph()
 	suite.Regexp("/foo.*fooTypeID", err)
 	suite.Regexp(regexp.QuoteMeta(schemaFormat), err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulInvocation_ReturnsSchema() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		rawTypeID: "baz.fooTypeID",
 		methods: map[string]methodInfo{
 			"schema": methodInfo{},
@@ -498,22 +494,21 @@ func (suite *ExternalPluginEntryTestSuite) TestSchema_NotPrefetched_SuccessfulIn
 }
 `
 	mockScript.OnInvokeAndWait(mock.Anything, "schema", entry).Return(mockInvocation([]byte(stdout)), nil).Once()
-	schema, err := entry.schema()
-	if suite.NoError(err) && suite.NotNil(schema) {
-		schemaJSON, err := json.Marshal(schema)
+	graph, err := entry.SchemaGraph()
+	if suite.NoError(err) && suite.NotNil(graph) {
+		schemaJSON, err := graph.ToJSON()
 		if suite.NoError(err) {
 			stdout = strings.ReplaceAll(stdout, "methods", "actions")
 			stdout = strings.ReplaceAll(stdout, "baz.", "fooPlugin::baz.")
 			suite.JSONEq(stdout, string(schemaJSON))
-			suite.Equal(schema.Actions, []string{"list"})
 		}
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestList() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 		schemaGraphs: map[string]*linkedhashmap.Map{
 			"foo": linkedhashmap.New(),
@@ -546,13 +541,13 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
-		entryBase := NewEntry("foo")
-		expectedEntries := []Entry{
-			&externalPluginEntry{
+		entryBase := plugin.NewEntry("foo")
+		expectedEntries := []plugin.Entry{
+			&pluginEntry{
 				EntryBase: entryBase,
 				methods: map[string]methodInfo{
 					"list": methodInfo{
-						signature: defaultSignature,
+						signature: plugin.DefaultSignature,
 					},
 				},
 				script:       entry.script,
@@ -566,9 +561,9 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestRead() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -595,9 +590,9 @@ func (suite *ExternalPluginEntryTestSuite) TestRead() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -607,16 +602,16 @@ func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
 		mockScript.OnInvokeAndWait(ctx, "read", entry, "10", "0").Return(mockInvocation(stdout), err).Once()
 	}
 
-	// Test that if InvokeAndWait errors, then blockRead returns its error
+	// Test that if InvokeAndWait errors, then BlockRead returns its error
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
-	_, err := entry.blockRead(ctx, 10, 0)
+	_, err := entry.BlockRead(ctx, 10, 0)
 	suite.EqualError(mockErr, err.Error())
 
-	// Test that blockRead returns the invocation's stdout
+	// Test that BlockRead returns the invocation's stdout
 	stdout := "foo"
 	mockInvokeAndWait([]byte(stdout), nil)
-	content, err := entry.blockRead(ctx, 10, 0)
+	content, err := entry.BlockRead(ctx, 10, 0)
 	if suite.NoError(err) {
 		expectedContent := []byte(stdout)
 		suite.Equal(expectedContent, content)
@@ -624,9 +619,9 @@ func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -650,17 +645,17 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries))
-		if suite.Equal([]string{"list"}, SupportedActionsOf(entries[0])) {
-			children, err := entries[0].(Parent).List(ctx)
+		if suite.Equal([]string{"list"}, plugin.SupportedActionsOf(entries[0])) {
+			children, err := entries[0].(plugin.Parent).List(ctx)
 			if suite.NoError(err) {
 				suite.Equal(1, len(children))
-				attr := Attributes(children[0])
+				attr := plugin.Attributes(children[0])
 				if suite.True(attr.HasSize()) {
 					suite.Equal(uint64(len(someContent)), attr.Size())
 				}
 
-				if suite.Equal([]string{"read"}, SupportedActionsOf(children[0])) {
-					content, err := children[0].(Readable).Read(ctx)
+				if suite.Equal([]string{"read"}, plugin.SupportedActionsOf(children[0])) {
+					content, err := children[0].(plugin.Readable).Read(ctx)
 					suite.NoError(err)
 					suite.Equal(someContent, string(content))
 				}
@@ -670,7 +665,7 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 }
 
 type mockedInvocation struct {
-	internal.Command
+	Command
 	mock.Mock
 }
 
@@ -689,9 +684,9 @@ func (m *mockedInvocation) Stderr() *bytes.Buffer {
 var _ = invocation(&mockedInvocation{})
 
 func (suite *ExternalPluginEntryTestSuite) TestWrite() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -699,7 +694,7 @@ func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 
 	ctx := context.Background()
 	mockRunAndWait := func(err error) {
-		mockInv := &mockedInvocation{Command: internal.NewCommand(ctx, "")}
+		mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
 		mockScript.On("NewInvocation", ctx, "write", entry, []string(nil)).Return(mockInv).Once()
 		mockInv.On("RunAndWait", ctx).Return(err).Once()
 	}
@@ -717,9 +712,9 @@ func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
 	entry.SetTestID("/foo")
@@ -738,27 +733,27 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries))
-		supported := SupportedActionsOf(entries[0])
+		supported := plugin.SupportedActionsOf(entries[0])
 		suite.Contains(supported, "list")
 		suite.Contains(supported, "read")
 
-		_, err = entries[0].(Parent).List(ctx)
+		_, err = entries[0].(plugin.Parent).List(ctx)
 		suite.EqualError(err, `implementation of list must conform to `+
 			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
 
-		_, err = entries[0].(Readable).Read(ctx)
+		_, err = entries[0].(plugin.Readable).Read(ctx)
 		suite.EqualError(err, "Read method must provide a string, not [1 2]")
 		// TODO: Add a test for block readable here
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}
-	expectedMeta := JSONObject{"foo": "bar"}
+	expectedMeta := plugin.JSONObject{"foo": "bar"}
 	entry.SetPartialMetadata(expectedMeta)
 
 	// If metadata is not implemented, then e.Metadata should return
@@ -772,9 +767,9 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		methods:   map[string]methodInfo{"metadata": methodInfo{}},
 		script:    mockScript,
 	}
@@ -802,15 +797,15 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	metadata, err := entry.Metadata(ctx)
 	if suite.NoError(err) {
-		expectedMetadata := JSONObject{"key": "value"}
+		expectedMetadata := plugin.JSONObject{"key": "value"}
 		suite.Equal(expectedMetadata, metadata)
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSignal() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		methods:   map[string]methodInfo{"signal": methodInfo{}},
 		script:    mockScript,
 	}
@@ -836,9 +831,9 @@ func (suite *ExternalPluginEntryTestSuite) TestSignal() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDelete() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		methods:   map[string]methodInfo{"delete": methodInfo{}},
 		script:    mockScript,
 	}
@@ -875,21 +870,21 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 // state.
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotAJSONObject() {
-	entry := &externalPluginEntry{}
+	entry := &pluginEntry{}
 	entry.SetTestID("/fooPlugin")
 	_, err := unmarshalSchemaGraph(entry, []byte("[]"))
 	suite.Regexp("non-empty.*object", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfAnEmptyJSONObject() {
-	entry := &externalPluginEntry{}
+	entry := &pluginEntry{}
 	entry.SetTestID("/fooPlugin")
 	_, err := unmarshalSchemaGraph(entry, []byte("{}"))
 	suite.Regexp("non-empty.*object", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfTypeIDNotPresent() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("/fooPlugin")
@@ -902,7 +897,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfType
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalformedSchema() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("/fooPlugin")
@@ -943,7 +938,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalf
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfLabelNotProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("/fooPlugin")
@@ -958,7 +953,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfLabe
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMethodsNotProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -975,7 +970,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMeth
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotParentAndChildrenProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -994,7 +989,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotP
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfParentAndChildrenNotProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1013,7 +1008,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfPare
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotSignalableAndSignalsProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1034,7 +1029,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotS
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSignalableAndSignalsNotProvided() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1053,7 +1048,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSign
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMissingChildSchema() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1072,7 +1067,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMiss
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSchemaIncludesDanglingTypeIDs() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1103,7 +1098,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidPartialMetadataSchema() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1124,7 +1119,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInvalidMetadataSchema() {
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "foo",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1150,7 +1145,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput()
 	// by the "actions" key)
 	stdout := readSchemaFixture(suite.Suite, "externalPluginSchema")
 
-	entry := &externalPluginEntry{
+	entry := &pluginEntry{
 		rawTypeID: "aws.Root",
 	}
 	entry.SetTestID("fooPlugin")
@@ -1159,7 +1154,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput()
 		// Check that the first key is aws.Root
 		it := actualGraph.Iterator()
 		it.First()
-		suite.Equal(it.Key(), TypeID(entry))
+		suite.Equal(it.Key(), plugin.TypeID(entry))
 
 		// Now check that all of stdout was successfully unmarshalled.
 		stdout = bytes.ReplaceAll(stdout, []byte("methods"), []byte("actions"))

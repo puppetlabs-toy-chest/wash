@@ -1,25 +1,27 @@
-package plugin
+package external
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/puppetlabs/wash/plugin"
 )
 
-// ExternalPluginSpec represents an external plugin's specification.
-type ExternalPluginSpec struct {
+// PluginSpec represents an external plugin's specification.
+type PluginSpec struct {
 	Script string
 }
 
 // Name returns the plugin name, which is the basename of the script with extension removed.
-func (s ExternalPluginSpec) Name() string {
+func (s PluginSpec) Name() string {
 	basename := filepath.Base(s.Script)
 	return strings.TrimSuffix(basename, filepath.Ext(basename))
 }
 
 // Load ensures the external plugin represents an executable artifact and create a plugin Root.
-func (s ExternalPluginSpec) Load() (Root, error) {
+func (s PluginSpec) Load() (plugin.Root, error) {
 	fi, err := os.Stat(s.Script)
 	if err != nil {
 		return nil, err
@@ -29,8 +31,8 @@ func (s ExternalPluginSpec) Load() (Root, error) {
 		return nil, fmt.Errorf("script %v is not executable", s.Script)
 	}
 
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry(s.Name()),
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry(s.Name()),
 		script:    externalPluginScriptImpl{path: s.Script},
 	}}
 	return root, nil

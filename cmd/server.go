@@ -15,6 +15,7 @@ import (
 	"github.com/puppetlabs/wash/cmd/internal/server"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/plugin/external"
 	"gopkg.in/yaml.v2"
 
 	log "github.com/sirupsen/logrus"
@@ -147,7 +148,7 @@ func serverOptsFor(cmd *cobra.Command) (map[string]plugin.Root, server.Opts, err
 
 	// Check the external plugins. First unmarshal their spec, ensure that
 	// they're valid scripts, then convert them to plugin.Root types.
-	var externalPlugins []plugin.ExternalPluginSpec
+	var externalPlugins []external.PluginSpec
 	if err := viper.UnmarshalKey("external-plugins", &externalPlugins); err != nil {
 		return nil, server.Opts{}, fmt.Errorf("failed to unmarshal the external-plugins key: %v", err)
 	}

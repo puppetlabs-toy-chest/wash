@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -26,7 +27,16 @@ func TypeID(e Entry) string {
 func schema(e Entry) (*EntrySchema, error) {
 	switch t := e.(type) {
 	case externalPlugin:
-		return t.schema()
+		graph, err := t.SchemaGraph()
+		if err != nil {
+			return nil, err
+		}
+		s := NewEntrySchema(e, "foo")
+		s.graph = graph
+		entrySchemaV, _ := s.graph.Get(TypeID(e))
+		// Nodes in the graph can only set properties on entrySchema, so only copy that.
+		s.entrySchema = entrySchemaV.(EntrySchema).entrySchema
+		return s, nil
 	case *Registry:
 		// The plugin registry includes external plugins, whose schema call can
 		// error. Thus, it needs to be treated differently from the other core
@@ -123,6 +133,13 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 // Note that UnmarshalJSON is not implemented since that is not
 // how plugin.EntrySchema objects are meant to be used.
 func (s EntrySchema) MarshalJSON() ([]byte, error) {
+	if s.entry == nil {
+		// Nodes in the external plugin graph don't use NewEntrySchema, they directly set the
+		// undocumented fields of EntrySchema. Since graph and entry won't be set - and this is
+		// part of a graph already - directly serialize entrySchema instead of using the graph.
+		return json.Marshal(s.entrySchema)
+	}
+
 	graph := s.graph
 	if graph == nil {
 		if _, ok := s.entry.(externalPlugin); ok {
