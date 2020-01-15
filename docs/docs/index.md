@@ -110,7 +110,7 @@ Lists the children of the specified paths, or current directory if no path is sp
 
 ### wash meta
 
-Prints the metadata of the given entries. By default, meta prints the full metadata as returned by the metadata endpoint. Specify the `--attribute` flag to instead print the meta attribute, a (possibly) reduced set of metadata that's returned when entries are enumerated.
+Prints the metadata of the given entries. By default, meta prints the full metadata as returned by the metadata endpoint. Specify the `--partial` flag to instead print the partial metadata, a (possibly) reduced set of metadata that's returned when entries are enumerated.
 
 ### wash ps
 

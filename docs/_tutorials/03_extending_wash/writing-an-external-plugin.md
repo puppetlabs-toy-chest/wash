@@ -38,11 +38,18 @@ function print_entry_json() {
   if [[ -z "${attributes_json}" ]]; then
     attributes_json="{}"
   fi
+
+  local partial_metadata_json="$4"
+  if [[ -z "${partial_metadata_json}" ]]; then
+    partial_metadata_json="{}"
+  fi
+
   local methods_json=`to_json_array "${methods}"`
   echo -n "{\
 \"name\":\"${name}\",\
 \"methods\":${methods_json},\
-\"attributes\":${attributes_json}\
+\"attributes\":${attributes_json},\
+\"partial_metadata\": ${partial_metadata_json}\
 }"
 }
 
@@ -70,10 +77,10 @@ Then invoke `local_fs init`. Your output should look something like this:
 
 ```
 bash-3.2$ ./tutorials/local_fs.sh init
-{"name":"local_fs","methods":["list"],"attributes":{}}
+{"name":"local_fs","methods":["list"],"attributes":{},"partial_metadata":{}}
 ```
 
-The printed JSON represents `local_fs`’ root. We see that the entry’s name is `local_fs`, that it implements `list`, and that it does not have any attributes.
+The printed JSON represents `local_fs`’ root. We see that the entry’s name is `local_fs`, that it implements `list`, and that it does not have any attributes or partial metadata.
 
 Now that we’ve implemented `init`, let’s go ahead and see `local_fs` in action. Add the following to your `~/.puppetlabs/wash/wash.yaml` file:
 
@@ -139,11 +146,18 @@ function print_entry_json() {
   if [[ -z "${attributes_json}" ]]; then
     attributes_json="{}"
   fi
+
+  local partial_metadata_json="$4"
+  if [[ -z "${partial_metadata_json}" ]]; then
+    partial_metadata_json="{}"
+  fi
+
   local methods_json=`to_json_array "${methods}"`
   echo -n "{\
 \"name\":\"${name}\",\
 \"methods\":${methods_json},\
-\"attributes\":${attributes_json}\
+\"attributes\":${attributes_json},\
+\"partial_metadata\": ${partial_metadata_json}\
 }"
 }
 
@@ -223,20 +237,22 @@ function list_dir() {
 \"atime\":${atime},\
 \"mtime\":${mtime},\
 \"ctime\":${ctime},\
-\"size\":${size},\
-\"meta\":{\
-  \"atime\":${atime},\
-  \"mtime\":${mtime},\
-  \"ctime\":${ctime},\
-  \"mode\":${mode},\
-  \"size\":${size},\
-  \"device\":${device},\
-  \"inodeNumber\":${inode_number},\
-  \"uid\":${uid},\
-  \"gid\":${gid}\
-}}"
+\"size\":${size}\
+}"
 
-    print_entry_json `basename "${file}"` "${methods}" "${attributes_json}"
+    local partial_metadata_json="{\
+\"atime\":${atime},\
+\"mtime\":${mtime},\
+\"ctime\":${ctime},\
+\"mode\":${mode},\
+\"size\":${size},\
+\"device\":${device},\
+\"inodeNumber\":${inode_number},\
+\"uid\":${uid},\
+\"gid\":${gid}\
+}"
+
+    print_entry_json `basename "${file}"` "${methods}" "${attributes_json}" "${partial_metadata_json}"
   done
   echo ""
   echo -n "]"
@@ -275,38 +291,23 @@ esac
 {% endhighlight %}
 
 
-**Note:** Don’t forget to set the `STAT_CMD` variable on line 81.
+**Note:** Don’t forget to set the `STAT_CMD` variable on line 88.
 
 Now you can `ls local_fs`:
 
 ```
-wash . ❯ ls local_fs
+wash . ❯ ls local_fs/
 Applications/
 Desktop/
 Documents/
 Downloads/
-Dump/
-Experiments/
 GitHub/
-Installs/
 Library/
-Misc/
 Movies/
 Music/
-PGitHub/
 Pictures/
 Public/
-Ruby/
-Sites/
-TranslationRepos/
-Tutorials/
-Upload/
-UsefulScripts/
-eclipse-workspace/
 go/
-support-tool/
-svn/
-workspace/
 ```
 
 Compare your output with `ls $HOME` (ignoring the hidden files).
@@ -316,32 +317,17 @@ Remember, when you use `ls local_fs`, which invokes the *list* action on the `lo
 ```
 bash-3.2$ ./tutorials/local_fs.sh list /local_fs
 [
-{"name":"svn","methods":["list"],"attributes":{"atime":1569968997,"mtime":1518042412,"ctime":1532474427,"size":128,"meta":{  "atime":1569968997,  "mtime":1518042412,  "ctime":1532474427,  "mode":16877,  "size":128,  "device":16777220,  "inodeNumber":2425576,  "uid":503,  "gid":20}}},
-{"name":"Misc","methods":["list"],"attributes":{"atime":1532474928,"mtime":1501020816,"ctime":1532474222,"size":128,"meta":{  "atime":1532474928,  "mtime":1501020816,  "ctime":1532474222,  "mode":16877,  "size":128,  "device":16777220,  "inodeNumber":2408689,  "uid":503,  "gid":20}}},
-{"name":"Music","methods":["list"],"attributes":{"atime":1532475166,"mtime":1516903352,"ctime":1532474458,"size":128,"meta":{  "atime":1532475166,  "mtime":1516903352,  "ctime":1532474458,  "mode":16832,  "size":128,  "device":16777220,  "inodeNumber":2408694,  "uid":503,  "gid":20}}},
-{"name":"Dump","methods":["list"],"attributes":{"atime":1532474928,"mtime":1506572473,"ctime":1532471948,"size":192,"meta":{  "atime":1532474928,  "mtime":1506572473,  "ctime":1532471948,  "mode":16877,  "size":192,  "device":16777220,  "inodeNumber":978092,  "uid":503,  "gid":20}}},
-{"name":"go","methods":["list"],"attributes":{"atime":1549159270,"mtime":1549423958,"ctime":1549423958,"size":160,"meta":{  "atime":1549159270,  "mtime":1549423958,  "ctime":1549423958,  "mode":16877,  "size":160,  "device":16777220,  "inodeNumber":13767491,  "uid":503,  "gid":20}}},
-{"name":"Installs","methods":["list"],"attributes":{"atime":1532475166,"mtime":1498666826,"ctime":1532474104,"size":128,"meta":{  "atime":1532475166,  "mtime":1498666826,  "ctime":1532474104,  "mode":16877,  "size":128,  "device":16777220,  "inodeNumber":2365626,  "uid":503,  "gid":20}}},
-{"name":"TranslationRepos","methods":["list"],"attributes":{"atime":1532474931,"mtime":1502748289,"ctime":1532474427,"size":64,"meta":{  "atime":1532474931,  "mtime":1502748289,  "ctime":1532474427,  "mode":16877,  "size":64,  "device":16777220,  "inodeNumber":2588564,  "uid":503,  "gid":20}}},
-{"name":"Experiments","methods":["list"],"attributes":{"atime":1560967858,"mtime":1560967858,"ctime":1560967858,"size":96,"meta":{  "atime":1560967858,  "mtime":1560967858,  "ctime":1560967858,  "mode":16877,  "size":96,  "device":16777220,  "inodeNumber":31253883,  "uid":503,  "gid":20}}},
-{"name":"Pictures","methods":["list"],"attributes":{"atime":1532475166,"mtime":1517959296,"ctime":1532474458,"size":160,"meta":{  "atime":1532475166,  "mtime":1517959296,  "ctime":1532474458,  "mode":16832,  "size":160,  "device":16777220,  "inodeNumber":2425431,  "uid":503,  "gid":20}}},
-{"name":"workspace","methods":["list"],"attributes":{"atime":1551289602,"mtime":1551289602,"ctime":1551289602,"size":96,"meta":{  "atime":1551289602,  "mtime":1551289602,  "ctime":1551289602,  "mode":16877,  "size":96,  "device":16777220,  "inodeNumber":15771590,  "uid":503,  "gid":20}}},
-{"name":"Desktop","methods":["list"],"attributes":{"atime":1569991296,"mtime":1569902573,"ctime":1569902573,"size":1472,"meta":{  "atime":1569991296,  "mtime":1569902573,  "ctime":1569902573,  "mode":16832,  "size":1472,  "device":16777220,  "inodeNumber":944178,  "uid":503,  "gid":20}}},
-{"name":"Library","methods":["list"],"attributes":{"atime":1570041461,"mtime":1569360574,"ctime":1569360574,"size":2240,"meta":{  "atime":1570041461,  "mtime":1569360574,  "ctime":1569360574,  "mode":16832,  "size":2240,  "device":16777220,  "inodeNumber":2365902,  "uid":503,  "gid":20}}},
-{"name":"eclipse-workspace","methods":["list"],"attributes":{"atime":1532475163,"mtime":1499457703,"ctime":1532471948,"size":96,"meta":{  "atime":1532475163,  "mtime":1499457703,  "ctime":1532471948,  "mode":16877,  "size":96,  "device":16777220,  "inodeNumber":978097,  "uid":503,  "gid":20}}},
-{"name":"Sites","methods":["list"],"attributes":{"atime":1532474938,"mtime":1532474458,"ctime":1532474458,"size":96,"meta":{  "atime":1532474938,  "mtime":1532474458,  "ctime":1532474458,  "mode":16877,  "size":96,  "device":16777220,  "inodeNumber":2618702,  "uid":503,  "gid":20}}},
-{"name":"Public","methods":["list"],"attributes":{"atime":1532475089,"mtime":1495831550,"ctime":1532474255,"size":128,"meta":{  "atime":1532475089,  "mtime":1495831550,  "ctime":1532474255,  "mode":16877,  "size":128,  "device":16777220,  "inodeNumber":2425566,  "uid":503,  "gid":20}}},
-{"name":"GitHub","methods":["list"],"attributes":{"atime":1570031837,"mtime":1569639580,"ctime":1569639580,"size":8064,"meta":{  "atime":1570031837,  "mtime":1569639580,  "ctime":1569639580,  "mode":16877,  "size":8064,  "device":16777220,  "inodeNumber":978173,  "uid":503,  "gid":20}}},
-{"name":"Movies","methods":["list"],"attributes":{"atime":1532475144,"mtime":1495831550,"ctime":1532474458,"size":96,"meta":{  "atime":1532475144,  "mtime":1495831550,  "ctime":1532474458,  "mode":16832,  "size":96,  "device":16777220,  "inodeNumber":2408692,  "uid":503,  "gid":20}}},
-{"name":"Applications","methods":["list"],"attributes":{"atime":1570031244,"mtime":1495831999,"ctime":1532471853,"size":128,"meta":{  "atime":1570031244,  "mtime":1495831999,  "ctime":1532471853,  "mode":17344,  "size":128,  "device":16777220,  "inodeNumber":943924,  "uid":503,  "gid":20}}},
-{"name":"Tutorials","methods":["list"],"attributes":{"atime":1569641420,"mtime":1569641334,"ctime":1569641334,"size":704,"meta":{  "atime":1569641420,  "mtime":1569641334,  "ctime":1569641334,  "mode":16877,  "size":704,  "device":16777220,  "inodeNumber":2588565,  "uid":503,  "gid":20}}},
-{"name":"Documents","methods":["list"],"attributes":{"atime":1565821490,"mtime":1565821494,"ctime":1565821494,"size":1440,"meta":{  "atime":1565821490,  "mtime":1565821494,  "ctime":1565821494,  "mode":16832,  "size":1440,  "device":16777220,  "inodeNumber":944192,  "uid":503,  "gid":20}}},
-{"name":"support-tool","methods":["list"],"attributes":{"atime":1532475144,"mtime":1501172807,"ctime":1532474255,"size":64,"meta":{  "atime":1532475144,  "mtime":1501172807,  "ctime":1532474255,  "mode":16877,  "size":64,  "device":16777220,  "inodeNumber":2425575,  "uid":503,  "gid":20}}},
-{"name":"UsefulScripts","methods":["list"],"attributes":{"atime":1532475143,"mtime":1508201220,"ctime":1532474458,"size":160,"meta":{  "atime":1532475143,  "mtime":1508201220,  "ctime":1532474458,  "mode":16877,  "size":160,  "device":16777220,  "inodeNumber":2618684,  "uid":503,  "gid":20}}},
-{"name":"Downloads","methods":["list"],"attributes":{"atime":1569859792,"mtime":1569859792,"ctime":1569859792,"size":1024,"meta":{  "atime":1569859792,  "mtime":1569859792,  "ctime":1569859792,  "mode":16832,  "size":1024,  "device":16777220,  "inodeNumber":975831,  "uid":503,  "gid":20}}},
-{"name":"Ruby","methods":["list"],"attributes":{"atime":1532475143,"mtime":1507151974,"ctime":1532474255,"size":64,"meta":{  "atime":1532475143,  "mtime":1507151974,  "ctime":1532474255,  "mode":16877,  "size":64,  "device":16777220,  "inodeNumber":2425574,  "uid":503,  "gid":20}}},
-{"name":"Upload","methods":["list"],"attributes":{"atime":1532475143,"mtime":1507180839,"ctime":1532474458,"size":128,"meta":{  "atime":1532475143,  "mtime":1507180839,  "ctime":1532474458,  "mode":16877,  "size":128,  "device":16777220,  "inodeNumber":2618681,  "uid":503,  "gid":20}}},
-{"name":"PGitHub","methods":["list"],"attributes":{"atime":1569859882,"mtime":1552437895,"ctime":1552437895,"size":480,"meta":{  "atime":1569859882,  "mtime":1552437895,  "ctime":1552437895,  "mode":16877,  "size":480,  "device":16777220,  "inodeNumber":2408772,  "uid":503,  "gid":20}}}
+{"name":"Music","methods":["list"],"attributes":{"atime":1576614404,"mtime":1575331025,"ctime":1575331025,"size":128},"partial_metadata": {"atime":1576614404,"mtime":1575331025,"ctime":1575331025,"mode":16832,"size":128,"device":16777221,"inodeNumber":12885648174,"uid":501,"gid":20}},
+{"name":"go","methods":["list"],"attributes":{"atime":1576614404,"mtime":1576557876,"ctime":1576557876,"size":160},"partial_metadata": {"atime":1576614404,"mtime":1576557876,"ctime":1576557876,"mode":16877,"size":160,"device":16777221,"inodeNumber":12886708625,"uid":501,"gid":20}},
+{"name":"Pictures","methods":["list"],"attributes":{"atime":1578617514,"mtime":1577074362,"ctime":1577074362,"size":128},"partial_metadata": {"atime":1578617514,"mtime":1577074362,"ctime":1577074362,"mode":16832,"size":128,"device":16777221,"inodeNumber":12885648177,"uid":501,"gid":20}},
+{"name":"Desktop","methods":["list"],"attributes":{"atime":1578514087,"mtime":1577778220,"ctime":1577778220,"size":480},"partial_metadata": {"atime":1578514087,"mtime":1577778220,"ctime":1577778220,"mode":16832,"size":480,"device":16777221,"inodeNumber":12885648179,"uid":501,"gid":20}},
+{"name":"Library","methods":["list"],"attributes":{"atime":1577838807,"mtime":1578958647,"ctime":1578958647,"size":1984},"partial_metadata": {"atime":1577838807,"mtime":1578958647,"ctime":1578958647,"mode":16832,"size":1984,"device":16777221,"inodeNumber":12885648155,"uid":501,"gid":20}},
+{"name":"Public","methods":["list"],"attributes":{"atime":1575330350,"mtime":1575330349,"ctime":1575330350,"size":128},"partial_metadata": {"atime":1575330350,"mtime":1575330349,"ctime":1575330350,"mode":16877,"size":128,"device":16777221,"inodeNumber":12885648228,"uid":501,"gid":20}},
+{"name":"GitHub","methods":["list"],"attributes":{"atime":1578973413,"mtime":1576614164,"ctime":1576614164,"size":512},"partial_metadata": {"atime":1578973413,"mtime":1576614164,"ctime":1576614164,"mode":16877,"size":512,"device":16777221,"inodeNumber":12886683114,"uid":501,"gid":20}},
+{"name":"Movies","methods":["list"],"attributes":{"atime":1575330350,"mtime":1575330349,"ctime":1575330350,"size":96},"partial_metadata": {"atime":1575330350,"mtime":1575330349,"ctime":1575330350,"mode":16832,"size":96,"device":16777221,"inodeNumber":12885648232,"uid":501,"gid":20}},
+{"name":"Applications","methods":["list"],"attributes":{"atime":1578514067,"mtime":1575331450,"ctime":1575331450,"size":96},"partial_metadata": {"atime":1578514067,"mtime":1575331450,"ctime":1575331450,"mode":16832,"size":96,"device":16777221,"inodeNumber":12885796512,"uid":501,"gid":20}},
+{"name":"Documents","methods":["list"],"attributes":{"atime":1576522412,"mtime":1575325014,"ctime":1575337685,"size":1440},"partial_metadata": {"atime":1576522412,"mtime":1575325014,"ctime":1575337685,"mode":16832,"size":1440,"device":16777221,"inodeNumber":12885817316,"uid":501,"gid":20}},
+{"name":"Downloads","methods":["list"],"attributes":{"atime":1578974744,"mtime":1578511137,"ctime":1578511137,"size":608},"partial_metadata": {"atime":1578974744,"mtime":1578511137,"ctime":1578511137,"mode":16832,"size":608,"device":16777221,"inodeNumber":12885648169,"uid":501,"gid":20}}
 ]
 ```
 
@@ -350,25 +336,23 @@ Each JSON object corresponds to a child entry. For example, the `Applications` d
 ```
 {
   "name": "Applications",
-  "methods": [
-    "list"
-  ],
+  "methods": ["list"],
   "attributes": {
-    "atime": 1570031244,
-    "mtime": 1495831999,
-    "ctime": 1532471853,
-    "size": 128,
-    "meta": {
-      "atime": 1570031244,
-      "mtime": 1495831999,
-      "ctime": 1532471853,
-      "mode": 17344,
-      "size": 128,
-      "device": 16777220,
-      "inodeNumber": 943924,
-      "uid": 503,
-      "gid": 20
-    }
+    "atime": 1578514067,
+    "mtime": 1575331450,
+    "ctime": 1575331450,
+    "size": 96
+  },
+  "partial_metadata": {
+    "atime": 1578514067,
+    "mtime": 1575331450,
+    "ctime": 1575331450,
+    "mode": 16832,
+    "size": 96,
+    "device": 16777221,
+    "inodeNumber": 12885796512,
+    "uid": 501,
+    "gid": 20
   }
 }
 ```
@@ -377,16 +361,15 @@ Notice that `list`'s output also included the children’s attributes. We can us
 
 ```
 wash . ❯ winfo local_fs/Applications
-Path: /Users/enis.inan/Library/Caches/wash/mnt182709991/local_fs/Applications
 Name: Applications
 CName: Applications
 Actions:
 - list
 Attributes:
-  atime: 2019-10-02T08:47:24-07:00
-  ctime: 2018-07-24T15:37:33-07:00
-  mtime: 2017-05-26T13:53:19-07:00
-  size: 128
+  atime: 2020-01-08T12:07:47-08:00
+  ctime: 2019-12-02T16:04:10-08:00
+  mtime: 2019-12-02T16:04:10-08:00
+  size: 96
 ```
 
 **Note:** The `mode` attribute doesn't work on Mac OS so we are omitting it for now. However, we're still including it as metadata.
@@ -395,20 +378,20 @@ We can also use `meta` to check out each child’s metadata.
 
 ```
 wash . ❯ meta local_fs/Applications
-atime: 1570031244
-ctime: 1532471853
-device: 16777220
+atime: 1578514067
+ctime: 1575331450
+device: 16777221
 gid: 20
-inodeNumber: 943924
-mode: 17344
-mtime: 1495831999
-size: 128
-uid: 503
+inodeNumber: 12885796512
+mode: 16832
+mtime: 1575331450
+size: 96
+uid: 501
 ```
 
-Notice that the output matches the `meta` attribute. That’s because the `meta` attribute completely describes `local_fs`' children.
+Notice that the output matches the partial metadata. That’s because the partial metadata completely describes `local_fs`' children.
 
-**Remember:** The `meta` attribute represents the raw response of a "bulk" fetch. For `local_fs`, the response would be `stat`’s output.
+**Remember:** The partial metadata represents the raw response of a "bulk" fetch. For `local_fs`, the response would be `stat`’s output.
 
 Congratulations! You've created your own Wash plugin to emulate some common file and directory filtering via the `local_fs` plugin and Wash `find`. The Wash external plugin interface, together with the attribute and metadata abstraction, make it possible for you to filter anything on almost anything! We can't wait to see what you do with Wash. Share your creations on the Wash Slack channel.
 
@@ -417,10 +400,10 @@ Congratulations! You've created your own Wash plugin to emulate some common file
 
     {% include exercise_answer.html answer="<code>local_fs.sh read &lt;path_to_file&gt;</code>" %}
 
-2. Implement the `stream` action for files. Hint: Take a look at lines 102-107, and 146-161. Your implementation should be a wrapper to `tail -f`. Also, don’t forget to print the header!
+2. Implement the `stream` action for files. Hint: Take a look at lines 109-114, and 155-170. Your implementation should be a wrapper to `tail -f`. Also, don’t forget to print the header!
 
     {% capture answer_2 %} 
-    On line 106, add <code>stream</code> to the list of supported methods. Then add the following case to the <code>case</code> statement in line 152:
+    On line 113, add <code>stream</code> to the list of supported methods. Then add the following case to the <code>case</code> statement in line 155:
         <code><br />
           &nbsp;&nbsp;&nbsp;&nbsp;"stream")<br />
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;echo "200"<br />
