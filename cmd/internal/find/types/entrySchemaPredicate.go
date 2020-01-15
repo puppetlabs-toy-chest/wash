@@ -15,26 +15,26 @@ type EntrySchemaPredicate interface {
 
 // ToEntrySchemaP converts p to an EntrySchemaPredicate object
 func ToEntrySchemaP(p func(*EntrySchema) bool) EntrySchemaPredicate {
-	return entrySchemaPredicateredicateFunc(p)
+	return entrySchemaPredicateFunc(p)
 }
 
-// entrySchemaPredicateredicateFunc implements the EntrySchemaPredicate
+// entrySchemaPredicateFunc implements the EntrySchemaPredicate
 // interface for the corresponding function type
-type entrySchemaPredicateredicateFunc func(*EntrySchema) bool
+type entrySchemaPredicateFunc func(*EntrySchema) bool
 
-func (p1 entrySchemaPredicateredicateFunc) P(s *EntrySchema) bool {
+func (p1 entrySchemaPredicateFunc) P(s *EntrySchema) bool {
 	return p1(s)
 }
 
 // Negate returns Not(p1)
-func (p1 entrySchemaPredicateredicateFunc) Negate() predicate.Predicate {
-	return entrySchemaPredicateredicateFunc(func(s *EntrySchema) bool {
+func (p1 entrySchemaPredicateFunc) Negate() predicate.Predicate {
+	return entrySchemaPredicateFunc(func(s *EntrySchema) bool {
 		return !p1(s)
 	})
 }
 
 // IsSatisfiedBy returns true if v satisfies the predicate, false otherwise
-func (p1 entrySchemaPredicateredicateFunc) IsSatisfiedBy(v interface{}) bool {
+func (p1 entrySchemaPredicateFunc) IsSatisfiedBy(v interface{}) bool {
 	s, ok := v.(*EntrySchema)
 	if !ok {
 		return false
@@ -45,7 +45,7 @@ func (p1 entrySchemaPredicateredicateFunc) IsSatisfiedBy(v interface{}) bool {
 // EntrySchemaPredicateParser parses EntrySchema predicates
 type EntrySchemaPredicateParser func(tokens []string) (EntrySchemaPredicate, []string, error)
 
-// Parse parses an entrySchemaPredicateredicateFunc from the given input.
+// Parse parses an entrySchemaPredicateFunc from the given input.
 func (parser EntrySchemaPredicateParser) Parse(tokens []string) (predicate.Predicate, []string, error) {
 	return parser(tokens)
 }
