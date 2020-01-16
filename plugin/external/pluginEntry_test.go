@@ -14,6 +14,8 @@ import (
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/transport"
+	"github.com/puppetlabs/wash/volume"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -100,10 +102,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 		suite.Nil(entry.methods["stream"].tupleValue)
 		suite.False(plugin.IsPrefetched(entry))
 
-		methods := entry.supportedMethods()
-		suite.Equal(2, len(methods))
-		suite.Contains(methods, "list")
-		suite.Contains(methods, "stream")
+		suite.Equal(2, len(entry.methods))
+		suite.Contains(entry.methods, "list")
+		suite.Contains(entry.methods, "stream")
 	}
 }
 
@@ -665,6 +666,121 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestListWithCoreEntry() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`
+[
+	{"name": "bar", "methods": ["list"]},
+	{"type_id": "__volume::fs__", "name": "fs1", "state": "{\"maxdepth\": 2}"}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(2, len(entries))
+
+		suite.Equal([]string{"list"}, plugin.SupportedActionsOf(entries[0]))
+		suite.Equal("bar", plugin.Name(entries[0]))
+
+		suite.Equal([]string{"list"}, plugin.SupportedActionsOf(entries[1]))
+		suite.Equal("fs1", plugin.Name(entries[1]))
+		suite.IsType(&volume.FS{}, entries[1])
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithUnknownCoreEntry() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[{"type_id": "__wash::other__", "name": "bar", "state": "{}"}]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "the entry's methods must be provided")
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_Transport() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[
+	{"name": "bar", "methods": [
+		["exec", {"transport": "ssh", "options": {"host": "example.com", "user": "ubuntu"}}]
+	]}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries))
+		suite.Equal([]string{"exec"}, plugin.SupportedActionsOf(entries[0]))
+
+		if suite.IsType(&pluginEntry{}, entries[0]) {
+			entry := entries[0].(*pluginEntry)
+			if suite.Contains(entry.methods, "exec") {
+				info := entry.methods["exec"]
+				if suite.IsType(execImpl{}, info.tupleValue) {
+					exec := info.tupleValue.(execImpl)
+					suite.Equal("ssh", exec.Transport)
+					suite.Equal("example.com", exec.Options.Host)
+					suite.Equal("ubuntu", exec.Options.User)
+				}
+			}
+		}
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_TransportUnknown() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[
+	{"name": "bar", "methods": [["exec", {"transport": "foo", "options": {}}]]}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "unsupported transport foo requested, only ssh is supported")
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_Unknown() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[{"name": "bar", "methods": [["exec", true]]}]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "result for exec must specify an implementation transport and options")
+}
+
 type mockedInvocation struct {
 	Command
 	mock.Mock
@@ -870,6 +986,39 @@ func (suite *ExternalPluginEntryTestSuite) TestExec() {
 		suite.Zero(exit)
 		mockScript.AssertExpectations(suite.T())
 	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestExec_Transport() {
+	// Mock transport.ExecSSH
+	savedFn := execSSHFn
+	var execMock mock.Mock
+	execSSHFn = func(ctx context.Context, id transport.Identity, cmd []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+		args := execMock.Called(ctx, id, cmd, opts)
+		return args.Get(0).(plugin.ExecCommand), args.Error(1)
+	}
+	defer func() { execSSHFn = savedFn }()
+
+	execVals := execImpl{Transport: "ssh", Options: transport.Identity{Host: "example.com"}}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		methods:   map[string]methodInfo{"exec": methodInfo{tupleValue: execVals}},
+	}
+	entry.SetTestID("/foo")
+
+	var opts plugin.ExecOptions
+	ctx, mockErr := context.Background(), fmt.Errorf("execution error")
+	args, result := []string{"echo", "hello"}, plugin.NewExecCommand(ctx)
+
+	// Test that if ExecSSH errors then Exec returns the error
+	execMock.On("func1", ctx, execVals.Options, args, opts).Return(result, mockErr).Once()
+	_, err := entry.Exec(ctx, "echo", []string{"hello"}, opts)
+	suite.EqualError(err, mockErr.Error())
+
+	// Test that if ExecSSH runs then Exec returns the result
+	execMock.On("func1", ctx, execVals.Options, args, opts).Return(result, nil).Once()
+	cmd, err := entry.Exec(ctx, "echo", []string{"hello"}, opts)
+	suite.NoError(err)
+	suite.Equal(cmd, result)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSignal() {

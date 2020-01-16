@@ -202,10 +202,16 @@ func sshConnect(ctx context.Context, conf sshConfig, retries uint) (*ssh.Client,
 
 // Identity identifies how to connect to a target.
 type Identity struct {
-	Host, User, FallbackUser, Password, IdentityFile, KnownHosts, HostKeyAlias string
+	Host         string `json:"host"`
+	User         string `json:"user"`
+	FallbackUser string `json:"fallback_user"`
+	Password     string `json:"password"`
+	IdentityFile string `json:"identity_file"`
+	KnownHosts   string `json:"known_hosts"`
+	HostKeyAlias string `json:"host_key_alias"`
 	// Retries can be set to a non-zero value to retry every 500ms for that many times.
-	Retries uint
-	Port    uint
+	Retries uint `json:"retries"`
+	Port    uint `json:"port"`
 }
 
 // ExecSSH executes against a target via SSH. It will look up port, user, and other configuration

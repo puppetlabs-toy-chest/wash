@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/getlantern/deepcopy"
+	"github.com/jinzhu/copier"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/transport"
 )
 
 type decodedCacheTTLs struct {
@@ -61,6 +63,11 @@ func (m *methodTuple) UnmarshalJSON(data []byte) error {
 	}
 	m.Value = list[1]
 	return nil
+}
+
+type execImpl struct {
+	Transport string             `json:"transport"`
+	Options   transport.Identity `json:"options"`
 }
 
 func (e decodedExternalPluginEntry) getMungedMethods() (map[string]methodInfo, error) {
@@ -115,6 +122,15 @@ func (e decodedExternalPluginEntry) getMungedMethods() (map[string]methodInfo, e
 				)
 			}
 			info.tupleValue = graph
+		case "exec":
+			// Check if we have ["exec", <exec_implementation>].
+			var impl execImpl
+			if err := json.Unmarshal(tuple.Value, &impl); err != nil {
+				return nil, fmt.Errorf("result for exec must specify an implementation transport and options")
+			} else if impl.Transport != "ssh" {
+				return nil, fmt.Errorf("unsupported transport %v requested, only ssh is supported", impl.Transport)
+			}
+			info.tupleValue = impl
 		}
 
 		methods[tuple.Method] = info
@@ -242,10 +258,6 @@ func (e *pluginEntry) implements(method string) bool {
 	return ok
 }
 
-func (e *pluginEntry) supportedMethods() map[string]methodInfo {
-	return e.methods
-}
-
 func (e *pluginEntry) MethodSignature(name string) plugin.MethodSignature {
 	if info, ok := e.methods[name]; ok {
 		return info.signature
@@ -323,7 +335,7 @@ func (e *pluginEntry) SchemaGraph() (*linkedhashmap.Map, error) {
 		es, _ := graph.Get(plugin.TypeID(e))
 		schemaMethods := es.(plugin.EntrySchema).Actions
 		instanceMethods := []string{}
-		for method := range e.supportedMethods() {
+		for method := range e.methods {
 			instanceMethods = append(instanceMethods, method)
 		}
 		sort.Strings(schemaMethods)
@@ -396,6 +408,15 @@ func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
+		if coreEnt, ok := coreEntries[decodedExternalPluginEntry.TypeID]; ok {
+			entry, err := coreEnt.createInstance(e, decodedExternalPluginEntry)
+			if err != nil {
+				return nil, err
+			}
+			entries[i] = entry
+			continue
+		}
+
 		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(ctx, e.schemaKnown, false)
 		if err != nil {
 			return nil, err
@@ -405,6 +426,7 @@ func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 		entry.schemaGraphs = e.schemaGraphs
 		entries[i] = entry
 	}
+
 	return entries, nil
 }
 
@@ -566,7 +588,20 @@ func (e *pluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
 	}
 }
 
+// Used for mocking tests.
+var execSSHFn = transport.ExecSSH
+
 func (e *pluginEntry) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+	if result := e.methods["exec"].tupleValue; result != nil {
+		impl := result.(execImpl)
+		if impl.Transport != "ssh" {
+			panic("transport must be ssh")
+		}
+
+		args = append([]string{cmd}, args...)
+		return execSSHFn(ctx, impl.Options, args, opts)
+	}
+
 	// Serialize opts to JSON
 	type serializedOptions struct {
 		plugin.ExecOptions
@@ -667,12 +702,29 @@ func unmarshalSchemaGraph(pluginName, rawTypeID string, stdout []byte) (*linkedh
 	requiredTypeIDs := map[string]bool{
 		rawTypeID: true,
 	}
+
 	type decodedEntrySchema struct {
 		plugin.EntrySchema
 		Methods []string `json:"methods"`
 	}
+
 	graph := linkedhashmap.New()
 	putNode := func(rawTypeID string, rawSchema interface{}) error {
+		if coreEnt, ok := coreEntries[rawTypeID]; ok {
+			pluginSchema := coreEnt.schema()
+
+			// Copy only the public fields so we serialize it as just data. Uses copier because it uses
+			// reflect to copy public fields, rather than Marshal/UnmarshalJSON which we've overridden.
+			var schema plugin.EntrySchema
+			err := copier.Copy(&schema, pluginSchema)
+			if err != nil {
+				panic(fmt.Sprintf("should always be able to copy from EntrySchema to EntrySchema: %v", err))
+			}
+			populatedTypeIDs[rawTypeID] = true
+			graph.Put(namespace(pluginName, rawTypeID), schema)
+			return nil
+		}
+
 		// Deep-copy the value into the decodedEntrySchema object
 		schema, ok := rawSchema.(map[string]interface{})
 		if !ok {
