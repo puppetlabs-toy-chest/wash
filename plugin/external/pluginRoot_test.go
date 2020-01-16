@@ -1,4 +1,4 @@
-package plugin
+package external
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"github.com/puppetlabs/wash/plugin"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -17,9 +18,9 @@ type ExternalPluginRootTestSuite struct {
 }
 
 func (suite *ExternalPluginRootTestSuite) TestInit() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}}
 
@@ -49,11 +50,11 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 	mockInvokeAndWait([]byte(stdout), nil)
 	err = root.Init(nil)
 	if suite.NoError(err) {
-		expectedRoot := &externalPluginRoot{
-			externalPluginEntry: &externalPluginEntry{
-				EntryBase: NewEntry("foo"),
+		expectedRoot := &pluginRoot{
+			pluginEntry: pluginEntry{
+				EntryBase: plugin.NewEntry("foo"),
 				methods: map[string]methodInfo{
-					"list": methodInfo{signature: defaultSignature},
+					"list": methodInfo{signature: plugin.DefaultSignature},
 				},
 				script:    root.script,
 				rawTypeID: "foo_type",
@@ -65,9 +66,9 @@ func (suite *ExternalPluginRootTestSuite) TestInit() {
 }
 
 func (suite *ExternalPluginRootTestSuite) TestInitWithConfig() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}}
 
@@ -82,9 +83,9 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithConfig() {
 }
 
 func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_SetsSchemaKnownVariable() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}}
 
@@ -100,9 +101,9 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_SetsSchemaKnownVari
 }
 
 func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_ReturnsErrorIfUnmarshallingSchemaFails() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("foo"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
 		script:    mockScript,
 	}}
 
@@ -121,9 +122,9 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Re
 }
 
 func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_PartitionsSchemaGraph() {
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	root := &externalPluginRoot{&externalPluginEntry{
-		EntryBase: NewEntry("fooPlugin"),
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	root := &pluginRoot{pluginEntry{
+		EntryBase: plugin.NewEntry("fooPlugin"),
 		script:    mockScript,
 	}}
 
@@ -160,7 +161,7 @@ func (suite *ExternalPluginRootTestSuite) TestInitWithSchema_PrefetchedSchema_Pa
 	if err := root.Init(nil); suite.NoError(err) && suite.NotNil(root.schemaGraphs) {
 		// Ensure that the graph of root.schemaGraphs[type_id] has "type_id" as its
 		// first item. We pick an arbitrary type ID here
-		typeID := namespace(root.eb().name, "aws.profile")
+		typeID := namespace(root.Name(), "aws.profile")
 		graph := root.schemaGraphs[typeID]
 		if suite.NotNil(graph) {
 			it := graph.Iterator()

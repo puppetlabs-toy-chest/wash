@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -401,35 +402,63 @@ func (suite *CacheTestSuite) TestCachedRead_ReadableCorePluginEntry_ErroredRead(
 	suite.Equal(expectedErr, err)
 }
 
+type mockExternalPlugin struct {
+	EntryBase
+	mock.Mock
+}
+
+func (e *mockExternalPlugin) Schema() *EntrySchema {
+	return e.Called().Get(0).(*EntrySchema)
+}
+
+func (e *mockExternalPlugin) Read(ctx context.Context) ([]byte, error) {
+	args := e.Called(ctx)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
+func (e *mockExternalPlugin) MethodSignature(name string) MethodSignature {
+	return e.Called(name).Get(0).(MethodSignature)
+}
+
+func (e *mockExternalPlugin) SchemaGraph() (*linkedhashmap.Map, error) {
+	args := e.Called()
+	return args.Get(0).(*linkedhashmap.Map), args.Error(1)
+}
+
+func (e *mockExternalPlugin) RawTypeID() string {
+	return e.Called().String(0)
+}
+
+func (e *mockExternalPlugin) BlockRead(ctx context.Context, size int64, offset int64) ([]byte, error) {
+	args := e.Called(ctx, size, offset)
+	return args.Get(0).([]byte), args.Error(1)
+}
+
 func (suite *CacheTestSuite) TestCachedRead_ReadableExternalPluginEntry_SuccessfulRead() {
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
-		methods: map[string]methodInfo{
-			"read": methodInfo{signature: defaultSignature, result: "some raw content"},
-		},
-	}
+	entry := &mockExternalPlugin{EntryBase: NewEntry("foo")}
+	ctx := context.Background()
+	entry.On("MethodSignature", "read").Return(DefaultSignature)
+	entry.On("Read", ctx).Return([]byte("some raw content"), nil)
 	entry.DisableDefaultCaching()
 	entry.SetTestID("/foo")
 
 	expectedContent := newEntryContent([]byte("some raw content"))
 
-	actualContent, err := cachedRead(context.Background(), entry)
+	actualContent, err := cachedRead(ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(expectedContent, actualContent)
 	}
 }
 
 func (suite *CacheTestSuite) TestCachedRead_ReadableExternalPluginEntry_ErroredRead() {
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
-		methods: map[string]methodInfo{
-			"read": methodInfo{signature: defaultSignature, result: []byte("invalid content")},
-		},
-	}
+	entry := &mockExternalPlugin{EntryBase: NewEntry("foo")}
+	ctx := context.Background()
+	entry.On("MethodSignature", "read").Return(DefaultSignature)
+	entry.On("Read", ctx).Return([]byte{}, fmt.Errorf("Read failed, not a string"))
 	entry.DisableDefaultCaching()
 	entry.SetTestID("/foo")
 
-	_, err := cachedRead(context.Background(), entry)
+	_, err := cachedRead(ctx, entry)
 	suite.Regexp("Read.*string", err.Error())
 }
 
@@ -468,23 +497,13 @@ func (suite *CacheTestSuite) TestCachedRead_BlockReadableCorePluginEntry() {
 
 func (suite *CacheTestSuite) TestCachedRead_BlockReadableExternalPluginEntry() {
 	expectedRawContent := []byte("some raw content")
-
-	mockScript := &mockExternalPluginScript{path: "plugin_script"}
-	entry := &externalPluginEntry{
-		EntryBase: NewEntry("foo"),
-		script:    mockScript,
-		methods: map[string]methodInfo{
-			"read": methodInfo{
-				signature: blockReadableSignature,
-			},
-		},
-	}
+	ctx := context.Background()
+	entry := &mockExternalPlugin{EntryBase: NewEntry("foo")}
+	entry.On("MethodSignature", "read").Return(BlockReadableSignature)
+	entry.On("BlockRead", ctx, int64(10), int64(0)).Return(expectedRawContent, nil)
 	entry.DisableDefaultCaching()
 	entry.SetTestID("/foo")
 	entry.Attributes().SetSize(uint64(len(expectedRawContent)))
-
-	ctx := context.Background()
-	mockScript.OnInvokeAndWait(ctx, "read", entry, "10", "0").Return(mockInvocation(expectedRawContent), nil).Once()
 
 	content, err := cachedRead(ctx, entry)
 	suite.Equal(entry.Attributes().Size(), content.size())
@@ -492,7 +511,6 @@ func (suite *CacheTestSuite) TestCachedRead_BlockReadableExternalPluginEntry() {
 		actualRawContent, err := content.read(ctx, 10, 0)
 		if suite.NoError(err) {
 			suite.Equal(expectedRawContent, actualRawContent)
-			mockScript.AssertExpectations(suite.T())
 		}
 	}
 }
