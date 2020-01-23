@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/avast/retry-go"
@@ -31,8 +32,8 @@ func closeConnection(id string, obj interface{}) {
 	}
 }
 
-func newAgent() (ssh.AuthMethod, error) {
-	sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+func newAgent(path string) (ssh.AuthMethod, error) {
+	sshAgent, err := net.Dial("unix", path)
 
 	if err != nil {
 		return nil, err
@@ -41,9 +42,9 @@ func newAgent() (ssh.AuthMethod, error) {
 }
 
 type sshConfig struct {
-	host, port, user string
-	identityFiles    []string
-	hostKeyCallback  ssh.HostKeyCallback
+	host, port, user, password string
+	identityFiles              []string
+	hostKeyCallback            ssh.HostKeyCallback
 }
 
 func getConnInfo(ctx context.Context, id Identity) (conf sshConfig, err error) {
@@ -55,7 +56,9 @@ func getConnInfo(ctx context.Context, id Identity) (conf sshConfig, err error) {
 	}
 
 	// ssh_config provides a default of port 22.
-	if conf.port, err = ssh_config.GetStrict(id.Host, "Port"); err != nil {
+	if id.Port != 0 {
+		conf.port = strconv.Itoa(int(id.Port))
+	} else if conf.port, err = ssh_config.GetStrict(id.Host, "Port"); err != nil {
 		return
 	}
 
@@ -71,6 +74,8 @@ func getConnInfo(ctx context.Context, id Identity) (conf sshConfig, err error) {
 	if conf.user == "" {
 		conf.user = "root"
 	}
+
+	conf.password = id.Password
 
 	// Try the requested identity file first. Include any in SSH config as well just-in-case.
 	conf.identityFiles = make([]string, 0)
@@ -136,25 +141,40 @@ func sshConnect(ctx context.Context, conf sshConfig, retries uint) (*ssh.Client,
 	connID := conf.user + "@" + conf.host + ":" + conf.port
 	// This is a single-use cache, so pass in an empty category.
 	obj, err := connectionCache.GetOrUpdate("", connID, expires, true, func() (interface{}, error) {
-		agent, err := newAgent()
-		if err != nil {
-			return nil, fmt.Errorf("Failed to find config from SSH_AUTH_SOCK: %v", err)
+		agentPath := os.Getenv("SSH_AUTH_SOCK")
+		var agent ssh.AuthMethod
+		if agentPath == "" {
+			// If an SSH agent isn't configured, we should still try to connect without it
+			activity.Record(ctx, "SSH_AUTH_SOCK unconfigured, skipping SSH agent configuration")
+		} else {
+			var err error
+			if agent, err = newAgent(agentPath); err != nil {
+				activity.Warnf(ctx, "Failed to connect to SSH agent at %v: %v", agentPath, err)
+			}
 		}
 
 		var authmethod []ssh.AuthMethod
+		if conf.password != "" {
+			authmethod = append(authmethod, ssh.Password(conf.password))
+		}
 		for _, identityFile := range conf.identityFiles {
 			if key, err := ioutil.ReadFile(identityFile); err != nil {
-				activity.Record(ctx, "Unable to read private key, falling back to SSH agent: %v", err)
+				activity.Record(ctx, "Unable to read private key: %v", err)
 			} else {
 				if signer, err := ssh.ParsePrivateKey(key); err != nil {
-					activity.Record(ctx, "Unable to parse private key, falling back to SSH agent: %v", err)
+					activity.Record(ctx, "Unable to parse private key: %v", err)
 				} else {
 					authmethod = append(authmethod, ssh.PublicKeys(signer))
 				}
 			}
 		}
+
 		// Append agent now so that it comes last in case we find another method to try.
-		authmethod = append(authmethod, agent)
+		if agent != nil {
+			activity.Record(ctx, "Adding SSH agent at %v", os.Getenv("SSH_AUTH_SOCK"))
+			authmethod = append(authmethod, agent)
+		}
+
 		sshConfig := &ssh.ClientConfig{
 			User:            conf.user,
 			Auth:            authmethod,
@@ -163,10 +183,10 @@ func sshConnect(ctx context.Context, conf sshConfig, retries uint) (*ssh.Client,
 
 		// Try until we've retried desired number of times or connection is established.
 		var cli *ssh.Client
-		err = retry.Do(
-			func() error {
+		err := retry.Do(
+			func() (err error) {
 				cli, err = ssh.Dial("tcp", conf.host+":"+conf.port, sshConfig)
-				return err
+				return
 			},
 			retry.Attempts(retries+1),
 			retry.Delay(500*time.Millisecond),
@@ -182,9 +202,10 @@ func sshConnect(ctx context.Context, conf sshConfig, retries uint) (*ssh.Client,
 
 // Identity identifies how to connect to a target.
 type Identity struct {
-	Host, User, FallbackUser, IdentityFile, KnownHosts, HostKeyAlias string
+	Host, User, FallbackUser, Password, IdentityFile, KnownHosts, HostKeyAlias string
 	// Retries can be set to a non-zero value to retry every 500ms for that many times.
 	Retries uint
+	Port    uint
 }
 
 // ExecSSH executes against a target via SSH. It will look up port, user, and other configuration
