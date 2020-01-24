@@ -527,7 +527,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.List(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that List returns an error if stdout does not have the right
 	// output format
@@ -578,7 +578,7 @@ func (suite *ExternalPluginEntryTestSuite) TestRead() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Read(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Read returns the invocation's stdout
 	stdout := "foo"
@@ -607,7 +607,7 @@ func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.BlockRead(ctx, 10, 0)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that BlockRead returns the invocation's stdout
 	stdout := "foo"
@@ -704,7 +704,7 @@ func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 	mockErr := fmt.Errorf("execution error")
 	mockRunAndWait(mockErr)
 	err := entry.Write(ctx, data)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that invocation succeeds
 	mockRunAndWait(nil)
@@ -782,7 +782,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Metadata(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Metadata returns an error if stdout does not have the right
 	// output format
@@ -818,7 +818,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSignal() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait("start", []byte{}, mockErr)
 	err := entry.Signal(ctx, "start")
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Signal properly signals the entry
 	mockInvokeAndWait("start", []byte{}, nil)
@@ -846,7 +846,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Delete(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Delete returns an error if stdout does not have the right
 	// output format
