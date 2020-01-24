@@ -674,6 +674,18 @@ func (m *mockedInvocation) RunAndWait(ctx context.Context) error {
 	return m.Called(ctx).Error(0)
 }
 
+func (m *mockedInvocation) Start() error {
+	return m.Called().Error(0)
+}
+
+func (m *mockedInvocation) Wait() error {
+	return m.Called().Error(0)
+}
+
+func (m *mockedInvocation) ExitCode() int {
+	return m.Called().Int(0)
+}
+
 func (m *mockedInvocation) Stdout() *bytes.Buffer {
 	return m.Called().Get(0).(*bytes.Buffer)
 }
@@ -797,6 +809,66 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	if suite.NoError(err) {
 		expectedMetadata := plugin.JSONObject{"key": "value"}
 		suite.Equal(expectedMetadata, metadata)
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestExec() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		methods:   map[string]methodInfo{"exec": methodInfo{}},
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockRunAndWait := func(cmd []string, startErr, waitErr error, exitCode int) {
+		mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
+		args := []interface{}{ctx, "exec", entry, append([]string{`{"tty":false,"elevate":false,"stdin":false}`}, cmd...)}
+		mockScript.On("NewInvocation", args...).Return(mockInv).Once()
+		mockInv.On("Start").Return(startErr).Once()
+		mockInv.On("Wait").Return(waitErr).Once()
+		mockInv.On("ExitCode").Return(exitCode).Once()
+	}
+
+	// Test that if Start errors, then Exec returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockRunAndWait([]string{"echo", "hello"}, mockErr, nil, 0)
+	_, err := entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	suite.EqualError(err, mockErr.Error())
+
+	// Test that if Wait errors, then ExecCommand returns the error
+	mockRunAndWait([]string{"echo", "hello"}, nil, mockErr, -1)
+	cmd, err := entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		var chunks []plugin.ExecOutputChunk
+		for chunk := range cmd.OutputCh() {
+			chunks = append(chunks, chunk)
+		}
+		suite.Empty(chunks)
+		_, err := cmd.ExitCode()
+		suite.EqualError(err, mockErr.Error())
+	}
+
+	// Test that if Wait has a non-zero exit code, then ExecCommand returns it
+	mockRunAndWait([]string{"echo", "hello"}, nil, nil, 1)
+	cmd, err = entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		<-cmd.OutputCh()
+		exit, err := cmd.ExitCode()
+		suite.NoError(err)
+		suite.Equal(1, exit)
+	}
+
+	// Test that Exec properly executes
+	mockRunAndWait([]string{"echo", "hello"}, nil, nil, 0)
+	cmd, err = entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		<-cmd.OutputCh()
+		exit, err := cmd.ExitCode()
+		suite.NoError(err)
+		suite.Zero(exit)
+		mockScript.AssertExpectations(suite.T())
 	}
 }
 
