@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/getlantern/deepcopy"
+	"github.com/jinzhu/copier"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/transport"
 )
 
 type decodedCacheTTLs struct {
@@ -26,10 +28,13 @@ type decodedCacheTTLs struct {
 }
 
 // decodedExternalPluginEntry describes a decoded serialized entry.
+// Methods can be a string, or a tuple of [<method>, <value>]. <value> can take different forms
+// depending on the method. json.RawMessage lets us delay parsing these so we can parse them into
+// method-specific structs, which greatly simplifies validation.
 type decodedExternalPluginEntry struct {
 	TypeID             string                 `json:"type_id"`
 	Name               string                 `json:"name"`
-	Methods            []interface{}          `json:"methods"`
+	Methods            []json.RawMessage      `json:"methods"`
 	SlashReplacer      string                 `json:"slash_replacer"`
 	CacheTTLs          decodedCacheTTLs       `json:"cache_ttls"`
 	InaccessibleReason string                 `json:"inaccessible_reason"`
@@ -38,45 +43,97 @@ type decodedExternalPluginEntry struct {
 	State              string                 `json:"state"`
 }
 
-const entryMethodTypeError = "each method must be a string or tuple [<method>, <result_or_signature>], not %v"
+type methodTuple struct {
+	Method string
+	Value  json.RawMessage
+}
 
-func mungeToMethods(input []interface{}) (map[string]methodInfo, error) {
+func (m *methodTuple) UnmarshalJSON(data []byte) error {
+	var list []json.RawMessage
+	if err := json.Unmarshal(data, &list); err != nil {
+		return err
+	}
+
+	if len(list) != 2 {
+		return fmt.Errorf("each method must be a string or tuple [<method>, <value>], not %v", string(data))
+	}
+
+	if err := json.Unmarshal(list[0], &m.Method); err != nil {
+		return err
+	}
+	m.Value = list[1]
+	return nil
+}
+
+type execImpl struct {
+	Transport string             `json:"transport"`
+	Options   transport.Identity `json:"options"`
+}
+
+func (e decodedExternalPluginEntry) getMungedMethods() (map[string]methodInfo, error) {
 	methods := make(map[string]methodInfo)
-	for _, val := range input {
-		switch data := val.(type) {
-		case string:
-			methods[data] = methodInfo{
-				signature: plugin.DefaultSignature,
-			}
-		case []interface{}:
-			if len(data) != 2 {
-				return nil, fmt.Errorf(entryMethodTypeError, data)
-			}
-			name, ok := data[0].(string)
-			if !ok {
-				return nil, fmt.Errorf(entryMethodTypeError, data)
-			}
-			info := methodInfo{
-				signature: plugin.DefaultSignature,
-			}
-			switch name {
-			default:
-				info.result = data[1]
-			case "read":
-				// Check if we have ["read", <block_readable?>] or ["read", <result>].
-				// The latter implies <block_readable> == false.
-				if blockReadable, ok := data[1].(bool); ok {
-					if blockReadable {
-						info.signature = plugin.BlockReadableSignature
-					}
-				} else {
-					info.result = data[1]
-				}
-			}
-			methods[name] = info
-		default:
-			return nil, fmt.Errorf(entryMethodTypeError, data)
+	for _, raw := range e.Methods {
+		// Try to unmarshal to a string. If that doesn't work, unmarshal to a method-specific tuple.
+		var name string
+		if err := json.Unmarshal(raw, &name); err == nil {
+			methods[name] = methodInfo{signature: plugin.DefaultSignature}
+			continue
 		}
+
+		var tuple methodTuple
+		if err := json.Unmarshal(raw, &tuple); err != nil {
+			return nil, err
+		}
+
+		// Assume a default signature. Then validate prefetched values for specific methods and update
+		// methodInfo as needed.
+		info := methodInfo{signature: plugin.DefaultSignature}
+		switch tuple.Method {
+		case "read":
+			// Check if we have ["read", <block_readable?>] or ["read", <content>].
+			// The latter implies <block_readable> == false.
+			var blockReadable bool
+			if err := json.Unmarshal(tuple.Value, &blockReadable); err == nil {
+				if blockReadable {
+					info.signature = plugin.BlockReadableSignature
+				}
+				break
+			}
+
+			var content string
+			if err := json.Unmarshal(tuple.Value, &content); err != nil {
+				return nil, fmt.Errorf("Read method must provide a string, not %v", string(tuple.Value))
+			}
+			info.tupleValue = []byte(content)
+		case "list":
+			var decodedEntries []decodedExternalPluginEntry
+			if err := json.Unmarshal(tuple.Value, &decodedEntries); err != nil {
+				return nil, fmt.Errorf("implementation of list must conform to %v, not %v", listFormat, string(tuple.Value))
+			}
+			info.tupleValue = decodedEntries
+		case "schema":
+			graph, err := unmarshalSchemaGraph(e.Name, e.TypeID, tuple.Value)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
+					err,
+					string(tuple.Value),
+					schemaFormat,
+				)
+			}
+			info.tupleValue = graph
+		case "exec":
+			// Check if we have ["exec", <exec_implementation>].
+			var impl execImpl
+			if err := json.Unmarshal(tuple.Value, &impl); err != nil {
+				return nil, fmt.Errorf("result for exec must specify an implementation transport and options")
+			} else if impl.Transport != "ssh" {
+				return nil, fmt.Errorf("unsupported transport %v requested, only ssh is supported", impl.Transport)
+			}
+			info.tupleValue = impl
+		}
+
+		methods[tuple.Method] = info
 	}
 	return methods, nil
 }
@@ -89,7 +146,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 		return nil, fmt.Errorf("the entry's methods must be provided")
 	}
 
-	methods, err := mungeToMethods(e.Methods)
+	methods, err := e.getMungedMethods()
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +165,7 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 			return nil, fmt.Errorf("entry %v (%v) implements schema, but the plugin root doesn't", e.Name, e.TypeID)
 		}
 		// schemaKnown || isRoot
-		if !isRoot && info.result != nil {
+		if !isRoot && info.tupleValue != nil {
 			return nil, fmt.Errorf(
 				"entry %v (%v) prefetched its schema. Only plugin roots support schema prefetching",
 				e.Name,
@@ -125,8 +182,8 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 
 	// If read content is static, it's likely it's not coming from a source that separately provides
 	// the size of that data. If not provided, update it since we know what it is.
-	if content, ok := methods["read"].result.(string); ok && !e.Attributes.HasSize() {
-		e.Attributes.SetSize(uint64(len(content)))
+	if val := methods["read"].tupleValue; val != nil && !e.Attributes.HasSize() {
+		e.Attributes.SetSize(uint64(len(val.([]byte))))
 	}
 
 	entry := &pluginEntry{
@@ -152,16 +209,18 @@ func (e decodedExternalPluginEntry) toExternalPluginEntry(ctx context.Context, s
 	}
 
 	// If some data originated from the parent via list, mark as prefetched.
-	if entry.methods["list"].result != nil || entry.methods["read"].result != nil {
+	if entry.methods["list"].tupleValue != nil || entry.methods["read"].tupleValue != nil {
 		entry.Prefetched()
 	}
 
 	return entry, nil
 }
 
+// Adds a tupleValue to the signature. tupleValue is either a method-specific type, or
+// json.RawMessage (so we can easily unmarshal it later).
 type methodInfo struct {
-	signature plugin.MethodSignature
-	result    interface{}
+	signature  plugin.MethodSignature
+	tupleValue interface{}
 }
 
 // pluginEntry represents an external plugin entry
@@ -197,10 +256,6 @@ func (e *pluginEntry) setCacheTTLs(ttls decodedCacheTTLs) {
 func (e *pluginEntry) implements(method string) bool {
 	_, ok := e.methods[method]
 	return ok
-}
-
-func (e *pluginEntry) supportedMethods() map[string]methodInfo {
-	return e.methods
 }
 
 func (e *pluginEntry) MethodSignature(name string) plugin.MethodSignature {
@@ -280,7 +335,7 @@ func (e *pluginEntry) SchemaGraph() (*linkedhashmap.Map, error) {
 		es, _ := graph.Get(plugin.TypeID(e))
 		schemaMethods := es.(plugin.EntrySchema).Actions
 		instanceMethods := []string{}
-		for method := range e.supportedMethods() {
+		for method := range e.methods {
 			instanceMethods = append(instanceMethods, method)
 		}
 		sort.Strings(schemaMethods)
@@ -319,7 +374,7 @@ func (e *pluginEntry) SchemaGraph() (*linkedhashmap.Map, error) {
 			)
 			return nil, err
 		}
-		graph, err = unmarshalSchemaGraph(e, inv.Stdout().Bytes())
+		graph, err = unmarshalSchemaGraph(pluginName(e), rawTypeID(e), inv.Stdout().Bytes())
 		if err != nil {
 			err := fmt.Errorf(
 				"%v (%v): could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
@@ -339,16 +394,8 @@ const listFormat = "[{\"name\":\"entry1\",\"methods\":[\"list\"]},{\"name\":\"en
 
 func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 	var decodedEntries []decodedExternalPluginEntry
-	if impl := e.methods["list"].result; impl != nil {
-		// Entry statically implements list. Construct new entries based on that rather than invoking the script.
-		bits, err := json.Marshal(impl)
-		if err != nil {
-			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
-		}
-
-		if err := json.Unmarshal(bits, &decodedEntries); err != nil {
-			return nil, fmt.Errorf("implementation of list must conform to %v, not %v", listFormat, impl)
-		}
+	if impl := e.methods["list"].tupleValue; impl != nil {
+		decodedEntries = impl.([]decodedExternalPluginEntry)
 	} else {
 		inv, err := e.script.InvokeAndWait(ctx, "list", e)
 		if err != nil {
@@ -361,6 +408,15 @@ func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
+		if coreEnt, ok := coreEntries[decodedExternalPluginEntry.TypeID]; ok {
+			entry, err := coreEnt.createInstance(e, decodedExternalPluginEntry)
+			if err != nil {
+				return nil, err
+			}
+			entries[i] = entry
+			continue
+		}
+
 		entry, err := decodedExternalPluginEntry.toExternalPluginEntry(ctx, e.schemaKnown, false)
 		if err != nil {
 			return nil, err
@@ -370,15 +426,13 @@ func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 		entry.schemaGraphs = e.schemaGraphs
 		entries[i] = entry
 	}
+
 	return entries, nil
 }
 
 func (e *pluginEntry) Read(ctx context.Context) ([]byte, error) {
-	if impl := e.methods["read"].result; impl != nil {
-		if content, ok := impl.(string); ok {
-			return []byte(content), nil
-		}
-		return nil, fmt.Errorf("Read method must provide a string, not %v", impl)
+	if impl := e.methods["read"].tupleValue; impl != nil {
+		return impl.([]byte), nil
 	}
 
 	inv, err := e.script.InvokeAndWait(ctx, "read", e)
@@ -534,7 +588,20 @@ func (e *pluginEntry) Stream(ctx context.Context) (io.ReadCloser, error) {
 	}
 }
 
+// Used for mocking tests.
+var execSSHFn = transport.ExecSSH
+
 func (e *pluginEntry) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+	if result := e.methods["exec"].tupleValue; result != nil {
+		impl := result.(execImpl)
+		if impl.Transport != "ssh" {
+			panic("transport must be ssh")
+		}
+
+		args = append([]string{cmd}, args...)
+		return execSSHFn(ctx, impl.Options, args, opts)
+	}
+
 	// Serialize opts to JSON
 	type serializedOptions struct {
 		plugin.ExecOptions
@@ -607,9 +674,7 @@ func newStdoutDecodeErr(ctx context.Context, decodedThing string, reason error, 
 	return newInvokeError(fmt.Sprintf("could not decode %v from stdout: %v", decodedThing, reason), inv)
 }
 
-func unmarshalSchemaGraph(e *pluginEntry, stdout []byte) (*linkedhashmap.Map, error) {
-	pluginName, rawTypeID := pluginName(e), rawTypeID(e)
-
+func unmarshalSchemaGraph(pluginName, rawTypeID string, stdout []byte) (*linkedhashmap.Map, error) {
 	// Since we know e's type ID, it is OK if the serialized schema's keys are
 	// out of order. However, the entry schema returned by the Wash API always
 	// ensures that the first key is the entry's type ID. Thus, we unmarshal the
@@ -637,12 +702,29 @@ func unmarshalSchemaGraph(e *pluginEntry, stdout []byte) (*linkedhashmap.Map, er
 	requiredTypeIDs := map[string]bool{
 		rawTypeID: true,
 	}
+
 	type decodedEntrySchema struct {
 		plugin.EntrySchema
 		Methods []string `json:"methods"`
 	}
+
 	graph := linkedhashmap.New()
 	putNode := func(rawTypeID string, rawSchema interface{}) error {
+		if coreEnt, ok := coreEntries[rawTypeID]; ok {
+			pluginSchema := coreEnt.schema()
+
+			// Copy only the public fields so we serialize it as just data. Uses copier because it uses
+			// reflect to copy public fields, rather than Marshal/UnmarshalJSON which we've overridden.
+			var schema plugin.EntrySchema
+			err := copier.Copy(&schema, pluginSchema)
+			if err != nil {
+				panic(fmt.Sprintf("should always be able to copy from EntrySchema to EntrySchema: %v", err))
+			}
+			populatedTypeIDs[rawTypeID] = true
+			graph.Put(namespace(pluginName, rawTypeID), schema)
+			return nil
+		}
+
 		// Deep-copy the value into the decodedEntrySchema object
 		schema, ok := rawSchema.(map[string]interface{})
 		if !ok {

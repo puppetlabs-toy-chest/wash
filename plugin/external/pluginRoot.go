@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
@@ -58,7 +57,7 @@ func (r *pluginRoot) Init(cfg map[string]interface{}) error {
 it's safe to omit name from the response to 'init'`, r.script.Path()))
 	}
 	if decodedRoot.Methods == nil {
-		decodedRoot.Methods = []interface{}{"list"}
+		decodedRoot.Methods = rawMethods(`"list"`)
 	}
 	entry, err := decodedRoot.toExternalPluginEntry(context.Background(), false, true)
 	if err != nil {
@@ -72,21 +71,8 @@ it's safe to omit name from the response to 'init'`, r.script.Path()))
 	r.pluginEntry.script = script
 
 	// Fill in the schema graph if provided
-	if rawSchema := r.methods["schema"].result; rawSchema != nil {
-		marshalledSchema, err := json.Marshal(rawSchema)
-		if err != nil {
-			panic(fmt.Sprintf("Error remarshaling previously unmarshaled data: %v", err))
-		}
-		graph, err := unmarshalSchemaGraph(&r.pluginEntry, marshalledSchema)
-		if err != nil {
-			return fmt.Errorf(
-				"could not decode schema from stdout: %v\nreceived:\n%v\nexpected something like:\n%v",
-				err,
-				strings.TrimSpace(string(marshalledSchema)),
-				schemaFormat,
-			)
-		}
-		r.schemaGraphs = r.partitionSchemaGraph(graph)
+	if val := r.methods["schema"].tupleValue; val != nil {
+		r.schemaGraphs = r.partitionSchemaGraph(val.(*linkedhashmap.Map))
 	}
 
 	return nil
@@ -125,4 +111,12 @@ func (r *pluginRoot) partitionSchemaGraph(graph *linkedhashmap.Map) map[string]*
 	})
 
 	return schemaGraphs
+}
+
+func rawMethods(strings ...string) []json.RawMessage {
+	raw := make([]json.RawMessage, len(strings))
+	for i, s := range strings {
+		raw[i] = []byte(s)
+	}
+	return raw
 }

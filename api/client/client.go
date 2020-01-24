@@ -125,7 +125,7 @@ func (c *domainSocketClient) doRequestAndParseJSONBody(method, endpoint string, 
 	}
 
 	if err := json.Unmarshal(respBodyBytes, result); err != nil {
-		return fmt.Errorf("Non-JSON body at %v: %v", endpoint, string(respBodyBytes))
+		return fmt.Errorf("Non-JSON body at %v: %v\n%v", endpoint, err, string(respBodyBytes))
 	}
 
 	return nil
@@ -270,7 +270,7 @@ func (c *domainSocketClient) Clear(path string) ([]string, error) {
 
 	var result []string
 	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, fmt.Errorf("Non-JSON body at %v: %v", "/cache", string(body))
+		return nil, fmt.Errorf("Non-JSON body at %v: %v\n%v", "/cache", err, string(body))
 	}
 
 	return result, nil

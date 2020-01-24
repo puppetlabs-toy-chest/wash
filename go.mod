@@ -17,6 +17,7 @@ require (
 	github.com/InVisionApp/tabular v0.3.0
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705 // indirect
+	github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239 // indirect
 	github.com/araddon/dateparse v0.0.0-20190329160016-74dc0e29b01f
 	github.com/avast/retry-go v2.4.1+incompatible
 	github.com/aws/aws-sdk-go v1.25.0
@@ -36,6 +37,7 @@ require (
 	github.com/gammazero/workerpool v0.0.0-20190608213748-0ed5e40ec55e
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/ghodss/yaml v1.0.0
+	github.com/gliderlabs/ssh v0.2.2
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-openapi/strfmt v0.19.3 // indirect
 	github.com/gobwas/glob v0.2.3
@@ -51,6 +53,7 @@ require (
 	github.com/hpcloud/tail v1.0.0
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/jedib0t/go-pretty v4.2.1+incompatible
+	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/json-iterator/go v1.1.7 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kevinburke/ssh_config v0.0.0-20190724205821-6cfae18c12b8

@@ -3,6 +3,7 @@ package external
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/transport"
+	"github.com/puppetlabs/wash/volume"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -71,21 +74,21 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryRequired
 
 	_, err = decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("methods", err)
-	decodedEntry.Methods = []interface{}{"list"}
+	decodedEntry.Methods = rawMethods(`"list"`)
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
 		suite.Equal(decodedEntry.Name, plugin.Name(entry))
 		suite.Equal(1, len(entry.methods))
 		suite.Contains(entry.methods, "list")
-		suite.Nil(entry.methods["list"].result)
+		suite.Nil(entry.methods["list"].tupleValue)
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFields() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list", "stream"},
+		Methods: rawMethods(`"list"`, `"stream"`),
 	}
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
@@ -93,23 +96,22 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryExtraFie
 		suite.Equal(decodedEntry.Name, entry.Name())
 		suite.Contains(entry.methods, "list")
 		suite.Equal(plugin.DefaultSignature, entry.methods["list"].signature)
-		suite.Nil(entry.methods["list"].result)
+		suite.Nil(entry.methods["list"].tupleValue)
 		suite.Contains(entry.methods, "stream")
 		suite.Equal(plugin.DefaultSignature, entry.methods["stream"].signature)
-		suite.Nil(entry.methods["stream"].result)
+		suite.Nil(entry.methods["stream"].tupleValue)
 		suite.False(plugin.IsPrefetched(entry))
 
-		methods := entry.supportedMethods()
-		suite.Equal(2, len(methods))
-		suite.Contains(methods, "list")
-		suite.Contains(methods, "stream")
+		suite.Equal(2, len(entry.methods))
+		suite.Contains(entry.methods, "list")
+		suite.Contains(entry.methods, "stream")
 	}
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_SupportsEmptyMethodsArray() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{},
+		Methods: []json.RawMessage{},
 	}
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
@@ -119,10 +121,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntry_Support
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMethodResults() {
-	childEntry := map[string]interface{}{"name": "foo", "methods": []string{"read"}}
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{[]interface{}{"list", []interface{}{childEntry}}, "read"},
+		Methods: rawMethods(`["list", [{"name": "foo", "methods": ["read"]}]]`, `"read"`),
 	}
 
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
@@ -130,9 +131,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 		suite.Equal(decodedEntry.Name, entry.Name())
 		suite.Contains(entry.methods, "list")
 		suite.Equal(plugin.DefaultSignature, entry.methods["list"].signature)
-		suite.NotNil(entry.methods["list"].result)
+		suite.NotNil(entry.methods["list"].tupleValue)
 		suite.Contains(entry.methods, "read")
-		suite.Nil(entry.methods["read"].result)
+		suite.Nil(entry.methods["read"].tupleValue)
 		suite.True(plugin.IsPrefetched(entry))
 	}
 }
@@ -140,7 +141,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithMeth
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryMethodTuple_Read() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{[]interface{}{"read", true}},
+		Methods: rawMethods(`["read", true]`),
 	}
 
 	type testCase struct {
@@ -151,15 +152,19 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryMethodTu
 	testCases := []testCase{
 		testCase{true, plugin.BlockReadableSignature, nil},
 		testCase{false, plugin.DefaultSignature, nil},
-		testCase{"foo", plugin.DefaultSignature, "foo"},
+		testCase{"foo", plugin.DefaultSignature, []byte("foo")},
 	}
 	for _, testCase := range testCases {
-		decodedEntry.Methods = []interface{}{[]interface{}{"read", testCase.data}}
+		data, err := json.Marshal(testCase.data)
+		if err != nil {
+			panic(err)
+		}
+		decodedEntry.Methods = rawMethods(`["read", ` + string(data) + `]`)
 		entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 		if suite.NoError(err) {
 			suite.NotNil(entry.methods["read"])
 			suite.Equal(testCase.expectedSignature, entry.methods["read"].signature)
-			suite.Equal(testCase.expectedResult, entry.methods["read"].result)
+			suite.Equal(testCase.expectedResult, entry.methods["read"].tupleValue)
 		}
 	}
 }
@@ -167,7 +172,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryMethodTu
 func newMockDecodedEntry(name string) decodedExternalPluginEntry {
 	return decodedExternalPluginEntry{
 		Name:    name,
-		Methods: []interface{}{"list"},
+		Methods: rawMethods(`"list"`),
 	}
 }
 
@@ -227,7 +232,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithPart
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_DoesNotImplementSchema() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list"},
+		Methods: rawMethods(`"list"`),
 	}
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	if suite.NoError(err) {
@@ -238,7 +243,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_ImplementsSchema_TypeIDNotIncluded() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list", "schema"},
+		Methods: rawMethods(`"list"`, `"schema"`),
 	}
 	_, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
@@ -247,7 +252,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaUnknown_ImplementsSchema() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list", "schema"},
+		Methods: rawMethods(`"list"`, `"schema"`),
 		TypeID:  "foo",
 	}
 	_, err := decodedEntry.toExternalPluginEntry(context.Background(), false, false)
@@ -257,7 +262,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_DoesNotImplementSchema() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list"},
+		Methods: rawMethods(`"list"`),
 		TypeID:  "foo",
 	}
 	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
@@ -267,7 +272,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_ImplementsSchema_TypeIDNotIncluded() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list", "schema"},
+		Methods: rawMethods(`"list"`, `"schema"`),
 	}
 	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	suite.Regexp("decodedEntry.*implements.*schema.*no.*type.*ID", err)
@@ -275,12 +280,9 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_PrefetchesSchema() {
 	decodedEntry := decodedExternalPluginEntry{
-		Name: "decodedEntry",
-		Methods: []interface{}{
-			"list",
-			[]interface{}{"schema", "schema_result"},
-		},
-		TypeID: "foo",
+		Name:    "decodedEntry",
+		Methods: rawMethods(`"list"`, `["schema", {"foo": {"label": "foo", "methods": []}}]`),
+		TypeID:  "foo",
 	}
 	_, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
 	suite.Regexp("decodedEntry.*foo.*plugin.*roots.*support.*prefetching", err)
@@ -289,7 +291,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSchema_SchemaKnown_ImplementsSchema() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:    "decodedEntry",
-		Methods: []interface{}{"list", "schema"},
+		Methods: rawMethods(`"list"`, `"schema"`),
 		TypeID:  "foo",
 	}
 	entry, err := decodedEntry.toExternalPluginEntry(context.Background(), true, false)
@@ -302,7 +304,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithSche
 func (suite *ExternalPluginEntryTestSuite) TestDecodeExternalPluginEntryWithInaccessibleReason() {
 	decodedEntry := decodedExternalPluginEntry{
 		Name:               "decodedEntry",
-		Methods:            []interface{}{"list", "stream"},
+		Methods:            rawMethods(`"list"`, `"stream"`),
 		InaccessibleReason: "permission denied",
 	}
 
@@ -526,7 +528,7 @@ func (suite *ExternalPluginEntryTestSuite) TestList() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.List(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that List returns an error if stdout does not have the right
 	// output format
@@ -577,7 +579,7 @@ func (suite *ExternalPluginEntryTestSuite) TestRead() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Read(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Read returns the invocation's stdout
 	stdout := "foo"
@@ -606,7 +608,7 @@ func (suite *ExternalPluginEntryTestSuite) TestBlockRead() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.BlockRead(ctx, 10, 0)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that BlockRead returns the invocation's stdout
 	stdout := "foo"
@@ -664,6 +666,121 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestListWithCoreEntry() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`
+[
+	{"name": "bar", "methods": ["list"]},
+	{"type_id": "__volume::fs__", "name": "fs1", "state": "{\"maxdepth\": 2}"}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(2, len(entries))
+
+		suite.Equal([]string{"list"}, plugin.SupportedActionsOf(entries[0]))
+		suite.Equal("bar", plugin.Name(entries[0]))
+
+		suite.Equal([]string{"list"}, plugin.SupportedActionsOf(entries[1]))
+		suite.Equal("fs1", plugin.Name(entries[1]))
+		suite.IsType(&volume.FS{}, entries[1])
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithUnknownCoreEntry() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[{"type_id": "__wash::other__", "name": "bar", "state": "{}"}]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "the entry's methods must be provided")
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_Transport() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[
+	{"name": "bar", "methods": [
+		["exec", {"transport": "ssh", "options": {"host": "example.com", "user": "ubuntu"}}]
+	]}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	entries, err := entry.List(ctx)
+	if suite.NoError(err) {
+		suite.Equal(1, len(entries))
+		suite.Equal([]string{"exec"}, plugin.SupportedActionsOf(entries[0]))
+
+		if suite.IsType(&pluginEntry{}, entries[0]) {
+			entry := entries[0].(*pluginEntry)
+			if suite.Contains(entry.methods, "exec") {
+				info := entry.methods["exec"]
+				if suite.IsType(execImpl{}, info.tupleValue) {
+					exec := info.tupleValue.(execImpl)
+					suite.Equal("ssh", exec.Transport)
+					suite.Equal("example.com", exec.Options.Host)
+					suite.Equal("ubuntu", exec.Options.User)
+				}
+			}
+		}
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_TransportUnknown() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[
+	{"name": "bar", "methods": [["exec", {"transport": "foo", "options": {}}]]}
+]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "unsupported transport foo requested, only ssh is supported")
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestListWithExec_Unknown() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	stdout := []byte(`[{"name": "bar", "methods": [["exec", true]]}]`)
+	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "result for exec must specify an implementation transport and options")
+}
+
 type mockedInvocation struct {
 	Command
 	mock.Mock
@@ -671,6 +788,18 @@ type mockedInvocation struct {
 
 func (m *mockedInvocation) RunAndWait(ctx context.Context) error {
 	return m.Called(ctx).Error(0)
+}
+
+func (m *mockedInvocation) Start() error {
+	return m.Called().Error(0)
+}
+
+func (m *mockedInvocation) Wait() error {
+	return m.Called().Error(0)
+}
+
+func (m *mockedInvocation) ExitCode() int {
+	return m.Called().Int(0)
 }
 
 func (m *mockedInvocation) Stdout() *bytes.Buffer {
@@ -703,7 +832,7 @@ func (suite *ExternalPluginEntryTestSuite) TestWrite() {
 	mockErr := fmt.Errorf("execution error")
 	mockRunAndWait(mockErr)
 	err := entry.Write(ctx, data)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that invocation succeeds
 	mockRunAndWait(nil)
@@ -724,27 +853,24 @@ func (suite *ExternalPluginEntryTestSuite) TestDecodeWithErrors() {
 		mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), err).Once()
 	}
 
-	// Test that List is invoked when
-	stdout := `[{"name": "foo", "methods": [
-								["list", {"name": "bar"}],
-								["read", [1, 2]]
-							]}]`
+	// Test that List validates prefetched read
+	stdout := `[{"name": "foo", "methods": [["read", [1, 2]]]}]`
 	mockInvokeAndWait([]byte(stdout), nil)
-	entries, err := entry.List(ctx)
-	if suite.NoError(err) {
-		suite.Equal(1, len(entries))
-		supported := plugin.SupportedActionsOf(entries[0])
-		suite.Contains(supported, "list")
-		suite.Contains(supported, "read")
+	_, err := entry.List(ctx)
+	suite.EqualError(err, "Read method must provide a string, not [1, 2]")
 
-		_, err = entries[0].(plugin.Parent).List(ctx)
-		suite.EqualError(err, `implementation of list must conform to `+
-			`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not map[name:bar]`)
+	// Test that List validates prefetched list
+	stdout = `[{"name": "foo", "methods": [["list", {"name": "bar"}]]}]`
+	mockInvokeAndWait([]byte(stdout), nil)
+	_, err = entry.List(ctx)
+	suite.EqualError(err, `implementation of list must conform to `+
+		`[{"name":"entry1","methods":["list"]},{"name":"entry2","methods":["list"]}], not {"name": "bar"}`)
 
-		_, err = entries[0].(plugin.Readable).Read(ctx)
-		suite.EqualError(err, "Read method must provide a string, not [1 2]")
-		// TODO: Add a test for block readable here
-	}
+	// Test that List validates block readable tag
+	stdout = `[{"name": "foo", "methods": [["read", true]]}]`
+	mockInvokeAndWait([]byte(stdout), nil)
+	_, err = entry.List(ctx)
+	suite.NoError(err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestMetadata_NotImplemented() {
@@ -784,7 +910,7 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Metadata(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Metadata returns an error if stdout does not have the right
 	// output format
@@ -800,6 +926,99 @@ func (suite *ExternalPluginEntryTestSuite) TestMetadata_Implemented() {
 		expectedMetadata := plugin.JSONObject{"key": "value"}
 		suite.Equal(expectedMetadata, metadata)
 	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestExec() {
+	mockScript := &mockPluginScript{path: "plugin_script"}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		methods:   map[string]methodInfo{"exec": methodInfo{}},
+		script:    mockScript,
+	}
+	entry.SetTestID("/foo")
+
+	ctx := context.Background()
+	mockRunAndWait := func(cmd []string, startErr, waitErr error, exitCode int) {
+		mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
+		args := []interface{}{ctx, "exec", entry, append([]string{`{"tty":false,"elevate":false,"stdin":false}`}, cmd...)}
+		mockScript.On("NewInvocation", args...).Return(mockInv).Once()
+		mockInv.On("Start").Return(startErr).Once()
+		mockInv.On("Wait").Return(waitErr).Once()
+		mockInv.On("ExitCode").Return(exitCode).Once()
+	}
+
+	// Test that if Start errors, then Exec returns its error
+	mockErr := fmt.Errorf("execution error")
+	mockRunAndWait([]string{"echo", "hello"}, mockErr, nil, 0)
+	_, err := entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	suite.EqualError(err, mockErr.Error())
+
+	// Test that if Wait errors, then ExecCommand returns the error
+	mockRunAndWait([]string{"echo", "hello"}, nil, mockErr, -1)
+	cmd, err := entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		var chunks []plugin.ExecOutputChunk
+		for chunk := range cmd.OutputCh() {
+			chunks = append(chunks, chunk)
+		}
+		suite.Empty(chunks)
+		_, err := cmd.ExitCode()
+		suite.EqualError(err, mockErr.Error())
+	}
+
+	// Test that if Wait has a non-zero exit code, then ExecCommand returns it
+	mockRunAndWait([]string{"echo", "hello"}, nil, nil, 1)
+	cmd, err = entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		<-cmd.OutputCh()
+		exit, err := cmd.ExitCode()
+		suite.NoError(err)
+		suite.Equal(1, exit)
+	}
+
+	// Test that Exec properly executes
+	mockRunAndWait([]string{"echo", "hello"}, nil, nil, 0)
+	cmd, err = entry.Exec(ctx, "echo", []string{"hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		<-cmd.OutputCh()
+		exit, err := cmd.ExitCode()
+		suite.NoError(err)
+		suite.Zero(exit)
+		mockScript.AssertExpectations(suite.T())
+	}
+}
+
+func (suite *ExternalPluginEntryTestSuite) TestExec_Transport() {
+	// Mock transport.ExecSSH
+	savedFn := execSSHFn
+	var execMock mock.Mock
+	execSSHFn = func(ctx context.Context, id transport.Identity, cmd []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+		args := execMock.Called(ctx, id, cmd, opts)
+		return args.Get(0).(plugin.ExecCommand), args.Error(1)
+	}
+	defer func() { execSSHFn = savedFn }()
+
+	execVals := execImpl{Transport: "ssh", Options: transport.Identity{Host: "example.com"}}
+	entry := &pluginEntry{
+		EntryBase: plugin.NewEntry("foo"),
+		methods:   map[string]methodInfo{"exec": methodInfo{tupleValue: execVals}},
+	}
+	entry.SetTestID("/foo")
+
+	var opts plugin.ExecOptions
+	ctx, mockErr := context.Background(), fmt.Errorf("execution error")
+	args, result := []string{"echo", "hello"}, plugin.NewExecCommand(ctx)
+
+	// Test that if ExecSSH errors then Exec returns the error
+	execMock.On("func1", ctx, execVals.Options, args, opts).Return(result, mockErr).Once()
+	_, err := entry.Exec(ctx, "echo", []string{"hello"}, opts)
+	suite.EqualError(err, mockErr.Error())
+
+	// Test that if ExecSSH runs then Exec returns the result
+	execMock.On("func1", ctx, execVals.Options, args, opts).Return(result, nil).Once()
+	cmd, err := entry.Exec(ctx, "echo", []string{"hello"}, opts)
+	suite.NoError(err)
+	suite.Equal(cmd, result)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestSignal() {
@@ -820,7 +1039,7 @@ func (suite *ExternalPluginEntryTestSuite) TestSignal() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait("start", []byte{}, mockErr)
 	err := entry.Signal(ctx, "start")
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Signal properly signals the entry
 	mockInvokeAndWait("start", []byte{}, nil)
@@ -848,7 +1067,7 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 	mockErr := fmt.Errorf("execution error")
 	mockInvokeAndWait([]byte{}, mockErr)
 	_, err := entry.Delete(ctx)
-	suite.EqualError(mockErr, err.Error())
+	suite.EqualError(err, mockErr.Error())
 
 	// Test that Delete returns an error if stdout does not have the right
 	// output format
@@ -872,14 +1091,14 @@ func (suite *ExternalPluginEntryTestSuite) TestDelete() {
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotAJSONObject() {
 	entry := &pluginEntry{}
 	entry.SetTestID("/fooPlugin")
-	_, err := unmarshalSchemaGraph(entry, []byte("[]"))
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), []byte("[]"))
 	suite.Regexp("non-empty.*object", err)
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfAnEmptyJSONObject() {
 	entry := &pluginEntry{}
 	entry.SetTestID("/fooPlugin")
-	_, err := unmarshalSchemaGraph(entry, []byte("{}"))
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), []byte("{}"))
 	suite.Regexp("non-empty.*object", err)
 }
 
@@ -892,7 +1111,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfType
 {
 	"bar": "baz"
 }`)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("foo.*missing", err)
 }
 
@@ -908,7 +1127,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalf
 	"foo": "fooSchema",
 	"bar": {}
 }`)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("object.*foo.*fooSchema", err)
 
 	// Error should indicate that "foo"'s label is malformed.
@@ -919,7 +1138,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalf
 	},
 	"bar": {}
 }`)
-	_, err = unmarshalSchemaGraph(entry, stdout)
+	_, err = unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("number", err)
 
 	// Error should indicate that "bar"'s children are malformed.
@@ -933,7 +1152,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnMalf
 		"children": true
 	}
 }`)
-	_, err = unmarshalSchemaGraph(entry, stdout)
+	_, err = unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp(`\[\]string`, err)
 }
 
@@ -948,7 +1167,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfLabe
 	"foo":{}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("label.*provided", err)
 }
 
@@ -965,7 +1184,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMeth
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("methods.*provided", err)
 }
 
@@ -984,7 +1203,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotP
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("entry.*children.*not.*parent", err)
 }
 
@@ -1003,7 +1222,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfPare
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("parent.*entries.*children", err)
 }
 
@@ -1024,7 +1243,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfNotS
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("entry.*signals.*not.*signalable", err)
 }
 
@@ -1043,7 +1262,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSign
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("signalable.*entries.*signal", err)
 }
 
@@ -1062,7 +1281,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfMiss
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("bar.*schema.*missing", err)
 }
 
@@ -1088,7 +1307,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsIfSche
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	// Need to do several regexp checks here b/c this error
 	// message is generated by iterating over a map's keys.
 	// Map keys are iterated in random order.
@@ -1114,7 +1333,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("invalid.*partial.*metadata.*object.*schema.*array", err)
 }
 
@@ -1135,7 +1354,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ErrorsOnInva
 	}
 }
 `)
-	_, err := unmarshalSchemaGraph(entry, stdout)
+	_, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	suite.Regexp("invalid.*metadata.*object.*schema.*array", err)
 }
 
@@ -1149,7 +1368,7 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput()
 		rawTypeID: "aws.Root",
 	}
 	entry.SetTestID("fooPlugin")
-	actualGraph, err := unmarshalSchemaGraph(entry, stdout)
+	actualGraph, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
 	if suite.NoError(err) {
 		// Check that the first key is aws.Root
 		it := actualGraph.Iterator()

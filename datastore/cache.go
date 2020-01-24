@@ -36,6 +36,8 @@ type MemCache struct {
 	limit       int
 }
 
+var _ = Cache(&MemCache{})
+
 // NewMemCache creates a new MemCache object
 func NewMemCache() *MemCache {
 	// The TTLs will be passed-in individually in the GetOrUpdate
