@@ -21,9 +21,11 @@ import (
 
 type SSHTestSuite struct {
 	suite.Suite
-	s                        gssh.Server
-	m                        mock.Mock
-	knownHosts, identityFile string
+	s             gssh.Server
+	m             mock.Mock
+	knownHosts    string
+	badKnownHosts string
+	identityFile  string
 }
 
 var _ = suite.SetupAllSuite(&SSHTestSuite{})
@@ -71,18 +73,27 @@ func createKnownHosts(address string, key ssh.PublicKey) (string, error) {
 }
 
 func (suite *SSHTestSuite) SetupSuite() {
+	addr := host + ":" + strconv.Itoa(port)
+
 	// Generate a host key and knownhosts file
 	signer, err := generateSigner()
 	if err != nil {
 		suite.T().Fatal(err)
 	}
-
-	addr := host + ":" + strconv.Itoa(port)
-	knownHosts, err := createKnownHosts(addr, signer.PublicKey())
+	suite.knownHosts, err = createKnownHosts(addr, signer.PublicKey())
 	if err != nil {
 		suite.T().Fatal(err)
 	}
-	suite.knownHosts = knownHosts
+
+	// Create a new known hosts file with a conflicting entry
+	badSigner, err := generateSigner()
+	if err != nil {
+		suite.T().Fatal(err)
+	}
+	suite.badKnownHosts, err = createKnownHosts(addr, badSigner.PublicKey())
+	if err != nil {
+		suite.T().Fatal(err)
+	}
 
 	// Generate an identity file
 	tmpfile, err := ioutil.TempFile("", "wash_ssh_key")
@@ -126,6 +137,9 @@ func (suite *SSHTestSuite) TearDownSuite() {
 		suite.T().Log(err)
 	}
 	if err := os.Remove(suite.knownHosts); err != nil {
+		suite.T().Log(err)
+	}
+	if err := os.Remove(suite.badKnownHosts); err != nil {
 		suite.T().Log(err)
 	}
 	if err := os.Remove(suite.identityFile); err != nil {
@@ -199,6 +213,32 @@ func (suite *SSHTestSuite) TestExec_WithPassword() {
 		suite.NoError(err)
 		suite.Zero(exit)
 	}
+}
+
+func (suite *SSHTestSuite) TestExec_IgnoreHostKey() {
+	// Tests that a mechanism exists to ignore host key checking
+	suite.m.On("Handler", mock.Anything).Run(func(args mock.Arguments) {})
+	suite.m.On("PublicKeyHandler", mock.Anything, mock.Anything).Return(true)
+
+	identity := suite.Identity()
+	identity.KnownHosts = os.DevNull
+	cmd, err := ExecSSH(context.Background(), identity, []string{"echo", "hello"}, plugin.ExecOptions{})
+	if suite.NoError(err) {
+		<-cmd.OutputCh()
+		exit, err := cmd.ExitCode()
+		suite.NoError(err)
+		suite.Zero(exit)
+	}
+}
+
+func (suite *SSHTestSuite) TestExec_HostKeyConflict() {
+	suite.m.On("Handler", mock.Anything).Run(func(args mock.Arguments) {})
+	suite.m.On("PublicKeyHandler", mock.Anything, mock.Anything).Return(true)
+
+	identity := suite.Identity()
+	identity.KnownHosts = suite.badKnownHosts
+	_, err := ExecSSH(context.Background(), identity, []string{"echo", "hello"}, plugin.ExecOptions{})
+	suite.EqualError(err, "Failed to connect: All attempts fail:\n#1: ssh: handshake failed: knownhosts: key mismatch")
 }
 
 func (suite *SSHTestSuite) TestExec_ContextCancelled() {
