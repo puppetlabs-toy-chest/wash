@@ -2,24 +2,38 @@
 title: External Plugins
 ---
 
-- [Adding an external plugin](#adding-an-external-plugin)
-- [Example Plugins](#example-plugins)
-- [Libraries](#libraries)
-- [Calling conventions](#calling-conventions)
-    - [init](#init)
-    - [list](#list)
-    - [read](#read)
-    - [write](#write)
-    - [metadata](#metadata)
-    - [stream](#stream)
-    - [exec](#exec)
-    - [schema](#schema)
-    - [delete](#delete)
-    - [signal](#signal)
-    - [Entry JSON object](#entry-json-object)
-    - [Entry schema graph JSON object](#entry-schema-graph-json-object)
-    - [Errors](#errors)
-- [Entry schema](#entry-schemas)
+* [Adding an external plugin](#adding-an-external-plugin)
+* [Example Plugins](#example-plugins)
+* [Libraries](#libraries)
+* [Calling conventions](#calling-conventions)
+  * [init](#init)
+    * [Examples](#examples)
+  * [list](#list)
+    * [Examples](#examples-1)
+    * [Method Tuples](#method-tuples)
+  * [read](#read)
+    * [Examples](#examples-2)
+    * [Method Tuples](#method-tuples-1)
+  * [write](#write)
+    * [Examples](#examples-3)
+  * [metadata](#metadata)
+    * [Examples](#examples-4)
+  * [stream](#stream)
+    * [Examples](#examples-5)
+  * [exec](#exec)
+    * [Examples](#examples-6)
+    * [Method Tuples](#method-tuples-2)
+  * [schema](#schema)
+    * [Examples](#examples-7)
+    * [Method Tuples](#method-tuples-3)
+  * [delete](#delete)
+    * [Examples](#examples-8)
+  * [signal](#signal)
+    * [Examples](#examples-9)
+  * [Entry JSON object](#entry-json-object)
+  * [Entry schema graph JSON object](#entry-schema-graph-json-object)
+  * [Errors](#errors)
+* [Entry schemas](#entry-schemas)
 
 # Adding an external plugin
 Add the plugin to your `wash.yaml` file under the `external-plugins` key, and specify the _absolute_ path to the plugin script. An example `wash.yaml` config adding the `puppetwash` plugin is shown below:
@@ -138,6 +152,48 @@ bash-3.2$ /path/to/myplugin.rb list /myplugin/foo ''
 ]
 ```
 
+### Method Tuples
+
+`list`'s method tuple value represents a prefetched entry. The output would be an array of other entries, identical to the output from running the script in the previous examples.
+
+Additionally Wash supports _core entries_ that provide built-in functionality that plugins can take advantage of.
+
+_core entries_ can be used by returning an entry object with `type_id` set to the _core entries_ name surrounded by double underscores (`__core::entry__`) and the `name` field to identify the entry. You can also specify options for a _core entry_ using the `state` field containing serialized JSON of the options. If your plugin use _schemas_, then when using a _core entry_ you must still specify the _core entry_ as a child of the entry that lists it in the schema by it's `type_id`.
+
+* `volume::fs`: a representation of your entry's filesystem that uses its `exec` method to access it. _Options_:
+  * `maxdepth`: identifies how many levels of filesystem to fetch in a single batch to support trade-offs between `exec` latency and file density in the volume.
+
+**EXAMPLES**
+```
+[
+  "list",
+  [
+    {
+      "type_id": "__volume::fs__",
+      "name": "fs",
+      "state": "[\"maxdepth\": 2]"
+    },
+    ...
+  ]
+]
+```
+
+A corresponding schema for the listing entry (given `type_id: example`) would be
+```
+"example": {
+  "label": "example",
+  "methods": [
+    "list",
+    "exec",
+    "schema"
+  ],
+  "children": [
+    "__volume::fs__",
+    ...
+  ]
+}
+```
+
 ## read
 The default calling convention for `read` is
 
@@ -170,6 +226,14 @@ Som
 ```
 
 where `Some content` is the entry's content.
+
+### Method Tuples
+
+`read`'s method-tuple can be specified as either `["read", <string_value>]` or `["read", <block_readable?>]` (where `<block_readable?>` is a Boolean value).
+
+If given a `<string_value>`, the string will be used as the result of a `read` instead of calling your plugin script, and the entry's `size` attribute will be set to the prefetched content size.
+
+If the plugin implements the block-readable calling convention, then it must provide the `<block_readable?>` signature, as in `["read", true]`. Entries that implement `read`'s default signature _can_ specify `read` as the method-tuple `["read", false]`, but this is not required. 
 
 ## write
 `<plugin_script> write <path> <state>`
@@ -241,14 +305,54 @@ bash-3.2$ echo "$?"
 0
 ```
 
+### Method Tuples
+
+`exec`'s tuple value represents an implementation of `exec`. Wash will use this implementation to handle all `exec` calls, so you do not have to implement `exec`'s plugin script invocation for this entry.
+
+Currently, only implementations provided by the `transport` package are supported. The method tuple must be
+```
+[
+  "exec",
+  {
+    "transport": <transport>,
+    "options": { ... }
+  }
+]
+```
+where the object in the `options` field specifies transport-specific options. Supported transports are:
+
+* `ssh`: connect using SSH. It will look up port, user, and other configuration by exact hostname match from default SSH config files (global SSH config is currently ignored). If present, a local SSH agent will be used for authentication. The known hosts file will be ignored if StrictHostKeyChecking=no in your SSH config. _Options_ (string values unless otherwise specified):
+  * `host`: (required) the hostname to connect to
+  * `port`: (integer) overrides port from SSH config (defaults to 22)
+  * `user`: overrides user from SSH config
+  * `fallback_user`: will be used if no user is specified in SSH config; if a user is not specified anywhere, will default to `root`
+  * `password`: used for password-based authentication
+  * `identity_file`: path to a private key file for public-key-based authentication
+  * `known_hosts`: path to a known hosts file for server authentication
+  * `host_key_alias`: can be used if the hostname specified in known hosts differs from `host`
+  * `retries`: (integer) can be set to retry every 500ms for that many times
+
+**EXAMPLES**
+```
+[
+  "exec",
+  {
+    "transport": "ssh",
+    "options": {
+      "host": "example.com",
+      "user": "ubuntu",
+      "port": 2222
+    }
+  }
+]
+```
+
 ## schema
 `<plugin_script> schema <path> <state>`
 
 When `schema` is invoked, the script must output an [entry schema graph JSON object](#entry-schema-graph-json-object).
 
 [Entry schemas](#entry-schemas) are an _on/off_ feature. If the plugin root implements `schema`, then entry schemas are _on_. Otherwise, entry schemas are _off_. If entry schemas are _on_, then Wash will require all subsequent entries to implement `schema` and to include a `type_id` key (including the root). Wash will return an error if both these conditions aren't met. If entry schemas are _off_, then Wash will return an error if any subsequent entry implements `schema`. The latter restriction's necessary to ensure consistent behavior across your plugin.
-
-Wash supports entry-schema prefetching. However, only the root is allowed to do this. Thus, if any other entry attempts to prefetch its schema, then Wash will return an error.
 
 ### Examples
 ```
@@ -262,6 +366,10 @@ bash-3.2$ /path/to/myplugin.rb schema /myplugin/foo ''
   }
 }
 ```
+
+### Method Tuples
+
+`schema`s method tuple value represents a prefetched result. However, only the root is allowed to do this. Thus, if any other entry attempts to prefetch its schema, Wash will return an error.
 
 ## delete
 `<plugin_script> delete <path> <state>`
@@ -298,43 +406,33 @@ This section describes the JSON object representing a serialized entry. An entry
 
 * `name` is a string representing the entry's raw name.
 
-* `methods` is an array specifying the entry's implemented methods. Each element in the array can be a string representing the method's name, or a method-tuple of `[<method_name>, <method_result>]` indicating a prefetched result. The result should have the same format as `<method_name>`'s output in its calling convention. Note that prefetching is a useful way to avoid unnecessary plugin script invocations. If `read` is prefetched, then the entry's `size` attribute will be set to the prefetched content size.
+* `methods` is an array specifying the entry's implemented methods. Each element in the array can be a string representing the method's name, or a method-tuple of `[<method_name>, <value>]`, where `value` is method-specific. See the _Tuple Value_ section of each method for specific details. The most common tuple value is a prefetched result, used in the examples below.
 
-   **Note:** `read`'s method-tuple can also be specified as `["read", <block_readable?>]` where `<block_readable?>` is a Boolean value. Entries that implement `read`'s block-readable calling convention _must_ specify `read` as the method-tuple `["read", true]`. Similarly, entries that implement `read`'s default signature _can_ specify `read` as the method-tuple `["read", false]`, but this is not required. Finally a prefetched `read` result, i.e. a method-tuple of `["read", <content>]`, implies that `<block_readable?>` is false.
+  **EXAMPLES**
+  ```
+  [
+    "list",
+    "exec"
+  ]
+  ```
 
-   **EXAMPLES**
-   ```
-   [
-     "list",
-     "exec"
-   ]
-   ```
+  ```
+  # With method tuples
+  [
+    ["list", [
+      {
+        "name": "foo",
+        "methods": [
+          ["read", "some content"],
+          "stream"
+        ]
+      }
+    ]],
+    "exec"
+  ]
+  ```
 
-   ```
-   # With prefetching
-   [
-     ["list", [
-       {
-         "name": "foo",
-         "methods": [
-           ["read", "some content"],
-           "stream"
-         ]
-       }
-     ]],
-     "exec"
-   ]
-   ```
-
-   Notice that `list`'s `<method_result>` matches what's outputted by a `list` invocation. Similarly, `read`'s `<method_result>` matches what's outputted by a `read` invocation. Also, Wash knows that `<block_readable?>` is false for this entry.
-
-   ```
-   # Block-readable entry
-   [
-     "list",
-     ["read", true]
-   ]
-   ```
+  Notice that `list`'s `<value>` matches what's outputted by a `list` invocation. Similarly, `read`'s `<value>` matches what's outputted by a `read` invocation.
 
 * `attributes` is an object specifying the entry's attributes. See the [attributes docs]({{ '/docs#attributes' | relative_url }}) for a list of all the supported Wash attributes.
 
