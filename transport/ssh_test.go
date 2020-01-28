@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -119,7 +120,7 @@ func (suite *SSHTestSuite) SetupSuite() {
 	suite.s.AddHostKey(signer)
 	suite.s.PasswordHandler = suite.PasswordHandler
 	suite.s.PublicKeyHandler = suite.PublicKeyHandler
-	go func() { suite.T().Log(suite.s.ListenAndServe()) }()
+	go func() { fmt.Println(suite.s.ListenAndServe()) }()
 }
 
 func (suite *SSHTestSuite) SetupTest() {
