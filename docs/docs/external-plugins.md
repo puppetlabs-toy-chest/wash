@@ -48,10 +48,11 @@ external-plugins:
 
 # Example Plugins
 
-* [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once without having to clone them
-* [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves
+* [Boltwash](https://github.com/puppetlabs/boltwash) - view your Puppet Bolt inventory and explore target filesystems
 * [Puppetwash](https://github.com/puppetlabs/puppetwash) - view your Puppet (Enterprise) instances and information about the managed nodes
+* [Washhub](https://github.com/timidri/washhub) - navigate all your GitHub repositories at once without having to clone them
 * [AWS IoT](https://gitlab.com/nwops/wash-iot) - view your AWS IoT devices and their shadow data
+* [Washreads](https://github.com/MikaelSmith/washreads) - view your Goodreads bookshelves, also gives an intro into how to create a plugin
 * [Spotify](https://github.com/binford2k/wash-spotifyfs) - view your Spotify playlists and tracks
 
 # Libraries
