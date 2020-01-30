@@ -74,6 +74,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/shirou/gopsutil v2.18.12+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
+	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114
 	github.com/simplereach/timeutils v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
@@ -87,9 +88,10 @@ require (
 	github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
 	go.mongodb.org/mongo-driver v1.0.4 // indirect
 	go.opencensus.io v0.22.1 // indirect
-	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449
+	golang.org/x/tools v0.0.0-20200121192408-9375b12bd86f // indirect
 	google.golang.org/api v0.13.0
 	google.golang.org/genproto v0.0.0-20191108220845-16a3f7862a1a
 	gopkg.in/go-ini/ini.v1 v1.42.0
