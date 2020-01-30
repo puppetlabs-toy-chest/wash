@@ -115,16 +115,16 @@ type stringEqual struct {
 }
 
 func (p *stringEqual) Marshal() interface{} {
-	return []interface{}{EQL, p.s}
+	return []interface{}{"=", p.s}
 }
 
 func (p *stringEqual) Unmarshal(input interface{}) error {
-	if !matcher.Array(matcher.Value(EQL))(input) {
-		return errz.MatchErrorf("must be formatted as ['%v', <str>]", EQL)
+	if !matcher.Array(matcher.Value("="))(input) {
+		return errz.MatchErrorf("must be formatted as ['%v', <str>]", "=")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['%v', <str>]", EQL)
+		return fmt.Errorf("must be formatted as ['%v', <str>]", "=")
 	}
 	if len(array) < 2 {
 		return fmt.Errorf("missing the string")
