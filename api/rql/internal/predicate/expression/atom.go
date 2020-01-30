@@ -8,6 +8,17 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+/*
+Atom wraps p into a type that works with predicate expressions. The RQL
+will use this to call p's appropriate Eval* methods, where each Eval*
+method implements its interface-specific semantics. For example, if p is
+a Primary and EntryPredicate, then the returned atom's EvalEntry method
+will be evaluated as a.EvalEntry(e) == p.EntryInDomain(e) && p.EvalEntry(e).
+Front-end interfaces to the RQL should always use the Atom type when testing
+their parsed predicates to ensure correct evaluation semantics.
+
+If you'd like to see where Atoms are being used, then check out expression.go.
+*/
 func Atom(p rql.ASTNode) rql.ASTNode {
 	if _, ok := p.(expressionNode); ok {
 		panic("expression.Atom was called with an expression node")
