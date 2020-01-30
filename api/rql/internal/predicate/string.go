@@ -120,11 +120,11 @@ func (p *stringEqual) Marshal() interface{} {
 
 func (p *stringEqual) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("="))(input) {
-		return errz.MatchErrorf("must be formatted as ['%v', <str>]", "=")
+		return errz.MatchErrorf("must be formatted as ['=', <str>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['%v', <str>]", "=")
+		return fmt.Errorf("must be formatted as ['=', <str>]")
 	}
 	if len(array) < 2 {
 		return fmt.Errorf("missing the string")

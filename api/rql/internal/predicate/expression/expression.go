@@ -15,7 +15,7 @@ type PtypeGenerator func() rql.ASTNode
 
 /*
 New returns a new predicate expression of 'ptype' predicates (PE).
-The AtomGenerator should generate "emtpy" structs representing
+The AtomGenerator should generate "empty" structs representing
 a 'ptype' predicate.
 
 A PE is described by the following grammar:
