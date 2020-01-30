@@ -14,6 +14,9 @@ type NonterminalNode interface {
 	SetMatchErrMsg(msg string) NonterminalNode
 }
 
+// NewNonterminalNode returns a new nonterminal node. This is structured
+// as "n, ns" to indicate at compile-time that the method takes at least
+// one argument.
 func NewNonterminalNode(n rql.ASTNode, ns ...rql.ASTNode) NonterminalNode {
 	return &nonterminalNode{
 		nodes: append(ns, n),
