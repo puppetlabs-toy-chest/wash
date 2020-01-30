@@ -27,7 +27,11 @@ func (s *TimeTestSuite) TestTime_Unmarshal() {
 	s.UMETC(t, s.A("<", true), "valid.*time.Time.*type", false)
 	s.UMETC(t, s.A("<", "true"), "parse.*true.*time.Time", false)
 	s.UMTC(t, s.A("<", s.TM(1000)), Time(LT, s.TM(1000)))
-	s.UMTC(t, s.A("<", s.TM(1000).Format(time.RFC3339)), Time(LT, s.TM(1000)))
+	rfc3339Str := s.TM(1000).Format(time.RFC3339)
+	expectedTime, err := time.Parse(time.RFC3339, rfc3339Str)
+	if s.NoError(err) {
+		s.UMTC(t, s.A("<", rfc3339Str), Time(LT, expectedTime))
+	}
 }
 
 func (s *TimeTestSuite) TestTime_EvalTime() {

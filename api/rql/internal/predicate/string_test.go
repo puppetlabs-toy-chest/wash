@@ -130,7 +130,7 @@ func (s *StringTestSuite) TestStringValue_Marshal() {
 	// This also tests that the StringValue* methods do the right thing
 	s.MTC(StringValueGlob("foo"), s.A("string", s.A("glob", "foo")))
 	s.MTC(StringValueRegex(regexp.MustCompile("foo")), s.A("string", s.A("regex", "foo")))
-	s.MTC(StringValueEqual("foo"), s.A("string", s.A(EQL, "foo")))
+	s.MTC(StringValueEqual("foo"), s.A("string", s.A("=", "foo")))
 }
 
 func (s *StringTestSuite) TestStringValue_Unmarshal() {
