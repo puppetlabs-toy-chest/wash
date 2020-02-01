@@ -36,6 +36,23 @@ func ToJSONObject(v interface{}) JSONObject {
 	return obj
 }
 
+// LoginShell describes the type of shell execution occurs in. It can be used
+// by the caller to decide what type of commands to run.
+type LoginShell int
+
+// Defines specific LoginShell classes you can configure
+const (
+	UnknownShell LoginShell = iota
+	POSIXShell
+	PowerShell
+)
+
+var shellNames = [3]string{"unknown", "posixshell", "powershell"}
+
+func (sh LoginShell) String() string {
+	return shellNames[sh]
+}
+
 /*
 EntryAttributes represents an entry's attributes. We use a struct
 instead of a map for efficient memory allocation/deallocation,
@@ -51,10 +68,12 @@ to do something like
 	entry.SetAttributes(attr)
 */
 type EntryAttributes struct {
-	atime   time.Time
-	mtime   time.Time
-	ctime   time.Time
-	crtime  time.Time
+	atime  time.Time
+	mtime  time.Time
+	ctime  time.Time
+	crtime time.Time
+	// TODO: make this OS, containing LoginShell and Platform
+	shell   LoginShell
 	mode    os.FileMode
 	hasMode bool
 	size    uint64
@@ -143,6 +162,22 @@ func (a *EntryAttributes) SetCrtime(crtime time.Time) *EntryAttributes {
 	return a
 }
 
+// HasLoginShell returns true if the entry uses a particular login shell
+func (a *EntryAttributes) HasLoginShell() bool {
+	return a.shell != UnknownShell
+}
+
+// LoginShell returns the entry's login shell when using Exec
+func (a *EntryAttributes) LoginShell() LoginShell {
+	return a.shell
+}
+
+// SetLoginShell sets the entry's login shell when using Exec
+func (a *EntryAttributes) SetLoginShell(shell LoginShell) *EntryAttributes {
+	a.shell = shell
+	return a
+}
+
 // HasMode returns true if the entry has a mode
 func (a *EntryAttributes) HasMode() bool {
 	return a.hasMode
@@ -192,6 +227,9 @@ func (a *EntryAttributes) ToMap() map[string]interface{} {
 	}
 	if a.HasCrtime() {
 		mp["crtime"] = a.Crtime()
+	}
+	if a.HasLoginShell() {
+		mp["loginshell"] = shellNames[a.LoginShell()]
 	}
 	if a.HasMode() {
 		// The mode string representation is the only portable representation. FileMode uses its own
@@ -251,6 +289,18 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 			return attrMungeError("crtime", err)
 		}
 		a.SetCrtime(t)
+	}
+	if shell, ok := mp["loginshell"]; ok {
+		var sh LoginShell
+		for i, name := range shellNames {
+			if shell == name {
+				sh = LoginShell(i)
+			}
+		}
+		if sh == UnknownShell {
+			return attrMungeError("shell", fmt.Errorf("provided unknown shell %v", shell))
+		}
+		a.SetLoginShell(sh)
 	}
 	if mode, ok := mp["mode"]; ok {
 		md, err := munge.ToUintMode(mode)

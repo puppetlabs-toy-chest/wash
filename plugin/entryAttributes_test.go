@@ -105,6 +105,17 @@ func (suite *EntryAttributesTestSuite) TestEntryAttributes() {
 	suite.Equal(expectedMp, attr.ToMap())
 	doUnmarshalJSONTests()
 
+	// Tests for login shell
+	suite.Equal(false, attr.HasLoginShell())
+	suite.Equal(expectedMp, attr.ToMap())
+	s := PowerShell
+	attr.SetLoginShell(s)
+	expectedMp["loginshell"] = "powershell"
+	suite.Equal(s, attr.LoginShell())
+	suite.Equal(true, attr.HasLoginShell())
+	suite.Equal(expectedMp, attr.ToMap())
+	doUnmarshalJSONTests()
+
 	// Tests for Mode
 	suite.Equal(false, attr.HasMode())
 	suite.Equal(expectedMp, attr.ToMap())

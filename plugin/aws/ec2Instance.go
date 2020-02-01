@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -144,9 +145,15 @@ func getAttributesAndMetadata(inst *ec2Client.Instance) (plugin.EntryAttributes,
 		}
 	}
 
+	shell := plugin.POSIXShell
+	if strings.EqualFold(awsSDK.StringValue(inst.Platform), "windows") {
+		shell = plugin.PowerShell
+	}
+
 	attr.
 		SetCrtime(crtime).
-		SetMtime(mtime)
+		SetMtime(mtime).
+		SetLoginShell(shell)
 
 	meta := plugin.ToJSONObject(ec2InstanceMetadata{
 		Instance:         inst,
@@ -266,6 +273,8 @@ func (inst *ec2Instance) Delete(ctx context.Context) (bool, error) {
 }
 
 func (inst *ec2Instance) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+	// TBD: how to get WinRM connection info. Only work with Kerberos? Require a mini-inventory from wash.yaml?
+
 	meta, err := inst.Metadata(ctx)
 	if err != nil {
 		return nil, err
