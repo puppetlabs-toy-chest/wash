@@ -132,5 +132,6 @@ func (r *stubRoot) List(context.Context) ([]Entry, error) {
 
 const registryDescription = `
 Welcome to Wash, a UNIX-like shell that lets you manage all your entries as if
-they were files and directories. This entry represents the Wash root.
+they were files and directories. This entry represents the Wash root. 'ls'-ing
+it yields all the configured plugins.
 `
