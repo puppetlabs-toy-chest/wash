@@ -58,11 +58,14 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 	}
 
 	// Print the supported attributes. This part is printed as
-	//   SUPPORTED_ATTRIBUTES
+	//   SUPPORTED ATTRIBUTES
 	//     * <attribute> (<full_name_of_attribute>)
 	//
 	//   <description that talks about attributes/metadata and shows off 'meta'>
-	if len(entry.Attributes.ToMap()) > 0 {
+	//
+	// if the entry has any supported attributes. Otherwise, it prints an appropriate
+	// note then prints the attributes/metadata description.
+	if len(entry.Metadata) > 0 {
 		addSection(docs, stringifySupportedAttributes(path, entry))
 	}
 
@@ -113,23 +116,30 @@ func stringifySupportedAttributes(path string, entry apitypes.Entry) string {
 	path = shellquote.Join(path)
 	var supportedAttributes strings.Builder
 	supportedAttributes.WriteString("SUPPORTED ATTRIBUTES\n")
-	for attr, value := range entry.Attributes.ToMap() {
-		supportedAttributes.WriteString(fmt.Sprintf("* %v", attr))
-		var fullAttrName string
-		switch attr {
-		case "atime":
-			fullAttrName = "last access time"
-		case "mtime":
-			fullAttrName = "last modified time"
-		case "ctime":
-			fullAttrName = "change time"
-		case "crtime":
-			fullAttrName = "creation time"
+	if len(entry.Attributes.ToMap()) <= 0 {
+		lines := []string{
+			fmt.Sprintf("This entry hasn't specified any attributes. However, it does have some metadata."),
 		}
-		if len(fullAttrName) > 0 {
-			supportedAttributes.WriteString(fmt.Sprintf(" (%v)", fullAttrName))
+		supportedAttributes.WriteString(strings.Join(lines, "\n"))
+	} else {
+		for attr, value := range entry.Attributes.ToMap() {
+			supportedAttributes.WriteString(fmt.Sprintf("* %v", attr))
+			var fullAttrName string
+			switch attr {
+			case "atime":
+				fullAttrName = "last access time"
+			case "mtime":
+				fullAttrName = "last modified time"
+			case "ctime":
+				fullAttrName = "change time"
+			case "crtime":
+				fullAttrName = "creation time"
+			}
+			if len(fullAttrName) > 0 {
+				supportedAttributes.WriteString(fmt.Sprintf(" (%v)", fullAttrName))
+			}
+			supportedAttributes.WriteString(fmt.Sprintf(" -- %s\n", value))
 		}
-		supportedAttributes.WriteString(fmt.Sprintf(" -- %s\n", value))
 	}
 	supportedAttributes.WriteString("\n")
 	metadataLines := []string{
