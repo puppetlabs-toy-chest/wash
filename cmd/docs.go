@@ -86,7 +86,7 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 	//         <desc>
 	//     * <signal_group>
 	//         <desc>
-	if len(schema.Signals()) > 0 {
+	if schema != nil && len(schema.Signals()) > 0 {
 		var supportedSignals []apitypes.SignalSchema
 		var supportedSignalGroups []apitypes.SignalSchema
 		for _, signalSchema := range schema.Signals() {
