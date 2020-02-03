@@ -184,7 +184,9 @@ func Size(ctx context.Context, e Entry) (uint64, error) {
 }
 
 // PartialMetadata returns the entry's partial metadata, a subset of the entry's
-// metadata that is typically provided by the plugin API's List endpoint.
+// metadata that is typically provided by the plugin API's List endpoint. If the
+// entry didn't specify any partial metadata, then this returns Attributes(e).ToMap()
+// to enforce the "attributes are a subset of the partial metadata" invariant.
 func PartialMetadata(e Entry) JSONObject {
 	return e.eb().partialMetadata()
 }

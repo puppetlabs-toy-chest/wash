@@ -39,6 +39,17 @@ func (suite *DocsTestSuite) TestStringifySupportedAttributes() {
 	suite.Regexp("meta foo", supportedAttributes)
 	suite.Regexp("meta --partial foo", supportedAttributes)
 	suite.Regexp("find --help", supportedAttributes)
+
+	// Now try an entry without any supported attributes
+
+	entry = apitypes.Entry{}
+	supportedAttributes = stringifySupportedAttributes(path, entry)
+
+	suite.Regexp("^SUPPORTED ATTRIBUTES", supportedAttributes)
+	suite.Regexp("have.*some.*metadata", supportedAttributes)
+	suite.Regexp("meta foo", supportedAttributes)
+	suite.Regexp("meta --partial foo", supportedAttributes)
+	suite.Regexp("find --help", supportedAttributes)
 }
 
 func (suite *DocsTestSuite) TestStringifySupportedActions() {

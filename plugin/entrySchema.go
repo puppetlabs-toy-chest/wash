@@ -31,6 +31,9 @@ func schema(e Entry) (*EntrySchema, error) {
 		if err != nil {
 			return nil, err
 		}
+		if graph == nil {
+			return nil, nil
+		}
 		s := NewEntrySchema(e, "foo")
 		s.graph = graph
 		entrySchemaV, _ := s.graph.Get(TypeID(e))
