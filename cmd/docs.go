@@ -65,6 +65,10 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 	//
 	// if the entry has any supported attributes. Otherwise, it prints an appropriate
 	// note then prints the attributes/metadata description.
+	//
+	// NOTE: If the entry has attributes but doesn't have any partial metadata, then
+	// entry.Metadata contains all of the attributes so this check still works. See
+	// plugin.PartialMetadata's comments for more details.
 	if len(entry.Metadata) > 0 {
 		addSection(docs, stringifySupportedAttributes(path, entry))
 	}
