@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kballard/go-shellquote"
 	apitypes "github.com/puppetlabs/wash/api/types"
 	cmdutil "github.com/puppetlabs/wash/cmd/util"
 	"github.com/puppetlabs/wash/plugin"
@@ -109,6 +110,7 @@ func docsMain(cmd *cobra.Command, args []string) exitCode {
 }
 
 func stringifySupportedAttributes(path string, entry apitypes.Entry) string {
+	path = shellquote.Join(path)
 	var supportedAttributes strings.Builder
 	supportedAttributes.WriteString("SUPPORTED ATTRIBUTES\n")
 	for attr, value := range entry.Attributes.ToMap() {
@@ -145,6 +147,7 @@ func stringifySupportedAttributes(path string, entry apitypes.Entry) string {
 }
 
 func stringifySupportedActions(path string, entry apitypes.Entry) string {
+	path = shellquote.Join(path)
 	var supportedActions strings.Builder
 	supportedActions.WriteString("SUPPORTED ACTIONS\n")
 	actions := entry.Actions
