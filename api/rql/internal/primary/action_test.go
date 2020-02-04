@@ -21,10 +21,10 @@ func (s *ActionTestSuite) TestMarshal() {
 
 func (s *ActionTestSuite) TestUnmarshal() {
 	p := Action(predicate.Action(plugin.Action{}))
-	s.UMETC(p, "foo", "formatted.*'action'.*<action_predicate>", true)
-	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), "formatted.*'action'.*<action_predicate>", true)
-	s.UMETC(p, s.A("action", "foo", "bar"), "formatted.*'action'.*<action_predicate>", false)
-	s.UMETC(p, s.A("action"), "missing.*action.*predicate", false)
+	s.UMETC(p, "foo", `action.*formatted.*"action".*PE ActionPredicate`, true)
+	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), `action.*formatted.*"action".*PE ActionPredicate`, true)
+	s.UMETC(p, s.A("action", "foo", "bar"), `action.*formatted.*"action".*PE ActionPredicate`, false)
+	s.UMETC(p, s.A("action"), `action.*formatted.*"action".*PE ActionPredicate.*missing.*PE ActionPredicate`, false)
 	s.UMETC(p, s.A("action", "foo"), "<action>", false)
 	// UMTC doesn't work because s.Equal doesn't work for the Action
 	// type so we do our own assertion here.

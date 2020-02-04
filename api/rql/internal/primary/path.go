@@ -10,7 +10,7 @@ func Path(p rql.StringPredicate) rql.Primary {
 	return &path{
 		base: base{
 			name:  "path",
-			ptype: "string",
+			ptype: "String",
 			p:     p,
 		},
 		p: p,

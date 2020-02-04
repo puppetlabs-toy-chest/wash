@@ -19,13 +19,13 @@ func (s *PathTestSuite) TestMarshal() {
 }
 
 func (s *PathTestSuite) TestUnmarshal() {
-	p := Path(predicate.StringGlob(""))
-	s.UMETC(p, "foo", "formatted.*'path'.*<string_predicate>", true)
-	s.UMETC(p, s.A("foo", s.A("glob", "foo")), "formatted.*'path'.*<string_predicate>", true)
-	s.UMETC(p, s.A("path", "foo", "bar"), "formatted.*'path'.*<string_predicate>", false)
-	s.UMETC(p, s.A("path"), "missing.*string.*predicate", false)
-	s.UMETC(p, s.A("path", s.A("glob", "[")), "glob", false)
-	s.UMTC(p, s.A("path", s.A("glob", "foo")), Path(predicate.StringGlob("foo")))
+	n := Path(predicate.StringGlob(""))
+	s.UMETC(n, "foo", `path.*formatted.*"path".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `path.*formatted.*"path".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("path", "foo", "bar"), `path.*formatted.*"path".*PE StringPredicate`, false)
+	s.UMETC(n, s.A("path"), `path.*formatted.*"path".*PE StringPredicate.*missing.*PE StringPredicate`, false)
+	s.UMETC(n, s.A("path", s.A("glob", "[")), "path.*glob", false)
+	s.UMTC(n, s.A("path", s.A("glob", "foo")), Path(predicate.StringGlob("foo")))
 }
 
 func (s *PathTestSuite) TestEntryInDomain() {

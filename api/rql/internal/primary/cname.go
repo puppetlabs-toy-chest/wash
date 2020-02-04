@@ -8,7 +8,7 @@ func CName(p rql.StringPredicate) rql.Primary {
 	return &cname{
 		base: base{
 			name:  "cname",
-			ptype: "string",
+			ptype: "String",
 			p:     p,
 		},
 		p: p,

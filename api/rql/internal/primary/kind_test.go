@@ -19,13 +19,13 @@ func (s *KindTestSuite) TestMarshal() {
 }
 
 func (s *KindTestSuite) TestUnmarshal() {
-	p := Kind(predicate.StringGlob(""))
-	s.UMETC(p, "foo", "formatted.*'kind'.*<string_predicate>", true)
-	s.UMETC(p, s.A("foo", s.A("glob", "foo")), "formatted.*'kind'.*<string_predicate>", true)
-	s.UMETC(p, s.A("kind", "foo", "bar"), "formatted.*'kind'.*<string_predicate>", false)
-	s.UMETC(p, s.A("kind"), "missing.*string.*predicate", false)
-	s.UMETC(p, s.A("kind", s.A("glob", "[")), "glob", false)
-	s.UMTC(p, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
+	n := Kind(predicate.StringGlob(""))
+	s.UMETC(n, "foo", `kind.*formatted.*"kind".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*PE StringPredicate`, false)
+	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*PE StringPredicate.*missing.*PE StringPredicate`, false)
+	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*glob", false)
+	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
 }
 
 func (s *KindTestSuite) TestEntrySchemaInDomain() {
