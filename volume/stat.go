@@ -14,7 +14,7 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// StatCmd returns the command required to stat all the files in a directory up to maxdepth.
+// StatCmd returns the POSIX command required to stat all the files in a directory up to maxdepth.
 func StatCmd(path string, maxdepth int) []string {
 	// List uses "" to mean root. Translate for executing on the target.
 	if path == RootPath {
@@ -128,33 +128,36 @@ func StatParseAll(output io.Reader, base string, start string, maxdepth int) (Di
 			if err != nil {
 				return nil, err
 			}
-
-			relative := strings.TrimPrefix(fullpath, base)
-			// Create an entry for each directory.
-			numSegments := numPathSegments(relative)
-			if numSegments > maxdepth {
-				panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
-			} else if attr.Mode().IsDir() {
-				// Mark directories at maxdepth as unexplored with nil Children.
-				if numSegments == maxdepth {
-					dirmap[relative] = Children(nil)
-				} else {
-					dirmap[relative] = make(Children)
-				}
-			}
-
-			// Add each entry to its parent's listing.
-			parent, file := path.Split(relative)
-			parent = strings.TrimSuffix(parent, "/")
-			parentchildren := makeChildren(dirmap, parent)
-			// Attr + path represents a volume dir or file.
-			parentchildren[file] = attr
+			addAttributesForPath(dirmap, attr, base, fullpath, maxdepth)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 	return dirmap, nil
+}
+
+func addAttributesForPath(dirmap DirMap, attr plugin.EntryAttributes, base, fullpath string, maxdepth int) {
+	relative := strings.TrimPrefix(fullpath, base)
+	// Create an entry for each directory.
+	numSegments := numPathSegments(relative)
+	if numSegments > maxdepth {
+		panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
+	} else if attr.Mode().IsDir() {
+		// Mark directories at maxdepth as unexplored with nil Children.
+		if numSegments == maxdepth {
+			dirmap[relative] = Children(nil)
+		} else {
+			dirmap[relative] = make(Children)
+		}
+	}
+
+	// Add the entry to its parent's listing.
+	parent, file := path.Split(relative)
+	parent = strings.TrimSuffix(parent, "/")
+	parentchildren := makeChildren(dirmap, parent)
+	// Attr + path represents a volume dir or file.
+	parentchildren[file] = attr
 }
 
 func numPathSegments(path string) int {

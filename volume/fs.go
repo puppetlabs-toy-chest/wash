@@ -95,7 +95,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty b
 
 // VolumeList satisfies the Interface required by List to enumerate files.
 func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
-	cmdline := StatCmd(path, d.maxdepth)
+	cmdline := d.selectShellCommand(StatCmd(path, d.maxdepth), ChildItemsCmd(path, d.maxdepth))
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 
 	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
@@ -110,18 +110,27 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 		return nil, err
 	}
 	activity.Record(ctx, "VolumeList complete")
+
 	// Always returns results normalized to the base.
-	return StatParseAll(buf, RootPath, path, d.maxdepth)
+	switch d.loginShell() {
+	case plugin.POSIXShell:
+		return StatParseAll(buf, RootPath, path, d.maxdepth)
+	case plugin.PowerShell:
+		return ItemsParseAll(buf, RootPath, path, d.maxdepth)
+	default:
+		panic("unknown shell")
+	}
 }
 
 // VolumeRead satisfies the Interface required by List to read file contents.
 func (d *FS) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
+	command := d.selectShellCommand([]string{"cat", path}, []string{"Get-Content '" + path + "'"})
 
 	// Don't use Tty when outputting file content because it may convert LF to CRLF.
-	buf, err := exec(ctx, d.executor, []string{"cat", path}, false)
+	buf, err := exec(ctx, d.executor, command, false)
 	if err != nil {
-		activity.Record(ctx, "Exec error running 'cat %v' in VolumeOpen: %v", path, err)
+		activity.Record(ctx, "Exec error running %+v in VolumeOpen: %v", command, err)
 		return nil, err
 	}
 	return buf.Bytes(), nil
@@ -130,8 +139,13 @@ func (d *FS) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 // VolumeStream satisfies the Interface required by List to stream file contents.
 func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
+	command := d.selectShellCommand(
+		[]string{"tail", "-f", path},
+		[]string{"Get-Content -Wait -Tail 10 '" + path + "'"},
+	)
+
 	execOpts := plugin.ExecOptions{Elevate: true, Tty: true}
-	cmd, err := plugin.Exec(ctx, d.executor, "tail", []string{"-f", path}, execOpts)
+	cmd, err := plugin.Exec(ctx, d.executor, command[0], command[1:], execOpts)
 	if err != nil {
 		activity.Record(ctx, "Exec error in VolumeRead: %v", err)
 		return nil, err
@@ -170,14 +184,42 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 // VolumeDelete satisfies the Interface required by Delete to delete volume nodes.
 func (d *FS) VolumeDelete(ctx context.Context, path string) (bool, error) {
 	activity.Record(ctx, "Deleting %v on %v", path, plugin.ID(d.executor))
+	command := d.selectShellCommand(
+		[]string{"rm", "-rf", path},
+		[]string{"Remove-Item -Recurse -Force '" + path + "'"},
+	)
 
 	// Skip tty because we don't need it, we ignore the output.
-	_, err := exec(ctx, d.executor, []string{"rm", "-rf", path}, false)
+	_, err := exec(ctx, d.executor, command, false)
 	if err != nil {
 		activity.Record(ctx, "Exec error running 'rm -rf %v' in VolumeDelete: %v", path, err)
 		return false, err
 	}
 	return true, nil
+}
+
+// Selects between a posix and powershell command based on the entry's login shell.
+// Note that powershell commands are often a single string because they represent a PowerShell
+// expression, and it's easier to pass that as a string than try to correctly escape it as
+// multiple tokens.
+func (d *FS) selectShellCommand(posix []string, power []string) []string {
+	switch d.loginShell() {
+	case plugin.POSIXShell:
+		return posix
+	case plugin.PowerShell:
+		return power
+	default:
+		panic("unknown shell")
+	}
+}
+
+func (d *FS) loginShell() plugin.LoginShell {
+	attr := plugin.Attributes(d.executor)
+	if attr.HasLoginShell() {
+		return attr.LoginShell()
+	}
+	// Fallback to posix as a default
+	return plugin.POSIXShell
 }
 
 const fsDescription = `
