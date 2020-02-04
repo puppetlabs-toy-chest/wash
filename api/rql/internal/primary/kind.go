@@ -10,7 +10,7 @@ func Kind(p rql.StringPredicate) rql.Primary {
 	return &kind{
 		base: base{
 			name:  "kind",
-			ptype: "string",
+			ptype: "String",
 			p:     p,
 		},
 		p: p,

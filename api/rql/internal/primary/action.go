@@ -9,7 +9,7 @@ func Action(p rql.ActionPredicate) rql.Primary {
 	return &action{
 		base: base{
 			name:  "action",
-			ptype: "action",
+			ptype: "Action",
 			p:     p,
 		},
 		p: p,

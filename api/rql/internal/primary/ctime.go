@@ -8,7 +8,7 @@ func Ctime(p rql.TimePredicate) rql.Primary {
 	return &ctime{
 		base: base{
 			name:  "ctime",
-			ptype: "time",
+			ptype: "Time",
 			p:     p,
 		},
 		p: p,
