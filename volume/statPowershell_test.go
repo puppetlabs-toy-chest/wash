@@ -23,7 +23,7 @@ const itemsFixture = `
 "C:\Windows\bootstat.dat","67584","2019-10-13T01:16:07Z","2020-01-07T21:05:03Z","2020-01-07T21:05:03Z","System, Archive"
 `
 
-func TestChildItemsCmd(t *testing.T) {
+func TestStatCmdPowershell(t *testing.T) {
 	const piping = " | Select-Object FullName,Length,CreationTimeUtc," +
 		`LastAccessTimeUtc,LastWriteTimeUtc,Attributes | ForEach-Object {
 $utc=[Xml.XmlDateTimeSerializationMode]::Utc
@@ -32,18 +32,18 @@ $_.LastAccessTimeUtc = [Xml.XmlConvert]::ToString($_.LastAccessTimeUtc,$utc)
 $_.LastWriteTimeUtc = [Xml.XmlConvert]::ToString($_.LastWriteTimeUtc,$utc)
 $_ } | ConvertTo-Csv`
 
-	cmd := ChildItemsCmd("", 1)
+	cmd := StatCmdPowershell("", 1)
 	assert.Equal(t, []string{"Get-ChildItem '/' -Recurse -Depth 0" + piping}, cmd)
 
-	cmd = ChildItemsCmd("/", 1)
+	cmd = StatCmdPowershell("/", 1)
 	assert.Equal(t, []string{"Get-ChildItem '/' -Recurse -Depth 0" + piping}, cmd)
 
-	cmd = ChildItemsCmd("/Program Files/PowerShell", 5)
+	cmd = StatCmdPowershell("/Program Files/PowerShell", 5)
 	assert.Equal(t, []string{"Get-ChildItem '/Program Files/PowerShell' -Recurse -Depth 4" + piping}, cmd)
 }
 
-func TestItemsParseAll(t *testing.T) {
-	dmap, err := ItemsParseAll(strings.NewReader(itemsFixture), mountpoint, mountpoint, mountDepth)
+func TestParseStatPowershell(t *testing.T) {
+	dmap, err := ParseStatPowershell(strings.NewReader(itemsFixture), mountpoint, mountpoint, mountDepth)
 	assert.NoError(t, err)
 	assert.NotNil(t, dmap)
 	assert.Len(t, dmap, 7)
@@ -89,8 +89,8 @@ func TestItemsParseAll(t *testing.T) {
 	assert.Equal(t, expectedAttr, dmap["/Windows"]["bfsvc.exe"])
 }
 
-func TestItemsParseAll_Empty(t *testing.T) {
-	dmap, err := ItemsParseAll(strings.NewReader(""), mountpoint, mountpoint, mountDepth)
+func TestParseStatPowershell_Empty(t *testing.T) {
+	dmap, err := ParseStatPowershell(strings.NewReader(""), mountpoint, mountpoint, mountDepth)
 	assert.NoError(t, err)
 	assert.NotNil(t, dmap)
 	assert.Len(t, dmap, 1)

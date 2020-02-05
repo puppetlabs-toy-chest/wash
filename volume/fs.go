@@ -95,7 +95,7 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty b
 
 // VolumeList satisfies the Interface required by List to enumerate files.
 func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
-	cmdline := d.selectShellCommand(StatCmd(path, d.maxdepth), ChildItemsCmd(path, d.maxdepth))
+	cmdline := d.selectShellCommand(StatCmdPOSIX(path, d.maxdepth), StatCmdPowershell(path, d.maxdepth))
 	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 
 	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
@@ -114,9 +114,9 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	// Always returns results normalized to the base.
 	switch d.loginShell() {
 	case plugin.POSIXShell:
-		return StatParseAll(buf, RootPath, path, d.maxdepth)
+		return ParseStatPOSIX(buf, RootPath, path, d.maxdepth)
 	case plugin.PowerShell:
-		return ItemsParseAll(buf, RootPath, path, d.maxdepth)
+		return ParseStatPowershell(buf, RootPath, path, d.maxdepth)
 	default:
 		panic("unknown shell")
 	}

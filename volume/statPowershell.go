@@ -11,8 +11,8 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// ChildItemsCmd returns the PowerShell command required to stat all the files in a directory up to maxdepth.
-func ChildItemsCmd(path string, maxdepth int) []string {
+// StatCmdPowershell returns the PowerShell command required to stat all the files in a directory up to maxdepth.
+func StatCmdPowershell(path string, maxdepth int) []string {
 	// List uses "" to mean root. Translate for executing on the target.
 	if path == RootPath {
 		path = "/"
@@ -34,9 +34,9 @@ $_ } | ConvertTo-Csv`,
 	}
 }
 
-// parseItem parses a single csv record of ChildItemsCmd into EntryAttributes and a path.
-// Example: "C:\Windows\WindowsUpdate.log","276","10/13/2019 1:22:54 AM","10/13/2019 1:28:08 AM","10/13/2019 1:28:08 AM","Archive, Compressed"
-func parseItem(record []string) (attr plugin.EntryAttributes, path string, err error) {
+// parseStatPowershell parses a single csv record of StatCmdPowershell output into EntryAttributes
+// and a path.
+func parseStatPowershell(record []string) (attr plugin.EntryAttributes, path string, err error) {
 	// Normalize path to remove the drive letter and convert to forward-slash
 	path = strings.TrimLeftFunc(record[0], func(c rune) bool { return c != '\\' })
 	path = strings.ReplaceAll(path, "\\", "/")
@@ -68,8 +68,9 @@ func parseItem(record []string) (attr plugin.EntryAttributes, path string, err e
 	// modified implies changed, so this seems appropriate
 	attr.SetCtime(mtime)
 
-	// Attributes: Archive, Compressed, Device, Directory, Encrypted, Hidden, IntegrityStream, Normal,
-	//						 NoScrubData, NotContentIndexed, Offline, ReadOnly, ReparsePoint, SparseFile, System, Temporary
+	// Attributes: Archive, Compressed, Device, Directory, Encrypted, Hidden, IntegrityStream,
+	//             Normal, NoScrubData, NotContentIndexed, Offline, ReadOnly, ReparsePoint,
+	//						 SparseFile, System, Temporary
 	var mode os.FileMode = 0600
 	attributes := strings.Split(record[5], ", ")
 	for _, a := range attributes {
@@ -84,12 +85,12 @@ func parseItem(record []string) (attr plugin.EntryAttributes, path string, err e
 	return
 }
 
-// ItemsParseAll an output stream that is the result of running ChildItemsCmd. Strips 'base' from the
-// file paths, and maps each directory to a map of files in that directory and their attr
-// (attributes). The 'maxdepth' used to produce the output is required to identify directories
-// where we do not know their contents. 'start' denotes where the search started from, and is the
-// basis for calculating maxdepth.
-func ItemsParseAll(output io.Reader, base string, start string, maxdepth int) (DirMap, error) {
+// ParseStatPowershell an output stream that is the result of running StatCmdPowershell. Strips
+// 'base' from the file paths, and maps each directory to a map of files in that directory and
+// their attr (attributes). The 'maxdepth' used to produce the output is required to identify
+// directories where we do not know their contents. 'start' denotes where the search started from,
+// and is the basis for calculating maxdepth.
+func ParseStatPowershell(output io.Reader, base string, start string, maxdepth int) (DirMap, error) {
 	maxdepth += numPathSegments(strings.TrimPrefix(start, base))
 	scanner := csv.NewReader(output)
 	scanner.Comment = '#'
@@ -107,9 +108,9 @@ func ItemsParseAll(output io.Reader, base string, start string, maxdepth int) (D
 		return dirmap, nil
 	}
 
-	// Skip header field
+	// Iterate over records after the header.
 	for _, record := range records[1:] {
-		attr, fullpath, err := parseItem(record)
+		attr, fullpath, err := parseStatPowershell(record)
 		if err != nil {
 			return nil, err
 		}

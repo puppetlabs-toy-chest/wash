@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Represents the output of StatCmd(/var/log)
+// Represents the output of StatCmdPOSIX(/var/log)
 const varLogDepth = 7
 const varLogFixture = `
 96 1550611510 1550611448 1550611448 41ed /var/log/path
@@ -66,7 +66,7 @@ func (suite *fsTestSuite) createExec(fixt string, depth int) *mockExecutor {
 	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	// Used when recording activity.
 	exec.SetTestID("/instance")
-	cmd := StatCmd("/", depth)
+	cmd := StatCmdPOSIX("/", depth)
 	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(fixt), nil)
 	return exec
 }
@@ -147,7 +147,7 @@ func (suite *fsTestSuite) TestFSListTwice() {
 `
 	depth := 3
 	exec := suite.createExec(firstFixture, depth)
-	cmd := StatCmd("/var/log/path", depth)
+	cmd := StatCmdPOSIX("/var/log/path", depth)
 	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(secondFixture), nil)
 
 	fs := NewFS("fs", exec, depth)
@@ -183,7 +183,7 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	depth := 3
 	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	exec.SetTestID("/instance")
-	cmd := StatCmd("/", depth)
+	cmd := StatCmdPOSIX("/", depth)
 	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(mockExecCmd{shortFixture}, nil)
 
 	fs := NewFS("fs", exec, depth)

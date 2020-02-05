@@ -166,11 +166,11 @@ func (v *volume) runInTemporaryContainer(ctx context.Context, cmd []string) ([]b
 func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, error) {
 	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
 	maxdepth := 10
-	output, err := v.runInTemporaryContainer(ctx, volpkg.StatCmd(mountpoint+path, maxdepth))
+	output, err := v.runInTemporaryContainer(ctx, volpkg.StatCmdPOSIX(mountpoint+path, maxdepth))
 	if err != nil {
 		return nil, err
 	}
-	return volpkg.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
+	return volpkg.ParseStatPOSIX(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
 func (v *volume) VolumeRead(ctx context.Context, path string) ([]byte, error) {

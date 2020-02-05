@@ -42,7 +42,7 @@ func (m *mockDirEntry) Schema() *plugin.EntrySchema {
 }
 
 func TestVolumeDir(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
+	dmap, err := ParseStatPOSIX(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
 	assert.Nil(t, err)
 
 	plugin.SetTestCache(datastore.NewMemCache())
