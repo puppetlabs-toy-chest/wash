@@ -213,10 +213,10 @@ func (d *FS) selectShellCommand(posix []string, power []string) []string {
 	}
 }
 
-func (d *FS) loginShell() plugin.LoginShell {
+func (d *FS) loginShell() plugin.Shell {
 	attr := plugin.Attributes(d.executor)
-	if attr.HasLoginShell() {
-		return attr.LoginShell()
+	if shell := attr.OS().LoginShell; attr.HasOS() && shell != plugin.UnknownShell {
+		return shell
 	}
 	// Fallback to posix as a default
 	return plugin.POSIXShell

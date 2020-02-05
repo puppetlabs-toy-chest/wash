@@ -45,7 +45,7 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 		SetPartialMetadata(inst).
 		Attributes().
 		SetCrtime(crtime).
-		SetLoginShell(plugin.POSIXShell)
+		SetOS(plugin.OS{LoginShell: plugin.POSIXShell})
 	return comp
 }
 

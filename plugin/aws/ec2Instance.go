@@ -153,7 +153,7 @@ func getAttributesAndMetadata(inst *ec2Client.Instance) (plugin.EntryAttributes,
 	attr.
 		SetCrtime(crtime).
 		SetMtime(mtime).
-		SetLoginShell(shell)
+		SetOS(plugin.OS{LoginShell: shell})
 
 	meta := plugin.ToJSONObject(ec2InstanceMetadata{
 		Instance:         inst,

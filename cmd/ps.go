@@ -122,16 +122,16 @@ func psMain(cmd *cobra.Command, args []string) exitCode {
 			if err != nil {
 				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
 			}
-			var shell plugin.LoginShell
-			if entry.Attributes.HasLoginShell() {
-				shell = entry.Attributes.LoginShell()
+			var loginShell plugin.Shell
+			if entry.Attributes.HasOS() {
+				loginShell = entry.Attributes.OS().LoginShell
 			}
-			if shell == plugin.UnknownShell {
+			if loginShell == plugin.UnknownShell {
 				// Assume posix if unknown
-				shell = plugin.POSIXShell
+				loginShell = plugin.POSIXShell
 			}
 
-			dispatcher := dispatchers[shell]
+			dispatcher := dispatchers[loginShell]
 			ch, err := dispatcher.execPS(conn, k)
 			if err != nil {
 				cmdutil.ErrPrintf("errored on %v: %v\n", k, err)
