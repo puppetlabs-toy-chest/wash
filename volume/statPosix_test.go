@@ -29,22 +29,22 @@ const fixture = `
 64 1550611510 1550611441 1550611441 41ed mnt/path2/dir
 `
 
-func TestStatCmd(t *testing.T) {
-	cmd := StatCmd("", 1)
+func TestStatCmdPOSIX(t *testing.T) {
+	cmd := StatCmdPOSIX("", 1)
 	assert.Equal(t, []string{"find", "-L", "/", "-mindepth", "1", "-maxdepth", "1",
 		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 
-	cmd = StatCmd("/", 1)
+	cmd = StatCmdPOSIX("/", 1)
 	assert.Equal(t, []string{"find", "-L", "/", "-mindepth", "1", "-maxdepth", "1",
 		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 
-	cmd = StatCmd("/var/log", 5)
+	cmd = StatCmdPOSIX("/var/log", 5)
 	assert.Equal(t, []string{"find", "-L", "/var/log", "-mindepth", "1", "-maxdepth", "5",
 		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}, cmd)
 }
 
 func TestStatParse(t *testing.T) {
-	actualAttr, path, err := StatParse("96 1550611510 1550611448 1550611448 41ed mnt/path")
+	actualAttr, path, err := parseStatPOSIX("96 1550611510 1550611448 1550611448 41ed mnt/path")
 	assert.Nil(t, err)
 	assert.Equal(t, "mnt/path", path)
 	expectedAttr := plugin.EntryAttributes{}
@@ -56,7 +56,7 @@ func TestStatParse(t *testing.T) {
 		SetSize(96)
 	assert.Equal(t, expectedAttr, actualAttr)
 
-	actualAttr, path, err = StatParse("0 1550611458 1550611458 1550611458 81a4 mnt/path/has/got/some/legs")
+	actualAttr, path, err = parseStatPOSIX("0 1550611458 1550611458 1550611458 81a4 mnt/path/has/got/some/legs")
 	assert.Nil(t, err)
 	assert.Equal(t, "mnt/path/has/got/some/legs", path)
 	expectedAttr = plugin.EntryAttributes{}
@@ -68,27 +68,27 @@ func TestStatParse(t *testing.T) {
 		SetSize(0)
 	assert.Equal(t, expectedAttr, actualAttr)
 
-	_, _, err = StatParse("stat: failed")
+	_, _, err = parseStatPOSIX("stat: failed")
 	assert.Equal(t, errors.New("Stat did not return 6 components: stat: failed"), err)
 
-	_, _, err = StatParse("-1 1550611510 1550611448 1550611448 41ed mnt/path")
+	_, _, err = parseStatPOSIX("-1 1550611510 1550611448 1550611448 41ed mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Equal(t, &strconv.NumError{Func: "ParseUint", Num: "-1", Err: strconv.ErrSyntax}, err)
 	}
 
-	_, _, err = StatParse("0 2019-01-01 2019-01-01 2019-01-01 41ed mnt/path")
+	_, _, err = parseStatPOSIX("0 2019-01-01 2019-01-01 2019-01-01 41ed mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Equal(t, &strconv.NumError{Func: "ParseInt", Num: "2019-01-01", Err: strconv.ErrSyntax}, err)
 	}
 
-	_, _, err = StatParse("96 1550611510 1550611448 1550611448 zebra mnt/path")
+	_, _, err = parseStatPOSIX("96 1550611510 1550611448 1550611448 zebra mnt/path")
 	if assert.NotNil(t, err) {
 		assert.Regexp(t, regexp.MustCompile("mode.*zebra"), err.Error())
 	}
 }
 
-func TestStatParseAll(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
+func TestParseStatPOSIX(t *testing.T) {
+	dmap, err := ParseStatPOSIX(strings.NewReader(fixture), mountpoint, mountpoint, mountDepth)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 8, len(dmap))
@@ -131,12 +131,12 @@ func TestStatParseAll(t *testing.T) {
 	assert.Equal(t, expectedAttr, dmap["/path"]["has"])
 }
 
-func TestStatParseAllUnfinished(t *testing.T) {
+func TestParseStatPOSIXUnfinished(t *testing.T) {
 	const shortFixture = `
 	96 1550611510 1550611448 1550611448 41ed mnt/path
 	96 1550611510 1550611448 1550611448 41ed mnt/path/has
 	`
-	dmap, err := StatParseAll(strings.NewReader(shortFixture), mountpoint, mountpoint, 2)
+	dmap, err := ParseStatPOSIX(strings.NewReader(shortFixture), mountpoint, mountpoint, 2)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 3, len(dmap))
@@ -149,12 +149,12 @@ func TestStatParseAllUnfinished(t *testing.T) {
 	assert.Nil(t, dmap["/path/has"])
 }
 
-func TestStatParseAllDeep(t *testing.T) {
+func TestParseStatPOSIXDeep(t *testing.T) {
 	const shortFixture = `
 	96 1550611510 1550611448 1550611448 41ed mnt/path
 	96 1550611510 1550611448 1550611448 41ed mnt/path/has
 	`
-	dmap, err := StatParseAll(strings.NewReader(shortFixture), RootPath, mountpoint, 2)
+	dmap, err := ParseStatPOSIX(strings.NewReader(shortFixture), RootPath, mountpoint, 2)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 4, len(dmap))
@@ -169,8 +169,8 @@ func TestStatParseAllDeep(t *testing.T) {
 	assert.Nil(t, dmap["mnt/path/has"])
 }
 
-func TestStatParseAllRoot(t *testing.T) {
-	dmap, err := StatParseAll(strings.NewReader(fixture), RootPath, RootPath, mountDepth+1)
+func TestParseStatPOSIXRoot(t *testing.T) {
+	dmap, err := ParseStatPOSIX(strings.NewReader(fixture), RootPath, RootPath, mountDepth+1)
 	assert.Nil(t, err)
 	assert.NotNil(t, dmap)
 	assert.Equal(t, 9, len(dmap))

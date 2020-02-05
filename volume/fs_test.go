@@ -3,6 +3,7 @@ package volume
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 	"testing"
@@ -14,9 +15,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Represents the output of StatCmd(/var/log)
-const varLogDepth = 7
-const varLogFixture = `
+const fixtureDepth = 7
+
+// Represents the output of StatCmdPOSIX(/var/log)
+const (
+	posixFixture = `
 96 1550611510 1550611448 1550611448 41ed /var/log/path
 96 1550611510 1550611448 1550611448 41ed /var/log/path/has
 96 1550611510 1550611448 1550611448 41ed /var/log/path/has/got
@@ -27,11 +30,55 @@ const varLogFixture = `
 96 1550611510 1550611441 1550611441 41ed /var/log/path2
 64 1550611510 1550611441 1550611441 41ed /var/log/path2/dir
 `
+	posixFixtureShort = `
+96 1550611510 1550611448 1550611448 41ed /var
+96 1550611510 1550611448 1550611448 41ed /var/log
+96 1550611510 1550611448 1550611448 41ed /var/log/path
+`
+	posixFixtureDeep = `
+96 1550611510 1550611448 1550611448 41ed /var/log/path/has
+96 1550611510 1550611448 1550611448 41ed /var/log/path/has/got
+96 1550611510 1550611458 1550611458 41ed /var/log/path/has/got/some
+`
+)
+
+// Represents the output of StatCmdPowershell(/var/log)
+const (
+	powershellFixture = `
+"FullName","Length","CreationTimeUtc","LastAccessTimeUtc","LastWriteTimeUtc","Attributes"
+"C:\var\log\path",,"2018-09-15T07:19:00Z","2020-01-07T21:11:01Z","2020-01-07T21:10:43Z","Directory"
+"C:\var\log\path\has",,"2018-09-15T06:09:26Z","2020-01-07T20:43:01Z","2020-01-07T20:43:01Z","Directory"
+"C:\var\log\path\has\got",,"2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","Directory"
+"C:\var\log\path\has\got\some",,"2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","Directory"
+"C:\var\log\path\has\got\some\legs","0","2018-09-15T07:19:01Z","2019-09-07T00:21:10Z","2019-09-07T00:21:10Z","ReadOnly, Archive"
+"C:\var\log\path1",,"2018-09-15T07:19:00Z","2018-09-15T07:19:03Z","2018-09-15T07:19:03Z","Directory"
+"C:\var\log\path1\a file","7842","2019-10-13T08:15:00Z","2019-10-13T08:15:00Z","2019-10-13T08:15:00Z","NotContentIndexed, Archive"
+"C:\var\log\path2",,"2018-09-15T07:12:58Z","2018-09-15T07:12:58Z","2018-09-15T07:12:58Z","System, Directory"
+"C:\var\log\path2\dir","67584","2019-10-13T01:16:07Z","2020-01-07T21:05:03Z","2020-01-07T21:05:03Z","Directory, System"
+`
+	powershellFixtureShort = `
+"C:\var",,"2018-09-15T07:19:00Z","2020-01-07T21:11:01Z","2020-01-07T21:10:43Z","Directory"
+"C:\var\log",,"2018-09-15T07:19:00Z","2020-01-07T21:11:01Z","2020-01-07T21:10:43Z","Directory"
+"C:\var\log\path",,"2018-09-15T07:19:00Z","2020-01-07T21:11:01Z","2020-01-07T21:10:43Z","Directory"
+`
+	powershellFixtureDeep = `
+"C:\var\log\path\has",,"2018-09-15T06:09:26Z","2020-01-07T20:43:01Z","2020-01-07T20:43:01Z","Directory"
+"C:\var\log\path\has\got",,"2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","Directory"
+"C:\var\log\path\has\got\some",,"2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","2018-09-15T07:19:01Z","Directory"
+`
+)
 
 type fsTestSuite struct {
 	suite.Suite
-	ctx        context.Context
-	cancelFunc context.CancelFunc
+	ctx                       context.Context
+	cancelFunc                context.CancelFunc
+	loginShell                plugin.Shell
+	statCmd                   func(path string, maxdepth int) []string
+	parseOutput               func(output io.Reader, base string, start string, maxdepth int) (DirMap, error)
+	outputFixture             string
+	outputDepth               int
+	shortFixture, deepFixture string
+	readCmdFn, deleteCmdFn    func(path string) (command []string)
 }
 
 func (suite *fsTestSuite) SetupTest() {
@@ -62,12 +109,11 @@ func (suite *fsTestSuite) createResult(data string) plugin.ExecCommand {
 	return cmd
 }
 
-func (suite *fsTestSuite) createExec(fixt string, depth int) *mockExecutor {
+func (suite *fsTestSuite) createExec() *mockExecutor {
 	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
 	// Used when recording activity.
 	exec.SetTestID("/instance")
-	cmd := StatCmd("/", depth)
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(fixt), nil)
+	exec.Attributes().SetOS(plugin.OS{LoginShell: suite.loginShell})
 	return exec
 }
 
@@ -92,8 +138,10 @@ func (suite *fsTestSuite) find(parent plugin.Parent, path string) plugin.Entry {
 }
 
 func (suite *fsTestSuite) TestFSList() {
-	exec := suite.createExec(varLogFixture, varLogDepth)
-	fs := NewFS("fs", exec, varLogDepth)
+	exec := suite.createExec()
+	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
+
+	fs := NewFS("fs", exec, suite.outputDepth)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
@@ -132,23 +180,14 @@ func (suite *fsTestSuite) TestFSList() {
 		_, ok := entries2[0].(plugin.Parent)
 		suite.True(ok)
 	}
+	exec.AssertExpectations(suite.T())
 }
 
 func (suite *fsTestSuite) TestFSListTwice() {
-	firstFixture := `
-96 1550611510 1550611448 1550611448 41ed /var
-96 1550611510 1550611448 1550611448 41ed /var/log
-96 1550611510 1550611448 1550611448 41ed /var/log/path
-`
-	secondFixture := `
-96 1550611510 1550611448 1550611448 41ed /var/log/path/has
-96 1550611510 1550611448 1550611448 41ed /var/log/path/has/got
-96 1550611510 1550611458 1550611458 41ed /var/log/path/has/got/some
-`
 	depth := 3
-	exec := suite.createExec(firstFixture, depth)
-	cmd := StatCmd("/var/log/path", depth)
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(suite.createResult(secondFixture), nil)
+	exec := suite.createExec()
+	exec.onExec(suite.statCmd("/", depth), suite.createResult(suite.shortFixture))
+	exec.onExec(suite.statCmd("/var/log/path", depth), suite.createResult(suite.deepFixture))
 
 	fs := NewFS("fs", exec, depth)
 	// ID would normally be set when listing FS within the parent instance.
@@ -172,19 +211,13 @@ func (suite *fsTestSuite) TestFSListTwice() {
 			suite.Contains(entries2.Map(), "got")
 		}
 	}
+	exec.AssertExpectations(suite.T())
 }
 
 func (suite *fsTestSuite) TestFSListExpiredCache() {
-	shortFixture := `
-96 1550611510 1550611448 1550611448 41ed /var
-96 1550611510 1550611448 1550611448 41ed /var/log
-96 1550611510 1550611448 1550611448 41ed /var/log/path
-`
 	depth := 3
-	exec := &mockExecutor{EntryBase: plugin.NewEntry("instance")}
-	exec.SetTestID("/instance")
-	cmd := StatCmd("/", depth)
-	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).Return(mockExecCmd{shortFixture}, nil)
+	exec := suite.createExec()
+	exec.onExec(suite.statCmd("/", depth), mockExecCmd{suite.shortFixture}).Twice()
 
 	fs := NewFS("fs", exec, depth)
 	// ID would normally be set when listing FS within the parent instance.
@@ -198,48 +231,73 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	suite.Equal(1, entries.Len())
 	suite.Contains(entries.Map(), "path")
 
-	_ = plugin.ClearCacheFor("/instance/fs", false)
+	cleared := plugin.ClearCacheFor("/instance/fs", false)
+	suite.Equal([]string{"List::/instance/fs"}, cleared)
 	entries, err = plugin.List(suite.ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(1, entries.Len())
 	}
 	suite.Implements((*plugin.Parent)(nil), suite.find(fs, "var/log"))
+	exec.AssertExpectations(suite.T())
 }
 
 func (suite *fsTestSuite) TestFSRead() {
-	exec := suite.createExec(varLogFixture, varLogDepth)
-	fs := NewFS("fs", exec, varLogDepth)
+	exec := suite.createExec()
+	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
+
+	fs := NewFS("fs", exec, suite.outputDepth)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
 	entry := suite.find(fs, "var/log/path1/a file")
 	suite.Equal("a file", plugin.Name(entry))
+	exec.onExec(suite.readCmdFn("/var/log/path1/a file"), suite.createResult("hello"))
 
-	execResult := suite.createResult("hello")
-	exec.On("Exec", mock.Anything, "cat", []string{"/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
 	content, err := entry.(plugin.Readable).Read(context.Background())
-	if suite.NoError(err) {
-		suite.Equal([]byte("hello"), content)
-	}
+	suite.NoError(err)
+	suite.Equal([]byte("hello"), content)
+	exec.AssertExpectations(suite.T())
 }
 
 func (suite *fsTestSuite) TestVolumeDelete() {
-	exec := suite.createExec(varLogFixture, varLogDepth)
-	fs := NewFS("fs", exec, varLogDepth)
+	exec := suite.createExec()
+	fs := NewFS("fs", exec, suite.outputDepth)
 	// ID would normally be set when listing FS within the parent instance.
 	fs.SetTestID("/instance/fs")
 
-	execResult := suite.createResult("deleted")
-	exec.On("Exec", mock.Anything, "rm", []string{"-rf", "/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true}).Return(execResult, nil)
+	exec.onExec(suite.deleteCmdFn("/var/log/path1/a file"), suite.createResult("deleted"))
 	deleted, err := fs.VolumeDelete(context.Background(), "/var/log/path1/a file")
-	if suite.NoError(err) {
-		suite.True(deleted)
-		exec.AssertCalled(suite.T(), "Exec", mock.Anything, "rm", []string{"-rf", "/var/log/path1/a file"}, plugin.ExecOptions{Elevate: true})
-	}
+	suite.NoError(err)
+	suite.True(deleted)
+	exec.AssertExpectations(suite.T())
 }
 
-func TestFS(t *testing.T) {
-	suite.Run(t, new(fsTestSuite))
+func TestPOSIXFS(t *testing.T) {
+	suite.Run(t, &fsTestSuite{
+		loginShell:    plugin.POSIXShell,
+		statCmd:       StatCmdPOSIX,
+		parseOutput:   ParseStatPOSIX,
+		outputFixture: posixFixture,
+		outputDepth:   fixtureDepth,
+		shortFixture:  posixFixtureShort,
+		deepFixture:   posixFixtureDeep,
+		readCmdFn:     func(path string) []string { return []string{"cat", path} },
+		deleteCmdFn:   func(path string) []string { return []string{"rm", "-rf", path} },
+	})
+}
+
+func TestPowershellFS(t *testing.T) {
+	suite.Run(t, &fsTestSuite{
+		loginShell:    plugin.PowerShell,
+		statCmd:       StatCmdPowershell,
+		parseOutput:   ParseStatPowershell,
+		outputFixture: powershellFixture,
+		outputDepth:   fixtureDepth,
+		shortFixture:  powershellFixtureShort,
+		deepFixture:   powershellFixtureDeep,
+		readCmdFn:     func(path string) []string { return []string{"Get-Content '" + path + "'"} },
+		deleteCmdFn:   func(path string) []string { return []string{"Remove-Item -Recurse -Force '" + path + "'"} },
+	})
 }
 
 type mockExecutor struct {
@@ -247,13 +305,19 @@ type mockExecutor struct {
 	mock.Mock
 }
 
-func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+func (m *mockExecutor) Exec(ctx context.Context, cmd string, args []string,
+	opts plugin.ExecOptions) (plugin.ExecCommand, error) {
 	arger := m.Called(ctx, cmd, args, opts)
 	return arger.Get(0).(plugin.ExecCommand), arger.Error(1)
 }
 
 func (m *mockExecutor) Schema() *plugin.EntrySchema {
 	return nil
+}
+
+func (m *mockExecutor) onExec(cmd []string, result plugin.ExecCommand) *mock.Call {
+	return m.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).
+		Return(result, nil)
 }
 
 // Mock ExecCommand that can be used repeatedly when mocking a repeated call.

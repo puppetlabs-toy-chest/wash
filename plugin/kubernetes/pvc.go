@@ -184,11 +184,11 @@ func (v *pvc) runInTemporaryPod(ctx context.Context, cmd []string) ([]byte, erro
 func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
 	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
 	maxdepth := 10
-	output, err := v.runInTemporaryPod(ctx, volume.StatCmd(mountpoint+path, maxdepth))
+	output, err := v.runInTemporaryPod(ctx, volume.StatCmdPOSIX(mountpoint+path, maxdepth))
 	if err != nil {
 		return nil, err
 	}
-	return volume.StatParseAll(bytes.NewReader(output), mountpoint, path, maxdepth)
+	return volume.ParseStatPOSIX(bytes.NewReader(output), mountpoint, path, maxdepth)
 }
 
 func (v *pvc) VolumeRead(ctx context.Context, path string) ([]byte, error) {

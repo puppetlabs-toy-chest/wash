@@ -23,7 +23,7 @@ import (
 type Interface interface {
 	plugin.Entry
 
-	// Returns a map of volume nodes to their stats, such as that returned by StatParseAll.
+	// Returns a map of volume nodes to their stats, such as that returned by ParseStatPOSIX.
 	// DirMap must include items starting from the specified path. If an entry in DirMap
 	// points to a nil Dir, it is assumed to be unexplored.
 	VolumeList(ctx context.Context, path string) (DirMap, error)

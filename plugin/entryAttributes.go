@@ -36,6 +36,36 @@ func ToJSONObject(v interface{}) JSONObject {
 	return obj
 }
 
+// Shell describes a command shell.
+type Shell int
+
+// Defines specific Shell classes you can configure
+const (
+	UnknownShell Shell = iota
+	POSIXShell
+	PowerShell
+)
+
+var shellNames = [3]string{"unknown", "posixshell", "powershell"}
+
+func (sh Shell) String() string {
+	return shellNames[sh]
+}
+
+// OS contains information about the operating system of a compute-like entry
+type OS struct {
+	// LoginShell describes the type of shell execution occurs in. It can be used
+	// by the caller to decide what type of commands to run.
+	LoginShell Shell
+}
+
+// ToMap converts the OS struct data to a map.
+func (o OS) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"login_shell": o.LoginShell.String(),
+	}
+}
+
 /*
 EntryAttributes represents an entry's attributes. We use a struct
 instead of a map for efficient memory allocation/deallocation,
@@ -55,6 +85,8 @@ type EntryAttributes struct {
 	mtime   time.Time
 	ctime   time.Time
 	crtime  time.Time
+	os      OS
+	hasOS   bool // identifies that the OS struct has valid operating system information
 	mode    os.FileMode
 	hasMode bool
 	size    uint64
@@ -143,6 +175,23 @@ func (a *EntryAttributes) SetCrtime(crtime time.Time) *EntryAttributes {
 	return a
 }
 
+// HasOS returns true if the entry has information about its OS
+func (a *EntryAttributes) HasOS() bool {
+	return a.hasOS
+}
+
+// OS returns the entry's operating system information
+func (a *EntryAttributes) OS() OS {
+	return a.os
+}
+
+// SetOS sets the entry's operating system information
+func (a *EntryAttributes) SetOS(os OS) *EntryAttributes {
+	a.os = os
+	a.hasOS = true
+	return a
+}
+
 // HasMode returns true if the entry has a mode
 func (a *EntryAttributes) HasMode() bool {
 	return a.hasMode
@@ -192,6 +241,9 @@ func (a *EntryAttributes) ToMap() map[string]interface{} {
 	}
 	if a.HasCrtime() {
 		mp["crtime"] = a.Crtime()
+	}
+	if a.HasOS() {
+		mp["os"] = a.OS().ToMap()
 	}
 	if a.HasMode() {
 		// The mode string representation is the only portable representation. FileMode uses its own
@@ -251,6 +303,30 @@ func (a *EntryAttributes) UnmarshalJSON(data []byte) error {
 			return attrMungeError("crtime", err)
 		}
 		a.SetCrtime(t)
+	}
+	if obj, ok := mp["os"]; ok {
+		os, ok := obj.(map[string]interface{})
+		if !ok {
+			return attrMungeError("os", fmt.Errorf("os must be an object"))
+		}
+
+		var o OS
+		if obj, ok := os["login_shell"]; ok {
+			shell, ok := obj.(string)
+			if !ok {
+				return attrMungeError("os", fmt.Errorf("login_shell must be a string"))
+			}
+			for i, name := range shellNames {
+				if shell == name {
+					o.LoginShell = Shell(i)
+				}
+			}
+			if o.LoginShell == UnknownShell {
+				errTxt := "provided unknown login shell %v, must be %v or %v"
+				return attrMungeError("os", fmt.Errorf(errTxt, shell, PowerShell, POSIXShell))
+			}
+		}
+		a.SetOS(o)
 	}
 	if mode, ok := mp["mode"]; ok {
 		md, err := munge.ToUintMode(mode)

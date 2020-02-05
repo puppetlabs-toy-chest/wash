@@ -38,11 +38,14 @@ func newComputeInstance(inst *compute.Instance, c computeProjectService) *comput
 	if err != nil {
 		panic(fmt.Sprintf("Timestamp for %v was not expected format RFC3339: %v", comp, inst.CreationTimestamp))
 	}
+	// No way to determine OS type from the Instance. Should we scrape some ports to see if
+	// SSH or WinRM are exposed?
 	comp.
 		DisableCachingFor(plugin.MetadataOp).
 		SetPartialMetadata(inst).
 		Attributes().
-		SetCrtime(crtime)
+		SetCrtime(crtime).
+		SetOS(plugin.OS{LoginShell: plugin.POSIXShell})
 	return comp
 }
 

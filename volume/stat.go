@@ -1,86 +1,43 @@
 package volume
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/puppetlabs/wash/munge"
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// StatCmd returns the command required to stat all the files in a directory up to maxdepth.
-func StatCmd(path string, maxdepth int) []string {
-	// List uses "" to mean root. Translate for executing on the target.
-	if path == RootPath {
-		path = "/"
+func addAttributesForPath(dirmap DirMap, attr plugin.EntryAttributes, base, fullpath string, maxdepth int) {
+	relative := strings.TrimPrefix(fullpath, base)
+	// Create an entry for each directory.
+	numSegments := numPathSegments(relative)
+	if numSegments > maxdepth {
+		panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
+	} else if attr.Mode().IsDir() {
+		// Mark directories at maxdepth as unexplored with nil Children.
+		if numSegments == maxdepth {
+			dirmap[relative] = Children(nil)
+		} else {
+			dirmap[relative] = make(Children)
+		}
 	}
-	// size, atime, mtime, ctime, mode, name
-	// %s - Total size, in bytes
-	// %X - Time of last access as seconds since Epoch
-	// %Y - Time of last data modification as seconds since Epoch
-	// %Z - Time of last status change as seconds since Epoch
-	// %f - Raw mode in hex
-	// %n - File name
-	// TODO: fix as part of https://github.com/puppetlabs/wash/issues/378. We don't currently handle
-	// showing symbolic links, instead representing them as the resolved target.
-	return []string{"find", "-L", path, "-mindepth", "1", "-maxdepth", strconv.Itoa(maxdepth),
-		"-exec", "stat", "-L", "-c", "%s %X %Y %Z %f %n", "{}", "+"}
+
+	// Add the entry to its parent's listing.
+	parent, file := path.Split(relative)
+	parent = strings.TrimSuffix(parent, "/")
+	parentchildren := makeChildren(dirmap, parent)
+	// Attr + path represents a volume dir or file.
+	parentchildren[file] = attr
 }
 
-// Keep as its own specialized function as it will be faster than munge.ToTime.
-func parseTime(t string) (time.Time, error) {
-	epoch, err := strconv.ParseInt(t, 10, 64)
-	if err != nil {
-		return time.Time{}, err
+func numPathSegments(path string) int {
+	path = strings.TrimPrefix(path, "/")
+	if path == "" {
+		return 0
 	}
-	return time.Unix(epoch, 0), nil
-}
-
-// StatParse parses a single line of the output of StatCmd into EntryAttributes and a path.
-func StatParse(line string) (plugin.EntryAttributes, string, error) {
-	var attr plugin.EntryAttributes
-	segments := strings.SplitN(line, " ", 6)
-	if len(segments) != 6 {
-		return attr, "", fmt.Errorf("Stat did not return 6 components: %v", line)
-	}
-
-	size, err := strconv.ParseUint(segments[0], 10, 64)
-	if err != nil {
-		return attr, "", err
-	}
-	attr.SetSize(size)
-
-	atime, err := parseTime(segments[1])
-	if err != nil {
-		return attr, "", err
-	}
-	attr.SetAtime(atime)
-
-	mtime, err := parseTime(segments[2])
-	if err != nil {
-		return attr, "", err
-	}
-	attr.SetMtime(mtime)
-
-	ctime, err := parseTime(segments[3])
-	if err != nil {
-		return attr, "", err
-	}
-	attr.SetCtime(ctime)
-
-	mode, err := munge.ToFileMode("0x" + segments[4])
-	if err != nil {
-		return attr, "", err
-	}
-	attr.SetMode(mode)
-
-	return attr, segments[5], nil
+	return len(strings.Split(path, string(os.PathSeparator)))
 }
 
 // Ensure the directory at newpath - and its parents - all exist. Returns the children of that
@@ -88,7 +45,7 @@ func StatParse(line string) (plugin.EntryAttributes, string, error) {
 // to the root directory than where we searched because we want to preserve some of the hierarchy.
 func makeChildren(dirmap DirMap, newpath string) Children {
 	// If it exists, return the children map. Base case would be newpath == RootPath, which we create
-	// at the start of StatParseAll.
+	// at the start of ParseStatPOSIX.
 	if newchildren, ok := dirmap[newpath]; ok {
 		return newchildren
 	}
@@ -107,60 +64,4 @@ func makeChildren(dirmap DirMap, newpath string) Children {
 	attr.SetMode(os.ModeDir | 0550)
 	parentchildren[file] = attr
 	return newchildren
-}
-
-// StatParseAll an output stream that is the result of running StatCmd. Strips 'base' from the
-// file paths, and maps each directory to a map of files in that directory and their attr
-// (attributes). The 'maxdepth' used to produce the output is required to identify directories
-// where we do not know their contents. 'start' denotes where the search started from, and is the
-// basis for calculating maxdepth.
-func StatParseAll(output io.Reader, base string, start string, maxdepth int) (DirMap, error) {
-	maxdepth += numPathSegments(strings.TrimPrefix(start, base))
-	scanner := bufio.NewScanner(output)
-	// Create lookup table for directories to contents, and prepopulate the root entry because
-	// the mount point won't be included in the stat output.
-	dirmap := DirMap{RootPath: make(Children)}
-	for scanner.Scan() {
-		text := strings.TrimSpace(scanner.Text())
-		// Skip error lines in case we're running in a tty.
-		if text != "" && !strings.HasPrefix(text, "stat:") && !strings.HasPrefix(text, "find:") {
-			attr, fullpath, err := StatParse(text)
-			if err != nil {
-				return nil, err
-			}
-
-			relative := strings.TrimPrefix(fullpath, base)
-			// Create an entry for each directory.
-			numSegments := numPathSegments(relative)
-			if numSegments > maxdepth {
-				panic(fmt.Sprintf("Should only have %v segments, found %v: %v", maxdepth, numSegments, relative))
-			} else if attr.Mode().IsDir() {
-				// Mark directories at maxdepth as unexplored with nil Children.
-				if numSegments == maxdepth {
-					dirmap[relative] = Children(nil)
-				} else {
-					dirmap[relative] = make(Children)
-				}
-			}
-
-			// Add each entry to its parent's listing.
-			parent, file := path.Split(relative)
-			parent = strings.TrimSuffix(parent, "/")
-			parentchildren := makeChildren(dirmap, parent)
-			// Attr + path represents a volume dir or file.
-			parentchildren[file] = attr
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return dirmap, nil
-}
-
-func numPathSegments(path string) int {
-	path = strings.TrimPrefix(path, "/")
-	if path == "" {
-		return 0
-	}
-	return len(strings.Split(path, string(os.PathSeparator)))
 }
