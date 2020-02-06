@@ -21,7 +21,7 @@ func (s *AtomTestSuite) TestMarshal() {
 
 func (s *AtomTestSuite) TestUnmarshal() {
 	p := Atom(predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*<boolean_value>", true)
+	s.UMETC(p, "foo", "Boolean", true)
 	s.UMTC(p, true, Atom(predicate.Boolean(true)))
 }
 

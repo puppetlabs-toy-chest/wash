@@ -28,17 +28,17 @@ func (p *size) Marshal() interface{} {
 
 func (p *size) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("size"))(input) {
-		return errz.MatchErrorf("must be formatted as ['size', <numeric_predicate>]")
+		return errz.MatchErrorf("size: must be formatted as [\"size\", PE NumericPredicate]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['size', <numeric_predicate>]")
+		return fmt.Errorf("size: must be formatted as [\"size\", PE NumericPredicate]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the numeric predicate expression")
+		return fmt.Errorf("size: must be formatted as [\"size\", PE NumericPredicate] (missing PE NumericPredicate)")
 	}
 	if err := p.p.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("size: error unmarshalling the PE NumericPredicate: %w", err)
 	}
 	return nil
 }

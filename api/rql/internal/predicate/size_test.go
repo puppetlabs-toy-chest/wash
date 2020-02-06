@@ -19,12 +19,12 @@ func (s *SizeTestSuite) TestMarshal() {
 
 func (s *SizeTestSuite) TestUnmarshal() {
 	p := Size(UnsignedNumeric("", s.N("0")))
-	s.UMETC(p, "foo", "formatted.*'size'.*<numeric_predicate>", true)
-	s.UMETC(p, s.A("foo"), "formatted.*'size'.*<numeric_predicate>", true)
-	s.UMETC(p, s.A("size", "foo", "bar"), "formatted.*'size'.*<numeric_predicate>", false)
-	s.UMETC(p, s.A("size"), "missing.*predicate.*expression", false)
-	s.UMETC(p, s.A("size", s.A("<", true)), "valid.*number", false)
-	s.UMETC(p, s.A("size", s.A("<", "-10")), "unsigned.*number", false)
+	s.UMETC(p, "foo", `size.*formatted.*"size".*PE NumericPredicate`, true)
+	s.UMETC(p, s.A("foo"), `size.*formatted.*"size".*PE NumericPredicate`, true)
+	s.UMETC(p, s.A("size", "foo", "bar"), `size.*formatted.*"size".*PE NumericPredicate`, false)
+	s.UMETC(p, s.A("size"), `size.*formatted.*"size".*PE NumericPredicate.*missing.*PE NumericPredicate`, false)
+	s.UMETC(p, s.A("size", s.A("<", true)), "size.*PE NumericPredicate.*valid.*number", false)
+	s.UMETC(p, s.A("size", s.A("<", "-10")), "size.*PE NumericPredicate.*unsigned.*number", false)
 	s.UMTC(p, s.A("size", s.A("<", "10")), Size(UnsignedNumeric(LT, s.N("10"))))
 }
 

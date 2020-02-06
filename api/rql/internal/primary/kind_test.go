@@ -24,7 +24,7 @@ func (s *KindTestSuite) TestUnmarshal() {
 	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*PE StringPredicate`, true)
 	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*PE StringPredicate`, false)
 	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*glob", false)
+	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*PE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
 }
 

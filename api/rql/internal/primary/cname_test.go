@@ -24,7 +24,7 @@ func (s *CNameTestSuite) TestUnmarshal() {
 	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `cname.*formatted.*"cname".*PE StringPredicate`, true)
 	s.UMETC(n, s.A("cname", "foo", "bar"), `cname.*formatted.*"cname".*PE StringPredicate`, false)
 	s.UMETC(n, s.A("cname"), `cname.*formatted.*"cname".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("cname", s.A("glob", "[")), "cname.*glob", false)
+	s.UMETC(n, s.A("cname", s.A("glob", "[")), "cname.*PE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("cname", s.A("glob", "foo")), CName(predicate.StringGlob("foo")))
 }
 

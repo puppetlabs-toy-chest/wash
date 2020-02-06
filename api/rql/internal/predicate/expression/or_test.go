@@ -22,12 +22,12 @@ func (s *OrTestSuite) TestMarshal() {
 
 func (s *OrTestSuite) TestUnmarshal() {
 	p := Or(predicate.Boolean(false), predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*'OR'.*<pe>.*<pe>", true)
-	s.UMETC(p, s.A("OR", "foo", "bar", "baz"), "'OR'.*<pe>.*<pe>", false)
+	s.UMETC(p, "foo", `formatted.*"OR".*<pe>.*<pe>`, true)
+	s.UMETC(p, s.A("OR", "foo", "bar", "baz"), `"OR".*<pe>.*<pe>`, false)
 	s.UMETC(p, s.A("OR"), "OR.*LHS.*RHS.*expression", false)
 	s.UMETC(p, s.A("OR", true), "OR.*LHS.*RHS.*expression", false)
-	s.UMETC(p, s.A("OR", "foo", true), "OR.*LHS.*<boolean_value>", false)
-	s.UMETC(p, s.A("OR", true, "foo"), "OR.*RHS.*<boolean_value>", false)
+	s.UMETC(p, s.A("OR", "foo", true), "OR.*LHS.*Boolean", false)
+	s.UMETC(p, s.A("OR", true, "foo"), "OR.*RHS.*Boolean", false)
 	s.UMTC(p, s.A("OR", true, true), Or(predicate.Boolean(true), predicate.Boolean(true)))
 }
 

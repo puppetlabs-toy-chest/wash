@@ -22,10 +22,10 @@ func (s *NotTestSuite) TestMarshal() {
 
 func (s *NotTestSuite) TestUnmarshal() {
 	p := Not(predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*'NOT'.*<pe>", true)
-	s.UMETC(p, s.A("NOT", "foo", "bar"), "formatted.*'NOT'.*<pe>", false)
+	s.UMETC(p, "foo", `formatted.*"NOT".*<pe>`, true)
+	s.UMETC(p, s.A("NOT", "foo", "bar"), `formatted.*"NOT".*<pe>`, false)
 	s.UMETC(p, s.A("NOT"), "NOT.*expression", false)
-	s.UMETC(p, s.A("NOT", s.A()), "NOT.*error.*expression.*formatted.*<boolean_value>", false)
+	s.UMETC(p, s.A("NOT", s.A()), "NOT.*error.*expression.*Boolean", false)
 	s.UMTC(p, s.A("NOT", true), Not(predicate.Boolean(true)))
 }
 

@@ -24,11 +24,11 @@ func (o *binOp) Marshal() interface{} {
 
 func (o *binOp) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value(o.op))(input) {
-		return errz.MatchErrorf("must be formatted as ['%v', <pe>, <pe>]", o.op)
+		return errz.MatchErrorf("must be formatted as [\"%v\", <pe>, <pe>]", o.op)
 	}
 	array := input.([]interface{})
 	if len(array) > 3 {
-		return fmt.Errorf("must be formatted as ['%v', <pe>, <pe>]", o.op)
+		return fmt.Errorf("must be formatted as [\"%v\", <pe>, <pe>]", o.op)
 	}
 	if len(array) != 3 {
 		return fmt.Errorf("%v: missing one or both of the LHS and RHS expressions", o.op)
@@ -37,7 +37,7 @@ func (o *binOp) Unmarshal(input interface{}) error {
 		return fmt.Errorf("%v: error unmarshaling LHS expression: %w", o.op, err)
 	}
 	if err := o.p2.Unmarshal(array[2]); err != nil {
-		return fmt.Errorf("%v error unmarshaling RHS expression: %w", o.op, err)
+		return fmt.Errorf("%v: error unmarshaling RHS expression: %w", o.op, err)
 	}
 	o.p1 = unravelNTN(o.p1)
 	o.p2 = unravelNTN(o.p2)
