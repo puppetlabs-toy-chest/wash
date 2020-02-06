@@ -41,7 +41,7 @@ func (p *tm) Unmarshal(input interface{}) error {
 		return fmt.Errorf("must be formatted as [<comparison_op>, <time>]")
 	}
 	if len(array) != 2 {
-		return fmt.Errorf("missing the time")
+		return fmt.Errorf("must be formatted as [<comparison_op>, <time>] (missing the time)")
 	}
 	op := ComparisonOp(array[0].(string))
 	if !comparisonOpMap[op] {
@@ -90,17 +90,17 @@ func (p *tmValue) Marshal() interface{} {
 
 func (p *tmValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("time"))(input) {
-		return errz.MatchErrorf("must be formatted as ['time', <time_predicate>]")
+		return errz.MatchErrorf("must be formatted as [\"time\", <time_predicate>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['time', <time_predicate>]")
+		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing.*time.*predicate")
+		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>] (missing the time predicate)")
 	}
 	if err := p.tm.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("error unmarshalling the time predicate: %w", err)
 	}
 	return nil
 }

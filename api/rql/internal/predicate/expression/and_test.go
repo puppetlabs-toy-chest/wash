@@ -22,12 +22,12 @@ func (s *AndTestSuite) TestMarshal() {
 
 func (s *AndTestSuite) TestUnmarshal() {
 	p := And(predicate.Boolean(false), predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*'AND'.*<pe>.*<pe>", true)
-	s.UMETC(p, s.A("AND", "foo", "bar", "baz"), "'AND'.*<pe>.*<pe>", false)
+	s.UMETC(p, "foo", `formatted.*"AND".*<pe>.*<pe>`, true)
+	s.UMETC(p, s.A("AND", "foo", "bar", "baz"), `"AND".*<pe>.*<pe>`, false)
 	s.UMETC(p, s.A("AND"), "AND.*LHS.*RHS.*expression", false)
 	s.UMETC(p, s.A("AND", true), "AND.*LHS.*RHS.*expression", false)
-	s.UMETC(p, s.A("AND", "foo", true), "AND.*LHS.*<boolean_value>", false)
-	s.UMETC(p, s.A("AND", true, "foo"), "AND.*RHS.*<boolean_value>", false)
+	s.UMETC(p, s.A("AND", "foo", true), "AND.*LHS.*Boolean", false)
+	s.UMETC(p, s.A("AND", true, "foo"), "AND.*RHS.*Boolean", false)
 	s.UMTC(p, s.A("AND", true, true), And(predicate.Boolean(true), predicate.Boolean(true)))
 }
 

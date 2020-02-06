@@ -21,10 +21,10 @@ func (s *StringTestSuite) TestGlob_Marshal() {
 
 func (s *StringTestSuite) TestGlob_Unmarshal() {
 	g := StringGlob("")
-	s.UMETC(g, "foo", "formatted.*'glob'.*<glob_str>", true)
-	s.UMETC(g, s.A("foo"), "formatted.*'glob'.*<glob_str>", true)
-	s.UMETC(g, s.A("glob", "foo", "bar"), "formatted.*'glob'.*<glob_str>", false)
-	s.UMETC(g, s.A("glob"), "missing.*glob", false)
+	s.UMETC(g, "foo", `formatted.*"glob".*<glob>`, true)
+	s.UMETC(g, s.A("foo"), `formatted.*"glob".*<glob>`, true)
+	s.UMETC(g, s.A("glob", "foo", "bar"), `formatted.*"glob".*<glob>`, false)
+	s.UMETC(g, s.A("glob"), `formatted.*"glob".*<glob>.*missing.*glob`, false)
 	s.UMETC(g, s.A("glob", 1), "glob.*string", false)
 	s.UMETC(g, s.A("glob", "["), "invalid.*glob.*[.*closing.*]", false)
 	s.UMTC(g, s.A("glob", "foo"), StringGlob("foo"))
@@ -42,10 +42,10 @@ func (s *StringTestSuite) TestRegex_Marshal() {
 
 func (s *StringTestSuite) TestRegex_Unmarshal() {
 	r := StringRegex(nil)
-	s.UMETC(r, "foo", "formatted.*'regex'.*<regex_str>", true)
-	s.UMETC(r, s.A("foo"), "formatted.*'regex'.*<regex_str>", true)
-	s.UMETC(r, s.A("regex", "foo", "bar"), "formatted.*'regex'.*<regex_str>", false)
-	s.UMETC(r, s.A("regex"), "missing.*regex", false)
+	s.UMETC(r, "foo", `formatted.*"regex".*<regex>`, true)
+	s.UMETC(r, s.A("foo"), `formatted.*"regex".*<regex>`, true)
+	s.UMETC(r, s.A("regex", "foo", "bar"), `formatted.*"regex".*<regex>`, false)
+	s.UMETC(r, s.A("regex"), `formatted.*"regex".*<regex>.*missing.*regex`, false)
 	s.UMETC(r, s.A("regex", 1), "regex.*string", false)
 	s.UMETC(r, s.A("regex", "["), "invalid.*regex.*[.*closing.*]", false)
 	s.UMTC(r, s.A("regex", "foo"), StringRegex(regexp.MustCompile("foo")))
@@ -63,10 +63,10 @@ func (s *StringTestSuite) TestEqual_Marshal() {
 
 func (s *StringTestSuite) TestEqual_Unmarshal() {
 	e := StringEqual("")
-	s.UMETC(e, "foo", "formatted.*'='.*<str>", true)
-	s.UMETC(e, s.A("foo"), "formatted.*'='.*<str>", true)
-	s.UMETC(e, s.A("=", "foo", "bar"), "formatted.*'='.*<str>", false)
-	s.UMETC(e, s.A("="), "missing.*string", false)
+	s.UMETC(e, "foo", `formatted.*"=".*<str>`, true)
+	s.UMETC(e, s.A("foo"), `formatted.*"=".*<str>`, true)
+	s.UMETC(e, s.A("=", "foo", "bar"), `formatted.*"=".*<str>`, false)
+	s.UMETC(e, s.A("="), `formatted.*"=".*<str>.*missing.*string`, false)
 	s.UMETC(e, s.A("=", 1), "string", false)
 	s.UMTC(e, s.A("=", "foo"), StringEqual("foo"))
 }
@@ -85,7 +85,7 @@ func (s *StringTestSuite) TestString_Marshal() {
 
 func (s *StringTestSuite) TestString_Unmarshal() {
 	p := String()
-	s.UMETC(p, "foo", "formatted.*'glob'.*'regex'.*'='", true)
+	s.UMETC(p, "foo", `formatted.*"glob".*"regex".*"="`, true)
 	s.UMETC(p, s.A("glob", "["), "invalid.*glob", false)
 	s.UMETC(p, s.A("regex", "["), "invalid.*regex", false)
 	s.UMETC(p, s.A("=", true), "string", false)
@@ -135,10 +135,10 @@ func (s *StringTestSuite) TestStringValue_Marshal() {
 
 func (s *StringTestSuite) TestStringValue_Unmarshal() {
 	g := StringValueGlob("")
-	s.UMETC(g, "foo", "formatted.*'string'.*<string_predicate>", true)
-	s.UMETC(g, s.A("string", "foo", "bar"), "formatted.*'string'.*<string_predicate>", false)
-	s.UMETC(g, s.A("string"), "missing.*string.*predicate", false)
-	s.UMETC(g, s.A("string", s.A()), "formatted.*'glob'.*<glob_str>", false)
+	s.UMETC(g, "foo", `formatted.*"string".*<string_predicate>`, true)
+	s.UMETC(g, s.A("string", "foo", "bar"), `formatted.*"string".*<string_predicate>`, false)
+	s.UMETC(g, s.A("string"), `formatted.*"string".*<string_predicate>.*missing.*string.*predicate`, false)
+	s.UMETC(g, s.A("string", s.A()), `error.*unmarshalling.*string.*predicate.*formatted.*"glob".*<glob>`, false)
 	s.UMTC(g, s.A("string", s.A("glob", "foo")), StringValueGlob("foo"))
 }
 

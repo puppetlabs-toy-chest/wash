@@ -22,7 +22,7 @@ func (p *boolean) Marshal() interface{} {
 func (p *boolean) Unmarshal(input interface{}) error {
 	val, ok := input.(bool)
 	if !ok {
-		return errz.MatchErrorf("must be formatted as <boolean_value>")
+		return errz.MatchErrorf("%v is not a valid Boolean value. Valid Boolean values are true, false", input)
 	}
 	p.val = val
 	return nil

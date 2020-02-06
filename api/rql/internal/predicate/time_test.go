@@ -23,7 +23,7 @@ func (s *TimeTestSuite) TestTime_Unmarshal() {
 	s.UMETC(t, "foo", "formatted.*<comparison_op>.*<time>", true)
 	s.UMETC(t, s.A("foo"), "formatted.*<comparison_op>.*<time>", true)
 	s.UMETC(t, s.A("<", "foo", "bar"), "formatted.*<comparison_op>.*<time>", false)
-	s.UMETC(t, s.A("<"), "missing.*time", false)
+	s.UMETC(t, s.A("<"), "formatted.*<comparison_op>.*<time>.*missing.*time", false)
 	s.UMETC(t, s.A("<", true), "valid.*time.Time.*type", false)
 	s.UMETC(t, s.A("<", "true"), "parse.*true.*time.Time", false)
 	s.UMTC(t, s.A("<", s.TM(1000)), Time(LT, s.TM(1000)))
@@ -89,9 +89,9 @@ func (s *TimeTestSuite) TestTimeValue_Marshal() {
 
 func (s *TimeTestSuite) TestTimeValue_Unmarshal() {
 	t := TimeValue("", s.TM(0))
-	s.UMETC(t, "foo", "formatted.*time.*<time_predicate>", true)
-	s.UMETC(t, s.A("time", "foo", "bar"), "formatted.*time.*<time_predicate>", false)
-	s.UMETC(t, s.A("time"), "missing.*time.*predicate", false)
+	s.UMETC(t, "foo", `formatted.*"time".*<time_predicate>`, true)
+	s.UMETC(t, s.A("time", "foo", "bar"), `formatted.*"time".*<time_predicate>`, false)
+	s.UMETC(t, s.A("time"), `formatted.*"time".*<time_predicate>.*missing.*time.*predicate`, false)
 	s.UMETC(t, s.A("time", s.A()), "formatted.*<comparison_op>.*<time>", false)
 	s.UMTC(t, s.A("time", s.A("<", s.TM(1000))), TimeValue(LT, s.TM(1000)))
 }

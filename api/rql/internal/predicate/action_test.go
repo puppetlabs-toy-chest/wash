@@ -20,8 +20,8 @@ func (s *ActionTestSuite) TestMarshal() {
 
 func (s *ActionTestSuite) TestUnmarshal() {
 	a := Action(plugin.Action{})
-	s.UMETC(a, 1, "formatted.*<action>", true)
-	s.UMETC(a, "foo", "formatted.*<action>", true)
+	s.UMETC(a, 1, `1.*valid.*action.*"exec"`, true)
+	s.UMETC(a, "foo", `foo.*valid.*action.*"exec"`, true)
 	// UMTC doesn't work because s.Equal doesn't work for the Action
 	// type. My best guess is because the Action type has a function
 	// as its field, and s.Equal doesn't work with functions. Thus, we

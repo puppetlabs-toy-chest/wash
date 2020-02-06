@@ -21,7 +21,7 @@ func (s *BooleanTestSuite) TestMarshal() {
 
 func (s *BooleanTestSuite) TestUnmarshal() {
 	b := Boolean(true)
-	s.UMETC(b, "foo", "formatted.*<boolean_value>", true)
+	s.UMETC(b, "foo", "foo.*valid.*Boolean.*true.*false", true)
 	s.UMTC(b, true, Boolean(true))
 	s.UMTC(b, false, Boolean(false))
 }

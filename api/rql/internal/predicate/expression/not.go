@@ -28,11 +28,11 @@ func (n *not) Marshal() interface{} {
 
 func (n *not) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("NOT"))(input) {
-		return errz.MatchErrorf("must be formatted as ['NOT', <pe>]")
+		return errz.MatchErrorf("must be formatted as [\"NOT\", <pe>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['NOT', <pe>]")
+		return fmt.Errorf("must be formatted as [\"NOT\", <pe>]")
 	}
 	if len(array) != 2 {
 		return fmt.Errorf("NOT: missing the expression")
