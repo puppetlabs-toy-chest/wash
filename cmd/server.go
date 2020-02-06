@@ -224,6 +224,11 @@ func writeEnabledPlugins(enabledPlugins []string, configFile string) error {
 	if err != nil {
 		return err
 	}
+	// Make sure that the Wash config file's directory exists. Otherwise,
+	// OpenFile will return an error.
+	if err := os.MkdirAll(filepath.Dir(configFile), 0750); err != nil {
+		return err
+	}
 	// Note that we do a raw append of "plugins: <enabled_plugins>" to preserve any
 	// existing data, including comments. The append should be OK because we know that
 	// the config file doesn't have a "plugins" key, so adding it will not mess anything
