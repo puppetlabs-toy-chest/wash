@@ -2,11 +2,15 @@ package expression
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
+	"github.com/puppetlabs/wash/plugin"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -31,8 +35,8 @@ func (s *ExpressionTestSuite) UMTC(input interface{}, expected interface{}) {
 
 func (s *ExpressionTestSuite) TestUnmarshal_Errors() {
 	e := s.mockExpression()
-	s.UMETC(e, "bar", "expected.*PE.*mock.*predicate", true)
-	s.UMETC(e, "foo", "failed.*unmarshal.*PE.*mock.*predicate.*syntax.*error", false)
+	s.UMETC(e, 1, "expected.*PE.*mock.*predicate", true)
+	s.UMETC(e, "syntax", "failed.*unmarshal.*PE.*mock.*predicate.*syntax.*error", false)
 }
 
 func (s *ExpressionTestSuite) TestUnmarshal() {
@@ -73,21 +77,78 @@ func (s *ExpressionTestSuite) mockExpression() rql.ASTNode {
 	return New("mock predicate", func() rql.ASTNode { return &mockPtype{} })
 }
 
-type mockPtype struct{}
+// mockPtype is a mock predicate type used to test the top-level
+// expression class and each of the binary operators. Each of the
+// Eval* methods "serialize" the specific type into something
+// that can be compared with "v".
+type mockPtype struct {
+	v string
+}
+
+func newMockP(v string) *mockPtype {
+	return &mockPtype{v}
+}
 
 func (p *mockPtype) Marshal() interface{} {
-	return "p"
+	return p.v
 }
 
 func (p *mockPtype) Unmarshal(input interface{}) error {
-	if input != "p" {
-		if input == "foo" {
-			// Mock a syntax error
-			return fmt.Errorf("syntax error")
-		}
-		return errz.MatchErrorf("expected 'p', got %v", input)
+	str, ok := input.(string)
+	if !ok {
+		return errz.MatchErrorf("expected a string value")
 	}
+	if str == "syntax" {
+		return fmt.Errorf("syntax error")
+	}
+	p.v = str
 	return nil
 }
 
-var _ = rql.ASTNode(&mockPtype{})
+func (p *mockPtype) EntryInDomain(rql.Entry) bool {
+	return true
+}
+
+func (p *mockPtype) EvalEntry(e rql.Entry) bool {
+	return e.Name == p.v
+}
+
+func (p *mockPtype) EntrySchemaInDomain(*rql.EntrySchema) bool {
+	return true
+}
+
+func (p *mockPtype) EvalEntrySchema(s *rql.EntrySchema) bool {
+	return s.Path() == p.v
+}
+
+func (p *mockPtype) ValueInDomain(interface{}) bool {
+	return true
+}
+
+func (p *mockPtype) EvalValue(v interface{}) bool {
+	return v == p.v
+}
+
+func (p *mockPtype) EvalString(str string) bool {
+	return str == p.v
+}
+
+func (p *mockPtype) EvalNumeric(x decimal.Decimal) bool {
+	return x.String() == p.v
+}
+
+func (p *mockPtype) EvalTime(t time.Time) bool {
+	return strconv.Itoa(int(t.Unix())) == p.v
+}
+
+func (p *mockPtype) EvalAction(action plugin.Action) bool {
+	return p.v == action.Name
+}
+
+var _ = rql.EntryPredicate(&mockPtype{})
+var _ = rql.EntrySchemaPredicate(&mockPtype{})
+var _ = rql.ValuePredicate(&mockPtype{})
+var _ = rql.StringPredicate(&mockPtype{})
+var _ = rql.NumericPredicate(&mockPtype{})
+var _ = rql.TimePredicate(&mockPtype{})
+var _ = rql.ActionPredicate(&mockPtype{})
