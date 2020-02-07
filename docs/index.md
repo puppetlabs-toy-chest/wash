@@ -24,6 +24,7 @@ $.get("https://api.github.com/repos/puppetlabs/wash/releases/latest", function(d
 * <p class="intro-normal">You can use <code>ls</code> to list, <code>cat</code> to read, and <code>wexec</code> to run commands on all your things. No more switching between confusing CLI tools.</p>
 * <p class="intro-normal">You can use <code>find</code> to filter anything on anything. No more complicated query DSLs.</p>
 * <p class="intro-normal">You can <code>cd</code> through a vendor's API. No more navigating complex console UIs.</p>
+* <p class="intro-normal">You can extend it to talk to other things, like Spotify.</p>
 
 <p class="intro-large">See for yourself</p>
 
@@ -64,10 +65,10 @@ $.get("https://api.github.com/repos/puppetlabs/wash/releases/latest", function(d
   {% include screencast.html name="intro/docker" poster="0:18" annotation=docker_annotation %}
 </div>
 
-# **Other**
+# **External plugins (Spotify)**
 <div id="external-plugin-demo" >
   {% capture external_plugin_annotation %}
-  The Spotify plugin shows off Wash's greatest power: its ability to talk to <i>anything</i> via the external plugin interface. And when we say anything, we really do mean anything. We mean other cloud native vendors like OpenStack or Azure. We mean personal IoT devices like network devices, smart lightbulbs, or bluetooth-enabled espresso scales. We mean IT infrastructure like Puppet nodes or Bolt inventory files. And we also mean some truly bizarre APIs like Goodreads or Fandango. Thus if you've got some other things you'd like to <code>cd</code> and <code>ls</code> through, filter with <code>find</code>, read with <code>cat</code>, or <a href="{{ '/docs#actions' | relative_url }}">more</a>, then give Wash a try. We already have some <a href="{{ '/docs/external-plugins#example-plugins' | relative_url }}">community-built external plugins</a> that you can use. If those aren't enough, then you can write your own external plugin in <i>any</i> language you like (think Bash, Ruby, Python, Go). The sky is the limit.
+  The Spotify plugin shows off Wash's greatest power: its ability to talk to <i>anything</i> via the external plugin interface. And when we say anything, we really do mean anything. We mean other cloud native vendors like OpenStack or Azure. We mean personal IoT devices like network devices, smart lightbulbs, or bluetooth-enabled espresso scales. We mean IT infrastructure like Puppet nodes, Bolt inventory files, or any of your company's internal APIs. And we also mean some truly bizarre APIs like Goodreads or Fandango. Thus if you've got some other things you'd like to <code>cd</code> and <code>ls</code> through, filter with <code>find</code>, read with <code>cat</code>, or <a href="{{ '/docs#actions' | relative_url }}">more</a>, then give Wash a try. We already have some <a href="{{ '/docs/external-plugins#example-plugins' | relative_url }}">community-built external plugins</a> that you can use. If those aren't enough, then you can write your own external plugin in <i>any</i> language you like (think Bash, Ruby, Python, Go). The sky is the limit.
   {% endcapture %}
 
   {% include screencast.html name="intro/external-plugins" poster="0:15" annotation=external_plugin_annotation %}
