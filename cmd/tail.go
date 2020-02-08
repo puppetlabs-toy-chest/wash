@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/Benchkram/errz"
@@ -35,13 +35,46 @@ type line struct {
 
 type lineWriter struct {
 	name string
+	buf  bytes.Buffer
 	out  chan line
 }
 
-func (w lineWriter) Write(b []byte) (int, error) {
-	s := strings.TrimSuffix(string(b), "\n")
-	w.out <- line{Line: tail.Line{Text: s, Time: time.Now()}, source: w.name}
+func (w *lineWriter) Write(b []byte) (int, error) {
+	// Buffer lines, then submit all completed lines to the output channel. For incomplete lines
+	// we just return the number of bytes written. Call Finish() when done writing to ensure any
+	// final line without line endings are also written to the output channel.
+	w.buf.Write(b)
+	i := bytes.LastIndexAny(w.buf.Bytes(), "\r\n")
+	if i == -1 {
+		// Incomplete line, so just return.
+		return len(b), nil
+	}
+
+	// Completed line. Remove line endings from the buffer and text (in case of \r\n) then submit it.
+	text := w.buf.Next(i)
+
+	// Consume \r or \n. Note that the Buffer takes care of re-using space when we catch up.
+	crOrLf, err := w.buf.ReadByte()
+	if err != nil {
+		// Impossible because the next character was already found to be a \r or \n.
+		panic(err)
+	}
+
+	// If the last character was \n, we could have had \r\n. We want just the line without line
+	// endings so check if the previous character was \r and if so remove it.
+	if last := len(text) - 1; last >= 0 && crOrLf == '\n' && text[last] == '\r' {
+		text = text[:last]
+	}
+
+	w.out <- line{Line: tail.Line{Text: string(text), Time: time.Now()}, source: w.name}
 	return len(b), nil
+}
+
+func (w *lineWriter) Finish() {
+	if w.buf.Len() > 0 {
+		// Write remainder because it didn't end in a newline.
+		w.out <- line{Line: tail.Line{Text: w.buf.String(), Time: time.Now()}, source: w.name}
+	}
 }
 
 // Streams output via API to aggregator channel.
@@ -63,9 +96,12 @@ func tailStream(conn client.Client, agg chan line, path string) io.Closer {
 
 	// Start copying the stream to the aggregate channel
 	go func() {
-		_, err := io.Copy(lineWriter{name: path, out: agg}, stream)
+		lw := lineWriter{name: path, out: agg}
+		_, err := io.Copy(&lw, stream)
 		if err != nil {
 			agg <- line{Line: tail.Line{Time: time.Now(), Err: err}, source: path}
+		} else {
+			lw.Finish()
 		}
 	}()
 	return stream
