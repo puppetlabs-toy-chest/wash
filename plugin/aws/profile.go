@@ -29,7 +29,7 @@ func newProfile(ctx context.Context, name string) (*profile, error) {
 
 	// profile-specific stdin prompt
 	tokenProvider := func() (string, error) {
-		return plugin.Prompt(fmt.Sprintf("Enter ROLE MFA token code for %v", name))
+		return plugin.Prompt(fmt.Sprintf("Enter MFA token code for profile %v", name))
 	}
 
 	// Create the session. SharedConfigEnable tells AWS to load the profile
