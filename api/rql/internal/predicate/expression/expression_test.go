@@ -16,10 +16,9 @@ import (
 
 /*
 These tests are meant to test that we can unmarshal a PE
-to its reduced version (and that we correctly return any
-errors). Testing the correctness of the Eval* methods
-themselves are left to the places that use the expression
-type
+(and that we correctly return any errors). Testing the correctness
+of the Eval* methods themselves are left to the places that use the
+expression type
 */
 
 type ExpressionTestSuite struct {
@@ -29,7 +28,7 @@ type ExpressionTestSuite struct {
 func (s *ExpressionTestSuite) UMTC(input interface{}, expected interface{}) {
 	e := s.mockExpression().(*expression)
 	if s.NoError(e.Unmarshal(input)) {
-		s.Equal(expected, e.reducedForm.Marshal())
+		s.Equal(expected, e.Marshal())
 	}
 }
 
@@ -49,24 +48,6 @@ func (s *ExpressionTestSuite) TestUnmarshal() {
 	// Test nested unmarshaling
 	s.UMTC(s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")), s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")))
 	s.UMTC(s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")), s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")))
-
-	// Test NOT reductions
-	//
-	// NOT(NOT(p)) == p
-	s.UMTC(s.A("NOT", s.A("NOT", "p")), "p")
-	// NOT(AND(p, p)) == OR(NOT(p), NOT(p))
-	s.UMTC(s.A("NOT", s.A("AND", "p", "p")), s.A("OR", s.A("NOT", "p"), s.A("NOT", "p")))
-	// NOT(OR(p, p)) == AND(NOT(p), NOT(p))
-	s.UMTC(s.A("NOT", s.A("OR", "p", "p")), s.A("AND", s.A("NOT", "p"), s.A("NOT", "p")))
-
-	// Test a more complicated reduction
-	//
-	// AND(NOT(OR(p, NOT(p))), OR(NOT(AND(NOT(p), p)), NOT(p))) ==
-	// AND(AND(NOT(p), p), OR(OR(p, NOT(p)), NOT(p)))
-	s.UMTC(
-		s.A("AND", s.A("NOT", s.A("OR", "p", s.A("NOT", "p"))), s.A("OR", s.A("NOT", s.A("AND", s.A("NOT", "p"), "p")), s.A("NOT", "p"))),
-		s.A("AND", s.A("AND", s.A("NOT", "p"), "p"), s.A("OR", s.A("OR", "p", s.A("NOT", "p")), s.A("NOT", "p"))),
-	)
 }
 
 func TestExpression(t *testing.T) {

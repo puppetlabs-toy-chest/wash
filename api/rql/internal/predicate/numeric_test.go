@@ -130,7 +130,7 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"number", []interface{}{"<", "1"}}})
-	s.EVTTC(expr, float64(1))
+	s.EVTTC(expr, float64(1), "1")
 	s.EVFTC(expr, float64(0))
 }
 

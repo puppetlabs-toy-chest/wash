@@ -166,7 +166,7 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"string", []interface{}{"glob", "foo"}}})
-	s.EVTTC(expr, "bar")
+	s.EVTTC(expr, "bar", 1)
 	s.EVFTC(expr, "foo")
 }
 

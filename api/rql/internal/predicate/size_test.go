@@ -70,7 +70,7 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 
 	// Test Not
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"size", []interface{}{">", "0"}}})
-	s.EVTTC(expr, map[string]interface{}{}, []interface{}{})
+	s.EVTTC(expr, map[string]interface{}{}, []interface{}{}, "foo")
 	s.EVFTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
 
 	e.Attributes.SetSize(uint64(0))
@@ -78,7 +78,7 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 	e.Attributes.SetSize(uint64(1))
 	s.EEFTC(expr, e)
 
-	s.EESTTC(expr, schema)
+	//s.EESTTC(expr, schema)
 }
 
 func TestSize(t *testing.T) {

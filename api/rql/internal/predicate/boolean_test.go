@@ -77,7 +77,7 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", true})
-	s.EVTTC(expr, false)
+	s.EVTTC(expr, false, "foo")
 	s.EVFTC(expr, true)
 	s.EEFTC(expr, rql.Entry{})
 	s.EESFTC(expr, &rql.EntrySchema{})
