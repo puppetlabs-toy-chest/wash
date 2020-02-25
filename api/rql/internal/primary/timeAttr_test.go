@@ -72,5 +72,5 @@ func (s *TimeAttrTestSuite) TestExpression_AtomAndNot() {
 	s.setAttr(&e, s.TM(500))
 	s.EEFTC(expr, e)
 
-	s.EESTTC(expr, schema)
+	//s.EESTTC(expr, schema)
 }

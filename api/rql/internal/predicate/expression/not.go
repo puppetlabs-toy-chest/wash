@@ -44,40 +44,16 @@ func (n *not) Unmarshal(input interface{}) error {
 	return nil
 }
 
-// INVARIANT: n.p is an atom by the time each of these Eval*
-// methods are called. This only matters for EvalEntry,
-// EvalEntrySchema and EvalValue.
-
 func (n *not) EvalEntry(e rql.Entry) bool {
-	a := n.p.(*atom)
-	_, ok := a.p.(rql.Primary)
-	if !ok {
-		panic(fmt.Sprintf("Not#EvalEntrySchema: predicate %T doesn't implement rql.Primary", a.p))
-	}
-	result := true
-	if ep, ok := a.p.(rql.EntryPredicate); ok {
-		result = result && !ep.EvalEntry(e)
-	}
-	return result
+	return !n.p.(rql.EntryPredicate).EvalEntry(e)
 }
 
 func (n *not) EvalEntrySchema(s *rql.EntrySchema) bool {
-	a := n.p.(*atom)
-	_, ok := a.p.(rql.Primary)
-	if !ok {
-		panic(fmt.Sprintf("Not#EvalEntrySchema: predicate %T doesn't implement rql.Primary", a.p))
-	}
-	result := true
-	if sp, ok := a.p.(rql.EntrySchemaPredicate); ok {
-		result = result && !sp.EvalEntrySchema(s)
-	}
-	return result
+	return !n.p.(rql.EntrySchemaPredicate).EvalEntrySchema(s)
 }
 
 func (n *not) EvalValue(v interface{}) bool {
-	a := n.p.(*atom)
-	vp := a.p.(rql.ValuePredicate)
-	return !vp.EvalValue(v)
+	return !n.p.(rql.ValuePredicate).EvalValue(v)
 }
 
 func (n *not) EvalString(str string) bool {
