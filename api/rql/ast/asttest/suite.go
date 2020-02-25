@@ -70,20 +70,6 @@ func (s *Suite) UMTC(n rql.ASTNode, input interface{}, expected rql.ASTNode) {
 	}
 }
 
-// VIDTTC => ValueInDomainTrueTestCases
-func (s *Suite) VIDTTC(n rql.ASTNode, trueVs ...interface{}) {
-	for _, trueV := range trueVs {
-		s.True(n.(rql.ValuePredicate).ValueInDomain(trueV))
-	}
-}
-
-// VIDFTC => ValueInDomainFalseTestCases
-func (s *Suite) VIDFTC(n rql.ASTNode, falseVs ...interface{}) {
-	for _, falseV := range falseVs {
-		s.False(n.(rql.ValuePredicate).ValueInDomain(falseV))
-	}
-}
-
 // EVTTC => EvalValueTrueTestCases
 func (s *Suite) EVTTC(n rql.ASTNode, trueVs ...interface{}) {
 	for _, trueV := range trueVs {
@@ -140,20 +126,6 @@ func (s *Suite) ETFTC(t rql.ASTNode, falseVs ...time.Time) {
 	}
 }
 
-// EIDTTC => EntryInDomainTrueTestCases
-func (s *Suite) EIDTTC(e rql.ASTNode, trueVs ...rql.Entry) {
-	for _, trueV := range trueVs {
-		s.True(e.(rql.Primary).EntryInDomain(trueV))
-	}
-}
-
-// EIDFTC => EntryInDomainFalseTestCases
-func (s *Suite) EIDFTC(e rql.ASTNode, falseVs ...rql.Entry) {
-	for _, falseV := range falseVs {
-		s.False(e.(rql.Primary).EntryInDomain(falseV))
-	}
-}
-
 // EETTC => EvalEntryTrueTestCases
 func (s *Suite) EETTC(e rql.ASTNode, trueVs ...rql.Entry) {
 	for _, trueV := range trueVs {
@@ -165,20 +137,6 @@ func (s *Suite) EETTC(e rql.ASTNode, trueVs ...rql.Entry) {
 func (s *Suite) EEFTC(e rql.ASTNode, falseVs ...rql.Entry) {
 	for _, falseV := range falseVs {
 		s.False(e.(rql.EntryPredicate).EvalEntry(falseV))
-	}
-}
-
-// ESIDTTC => EntrySchemaInDomainTrueTestCases
-func (s *Suite) ESIDTTC(e rql.ASTNode, trueVs ...*rql.EntrySchema) {
-	for _, trueV := range trueVs {
-		s.True(e.(rql.Primary).EntrySchemaInDomain(trueV))
-	}
-}
-
-// ESIDFTC => EntrySchemaInDomainFalseTestCases
-func (s *Suite) ESIDFTC(e rql.ASTNode, falseVs ...*rql.EntrySchema) {
-	for _, falseV := range falseVs {
-		s.False(e.(rql.Primary).EntrySchemaInDomain(falseV))
 	}
 }
 
@@ -238,13 +196,10 @@ func (s *Suite) AssertNotImplemented(n rql.ASTNode, interfaceCs ...InterfaceCode
 		case PrimaryC:
 			s.FailNow("AssertNotImplemented should take the *Predicate interfaces' interface codes, _not_ Primary")
 		case EntryPredicateC:
-			s.Panics(func() { n.(rql.EntryPredicate).EntryInDomain(rql.Entry{}) }, "EntryPredicate")
 			s.Panics(func() { n.(rql.EntryPredicate).EvalEntry(rql.Entry{}) }, "EntryPredicate")
 		case EntrySchemaPredicateC:
-			s.Panics(func() { n.(rql.EntrySchemaPredicate).EntrySchemaInDomain(&rql.EntrySchema{}) }, "EntryPredicate")
 			s.Panics(func() { n.(rql.EntrySchemaPredicate).EvalEntrySchema(&rql.EntrySchema{}) }, "EntrySchemaPredicate")
 		case ValuePredicateC:
-			s.Panics(func() { n.(rql.ValuePredicate).ValueInDomain(nil) }, "ValuePredicate")
 			s.Panics(func() { n.(rql.ValuePredicate).EvalValue(nil) }, "ValuePredicate")
 		case StringPredicateC:
 			s.Panics(func() { n.(rql.StringPredicate).EvalString("") }, "StringPredicate")

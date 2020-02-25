@@ -33,11 +33,6 @@ func (s *TimeAttrTestSuite) TestUnmarshal() {
 	s.UMTC(p, s.A(s.name, s.A("<", int64(1000))), s.constructP(predicate.Time(predicate.LT, s.TM(1000))))
 }
 
-func (s *TimeAttrTestSuite) TestEntryInDomain() {
-	p := s.constructP(predicate.Time(predicate.LT, s.TM(1000)))
-	s.EIDTTC(p, rql.Entry{})
-}
-
 func (s *TimeAttrTestSuite) TestEvalEntry() {
 	p := s.constructP(predicate.Time(predicate.LT, s.TM(1000)))
 	e := rql.Entry{}
@@ -45,11 +40,6 @@ func (s *TimeAttrTestSuite) TestEvalEntry() {
 	s.EEFTC(p, e)
 	s.setAttr(&e, s.TM(500))
 	s.EETTC(p, e)
-}
-
-func (s *TimeAttrTestSuite) TestEntrySchemaInDomain() {
-	p := s.constructP(predicate.Time(predicate.LT, s.TM(1000)))
-	s.ESIDTTC(p, &rql.EntrySchema{})
 }
 
 func (s *TimeAttrTestSuite) TestExpression_AtomAndNot() {

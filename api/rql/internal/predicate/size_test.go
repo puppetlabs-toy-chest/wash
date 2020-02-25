@@ -28,23 +28,11 @@ func (s *SizeTestSuite) TestUnmarshal() {
 	s.UMTC(p, s.A("size", s.A("<", "10")), Size(UnsignedNumeric(LT, s.N("10"))))
 }
 
-func (s *SizeTestSuite) TestValueInDomain() {
-	p := Size(UnsignedNumeric(GT, s.N("0")))
-	s.VIDFTC(p, "foo", true)
-	s.VIDTTC(p, map[string]interface{}{}, []interface{}{})
-}
-
 func (s *SizeTestSuite) EvalValue() {
 	p := Size(UnsignedNumeric(GT, s.N("0")))
 	s.EVFTC(p, map[string]interface{}{}, []interface{}{})
 	s.EVTTC(p, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
 }
-
-func (s *SizeTestSuite) TestEntryInDomain() {
-	p := Size(UnsignedNumeric(GT, s.N("0")))
-	s.EIDTTC(p, rql.Entry{})
-}
-
 func (s *SizeTestSuite) TestEvalEntry() {
 	p := Size(UnsignedNumeric(GT, s.N("0")))
 	e := rql.Entry{}
@@ -52,11 +40,6 @@ func (s *SizeTestSuite) TestEvalEntry() {
 	s.EEFTC(p, e)
 	e.Attributes.SetSize(uint64(1))
 	s.EETTC(p, e)
-}
-
-func (s *SizeTestSuite) TestEntrySchemaInDomain() {
-	p := Size(UnsignedNumeric(GT, s.N("0")))
-	s.ESIDTTC(p, &rql.EntrySchema{})
 }
 
 func (s *SizeTestSuite) TestExpression_AtomAndNot() {
@@ -88,7 +71,7 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 	// Test Not
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"size", []interface{}{">", "0"}}})
 	s.EVTTC(expr, map[string]interface{}{}, []interface{}{})
-	s.EVFTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"}, "foo")
+	s.EVFTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
 
 	e.Attributes.SetSize(uint64(0))
 	s.EETTC(expr, e)

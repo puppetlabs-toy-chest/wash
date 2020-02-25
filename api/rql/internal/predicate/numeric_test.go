@@ -105,12 +105,6 @@ func (s *NumericTestSuite) TestNumericValue_Unmarshal() {
 	s.UMTC(n, s.A("number", s.A("<", "2.3")), NumericValue(LT, s.N("2.3")))
 }
 
-func (s *NumericTestSuite) TestNumericValue_ValueInDomain() {
-	n := NumericValue(LT, s.N("2.0"))
-	s.VIDFTC(n, "bar", "123456")
-	s.VIDTTC(n, float64(10))
-}
-
 func (s *NumericTestSuite) TestNumericValue_EvalValue() {
 	n := NumericValue(LT, s.N("2.0"))
 	s.EVFTC(n, float64(3))
@@ -137,7 +131,7 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"number", []interface{}{"<", "1"}}})
 	s.EVTTC(expr, float64(1))
-	s.EVFTC(expr, float64(0), "1")
+	s.EVFTC(expr, float64(0))
 }
 
 func TestNumeric(t *testing.T) {

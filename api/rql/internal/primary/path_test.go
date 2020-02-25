@@ -28,14 +28,6 @@ func (s *PathTestSuite) TestUnmarshal() {
 	s.UMTC(n, s.A("path", s.A("glob", "foo")), Path(predicate.StringGlob("foo")))
 }
 
-func (s *PathTestSuite) TestEntryInDomain() {
-	p := Path(predicate.StringGlob("foo"))
-	e := rql.Entry{}
-	s.EIDFTC(p, e)
-	e.Path = "bar"
-	s.EIDTTC(p, e)
-}
-
 func (s *PathTestSuite) TestEvalEntry() {
 	p := Path(predicate.StringGlob("foo"))
 	e := rql.Entry{}
@@ -72,8 +64,6 @@ func (s *PathTestSuite) TestExpression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"path", []interface{}{"glob", "foo"}}})
-	e.Path = ""
-	s.EEFTC(expr, e)
 	e.Path = "bar"
 	s.EETTC(expr, e)
 	e.Path = "foo"

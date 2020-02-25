@@ -28,25 +28,17 @@ func (p *boolean) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *boolean) ValueInDomain(v interface{}) bool {
-	_, ok := v.(bool)
-	return ok
-}
-
 func (p *boolean) EvalValue(v interface{}) bool {
-	return v.(bool) == p.val
+	val, ok := v.(bool)
+	return ok && val == p.val
 }
 
-func (p *boolean) EntryInDomain(rql.Entry) bool {
+func (p *boolean) IsPrimary() bool {
 	return true
 }
 
 func (p *boolean) EvalEntry(_ rql.Entry) bool {
 	return p.val
-}
-
-func (p *boolean) EntrySchemaInDomain(*rql.EntrySchema) bool {
-	return true
 }
 
 func (p *boolean) EvalEntrySchema(_ *rql.EntrySchema) bool {

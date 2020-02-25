@@ -50,7 +50,11 @@ func (n *not) Unmarshal(input interface{}) error {
 
 func (n *not) EvalEntry(e rql.Entry) bool {
 	a := n.p.(*atom)
-	result := a.p.(rql.Primary).EntryInDomain(e)
+	_, ok := a.p.(rql.Primary)
+	if !ok {
+		panic(fmt.Sprintf("Not#EvalEntrySchema: predicate %T doesn't implement rql.Primary", a.p))
+	}
+	result := true
 	if ep, ok := a.p.(rql.EntryPredicate); ok {
 		result = result && !ep.EvalEntry(e)
 	}
@@ -59,7 +63,11 @@ func (n *not) EvalEntry(e rql.Entry) bool {
 
 func (n *not) EvalEntrySchema(s *rql.EntrySchema) bool {
 	a := n.p.(*atom)
-	result := a.p.(rql.Primary).EntrySchemaInDomain(s)
+	_, ok := a.p.(rql.Primary)
+	if !ok {
+		panic(fmt.Sprintf("Not#EvalEntrySchema: predicate %T doesn't implement rql.Primary", a.p))
+	}
+	result := true
 	if sp, ok := a.p.(rql.EntrySchemaPredicate); ok {
 		result = result && !sp.EvalEntrySchema(s)
 	}
@@ -69,7 +77,7 @@ func (n *not) EvalEntrySchema(s *rql.EntrySchema) bool {
 func (n *not) EvalValue(v interface{}) bool {
 	a := n.p.(*atom)
 	vp := a.p.(rql.ValuePredicate)
-	return vp.ValueInDomain(v) && !vp.EvalValue(v)
+	return !vp.EvalValue(v)
 }
 
 func (n *not) EvalString(str string) bool {

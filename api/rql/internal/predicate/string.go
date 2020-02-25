@@ -198,13 +198,9 @@ func (p *stringValue) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *stringValue) ValueInDomain(v interface{}) bool {
-	_, ok := v.(string)
-	return ok
-}
-
 func (p *stringValue) EvalValue(v interface{}) bool {
-	return p.EvalString(v.(string))
+	str, ok := v.(string)
+	return ok && p.EvalString(str)
 }
 
 func StringValue() rql.ValuePredicate {

@@ -28,11 +28,6 @@ func (s *NameTestSuite) TestUnmarshal() {
 	s.UMTC(n, s.A("name", s.A("glob", "foo")), Name(predicate.StringGlob("foo")))
 }
 
-func (s *NameTestSuite) TestEntryInDomain() {
-	p := Name(predicate.StringGlob("foo"))
-	s.EIDTTC(p, rql.Entry{})
-}
-
 func (s *NameTestSuite) TestEvalEntry() {
 	n := Name(predicate.StringGlob("foo"))
 	e := rql.Entry{}
@@ -40,11 +35,6 @@ func (s *NameTestSuite) TestEvalEntry() {
 	s.EEFTC(n, e)
 	e.Name = "foo"
 	s.EETTC(n, e)
-}
-
-func (s *NameTestSuite) TestEntrySchemaInDomain() {
-	p := Name(predicate.StringGlob("foo"))
-	s.ESIDTTC(p, &rql.EntrySchema{})
 }
 
 func (s *NameTestSuite) TestExpression_AtomAndNot() {
