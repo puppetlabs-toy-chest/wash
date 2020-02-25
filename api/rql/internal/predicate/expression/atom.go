@@ -1,6 +1,7 @@
 package expression
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/puppetlabs/wash/api/rql"
@@ -54,7 +55,11 @@ func (a *atom) Unmarshal(input interface{}) error {
 }
 
 func (a *atom) EvalEntry(e rql.Entry) bool {
-	result := a.p.(rql.Primary).EntryInDomain(e)
+	_, ok := a.p.(rql.Primary)
+	if !ok {
+		panic(fmt.Sprintf("Atom#EvalEntry: predicate %T doesn't implement rql.Primary", a.p))
+	}
+	result := true
 	if ep, ok := a.p.(rql.EntryPredicate); ok {
 		result = result && ep.EvalEntry(e)
 	}
@@ -62,7 +67,11 @@ func (a *atom) EvalEntry(e rql.Entry) bool {
 }
 
 func (a *atom) EvalEntrySchema(s *rql.EntrySchema) bool {
-	result := a.p.(rql.Primary).EntrySchemaInDomain(s)
+	_, ok := a.p.(rql.Primary)
+	if !ok {
+		panic(fmt.Sprintf("Atom#EvalEntrySchema: predicate %T doesn't implement rql.Primary", a.p))
+	}
+	result := true
 	if sp, ok := a.p.(rql.EntrySchemaPredicate); ok {
 		result = result && sp.EvalEntrySchema(s)
 	}
@@ -71,7 +80,7 @@ func (a *atom) EvalEntrySchema(s *rql.EntrySchema) bool {
 
 func (a *atom) EvalValue(v interface{}) bool {
 	vp := a.p.(rql.ValuePredicate)
-	return vp.ValueInDomain(v) && vp.EvalValue(v)
+	return vp.EvalValue(v)
 }
 
 func (a *atom) EvalString(str string) bool {

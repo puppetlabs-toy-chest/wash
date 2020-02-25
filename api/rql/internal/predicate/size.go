@@ -43,17 +43,6 @@ func (p *size) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *size) ValueInDomain(v interface{}) bool {
-	switch v.(type) {
-	case map[string]interface{}:
-		return true
-	case []interface{}:
-		return true
-	default:
-		return false
-	}
-}
-
 func (p *size) EvalValue(v interface{}) bool {
 	switch t := v.(type) {
 	case map[string]interface{}:
@@ -61,20 +50,16 @@ func (p *size) EvalValue(v interface{}) bool {
 	case []interface{}:
 		return p.p.EvalNumeric(decimal.NewFromInt(int64(len(t))))
 	default:
-		panic("sizePredicate: EvalValue called with an invalid value")
+		return false
 	}
 }
 
-func (p *size) EntryInDomain(rql.Entry) bool {
+func (p *size) IsPrimary() bool {
 	return true
 }
 
 func (p *size) EvalEntry(e rql.Entry) bool {
 	return p.p.EvalNumeric(decimal.NewFromInt(int64(e.Attributes.Size())))
-}
-
-func (p *size) EntrySchemaInDomain(*rql.EntrySchema) bool {
-	return true
 }
 
 var _ = rql.ValuePredicate(&size{})

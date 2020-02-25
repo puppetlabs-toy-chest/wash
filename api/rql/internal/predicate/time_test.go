@@ -96,12 +96,6 @@ func (s *TimeTestSuite) TestTimeValue_Unmarshal() {
 	s.UMTC(t, s.A("time", s.A("<", s.TM(1000))), TimeValue(LT, s.TM(1000)))
 }
 
-func (s *TimeTestSuite) TestTimeValue_ValueInDomain() {
-	t := TimeValue(LT, s.TM(1000))
-	s.VIDFTC(t, "bar")
-	s.VIDTTC(t, s.TM(2000), s.TM(2000).Format(time.RFC3339))
-}
-
 func (s *TimeTestSuite) TestTimeValue_EvalValue() {
 	t := TimeValue(LT, s.TM(1000))
 	s.EVFTC(t, s.TM(2000))
@@ -128,7 +122,7 @@ func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"time", []interface{}{"<", float64(1000)}}})
 	s.EVTTC(expr, s.TM(2000), s.TM(1000))
-	s.EVFTC(expr, s.TM(500), "foo")
+	s.EVFTC(expr, s.TM(500))
 }
 
 func TestTime(t *testing.T) {

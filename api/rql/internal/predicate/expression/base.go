@@ -12,16 +12,8 @@ type expressionNode interface {
 // base is a base class for expression nodes
 type base struct{}
 
-func (b *base) EntryInDomain(_ rql.Entry) bool {
-	panic("Only the primaries implement EntryInDomain")
-}
-
-func (b *base) EntrySchemaInDomain(_ *rql.EntrySchema) bool {
-	panic("Only the primaries implement EntrySchemaInDomain")
-}
-
-func (b *base) ValueInDomain(v interface{}) bool {
-	panic("Only value predicates implement ValueInDomain")
+func (b *base) IsPrimary() bool {
+	return true
 }
 
 func (b *base) valid() bool {

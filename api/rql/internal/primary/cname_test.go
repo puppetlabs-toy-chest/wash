@@ -28,11 +28,6 @@ func (s *CNameTestSuite) TestUnmarshal() {
 	s.UMTC(n, s.A("cname", s.A("glob", "foo")), CName(predicate.StringGlob("foo")))
 }
 
-func (s *CNameTestSuite) TestEntryInDomain() {
-	p := CName(predicate.StringGlob("foo"))
-	s.EIDTTC(p, rql.Entry{})
-}
-
 func (s *CNameTestSuite) TestEvalEntry() {
 	n := CName(predicate.StringGlob("foo"))
 	e := rql.Entry{}
@@ -40,11 +35,6 @@ func (s *CNameTestSuite) TestEvalEntry() {
 	s.EEFTC(n, e)
 	e.CName = "foo"
 	s.EETTC(n, e)
-}
-
-func (s *CNameTestSuite) TestEntrySchemaInDomain() {
-	p := CName(predicate.StringGlob("foo"))
-	s.ESIDTTC(p, &rql.EntrySchema{})
 }
 
 func (s *CNameTestSuite) TestExpression_AtomAndNot() {

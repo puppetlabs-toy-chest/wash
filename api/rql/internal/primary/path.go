@@ -22,12 +22,6 @@ type path struct {
 	p rql.StringPredicate
 }
 
-func (p *path) EntryInDomain(e rql.Entry) bool {
-	// path only makes sense for entries that aren't
-	// the starting entry
-	return len(e.Path) > 0
-}
-
 func (p *path) EvalEntry(e rql.Entry) bool {
 	return p.p.EvalString(e.Path)
 }

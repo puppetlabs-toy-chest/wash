@@ -142,12 +142,6 @@ func (s *StringTestSuite) TestStringValue_Unmarshal() {
 	s.UMTC(g, s.A("string", s.A("glob", "foo")), StringValueGlob("foo"))
 }
 
-func (s *StringTestSuite) TestStringValue_ValueInDomain() {
-	g := StringValueGlob("foo")
-	s.VIDFTC(g, 1)
-	s.VIDTTC(g, "bar")
-}
-
 func (s *StringTestSuite) TestStringValue_EvalValue() {
 	g := StringValueGlob("foo")
 	s.EVFTC(g, "bar")
@@ -173,7 +167,7 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"string", []interface{}{"glob", "foo"}}})
 	s.EVTTC(expr, "bar")
-	s.EVFTC(expr, "foo", 1)
+	s.EVFTC(expr, "foo")
 }
 
 func TestString(t *testing.T) {

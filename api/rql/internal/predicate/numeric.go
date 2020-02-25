@@ -123,14 +123,9 @@ func (p *numericValue) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *numericValue) ValueInDomain(v interface{}) bool {
-	// TODO: Support stringified numbers?
-	_, ok := v.(float64)
-	return ok
-}
-
 func (p *numericValue) EvalValue(v interface{}) bool {
-	return p.EvalNumeric(decimal.NewFromFloat(v.(float64)))
+	n, ok := v.(float64)
+	return ok && p.EvalNumeric(decimal.NewFromFloat(n))
 }
 
 var _ = rql.ValuePredicate(&numericValue{})

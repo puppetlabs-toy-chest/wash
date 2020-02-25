@@ -105,17 +105,9 @@ func (p *tmValue) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *tmValue) ValueInDomain(v interface{}) bool {
-	_, err := munge.ToTime(v)
-	return err == nil
-}
-
 func (p *tmValue) EvalValue(v interface{}) bool {
 	t, err := munge.ToTime(v)
-	if err != nil {
-		panic("timePredicate: EvalValue called with an invalid value")
-	}
-	return p.EvalTime(t)
+	return err == nil && p.EvalTime(t)
 }
 
 var _ = rql.ValuePredicate(&tmValue{})

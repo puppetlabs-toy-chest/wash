@@ -33,11 +33,6 @@ func (s *ActionTestSuite) TestUnmarshal() {
 	}
 }
 
-func (s *ActionTestSuite) TestEntryInDomain() {
-	p := Action(predicate.Action(plugin.ExecAction()))
-	s.EIDTTC(p, rql.Entry{})
-}
-
 func (s *ActionTestSuite) TestEvalEntry() {
 	p := Action(predicate.Action(plugin.ExecAction()))
 	e := rql.Entry{}
@@ -45,11 +40,6 @@ func (s *ActionTestSuite) TestEvalEntry() {
 	s.EEFTC(p, e)
 	e.Actions = []string{"list", "exec", "signal"}
 	s.EETTC(p, e)
-}
-
-func (s *ActionTestSuite) TestEntrySchemaInDomain() {
-	p := Action(predicate.Action(plugin.ExecAction()))
-	s.ESIDTTC(p, &rql.EntrySchema{})
 }
 
 func (s *ActionTestSuite) TestEvalEntrySchema() {

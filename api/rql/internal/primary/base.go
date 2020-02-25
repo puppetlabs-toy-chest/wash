@@ -40,10 +40,6 @@ func (p *base) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *base) EntryInDomain(rql.Entry) bool {
-	return true
-}
-
-func (p *base) EntrySchemaInDomain(*rql.EntrySchema) bool {
+func (p *base) IsPrimary() bool {
 	return true
 }

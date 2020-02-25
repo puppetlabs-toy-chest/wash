@@ -26,18 +26,6 @@ func (s *BooleanTestSuite) TestUnmarshal() {
 	s.UMTC(b, false, Boolean(false))
 }
 
-func (s *BooleanTestSuite) TestValueInDomain() {
-	// Test true
-	b := Boolean(true)
-	s.VIDFTC(b, "foo")
-	s.VIDTTC(b, false)
-
-	// Test false
-	b = Boolean(false)
-	s.VIDFTC(b, "foo")
-	s.VIDTTC(b, true)
-}
-
 func (s *BooleanTestSuite) TestEvalValue() {
 	// Test true
 	b := Boolean(true)
@@ -50,16 +38,6 @@ func (s *BooleanTestSuite) TestEvalValue() {
 	s.EVTTC(b, false)
 }
 
-func (s *BooleanTestSuite) TestEntryInDomain() {
-	// Test true
-	b := Boolean(true)
-	s.EIDTTC(b, rql.Entry{})
-
-	// Test false
-	b = Boolean(false)
-	s.EIDTTC(b, rql.Entry{})
-}
-
 func (s *BooleanTestSuite) TestEvalEntry() {
 	// Test true
 	b := Boolean(true).(rql.EntryPredicate)
@@ -68,16 +46,6 @@ func (s *BooleanTestSuite) TestEvalEntry() {
 	// Test false
 	b = Boolean(false).(rql.EntryPredicate)
 	s.EEFTC(b, rql.Entry{})
-}
-
-func (s *BooleanTestSuite) TestEntrySchemaInDomain() {
-	// Test true
-	b := Boolean(true)
-	s.ESIDTTC(b, &rql.EntrySchema{})
-
-	// Test false
-	b = Boolean(false)
-	s.ESIDTTC(b, &rql.EntrySchema{})
 }
 
 func (s *BooleanTestSuite) TestEvalEntrySchema() {
@@ -110,7 +78,7 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 
 	s.MUM(expr, []interface{}{"NOT", true})
 	s.EVTTC(expr, false)
-	s.EVFTC(expr, true, "foo")
+	s.EVFTC(expr, true)
 	s.EEFTC(expr, rql.Entry{})
 	s.EESFTC(expr, &rql.EntrySchema{})
 }

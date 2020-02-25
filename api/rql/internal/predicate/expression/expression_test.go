@@ -105,7 +105,7 @@ func (p *mockPtype) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *mockPtype) EntryInDomain(rql.Entry) bool {
+func (p *mockPtype) IsPrimary() bool {
 	return true
 }
 
@@ -113,16 +113,8 @@ func (p *mockPtype) EvalEntry(e rql.Entry) bool {
 	return e.Name == p.v
 }
 
-func (p *mockPtype) EntrySchemaInDomain(*rql.EntrySchema) bool {
-	return true
-}
-
 func (p *mockPtype) EvalEntrySchema(s *rql.EntrySchema) bool {
 	return s.Path() == p.v
-}
-
-func (p *mockPtype) ValueInDomain(interface{}) bool {
-	return true
 }
 
 func (p *mockPtype) EvalValue(v interface{}) bool {
