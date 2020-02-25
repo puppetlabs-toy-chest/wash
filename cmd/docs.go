@@ -216,6 +216,8 @@ func stringifySupportedActions(path string, entry apitypes.Entry) string {
 			actionDescriptionLines = []string{
 				fmt.Sprintf("- wexec %s <command> <args...>", path),
 				fmt.Sprintf("    e.g. wexec %s uname", path),
+				fmt.Sprintf("- wps %s", path),
+				fmt.Sprintf("    Displays all running processes on the given node"),
 			}
 		case plugin.DeleteAction().Name:
 			actionDescriptionLines = []string{
