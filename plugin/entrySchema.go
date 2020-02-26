@@ -49,7 +49,10 @@ func schema(e Entry) (*EntrySchema, error) {
 			IsSingleton().
 			SetDescription(registryDescription)
 		schema.graph = linkedhashmap.New()
-		schema.graph.Put(TypeID(t), &schema.entrySchema)
+		typeID := TypeID(t)
+		// We start by putting in a stub value for s so that we preserve the insertion
+		// order. We'll then update this value once the "Children" array's been calculated.
+		schema.graph.Put(typeID, EntrySchema{})
 		for _, root := range t.pluginRoots {
 			childSchema, err := Schema(root)
 			if err != nil {
@@ -73,6 +76,8 @@ func schema(e Entry) (*EntrySchema, error) {
 				schema.graph.Put(key, value)
 			})
 		}
+		// Update the graph
+		schema.graph.Put(typeID, schema.clone())
 		return schema, nil
 	default:
 		// e is a core-plugin
@@ -137,9 +142,10 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 // how plugin.EntrySchema objects are meant to be used.
 func (s EntrySchema) MarshalJSON() ([]byte, error) {
 	if s.entry == nil {
-		// Nodes in the external plugin graph don't use NewEntrySchema, they directly set the
-		// undocumented fields of EntrySchema. Since graph and entry won't be set - and this is
-		// part of a graph already - directly serialize entrySchema instead of using the graph.
+		// This corresponds to an "EntrySchema" value in another entry's schema graph.
+		// These values directly set the undocumented fields of EntrySchema. Since graph
+		// and entry won't be set - and this is part of a graph already - directly serialize
+		// entrySchema instead of using the graph.
 		return json.Marshal(s.entrySchema)
 	}
 
@@ -253,12 +259,18 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
 		}
 	}
-	graph.Put(TypeID(s.entry), &s.entrySchema)
+	typeID := TypeID(s.entry)
 
-	// Fill-in the children
 	if !ListAction().IsSupportedOn(s.entry) {
+		graph.Put(typeID, s.clone())
 		return
 	}
+
+	// Fill-in the children. We start by putting in a stub value for s
+	// so that we preserve the insertion order and so that we can mark
+	// the node as visited. We'll then update this value once the "Children"
+	// array's been calculated.
+	graph.Put(typeID, EntrySchema{})
 	// "sParent" is read as "s.parent"
 	sParent := s.entry.(Parent)
 	children := sParent.ChildSchemas()
@@ -280,6 +292,16 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		passAlongWrappedTypes(sParent, child.entry)
 		child.fill(graph)
 	}
+	// Update the graph
+	graph.Put(typeID, s.clone())
+}
+
+// clone returns a copy of s.entrySchema's fields as an EntrySchema
+// object
+func (s *EntrySchema) clone() EntrySchema {
+	var copy EntrySchema
+	copy.entrySchema = s.entrySchema
+	return copy
 }
 
 // This helper's used by CachedList + EntrySchema#fill(). The reason for
