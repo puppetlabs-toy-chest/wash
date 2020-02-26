@@ -491,3 +491,19 @@ As an octal string
   "mode": "40700"
 }
 ```
+
+### os
+This contains information about the operating system of an entry, if it has one.
+
+The `OS` property is an object containing
+* `login_shell` - The shell used when remotely logging into the machine, such as over SSH or WinRM. It can be one of `posixshell` (representing a POSIX-compatible shell such as bash or zsh) or `powershell` (PowerShell). This is commonly used to decide what types of shell is available for scripting; for example the `wps` command runs different commands to find process information based on the login shell.
+
+#### Example JSON
+
+```
+{
+  "os": {
+    "login_shell": "posixshell"
+  }
+}
+```
