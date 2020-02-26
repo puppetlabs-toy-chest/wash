@@ -7,10 +7,16 @@ google_analytics: UA-144580607-2
 exclude: [vendor, Boltdir, acceptance, modules, .git, Gemfile, Gemfile.lock]
 
 collections:
+  docs:
+    output: true
   tutorials:
     output: true
 
 defaults:
+  - scope:
+      type: docs
+    values:
+      layout: default
   - scope:
       type: tutorials
     values:

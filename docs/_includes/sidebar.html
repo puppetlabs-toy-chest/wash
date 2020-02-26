@@ -1,0 +1,91 @@
+<nav class="sidebar">
+  <a href="{{ '/' | relative_url }}">
+    <img src="{{ '/assets/images/wash-logo-lg.png' | relative_url }}" class="wash-logo" alt="">
+  </a>
+
+  <ul class="nav-list">
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/docs' | relative_url }}" class="center-vertical">Docs</a>
+      </span>
+      <ul>
+        {% for doc in site.docs %}
+          <li><a href="{{ doc.url | remove: "/index.html" | relative_url }}">{{ doc.title }}</a></li>
+        {% endfor %}
+        <li><a href="{{ '/docs/api.html' | relative_url }}">Server API</a></li>
+      </ul>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/getting_started' | relative_url }}" class="center-vertical">Getting Started</a>
+      </span>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/known_issues' | relative_url }}" class="center-vertical">Known Issues</a>
+      </span>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/release_announcements' | relative_url }}" class="center-vertical">Release Announcements</a>
+      </span>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/contributing' | relative_url }}" class="center-vertical">Contributing</a>
+      </span>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/posts' | relative_url }}" class="center-vertical">News</a>
+      </span>
+      <ul>
+        {% for post in site.posts limit: 3 %}
+          <li><a href="{{ post.url | remove: "/index.html" | relative_url }}">{{ post.title }}</a> <small>{{ post.date | date: "%Y-%m-%d" }}</small></li>
+        {% endfor %}
+      </ul>
+    </li>
+
+    <li>
+      <span class="nav-header">
+        <a href="{{ '/tutorials' | relative_url }}" class="center-vertical">Tutorials</a>
+      </span>
+      {% for tutorial in site.tutorials %}
+        <!--
+          The tutorial.main check is here so that Jekyll collections doesn't interpret each
+          section as its own tutorial.
+        -->
+        {% if tutorial.main %}
+          {% assign tutorial_url = tutorial.url | remove: "/index.html" | relative_url %}
+          <ul>
+            <!--
+              Figure out tutorial_link. If the tutorial's 'main' page doesn't have any content, then
+              this will link to the tutorial's first section. Otherwise, we'll link to the tutorial's
+              URL. This avoids unnecessary 'main' pages for tutorials that don't need them (like e.g.
+              'Debugging').
+            -->
+            {% assign tutorial_link = tutorial_url %}
+            {% assign content_size = tutorial.content | strip_newlines | size %}
+            {% if content_size <= 0 %}
+              {% assign tutorial_link = tutorial_url | append: '/' | append: tutorial.sections.first['endpoint'] %}
+            {% endif %}
+            <li><a href="{{ tutorial_link }}" class="center-vertical">{{tutorial.title}}</a>
+              <ol>
+              {% for section in tutorial.sections %}
+                <li style="font-size:16px"><a href="{{ tutorial_url | append: '/' | append: section['endpoint'] }}" class="center-vertical">
+                    {{ section['title'] }}
+                  </a></li>
+              {% endfor %}
+              </ol>
+            </li>
+          </ul>
+        {% endif %}
+      {% endfor %}
+    </li>
+  </ul>
+</nav>
