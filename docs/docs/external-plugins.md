@@ -161,7 +161,7 @@ Additionally Wash supports _core entries_ that provide built-in functionality th
 
 _core entries_ can be used by returning an entry object with `type_id` set to the _core entries_ name surrounded by double underscores (`__core::entry__`) and the `name` field to identify the entry. You can also specify options for a _core entry_ using the `state` field containing serialized JSON of the options. If your plugin use _schemas_, then when using a _core entry_ you must still specify the _core entry_ as a child of the entry that lists it in the schema by it's `type_id`.
 
-* `volume::fs`: a representation of your entry's filesystem that uses its `exec` method to access it. _Options_:
+* `volume::fs`: a representation of your entry's filesystem that uses its `exec` method to access it. The `os.login_shell` attribute is used to determine how to interact with the filesystem; if not set it assumes `posixshell`. _Options_:
   * `maxdepth`: identifies how many levels of filesystem to fetch in a single batch to support trade-offs between `exec` latency and file density in the volume.
 
 **EXAMPLES**
