@@ -66,8 +66,6 @@ func (s *CNameTestSuite) TestExpression_AtomAndNot() {
 	s.EETTC(expr, e)
 	e.CName = "foo"
 	s.EEFTC(expr, e)
-
-	//s.EESTTC(expr, schema)
 }
 
 func TestCName(t *testing.T) {
