@@ -18,10 +18,29 @@ func TypeID(e Entry) string {
 	pluginName := pluginName(e)
 	rawTypeID := rawTypeID(e)
 	if pluginName == "" {
-		// e is the plugin registry
+		// e is the plugin registry or a core entry used by an external plugin
 		return rawTypeID
 	}
 	return namespace(pluginName, rawTypeID)
+}
+
+// SchemaGraph returns e's schema graph. This is effectively a
+// map[string]plugin.EntrySchema object that preserves insertion
+// order (where the string is each entry's type ID).
+func SchemaGraph(e Entry) (*linkedhashmap.Map, error) {
+	s, err := schema(e)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	if s.graph == nil {
+		// e is a core plugin entry so fill its graph
+		s.graph = linkedhashmap.New()
+		s.fill(s.graph)
+	}
+	return s.graph, nil
 }
 
 func schema(e Entry) (*EntrySchema, error) {
@@ -361,16 +380,9 @@ func pluginName(e Entry) string {
 		switch e.(type) {
 		case Root:
 			return CName(e)
-		case *Registry:
-			return ""
 		default:
-			// e has no ID. This is possible if e's from the apifs package. For now,
-			// it is enough to return "__apifs__" here because this is an unlikely
-			// edge case.
-			//
-			// TODO: Panic here once https://github.com/puppetlabs/wash/issues/438
-			// is resolved.
-			return "__apifs__"
+			// e is an apifs entry or a core plugin entry used by an external plugin
+			return ""
 		}
 	}
 	segments := strings.SplitN(trimmedID, "/", 2)
