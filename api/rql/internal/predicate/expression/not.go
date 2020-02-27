@@ -28,11 +28,11 @@ func (n *not) Marshal() interface{} {
 
 func (n *not) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("NOT"))(input) {
-		return errz.MatchErrorf("must be formatted as ['NOT', <pe>]")
+		return errz.MatchErrorf("must be formatted as [\"NOT\", <pe>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['NOT', <pe>]")
+		return fmt.Errorf("must be formatted as [\"NOT\", <pe>]")
 	}
 	if len(array) != 2 {
 		return fmt.Errorf("NOT: missing the expression")
@@ -44,32 +44,16 @@ func (n *not) Unmarshal(input interface{}) error {
 	return nil
 }
 
-// INVARIANT: n.p is an atom by the time each of these Eval*
-// methods are called. This only matters for EvalEntry,
-// EvalEntrySchema and EvalValue.
-
 func (n *not) EvalEntry(e rql.Entry) bool {
-	a := n.p.(*atom)
-	result := a.p.(rql.Primary).EntryInDomain(e)
-	if ep, ok := a.p.(rql.EntryPredicate); ok {
-		result = result && !ep.EvalEntry(e)
-	}
-	return result
+	return !n.p.(rql.EntryPredicate).EvalEntry(e)
 }
 
 func (n *not) EvalEntrySchema(s *rql.EntrySchema) bool {
-	a := n.p.(*atom)
-	result := a.p.(rql.Primary).EntrySchemaInDomain(s)
-	if sp, ok := a.p.(rql.EntrySchemaPredicate); ok {
-		result = result && !sp.EvalEntrySchema(s)
-	}
-	return result
+	return !n.p.(rql.EntrySchemaPredicate).EvalEntrySchema(s)
 }
 
 func (n *not) EvalValue(v interface{}) bool {
-	a := n.p.(*atom)
-	vp := a.p.(rql.ValuePredicate)
-	return vp.ValueInDomain(v) && !vp.EvalValue(v)
+	return !n.p.(rql.ValuePredicate).EvalValue(v)
 }
 
 func (n *not) EvalString(str string) bool {

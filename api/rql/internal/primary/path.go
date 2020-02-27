@@ -10,7 +10,7 @@ func Path(p rql.StringPredicate) rql.Primary {
 	return &path{
 		base: base{
 			name:  "path",
-			ptype: "string",
+			ptype: "String",
 			p:     p,
 		},
 		p: p,
@@ -20,12 +20,6 @@ func Path(p rql.StringPredicate) rql.Primary {
 type path struct {
 	base
 	p rql.StringPredicate
-}
-
-func (p *path) EntryInDomain(e rql.Entry) bool {
-	// path only makes sense for entries that aren't
-	// the starting entry
-	return len(e.Path) > 0
 }
 
 func (p *path) EvalEntry(e rql.Entry) bool {

@@ -23,11 +23,6 @@ func (s *NullTestSuite) TestUnmarshal() {
 	s.UMTC(n, nil, Null())
 }
 
-func (s *NullTestSuite) TestValueInDomain() {
-	n := Null()
-	s.VIDTTC(n, "foo", 1)
-}
-
 func (s *NullTestSuite) TestEvalValue() {
 	n := Null()
 	s.EVFTC(n, "foo", 1, true)

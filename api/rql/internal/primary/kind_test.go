@@ -19,23 +19,14 @@ func (s *KindTestSuite) TestMarshal() {
 }
 
 func (s *KindTestSuite) TestUnmarshal() {
-	p := Kind(predicate.StringGlob(""))
-	s.UMETC(p, "foo", "formatted.*'kind'.*<string_predicate>", true)
-	s.UMETC(p, s.A("foo", s.A("glob", "foo")), "formatted.*'kind'.*<string_predicate>", true)
-	s.UMETC(p, s.A("kind", "foo", "bar"), "formatted.*'kind'.*<string_predicate>", false)
-	s.UMETC(p, s.A("kind"), "missing.*string.*predicate", false)
-	s.UMETC(p, s.A("kind", s.A("glob", "[")), "glob", false)
-	s.UMTC(p, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
+	n := Kind(predicate.StringGlob(""))
+	s.UMETC(n, "foo", `kind.*formatted.*"kind".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*PE StringPredicate`, true)
+	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*PE StringPredicate`, false)
+	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*PE StringPredicate.*missing.*PE StringPredicate`, false)
+	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*PE StringPredicate.*glob", false)
+	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
 }
-
-func (s *KindTestSuite) TestEntrySchemaInDomain() {
-	p := Kind(predicate.StringGlob("foo"))
-	schema := &rql.EntrySchema{}
-	s.ESIDFTC(p, schema)
-	schema.SetPath("bar")
-	s.ESIDTTC(p, schema)
-}
-
 func (s *KindTestSuite) TestEvalEntrySchema() {
 	p := Kind(predicate.StringGlob("foo"))
 	schema := &rql.EntrySchema{}
@@ -45,21 +36,12 @@ func (s *KindTestSuite) TestEvalEntrySchema() {
 	s.EESTTC(p, schema)
 }
 
-func (s *KindTestSuite) TestEntryInDomain() {
-	p := Kind(predicate.StringGlob("foo"))
-	e := rql.Entry{}
-	s.EIDFTC(p, e)
-	e.Schema = &rql.EntrySchema{}
-	s.EIDTTC(p, e)
-}
-
 func (s *KindTestSuite) TestExpression_AtomAndNot() {
 	expr := expression.New("kind", func() rql.ASTNode {
 		return Kind(predicate.String())
 	})
 
 	s.MUM(expr, []interface{}{"kind", []interface{}{"glob", "foo"}})
-	// Note from the semantics that EvalEntry(e) == EntryInDomain(e)
 	e := rql.Entry{}
 	s.EEFTC(expr, e)
 	e.Schema = &rql.EntrySchema{}
@@ -85,15 +67,6 @@ func (s *KindTestSuite) TestExpression_AtomAndNot() {
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"kind", []interface{}{"glob", "foo"}}})
 
-	// Remember that EvalEntry(e) == EntryInDomain(e)
-	e.Schema = nil
-	s.EEFTC(expr, e)
-	e.Schema = &rql.EntrySchema{}
-	e.Schema.SetPath("bar")
-	s.EETTC(expr, e)
-
-	schema.SetPath("")
-	s.EESFTC(expr, schema)
 	schema.SetPath("bar")
 	s.EESTTC(expr, schema)
 	schema.SetPath("foo")

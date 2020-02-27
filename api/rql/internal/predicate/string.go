@@ -33,14 +33,14 @@ func (p *stringGlob) Marshal() interface{} {
 
 func (p *stringGlob) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("glob"))(input) {
-		return errz.MatchErrorf("must be formatted as ['glob', <glob_str>]")
+		return errz.MatchErrorf("must be formatted as [\"glob\", <glob>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['glob', <glob_str>]")
+		return fmt.Errorf("must be formatted as [\"glob\", <glob>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the glob")
+		return fmt.Errorf("must be formatted as [\"glob\", <glob>] (missing the glob)")
 	}
 	globStr, ok := array[1].(string)
 	if !ok {
@@ -77,14 +77,14 @@ func (p *stringRegex) Marshal() interface{} {
 
 func (p *stringRegex) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("regex"))(input) {
-		return errz.MatchErrorf("must be formatted as ['regex', <regex_str>]")
+		return errz.MatchErrorf("must be formatted as [\"regex\", <regex>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['regex', <regex_str>]")
+		return fmt.Errorf("must be formatted as [\"regex\", <regex>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the regex")
+		return fmt.Errorf("must be formatted as [\"regex\", <regex>] (missing the regex)")
 	}
 	regexStr, ok := array[1].(string)
 	if !ok {
@@ -120,14 +120,14 @@ func (p *stringEqual) Marshal() interface{} {
 
 func (p *stringEqual) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("="))(input) {
-		return errz.MatchErrorf("must be formatted as ['=', <str>]")
+		return errz.MatchErrorf("must be formatted as [\"=\", <str>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['=', <str>]")
+		return fmt.Errorf("must be formatted as [\"=\", <str>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the string")
+		return fmt.Errorf("must be formatted as [\"=\", <str>] (missing the string)")
 	}
 	s, ok := array[1].(string)
 	if !ok {
@@ -159,7 +159,7 @@ func String() rql.StringPredicate {
 			StringEqual(""),
 		),
 	}
-	p.SetMatchErrMsg("must be formatted as either ['glob', <glob>], ['regex', <regex>], or ['=', <str>]")
+	p.SetMatchErrMsg("must be formatted as either [\"glob\", <glob>], [\"regex\", <regex>], or [\"=\", <str>]")
 	return p
 }
 
@@ -183,28 +183,24 @@ func (p *stringValue) Marshal() interface{} {
 
 func (p *stringValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("string"))(input) {
-		return errz.MatchErrorf("must be formatted as ['string', <string_predicate>]")
+		return errz.MatchErrorf("must be formatted as [\"string\", <string_predicate>]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['string', <string_predicate>]")
+		return fmt.Errorf("must be formatted as [\"string\", <string_predicate>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the string predicate")
+		return fmt.Errorf("must be formatted as [\"string\", <string_predicate>] (missing the string predicate)")
 	}
 	if err := p.StringPredicate.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("error unmarshalling the string predicate: %w", err)
 	}
 	return nil
 }
 
-func (p *stringValue) ValueInDomain(v interface{}) bool {
-	_, ok := v.(string)
-	return ok
-}
-
 func (p *stringValue) EvalValue(v interface{}) bool {
-	return p.EvalString(v.(string))
+	str, ok := v.(string)
+	return ok && p.EvalString(str)
 }
 
 func StringValue() rql.ValuePredicate {

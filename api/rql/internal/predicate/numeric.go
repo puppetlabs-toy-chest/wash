@@ -45,7 +45,7 @@ func (p *numeric) Unmarshal(input interface{}) error {
 		return fmt.Errorf("must be formatted as [<comparison_op>, <number>]")
 	}
 	if len(array) != 2 {
-		return fmt.Errorf("missing the number")
+		return fmt.Errorf("must be formatted as [<comparison_op>, <number>] (missing the number)")
 	}
 	op := ComparisonOp(array[0].(string))
 	var n decimal.Decimal
@@ -115,22 +115,17 @@ func (p *numericValue) Unmarshal(input interface{}) error {
 		return fmt.Errorf("must be formatted as ['number', <numeric_predicate>]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the numeric predicate")
+		return fmt.Errorf("must be formatted as ['number', <numeric_predicate>] (missing the numeric predicate)")
 	}
 	if err := p.numeric.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("error unmarshalling the numeric predicate: %w", err)
 	}
 	return nil
 }
 
-func (p *numericValue) ValueInDomain(v interface{}) bool {
-	// TODO: Support stringified numbers?
-	_, ok := v.(float64)
-	return ok
-}
-
 func (p *numericValue) EvalValue(v interface{}) bool {
-	return p.EvalNumeric(decimal.NewFromFloat(v.(float64)))
+	n, ok := v.(float64)
+	return ok && p.EvalNumeric(decimal.NewFromFloat(n))
 }
 
 var _ = rql.ValuePredicate(&numericValue{})

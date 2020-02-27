@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
-	"github.com/puppetlabs/wash/api/rql/internal/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,16 +16,16 @@ type NotTestSuite struct {
 }
 
 func (s *NotTestSuite) TestMarshal() {
-	s.MTC(Not(predicate.Boolean(true)), s.A("NOT", predicate.Boolean(true).Marshal()))
+	s.MTC(Not(newMockP("10")), s.A("NOT", "10"))
 }
 
 func (s *NotTestSuite) TestUnmarshal() {
-	p := Not(predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*'NOT'.*<pe>", true)
-	s.UMETC(p, s.A("NOT", "foo", "bar"), "formatted.*'NOT'.*<pe>", false)
+	p := Not(&mockPtype{})
+	s.UMETC(p, 1, `formatted.*"NOT".*<pe>`, true)
+	s.UMETC(p, s.A("NOT", "10", "11"), `formatted.*"NOT".*<pe>`, false)
 	s.UMETC(p, s.A("NOT"), "NOT.*expression", false)
-	s.UMETC(p, s.A("NOT", s.A()), "NOT.*error.*expression.*formatted.*<boolean_value>", false)
-	s.UMTC(p, s.A("NOT", true), Not(predicate.Boolean(true)))
+	s.UMETC(p, s.A("NOT", 1), "NOT.*error.*expression.*string", false)
+	s.UMTC(p, s.A("NOT", "10"), Not(newMockP("10")))
 }
 
 func TestNot(t *testing.T) {

@@ -22,27 +22,24 @@ func (p *base) Marshal() interface{} {
 }
 
 func (p *base) Unmarshal(input interface{}) error {
+	errMsgPrefix := fmt.Sprintf("%v: must be formatted as [\"%v\", PE %vPredicate]", p.name, p.name, p.ptype)
 	if !matcher.Array(matcher.Value(p.name))(input) {
-		return errz.MatchErrorf("must be formatted as ['%v', <%v_predicate>]", p.name, p.ptype)
+		return errz.MatchErrorf(errMsgPrefix)
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['%v', <%v_predicate>]", p.name, p.ptype)
+		return fmt.Errorf(errMsgPrefix)
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("missing the %v predicate", p.ptype)
+		return fmt.Errorf("%v (missing PE %vPredicate)", errMsgPrefix, p.ptype)
 	}
 	if err := p.p.Unmarshal(array[1]); err != nil {
 		// TODO: Make this a structured error
-		return fmt.Errorf("%w", err)
+		return fmt.Errorf("%v: error unmarshalling the PE %vPredicate: %w", p.name, p.ptype, err)
 	}
 	return nil
 }
 
-func (p *base) EntryInDomain(rql.Entry) bool {
-	return true
-}
-
-func (p *base) EntrySchemaInDomain(*rql.EntrySchema) bool {
+func (p *base) IsPrimary() bool {
 	return true
 }

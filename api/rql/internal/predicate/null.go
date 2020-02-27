@@ -22,11 +22,6 @@ func (p *null) Unmarshal(input interface{}) error {
 	return nil
 }
 
-func (p *null) ValueInDomain(v interface{}) bool {
-	// Any value works with the null predicate
-	return true
-}
-
 func (p *null) EvalValue(v interface{}) bool {
 	return v == nil
 }

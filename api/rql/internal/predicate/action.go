@@ -1,6 +1,9 @@
 package predicate
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/plugin"
@@ -22,12 +25,17 @@ func (p *action) Marshal() interface{} {
 
 func (p *action) Unmarshal(input interface{}) error {
 	name, ok := input.(string)
+	var supportedActions []string
+	for action := range plugin.Actions() {
+		supportedActions = append(supportedActions, fmt.Sprintf(`"%v"`, action))
+	}
+	invalidActionErr := errz.MatchErrorf("%v is not a valid action. Valid actions are %v", input, strings.Join(supportedActions, ", "))
 	if !ok {
-		return errz.MatchErrorf("must be formatted as <action>")
+		return invalidActionErr
 	}
 	a, ok := plugin.Actions()[name]
 	if !ok {
-		return errz.MatchErrorf("must be formatted as <action>")
+		return invalidActionErr
 	}
 	p.a = a
 	return nil

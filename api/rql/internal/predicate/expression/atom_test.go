@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
-	"github.com/puppetlabs/wash/api/rql/internal/predicate"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -16,13 +15,13 @@ type AtomTestSuite struct {
 }
 
 func (s *AtomTestSuite) TestMarshal() {
-	s.MTC(Atom(predicate.Boolean(true)), predicate.Boolean(true).Marshal())
+	s.MTC(Atom(newMockP("10")), "10")
 }
 
 func (s *AtomTestSuite) TestUnmarshal() {
-	p := Atom(predicate.Boolean(false))
-	s.UMETC(p, "foo", "formatted.*<boolean_value>", true)
-	s.UMTC(p, true, Atom(predicate.Boolean(true)))
+	p := Atom(&mockPtype{})
+	s.UMETC(p, 1, "string", true)
+	s.UMTC(p, "10", Atom(newMockP("10")))
 }
 
 func TestAtom(t *testing.T) {

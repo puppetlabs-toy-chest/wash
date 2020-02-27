@@ -22,7 +22,7 @@ func (s *NumericTestSuite) TestNumeric_Unmarshal() {
 	s.UMETC(n, "foo", "formatted.*<comparison_op>.*<number>", true)
 	s.UMETC(n, s.A(), "formatted.*<comparison_op>.*<number>", true)
 	s.UMETC(n, s.A("<", "foo", "bar"), "formatted.*<comparison_op>.*<number>", false)
-	s.UMETC(n, s.A("<"), "missing.*number", false)
+	s.UMETC(n, s.A("<"), "formatted.*<comparison_op>.*<number>.*missing.*number", false)
 	s.UMETC(n, s.A("<", true), "valid.*number", false)
 	s.UMETC(n, s.A("<", "true"), "parse.*true.*number.*exponent", false)
 	s.UMTC(n, s.A("<", 2.3), Numeric(LT, s.N("2.3")))
@@ -100,15 +100,9 @@ func (s *NumericTestSuite) TestNumericValue_Unmarshal() {
 	n := NumericValue("", s.N("0"))
 	s.UMETC(n, "foo", "formatted.*number.*<numeric_predicate>", true)
 	s.UMETC(n, s.A("number", "foo", "bar"), "formatted.*number.*<numeric_predicate>", false)
-	s.UMETC(n, s.A("number"), "missing.*numeric.*predicate", false)
-	s.UMETC(n, s.A("number", s.A()), "formatted.*<comparison_op>.*<number>", false)
+	s.UMETC(n, s.A("number"), "formatted.*number.*<numeric_predicate>.*missing.*numeric.*predicate", false)
+	s.UMETC(n, s.A("number", s.A()), "unmarshalling.*numeric.*predicate.*formatted.*<comparison_op>.*<number>", false)
 	s.UMTC(n, s.A("number", s.A("<", "2.3")), NumericValue(LT, s.N("2.3")))
-}
-
-func (s *NumericTestSuite) TestNumericValue_ValueInDomain() {
-	n := NumericValue(LT, s.N("2.0"))
-	s.VIDFTC(n, "bar", "123456")
-	s.VIDTTC(n, float64(10))
 }
 
 func (s *NumericTestSuite) TestNumericValue_EvalValue() {
@@ -136,8 +130,8 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"number", []interface{}{"<", "1"}}})
-	s.EVTTC(expr, float64(1))
-	s.EVFTC(expr, float64(0), "1")
+	s.EVTTC(expr, float64(1), "1")
+	s.EVFTC(expr, float64(0))
 }
 
 func TestNumeric(t *testing.T) {
