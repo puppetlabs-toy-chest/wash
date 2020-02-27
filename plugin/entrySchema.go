@@ -18,10 +18,29 @@ func TypeID(e Entry) string {
 	pluginName := pluginName(e)
 	rawTypeID := rawTypeID(e)
 	if pluginName == "" {
-		// e is the plugin registry
+		// e is the plugin registry or a core entry used by an external plugin
 		return rawTypeID
 	}
 	return namespace(pluginName, rawTypeID)
+}
+
+// SchemaGraph returns e's schema graph. This is effectively a
+// map[string]plugin.EntrySchema object that preserves insertion
+// order (where the string is each entry's type ID).
+func SchemaGraph(e Entry) (*linkedhashmap.Map, error) {
+	s, err := schema(e)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		return nil, nil
+	}
+	if s.graph == nil {
+		// e is a core plugin entry so fill its graph
+		s.graph = linkedhashmap.New()
+		s.fill(s.graph)
+	}
+	return s.graph, nil
 }
 
 func schema(e Entry) (*EntrySchema, error) {
@@ -49,7 +68,10 @@ func schema(e Entry) (*EntrySchema, error) {
 			IsSingleton().
 			SetDescription(registryDescription)
 		schema.graph = linkedhashmap.New()
-		schema.graph.Put(TypeID(t), &schema.entrySchema)
+		typeID := TypeID(t)
+		// We start by putting in a stub value for s so that we preserve the insertion
+		// order. We'll then update this value once the "Children" array's been calculated.
+		schema.graph.Put(typeID, EntrySchema{})
 		for _, root := range t.pluginRoots {
 			childSchema, err := Schema(root)
 			if err != nil {
@@ -73,6 +95,8 @@ func schema(e Entry) (*EntrySchema, error) {
 				schema.graph.Put(key, value)
 			})
 		}
+		// Update the graph
+		schema.graph.Put(typeID, schema.clone())
 		return schema, nil
 	default:
 		// e is a core-plugin
@@ -137,9 +161,10 @@ func NewEntrySchema(e Entry, label string) *EntrySchema {
 // how plugin.EntrySchema objects are meant to be used.
 func (s EntrySchema) MarshalJSON() ([]byte, error) {
 	if s.entry == nil {
-		// Nodes in the external plugin graph don't use NewEntrySchema, they directly set the
-		// undocumented fields of EntrySchema. Since graph and entry won't be set - and this is
-		// part of a graph already - directly serialize entrySchema instead of using the graph.
+		// This corresponds to an "EntrySchema" value in another entry's schema graph.
+		// These values directly set the undocumented fields of EntrySchema. Since graph
+		// and entry won't be set - and this is part of a graph already - directly serialize
+		// entrySchema instead of using the graph.
 		return json.Marshal(s.entrySchema)
 	}
 
@@ -253,12 +278,18 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 			s.fillPanicf("bad value passed into SetMetadataSchema: %v", err)
 		}
 	}
-	graph.Put(TypeID(s.entry), &s.entrySchema)
+	typeID := TypeID(s.entry)
 
-	// Fill-in the children
 	if !ListAction().IsSupportedOn(s.entry) {
+		graph.Put(typeID, s.clone())
 		return
 	}
+
+	// Fill-in the children. We start by putting in a stub value for s
+	// so that we preserve the insertion order and so that we can mark
+	// the node as visited. We'll then update this value once the "Children"
+	// array's been calculated.
+	graph.Put(typeID, EntrySchema{})
 	// "sParent" is read as "s.parent"
 	sParent := s.entry.(Parent)
 	children := sParent.ChildSchemas()
@@ -280,6 +311,16 @@ func (s *EntrySchema) fill(graph *linkedhashmap.Map) {
 		passAlongWrappedTypes(sParent, child.entry)
 		child.fill(graph)
 	}
+	// Update the graph
+	graph.Put(typeID, s.clone())
+}
+
+// clone returns a copy of s.entrySchema's fields as an EntrySchema
+// object
+func (s *EntrySchema) clone() EntrySchema {
+	var copy EntrySchema
+	copy.entrySchema = s.entrySchema
+	return copy
 }
 
 // This helper's used by CachedList + EntrySchema#fill(). The reason for
@@ -339,16 +380,9 @@ func pluginName(e Entry) string {
 		switch e.(type) {
 		case Root:
 			return CName(e)
-		case *Registry:
-			return ""
 		default:
-			// e has no ID. This is possible if e's from the apifs package. For now,
-			// it is enough to return "__apifs__" here because this is an unlikely
-			// edge case.
-			//
-			// TODO: Panic here once https://github.com/puppetlabs/wash/issues/438
-			// is resolved.
-			return "__apifs__"
+			// e is an apifs entry or a core plugin entry used by an external plugin
+			return ""
 		}
 	}
 	segments := strings.SplitN(trimmedID, "/", 2)

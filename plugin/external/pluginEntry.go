@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/getlantern/deepcopy"
-	"github.com/jinzhu/copier"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
 	"github.com/puppetlabs/wash/activity"
@@ -711,17 +710,24 @@ func unmarshalSchemaGraph(pluginName, rawTypeID string, stdout []byte) (*linkedh
 	graph := linkedhashmap.New()
 	putNode := func(rawTypeID string, rawSchema interface{}) error {
 		if coreEnt, ok := coreEntries[rawTypeID]; ok {
-			pluginSchema := coreEnt.schema()
-
-			// Copy only the public fields so we serialize it as just data. Uses copier because it uses
-			// reflect to copy public fields, rather than Marshal/UnmarshalJSON which we've overridden.
-			var schema plugin.EntrySchema
-			err := copier.Copy(&schema, pluginSchema)
-			if err != nil {
-				panic(fmt.Sprintf("should always be able to copy from EntrySchema to EntrySchema: %v", err))
+			template := coreEnt.template()
+			rawTypeID = plugin.TypeID(template)
+			if populatedTypeIDs[rawTypeID] {
+				// We've already included this entry's schema-graph
+				return nil
 			}
+			coreEntSchemaGraph, _ := plugin.SchemaGraph(template)
+			coreEntSchemaGraph.Each(func(rawTypeIDV interface{}, schemaV interface{}) {
+				// Munge the schema's children's type IDs
+				schema := schemaV.(plugin.EntrySchema)
+				children := []string{}
+				for _, child := range schema.Children {
+					children = append(children, namespace(pluginName, child))
+				}
+				schema.Children = children
+				graph.Put(namespace(pluginName, rawTypeIDV.(string)), schema)
+			})
 			populatedTypeIDs[rawTypeID] = true
-			graph.Put(namespace(pluginName, rawTypeID), schema)
 			return nil
 		}
 
@@ -764,6 +770,9 @@ func unmarshalSchemaGraph(pluginName, rawTypeID string, stdout []byte) (*linkedh
 			}
 			var namespacedChildren []string
 			for _, child := range node.Children {
+				if coreEnt, ok := coreEntries[child]; ok {
+					child = plugin.TypeID(coreEnt.template())
+				}
 				requiredTypeIDs[child] = true
 				namespacedChildren = append(namespacedChildren, namespace(pluginName, child))
 			}

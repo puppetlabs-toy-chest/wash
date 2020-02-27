@@ -10,7 +10,7 @@ import (
 
 type coreEntry interface {
 	createInstance(parent *pluginEntry, decodedEntry decodedExternalPluginEntry) (plugin.Entry, error)
-	schema() *plugin.EntrySchema
+	template() plugin.Entry
 }
 
 var coreEntries = map[string]coreEntry{
@@ -31,6 +31,6 @@ func (volumeFS) createInstance(parent *pluginEntry, e decodedExternalPluginEntry
 	return volume.NewFS(e.Name, parent, int(opts.Maxdepth)), nil
 }
 
-func (volumeFS) schema() *plugin.EntrySchema {
-	return (&volume.FS{}).Schema()
+func (volumeFS) template() plugin.Entry {
+	return &volume.FS{}
 }

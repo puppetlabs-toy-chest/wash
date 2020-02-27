@@ -1385,6 +1385,61 @@ func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_ValidInput()
 	}
 }
 
+func (suite *ExternalPluginEntryTestSuite) TestUnmarshalSchemaGraph_CoreEntries() {
+	entry := &pluginEntry{
+		rawTypeID: "foo",
+	}
+	entry.SetTestID("fooPlugin")
+
+	stdout := []byte(`
+{
+	"foo":{
+		"label": "fooLabel",
+		"methods": ["list"],
+		"children": ["__volume::fs__"]
+	},
+	"__volume::fs__": {}
+}
+`)
+
+	graph, err := unmarshalSchemaGraph(pluginName(entry), rawTypeID(entry), stdout)
+	if suite.NoError(err) {
+		assertSchema := func(typeID string, assertFunc func(plugin.EntrySchema)) {
+			schema, found := graph.Get(typeID)
+			if !found {
+				suite.FailNow("expected %v to be present in schema graph", typeID)
+			}
+			assertFunc(schema.(plugin.EntrySchema))
+		}
+
+		// Ensure that only four nodes exist in schema graph -- "foo", volume::fs,
+		// volume::dir, and volume::file
+		suite.Equal(int(4), graph.Size())
+
+		// Now ensure that the right nodes are set in the graph
+		volumeFSTemplate := (&volumeFS{}).template()
+		assertSchema("fooPlugin::foo", func(s plugin.EntrySchema) {
+			expectedVolumeFSTypeID := fmt.Sprintf("fooPlugin::%v", plugin.TypeID(volumeFSTemplate))
+			suite.Equal([]string{expectedVolumeFSTypeID}, s.Children)
+		})
+		// Ensure that volume::fs' schema-graph's been merged with our schema graph
+		// and that all the type IDs are properly namespaced
+		volumeFSGraph, _ := plugin.SchemaGraph(volumeFSTemplate)
+		volumeFSGraph.Each(func(typeIDV interface{}, schemaV interface{}) {
+			typeID := typeIDV.(string)
+			schema := schemaV.(plugin.EntrySchema)
+			expectedChildren := []string{}
+			for _, child := range schema.Children {
+				expectedChildren = append(expectedChildren, "fooPlugin::"+child)
+			}
+			assertSchema("fooPlugin::"+typeID, func(s plugin.EntrySchema) {
+				suite.Equal(schema.Label, s.Label)
+				suite.Equal(expectedChildren, s.Children)
+			})
+		})
+	}
+}
+
 func TestExternalPluginEntry(t *testing.T) {
 	suite.Run(t, new(ExternalPluginEntryTestSuite))
 }
