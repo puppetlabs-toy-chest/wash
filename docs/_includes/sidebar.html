@@ -6,20 +6,18 @@
   <ul class="nav-list">
     <li>
       <span class="nav-header">
-        <a href="{{ '/docs' | relative_url }}" class="center-vertical">Docs</a>
+        <a href="{{ '/getting_started' | relative_url }}" class="center-vertical">Getting Started</a>
       </span>
+    </li>
+
+    <li>
+      <span class="nav-header center-vertical">Documentation</span>
       <ul>
         {% for doc in site.docs %}
           <li><a href="{{ doc.url | remove: "/index.html" | relative_url }}">{{ doc.title }}</a></li>
         {% endfor %}
         <li><a href="{{ '/docs/api.html' | relative_url }}">Server API</a></li>
       </ul>
-    </li>
-
-    <li>
-      <span class="nav-header">
-        <a href="{{ '/getting_started' | relative_url }}" class="center-vertical">Getting Started</a>
-      </span>
     </li>
 
     <li>
