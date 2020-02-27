@@ -77,8 +77,6 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 	s.EETTC(expr, e)
 	e.Attributes.SetSize(uint64(1))
 	s.EEFTC(expr, e)
-
-	//s.EESTTC(expr, schema)
 }
 
 func TestSize(t *testing.T) {

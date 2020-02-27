@@ -68,8 +68,6 @@ func (s *PathTestSuite) TestExpression_AtomAndNot() {
 	s.EETTC(expr, e)
 	e.Path = "foo"
 	s.EEFTC(expr, e)
-
-	//s.EESTTC(expr, schema)
 }
 
 func TestPath(t *testing.T) {
