@@ -6,7 +6,15 @@ author: michaelsmith
 
 A full Puppet installation - masters, agents, database, etc - contains a lot of knowledge about your infrastructure. Sometimes this can be challenging to get at. [Puppetwash](https://github.com/puppetlabs/puppetwash) exposes that knowledge, starting with making your PuppetDB data more accessible. I'll demonstrate it by setting up an example with [Pupperware](https://github.com/puppetlabs/pupperware).
 
+> If you already have some Puppet infrastructure setup and want to try Puppetwash with it, jump to [configuring Puppetwash](#configure-puppetwash).
+
 ## Start Pupperware
+
+We're going to setup some containerized Puppet infrastructure using Pupperware by
+- starting PostgreSQL, Puppet Server, and PuppetDB using `docker-compose`
+- wait for all instances - particularly PuppetDB - to start
+- copy certificates necessary to connect to Puppet infrastructure for Puppetwash credentials
+- trigger a `puppet agent` run so we have something to view with Puppetwash
 
 Following the [instructions to provision the stack](https://github.com/puppetlabs/pupperware#provisioning), I've installed Docker Compose (using macOS 10.15) and - within the Pupperware project - run
 ```
@@ -106,9 +114,10 @@ gem install puppetwash
 
 Get the path to the Puppetwash script with
 ```
-$ gem contents puppetwash
+$ gem contents puppetwash --version 0.2.0
 /Users/me/.gem/ruby/2.6.0/gems/puppetwash-0.2.0/puppet.rb
 ```
+> We specify `--version` to make sure we get the latest version we just installed.
 
 We then add that to Wash's config at `~/.puppetlabs/wash/wash.yaml`
 ```
@@ -116,156 +125,242 @@ external-plugins:
 - script: '/Users/me/.gem/ruby/2.6.0/gems/puppetwash-0.2.0/puppet.rb'
 ```
 
-If we were using Puppet Enterprise we would use a user authentication (RBAC) token. Wash config would look like
+If you're using Puppet Enterprise you can use a user authentication (RBAC) token. You can generate a new one with
+```
+puppet access login -l 30d --print
+```
+
+Wash config would look like
 ```
 external-plugins:
 - script: '/Users/me/.gem/ruby/2.6.0/gems/puppetwash-0.2.0/puppet.rb'
-my_pe_instance:
-  puppetdb_url: https://puppet:8081
-  rbac_token: <my_rbac_token>
-  cacert: /path/to/cacert.pem
+puppet:
+  my_pe_instance:
+    puppetdb_url: https://puppet:8081
+    rbac_token: <my_rbac_token>
+    cacert: /path/to/cacert.pem
 ```
 
 With open-source Puppet, we'll use cert-based authentication. Using the examples from above, `~/.puppetlabs/wash/wash.yaml` should look like
 ```
 external-plugins:
 - script: '/Users/me/.gem/ruby/2.6.0/gems/puppetwash-0.2.0/puppet.rb'
-my_pe_instance:
-  puppetdb_url: https://puppetdb.test:32770
-  cacert: /Users/michaelsmith/.puppetlabs/wash/pupperware/ca.pem
-  cert: /Users/michaelsmith/.puppetlabs/wash/pupperware/puppet.test.pem
-  key: /Users/michaelsmith/.puppetlabs/wash/pupperware/puppet.test.key.pem
+puppet:
+  my_pe_instance:
+    puppetdb_url: https://puppetdb.test:32770
+    cacert: /Users/michaelsmith/.puppetlabs/wash/pupperware/ca.pem
+    cert: /Users/michaelsmith/.puppetlabs/wash/pupperware/puppet.test.pem
+    key: /Users/michaelsmith/.puppetlabs/wash/pupperware/puppet.test.key.pem
 ```
 
-Start (or restart) Wash to load the new Puppetwash config and you should now be able to explore PuppetDB data in Wash
+## Explore Puppet
+
+Start (or restart) Wash to load the new Puppetwash config and you should now be able to explore Puppetwash
+```
+wash . > stree puppet
+puppet
+└── [instance]
+    └── nodes
+        └── [node]
+            ├── catalog.json
+            ├── facts
+            │   └── [fact]
+            └── reports
+                └── [report]
+```
+
+Puppetwash can connect to multiple instances of Puppet infrastructure (either a PE deployment or a combination of puppet masters and PuppetDB). It provides access to data in PuppetDB about nodes in that infrastructure. The example above configures one instance named `pupperware`
+```
+wash . > ls puppet
+pupperware/
+```
+
+Let's look at some PuppetDB data
 ```
 wash . > cd puppet/pupperware/nodes
-wash puppet/pupperware/nodes > tree
-.
-└── puppet.test
-    ├── catalog.json
-    ├── facts
-    │   ├── aio_agent_version
-    │   ├── architecture
-    │   ├── augeas
-    │   ├── augeasversion
-    │   ├── bios_release_date
-    │   ├── bios_vendor
-    │   ├── bios_version
-    │   ├── blockdevice_sda_model
-    │   ├── blockdevice_sda_size
-    │   ├── blockdevice_sda_vendor
-    │   ├── blockdevice_sr0_model
-    │   ├── blockdevice_sr0_size
-    │   ├── blockdevice_sr0_vendor
-    │   ├── blockdevice_sr1_model
-    │   ├── blockdevice_sr1_size
-    │   ├── blockdevice_sr1_vendor
-    │   ├── blockdevice_sr2_model
-    │   ├── blockdevice_sr2_size
-    │   ├── blockdevice_sr2_vendor
-    │   ├── blockdevices
-    │   ├── chassisassettag
-    │   ├── chassistype
-    │   ├── clientcert
-    │   ├── clientnoop
-    │   ├── clientversion
-    │   ├── disks
-    │   ├── dmi
-    │   ├── domain
-    │   ├── facterversion
-    │   ├── filesystems
-    │   ├── fips_enabled
-    │   ├── fqdn
-    │   ├── gid
-    │   ├── hardwareisa
-    │   ├── hardwaremodel
-    │   ├── hostname
-    │   ├── hypervisors
-    │   ├── id
-    │   ├── identity
-    │   ├── interfaces
-    │   ├── ipaddress
-    │   ├── ipaddress_eth0
-    │   ├── ipaddress_lo
-    │   ├── is_virtual
-    │   ├── kernel
-    │   ├── kernelmajversion
-    │   ├── kernelrelease
-    │   ├── kernelversion
-    │   ├── load_averages
-    │   ├── macaddress
-    │   ├── macaddress_eth0
-    │   ├── memory
-    │   ├── memoryfree
-    │   ├── memoryfree_mb
-    │   ├── memorysize
-    │   ├── memorysize_mb
-    │   ├── mountpoints
-    │   ├── mtu_eth0
-    │   ├── mtu_ip6tnl0
-    │   ├── mtu_lo
-    │   ├── mtu_tunl0
-    │   ├── netmask
-    │   ├── netmask_eth0
-    │   ├── netmask_lo
-    │   ├── network
-    │   ├── network_eth0
-    │   ├── network_lo
-    │   ├── networking
-    │   ├── operatingsystem
-    │   ├── operatingsystemmajrelease
-    │   ├── operatingsystemrelease
-    │   ├── os
-    │   ├── osfamily
-    │   ├── partitions
-    │   ├── path
-    │   ├── physicalprocessorcount
-    │   ├── processor0
-    │   ├── processor1
-    │   ├── processor2
-    │   ├── processor3
-    │   ├── processor4
-    │   ├── processor5
-    │   ├── processorcount
-    │   ├── processors
-    │   ├── productname
-    │   ├── puppetversion
-    │   ├── ruby
-    │   ├── rubyplatform
-    │   ├── rubysitedir
-    │   ├── rubyversion
-    │   ├── selinux
-    │   ├── serialnumber
-    │   ├── swapfree
-    │   ├── swapfree_mb
-    │   ├── swapsize
-    │   ├── swapsize_mb
-    │   ├── system_uptime
-    │   ├── timezone
-    │   ├── trusted
-    │   ├── uptime
-    │   ├── uptime_days
-    │   ├── uptime_hours
-    │   ├── uptime_seconds
-    │   ├── uuid
-    │   └── virtual
-    └── reports
-        └── 2020-02-28T00:08:28.495Z
+wash puppet/pupperware/nodes > ls
+puppet.test/
+wash puppet/pupperware/nodes > tree puppet.test
+puppet.test
+├── catalog.json
+├── facts
+│   ├── aio_agent_version
+│   ├── architecture
+│   ├── augeas
+│   ├── augeasversion
+│   ├── bios_release_date
+│   ├── bios_vendor
+│   ├── bios_version
+│   ├── blockdevice_sda_model
+│   ├── blockdevice_sda_size
+│   ├── blockdevice_sda_vendor
+│   ├── blockdevice_sr0_model
+│   ├── blockdevice_sr0_size
+│   ├── blockdevice_sr0_vendor
+│   ├── blockdevice_sr1_model
+│   ├── blockdevice_sr1_size
+│   ├── blockdevice_sr1_vendor
+│   ├── blockdevice_sr2_model
+│   ├── blockdevice_sr2_size
+│   ├── blockdevice_sr2_vendor
+│   ├── blockdevices
+│   ├── chassisassettag
+│   ├── chassistype
+│   ├── clientcert
+│   ├── clientnoop
+│   ├── clientversion
+│   ├── disks
+│   ├── dmi
+│   ├── domain
+│   ├── facterversion
+│   ├── filesystems
+│   ├── fips_enabled
+│   ├── fqdn
+│   ├── gid
+│   ├── hardwareisa
+│   ├── hardwaremodel
+│   ├── hostname
+│   ├── hypervisors
+│   ├── id
+│   ├── identity
+│   ├── interfaces
+│   ├── ipaddress
+│   ├── ipaddress_eth0
+│   ├── ipaddress_lo
+│   ├── is_virtual
+│   ├── kernel
+│   ├── kernelmajversion
+│   ├── kernelrelease
+│   ├── kernelversion
+│   ├── load_averages
+│   ├── macaddress
+│   ├── macaddress_eth0
+│   ├── memory
+│   ├── memoryfree
+│   ├── memoryfree_mb
+│   ├── memorysize
+│   ├── memorysize_mb
+│   ├── mountpoints
+│   ├── mtu_eth0
+│   ├── mtu_ip6tnl0
+│   ├── mtu_lo
+│   ├── mtu_tunl0
+│   ├── netmask
+│   ├── netmask_eth0
+│   ├── netmask_lo
+│   ├── network
+│   ├── network_eth0
+│   ├── network_lo
+│   ├── networking
+│   ├── operatingsystem
+│   ├── operatingsystemmajrelease
+│   ├── operatingsystemrelease
+│   ├── os
+│   ├── osfamily
+│   ├── partitions
+│   ├── path
+│   ├── physicalprocessorcount
+│   ├── processor0
+│   ├── processor1
+│   ├── processor2
+│   ├── processor3
+│   ├── processor4
+│   ├── processor5
+│   ├── processorcount
+│   ├── processors
+│   ├── productname
+│   ├── puppetversion
+│   ├── ruby
+│   ├── rubyplatform
+│   ├── rubysitedir
+│   ├── rubyversion
+│   ├── selinux
+│   ├── serialnumber
+│   ├── swapfree
+│   ├── swapfree_mb
+│   ├── swapsize
+│   ├── swapsize_mb
+│   ├── system_uptime
+│   ├── timezone
+│   ├── trusted
+│   ├── uptime
+│   ├── uptime_days
+│   ├── uptime_hours
+│   ├── uptime_seconds
+│   ├── uuid
+│   └── virtual
+└── reports
+    └── 2020-02-28T00:08:28.495Z
 
-3 directories, 107 files
+2 directories, 107 files
 ```
 
-Pupperware presents the last catalog (`catalog.json`), reports (as JSON), and individual fact values. We can look at fact values with
+Pupperware presents the last catalog
 ```
 wash puppet/pupperware/nodes > cd puppet.test
+wash puppet/pupperware/nodes/puppet.test > head catalog.json
+{
+  "catalog_uuid": "bf1576bd-8406-4a9b-ba9d-9adde461f732",
+  "producer": "puppet.test",
+  "hash": "6ddc338fa1582e9b5b58b3c38ff307dca4a1269a",
+  "transaction_uuid": "510c3b1a-967f-4b88-a66d-225bc40ac467",
+  "producer_timestamp": "2020-02-28T00:08:28.262Z",
+  "environment": "production",
+  "code_id": null,
+  "version": "1582848507",
+  "resources": {
+```
+reports
+```
+wash puppet/pupperware/nodes/puppet.test > head reports/2020-02-28T00:08:28.495Z
+[
+  {
+    "catalog_uuid": "bf1576bd-8406-4a9b-ba9d-9adde461f732",
+    "receive_time": "2020-02-28T00:08:28.727Z",
+    "producer": "puppet.test",
+    "hash": "8043a61b020be5ed2f161eac6e1d7f1df2ee8fcf",
+    "transaction_uuid": "510c3b1a-967f-4b88-a66d-225bc40ac467",
+    "puppet_version": "6.7.2",
+    "noop": true,
+    "corrective_change": null,
+```
+and individual fact values
+```
 wash puppet/pupperware/nodes/puppet.test > cat facts/osfamily
 Debian
 ```
 
+Nodes have metadata attached to them that we can filter on
+```
+wash puppet/pupperware/nodes > meta puppet.test
+cached_catalog_status: not_used
+catalog_environment: production
+catalog_timestamp: "2020-02-28T00:08:28.328Z"
+certname: puppet.test
+deactivated: null
+expired: null
+facts_environment: production
+facts_timestamp: "2020-02-28T00:08:27.886Z"
+latest_report_corrective_change: null
+latest_report_hash: 8043a61b020be5ed2f161eac6e1d7f1df2ee8fcf
+latest_report_job_id: null
+latest_report_noop: true
+latest_report_noop_pending: false
+latest_report_status: unchanged
+report_environment: production
+report_timestamp: "2020-02-28T00:08:28.495Z"
+```
+
+For example, we could search for nodes that have been deactivated (or that haven't been)
+```
+wash puppet/pupperware/nodes > find . -meta deactivated -exists
+wash puppet/pupperware/nodes > find . -meta deactivated -null
+./puppet.test
+```
+
 Reports also have metadata attached to them that we can filter on
 ```
-wash puppet/pupperware/nodes/puppet.test > meta reports/2020-02-28T00:08:28.495Z
+wash puppet/pupperware/nodes > meta puppet.test/reports/2020-02-28T00:08:28.495Z
 end_time: "2020-02-28T00:08:28.495Z"
 environment: production
 hash: 8043a61b020be5ed2f161eac6e1d7f1df2ee8fcf
@@ -273,11 +368,16 @@ noop: true
 producer: puppet.test
 puppet_version: 6.7.2
 status: unchanged
-wash puppet/pupperware/nodes/puppet.test > find . -meta .noop -true
-./reports/2020-02-28T00:08:28.495Z
-wash puppet/pupperware/nodes/puppet.test > find . -meta .noop -false
-wash puppet/pupperware/nodes/puppet.test > echo $?
-0
 ```
 
-These are just a few things we thought might be useful to be able to explore. Let us know what other ideas you might have at https://github.com/puppetlabs/puppetwash/issues (or check out https://puppetlabs.github.io/wash/contributing for other ways to get involved).
+Since our only report was generated with `--noop`, we should find that no reports exist with `noop: true`, and one exists with `noop: false`
+```
+wash puppet/pupperware/nodes > find . -k '*report' -meta .noop -false
+wash puppet/pupperware/nodes > find . -k '*report' -meta .noop -true
+./puppet.test/reports/2020-02-28T00:08:28.495Z
+```
+> We use `-k '*report'` to limit what we match to just reports.
+
+These are just a few things we thought might be useful to be able to explore. [Try it out!](https://github.com/puppetlabs/boltwash#installation-and-configuration)
+
+Let us know what other ideas you might have at https://github.com/puppetlabs/puppetwash/issues (or check out https://puppetlabs.github.io/wash/contributing for other ways to get involved).
