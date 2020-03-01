@@ -62,7 +62,7 @@ func (s *TimeTestSuite) TestTime_EvalTime() {
 }
 
 func (s *TimeTestSuite) TestTime_Expression_AtomAndNot() {
-	expr := expression.New("time", func() rql.ASTNode {
+	expr := expression.New("time", true, func() rql.ASTNode {
 		return Time("", s.TM(0))
 	})
 
@@ -104,7 +104,7 @@ func (s *TimeTestSuite) TestTimeValue_EvalValue() {
 }
 
 func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
-	expr := expression.New("time", func() rql.ASTNode {
+	expr := expression.New("time", true, func() rql.ASTNode {
 		return TimeValue("", s.TM(0))
 	})
 

@@ -103,7 +103,7 @@ func (s *StringTestSuite) TestString_EvalString() {
 }
 
 func (s *StringTestSuite) TestString_Expression_AtomAndNot() {
-	expr := expression.New("string", func() rql.ASTNode {
+	expr := expression.New("string", true, func() rql.ASTNode {
 		return String()
 	})
 
@@ -149,7 +149,7 @@ func (s *StringTestSuite) TestStringValue_EvalValue() {
 }
 
 func (s *StringTestSuite) TestStringValue_AtomAndNot() {
-	expr := expression.New("string", func() rql.ASTNode {
+	expr := expression.New("string", true, func() rql.ASTNode {
 		return StringValue()
 	})
 

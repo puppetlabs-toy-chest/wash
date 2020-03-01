@@ -51,8 +51,8 @@ func (s *ActionTestSuite) TestEvalEntrySchema() {
 	s.EESTTC(p, schema)
 }
 
-func (s *ActionTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("action", func() rql.ASTNode {
+func (s *ActionTestSuite) TestExpression_Atom() {
+	expr := expression.New("action", false, func() rql.ASTNode {
 		return Action(predicate.Action(plugin.Action{}))
 	})
 
@@ -77,17 +77,6 @@ func (s *ActionTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"action", "exec"}})
-	e.Actions = []string{"list", "read"}
-	s.EETTC(expr, e)
-	e.Actions = []string{"list", "exec", "signal"}
-	s.EEFTC(expr, e)
-
-	schema.SetActions([]string{"list", "read"})
-	s.EESTTC(expr, schema)
-	schema.SetActions([]string{"list", "exec", "signal"})
-	s.EESFTC(expr, schema)
 }
 
 func TestAction(t *testing.T) {

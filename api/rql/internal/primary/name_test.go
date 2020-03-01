@@ -37,8 +37,8 @@ func (s *NameTestSuite) TestEvalEntry() {
 	s.EETTC(n, e)
 }
 
-func (s *NameTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("name", func() rql.ASTNode {
+func (s *NameTestSuite) TestExpression_Atom() {
+	expr := expression.New("name", false, func() rql.ASTNode {
 		return Name(predicate.String())
 	})
 
@@ -60,12 +60,6 @@ func (s *NameTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"name", []interface{}{"glob", "foo"}}})
-	e.Name = "bar"
-	s.EETTC(expr, e)
-	e.Name = "foo"
-	s.EEFTC(expr, e)
 }
 
 func TestName(t *testing.T) {

@@ -43,7 +43,7 @@ func (s *SizeTestSuite) TestEvalEntry() {
 }
 
 func (s *SizeTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("size", func() rql.ASTNode {
+	expr := expression.New("size", true, func() rql.ASTNode {
 		return Size(UnsignedNumeric("", s.N("0")))
 	})
 
@@ -68,15 +68,10 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 		asttest.ActionPredicateC,
 	)
 
-	// Test Not
+	// Test Not, but only the value predicate bit
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"size", []interface{}{">", "0"}}})
 	s.EVTTC(expr, map[string]interface{}{}, []interface{}{}, "foo")
 	s.EVFTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
-
-	e.Attributes.SetSize(uint64(0))
-	s.EETTC(expr, e)
-	e.Attributes.SetSize(uint64(1))
-	s.EEFTC(expr, e)
 }
 
 func TestSize(t *testing.T) {
