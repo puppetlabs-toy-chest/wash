@@ -14,18 +14,25 @@ import (
 type PtypeGenerator func() rql.ASTNode
 
 /*
-New returns a new predicate expression of 'ptype' predicates (PE).
+New returns a new predicate expression (PE) of 'ptype' predicates if
+negatable is false, otherwise it returns a new negatable predicate
+expression (NPE) of 'ptype' predicates.
+
 The AtomGenerator should generate "empty" structs representing
 a 'ptype' predicate.
 
 A PE is described by the following grammar:
-	PE := NOT(PE) | AND(PE, PE) | OR(PE, PE) | Atom(ptype)
+	PE := AND(PE, PE) | OR(PE, PE) | Atom(ptype)
+
+An NPE is described by the following grammar:
+   NPE := NOT(NPE) | AND(NPE, NPE) | OR(NPE, NPE) | Atom(ptype)
 */
-func New(ptype string, g PtypeGenerator) rql.ASTNode {
+func New(ptype string, negatable bool, g PtypeGenerator) rql.ASTNode {
 	e := &expression{
-		base:  base{},
-		ptype: ptype,
-		g:     g,
+		base:      base{},
+		ptype:     ptype,
+		g:         g,
+		negatable: negatable,
 	}
 	return e
 }
@@ -33,23 +40,29 @@ func New(ptype string, g PtypeGenerator) rql.ASTNode {
 type expression struct {
 	base
 	internal.NonterminalNode
-	ptype string
-	g     PtypeGenerator
+	ptype     string
+	g         PtypeGenerator
+	negatable bool
 }
 
 func (expr *expression) Unmarshal(input interface{}) error {
-	expr.NonterminalNode = internal.NewNonterminalNode(
-		Not(New(expr.ptype, expr.g)),
-		And(New(expr.ptype, expr.g), New(expr.ptype, expr.g)),
-		Or(New(expr.ptype, expr.g), New(expr.ptype, expr.g)),
+	exprType := "PE"
+	nodes := []rql.ASTNode{
+		And(New(expr.ptype, expr.negatable, expr.g), New(expr.ptype, expr.negatable, expr.g)),
+		Or(New(expr.ptype, expr.negatable, expr.g), New(expr.ptype, expr.negatable, expr.g)),
 		Atom(expr.g()),
-	)
-	expr.SetMatchErrMsg(fmt.Sprintf("expected PE %v", expr.ptype))
+	}
+	if expr.negatable {
+		exprType = "NPE"
+		nodes = append(nodes, Not(New(expr.ptype, expr.negatable, expr.g)))
+	}
+	expr.NonterminalNode = internal.NewNonterminalNode(nodes[0], nodes[1:]...)
+	expr.SetMatchErrMsg(fmt.Sprintf("expected %v %v", exprType, expr.ptype))
 	if err := expr.NonterminalNode.Unmarshal(input); err != nil {
 		if errz.IsMatchError(err) {
 			return err
 		}
-		return fmt.Errorf("failed to unmarshal PE %v: %w", expr.ptype, err)
+		return fmt.Errorf("failed to unmarshal %v %v: %w", exprType, expr.ptype, err)
 	}
 	return nil
 }

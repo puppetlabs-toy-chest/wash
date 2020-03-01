@@ -15,7 +15,7 @@ import (
 )
 
 /*
-These tests are meant to test that we can unmarshal a PE
+These tests are meant to test that we can unmarshal a PE/NPE
 (and that we correctly return any errors). Testing the correctness
 of the Eval* methods themselves are left to the places that use the
 expression type
@@ -26,36 +26,74 @@ type ExpressionTestSuite struct {
 }
 
 func (s *ExpressionTestSuite) UMTC(input interface{}, expected interface{}) {
-	e := s.mockExpression().(*expression)
+	e := s.mockExpression(true).(*expression)
 	if s.NoError(e.Unmarshal(input)) {
 		s.Equal(expected, e.Marshal())
 	}
 }
 
-func (s *ExpressionTestSuite) TestUnmarshal_Errors() {
-	e := s.mockExpression()
+func (s *ExpressionTestSuite) TestUnmarshal_PE_Errors() {
+	e := s.mockExpression(false)
 	s.UMETC(e, 1, "expected.*PE.*mock.*predicate", true)
+	s.UMETC(e, s.A("NOT", "p"), "expected.*PE.*mock.*predicate", true)
 	s.UMETC(e, "syntax", "failed.*unmarshal.*PE.*mock.*predicate.*syntax.*error", false)
+
+	// Here we test that the operators fail to unmarshal "NOT"
+	for _, op := range []string{"AND", "OR"} {
+		s.UMETC(e, s.A(op, s.A("NOT", "p"), "p"), "error.*LHS.*PE", false)
+		s.UMETC(e, s.A(op, "p", s.A("NOT", "p")), "error.*RHS.*PE", false)
+	}
 }
 
-func (s *ExpressionTestSuite) TestUnmarshal() {
-	// Test simple unmarshaling (Atom, Not, Binop)
-	s.UMTC("p", "p")
-	s.UMTC(s.A("NOT", "p"), s.A("NOT", "p"))
-	s.UMTC(s.A("AND", "p", "p"), s.A("AND", "p", "p"))
-	s.UMTC(s.A("OR", "p", "p"), s.A("OR", "p", "p"))
+func (s *ExpressionTestSuite) TestUnmarshal_PE() {
+	UMTC := func(input interface{}, expected interface{}) {
+		e := s.mockExpression(false)
+		if s.NoError(e.Unmarshal(input)) {
+			s.Equal(expected, e.Marshal())
+		}
+	}
+
+	// Test simple unmarshaling (Atom, Binop)
+	UMTC("p", "p")
+	UMTC(s.A("AND", "p", "p"), s.A("AND", "p", "p"))
+	UMTC(s.A("OR", "p", "p"), s.A("OR", "p", "p"))
 
 	// Test nested unmarshaling
-	s.UMTC(s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")), s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")))
-	s.UMTC(s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")), s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")))
+	UMTC(s.A("AND", "p", s.A("OR", "p", "p")), s.A("AND", "p", s.A("OR", "p", "p")))
+	UMTC(s.A("OR", "p", s.A("AND", "p", "p")), s.A("OR", "p", s.A("AND", "p", "p")))
+}
+
+func (s *ExpressionTestSuite) TestUnmarshal_NPE_Errors() {
+	e := s.mockExpression(true)
+	s.UMETC(e, 1, "expected.*NPE.*mock.*predicate", true)
+	s.UMETC(e, "syntax", "failed.*unmarshal.*NPE.*mock.*predicate.*syntax.*error", false)
+}
+
+func (s *ExpressionTestSuite) TestUnmarshal_NPE() {
+	UMTC := func(input interface{}, expected interface{}) {
+		e := s.mockExpression(true)
+		if s.NoError(e.Unmarshal(input)) {
+			s.Equal(expected, e.Marshal())
+		}
+	}
+
+	// Test simple unmarshaling (Atom, Not, Binop)
+	UMTC("p", "p")
+	UMTC(s.A("NOT", "p"), s.A("NOT", "p"))
+	UMTC(s.A("AND", "p", "p"), s.A("AND", "p", "p"))
+	UMTC(s.A("OR", "p", "p"), s.A("OR", "p", "p"))
+
+	// Test nested unmarshaling
+	UMTC(s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")), s.A("AND", s.A("NOT", "p"), s.A("OR", "p", "p")))
+	UMTC(s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")), s.A("OR", s.A("NOT", "p"), s.A("AND", "p", "p")))
 }
 
 func TestExpression(t *testing.T) {
 	suite.Run(t, new(ExpressionTestSuite))
 }
 
-func (s *ExpressionTestSuite) mockExpression() rql.ASTNode {
-	return New("mock predicate", func() rql.ASTNode { return &mockPtype{} })
+func (s *ExpressionTestSuite) mockExpression(negatable bool) rql.ASTNode {
+	return New("mock predicate", negatable, func() rql.ASTNode { return &mockPtype{} })
 }
 
 // mockPtype is a mock predicate type used to test the top-level
