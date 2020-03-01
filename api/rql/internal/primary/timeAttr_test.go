@@ -42,8 +42,8 @@ func (s *TimeAttrTestSuite) TestEvalEntry() {
 	s.EETTC(p, e)
 }
 
-func (s *TimeAttrTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New(s.name, func() rql.ASTNode {
+func (s *TimeAttrTestSuite) TestExpression_Atom() {
+	expr := expression.New(s.name, false, func() rql.ASTNode {
 		return s.constructP(predicate.Time("", time.Time{}))
 	})
 
@@ -65,10 +65,4 @@ func (s *TimeAttrTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{s.name, []interface{}{"<", float64(1000)}}})
-	s.setAttr(&e, s.TM(2000))
-	s.EETTC(expr, e)
-	s.setAttr(&e, s.TM(500))
-	s.EEFTC(expr, e)
 }

@@ -38,7 +38,7 @@ func (s *ActionTestSuite) TestEvalAction() {
 }
 
 func (s *ActionTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("action", func() rql.ASTNode {
+	expr := expression.New("action", true, func() rql.ASTNode {
 		return Action(plugin.Action{})
 	})
 

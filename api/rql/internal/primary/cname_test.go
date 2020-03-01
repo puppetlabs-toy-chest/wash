@@ -37,8 +37,8 @@ func (s *CNameTestSuite) TestEvalEntry() {
 	s.EETTC(n, e)
 }
 
-func (s *CNameTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("cname", func() rql.ASTNode {
+func (s *CNameTestSuite) TestExpression_Atom() {
+	expr := expression.New("cname", false, func() rql.ASTNode {
 		return CName(predicate.String())
 	})
 
@@ -60,12 +60,6 @@ func (s *CNameTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"cname", []interface{}{"glob", "foo"}}})
-	e.CName = "bar"
-	s.EETTC(expr, e)
-	e.CName = "foo"
-	s.EEFTC(expr, e)
 }
 
 func TestCName(t *testing.T) {

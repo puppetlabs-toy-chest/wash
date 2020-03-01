@@ -28,68 +28,65 @@ func (s *QueryTestSuite) QTC(rawQuery interface{}, trueV interface{}) {
 	}
 }
 
-func (s *QueryTestSuite) TestCanUnmarshalAllThePrimariesAndTheirPEs() {
+func (s *QueryTestSuite) TestCanUnmarshalAllThePrimariesAndTheirExpressions() {
 	// These are in the same order as they're created in the primary
 	// directory
-	s.testPrimaryWithPEAction("action", func(action string) interface{} {
+	s.testPrimaryWithNPEAction("action", func(action string) interface{} {
 		e := rql.Entry{}
 		e.Actions = []string{action}
 		return e
 	})
 
-	s.testPrimaryWithPETime("atime", func(t time.Time) interface{} {
+	s.testPrimaryWithNPETime("atime", func(t time.Time) interface{} {
 		e := rql.Entry{}
 		e.Attributes.SetAtime(t)
 		return e
 	})
 
-	e := rql.Entry{}
-	s.QTC(true, e)
-
-	s.testPrimaryWithPEString("cname", func(s string) interface{} {
-		e = rql.Entry{}
+	s.testPrimaryWithNPEString("cname", func(s string) interface{} {
+		e := rql.Entry{}
 		e.CName = s
 		return e
 	})
 
-	s.testPrimaryWithPETime("crtime", func(t time.Time) interface{} {
+	s.testPrimaryWithNPETime("crtime", func(t time.Time) interface{} {
 		e := rql.Entry{}
 		e.Attributes.SetCrtime(t)
 		return e
 	})
 
-	s.testPrimaryWithPETime("ctime", func(t time.Time) interface{} {
+	s.testPrimaryWithNPETime("ctime", func(t time.Time) interface{} {
 		e := rql.Entry{}
 		e.Attributes.SetCtime(t)
 		return e
 	})
 
-	s.testPrimaryWithPEString("kind", func(s string) interface{} {
+	s.testPrimaryWithNPEString("kind", func(s string) interface{} {
 		es := &rql.EntrySchema{}
 		es.SetPath(s)
 		return es
 	})
 
-	s.testPrimaryWithPETime("mtime", func(t time.Time) interface{} {
+	s.testPrimaryWithNPETime("mtime", func(t time.Time) interface{} {
 		e := rql.Entry{}
 		e.Attributes.SetMtime(t)
 		return e
 	})
 
-	s.testPrimaryWithPEString("name", func(s string) interface{} {
-		e = rql.Entry{}
+	s.testPrimaryWithNPEString("name", func(s string) interface{} {
+		e := rql.Entry{}
 		e.Name = s
 		return e
 	})
 
-	s.testPrimaryWithPEString("path", func(s string) interface{} {
-		e = rql.Entry{}
+	s.testPrimaryWithNPEString("path", func(s string) interface{} {
+		e := rql.Entry{}
 		e.Path = s
 		return e
 	})
 
-	s.testPrimaryWithPENumeric("size", func(n float64) interface{} {
-		e = rql.Entry{}
+	s.testPrimaryWithNPENumeric("size", func(n float64) interface{} {
+		e := rql.Entry{}
 		e.Attributes.SetSize(uint64(n))
 		return e
 	})
@@ -98,7 +95,6 @@ func (s *QueryTestSuite) TestCanUnmarshalAllThePrimariesAndTheirPEs() {
 func (s *QueryTestSuite) TestCanUnmarshalPEPrimary() {
 	e := rql.Entry{}
 	e.Name = "foo"
-	s.QTC(s.A("NOT", s.A("name", s.A("glob", "bar"))), e)
 	e.CName = "foo"
 	s.QTC(s.A("AND", s.A("name", s.A("glob", "foo")), s.A("cname", s.A("glob", "foo"))), e)
 	s.QTC(s.A("OR", s.A("name", s.A("glob", "bar")), s.A("cname", s.A("glob", "foo"))), e)
@@ -107,34 +103,34 @@ func (s *QueryTestSuite) TestCanUnmarshalPEPrimary() {
 func (s *QueryTestSuite) TestUnmarshalErrors() {
 	q := Query()
 	s.UMETC(q, s.A(), "expected.*PE.*Primary", true)
-	s.UMETC(q, s.A("name", 1), "expected.*PE.*StringPredicate", false)
-	s.UMETC(q, s.A("NOT", 1), "expected.*PE.*Primary", false)
+	s.UMETC(q, s.A("name", 1), "expected.*NPE.*StringPredicate", false)
+	s.UMETC(q, s.A("NOT", 1), "expected.*PE.*Primary", true)
 	s.UMETC(q, s.A("AND", 1, 2), "expected.*PE.*Primary", false)
 	s.UMETC(q, s.A("OR", 1, 2), "expected.*PE.*Primary", false)
 }
 
-func (s *QueryTestSuite) testPrimaryWithPEAction(primaryName string, constructV func(string) interface{}) {
+func (s *QueryTestSuite) testPrimaryWithNPEAction(primaryName string, constructV func(string) interface{}) {
 	s.QTC(s.A(primaryName, "exec"), constructV("exec"))
 	s.QTC(s.A(primaryName, s.A("NOT", "exec")), constructV("list"))
 	s.QTC(s.A(primaryName, s.A("AND", "exec", "exec")), constructV("exec"))
 	s.QTC(s.A(primaryName, s.A("OR", "stream", "exec")), constructV("stream"))
 }
 
-func (s *QueryTestSuite) testPrimaryWithPETime(primaryName string, constructV func(time.Time) interface{}) {
+func (s *QueryTestSuite) testPrimaryWithNPETime(primaryName string, constructV func(time.Time) interface{}) {
 	s.QTC(s.A(primaryName, s.A(">", float64(500))), constructV(s.TM(1000)))
 	s.QTC(s.A(primaryName, s.A("NOT", s.A(">", float64(500)))), constructV(s.TM(500)))
 	s.QTC(s.A(primaryName, s.A("AND", s.A(">=", float64(500)), s.A("=", float64(500)))), constructV(s.TM(500)))
 	s.QTC(s.A(primaryName, s.A("OR", s.A(">", float64(500)), s.A("=", float64(500)))), constructV(s.TM(500)))
 }
 
-func (s *QueryTestSuite) testPrimaryWithPENumeric(primaryName string, constructV func(float64) interface{}) {
+func (s *QueryTestSuite) testPrimaryWithNPENumeric(primaryName string, constructV func(float64) interface{}) {
 	s.QTC(s.A(primaryName, s.A(">", float64(500))), constructV(1000))
 	s.QTC(s.A(primaryName, s.A("NOT", s.A(">", float64(500)))), constructV(500))
 	s.QTC(s.A(primaryName, s.A("AND", s.A(">=", float64(500)), s.A("=", float64(500)))), constructV(500))
 	s.QTC(s.A(primaryName, s.A("OR", s.A(">", float64(500)), s.A("=", float64(500)))), constructV(500))
 }
 
-func (s *QueryTestSuite) testPrimaryWithPEString(primaryName string, constructV func(string) interface{}) {
+func (s *QueryTestSuite) testPrimaryWithNPEString(primaryName string, constructV func(string) interface{}) {
 	// Test that it can marshal all the atoms
 	s.QTC(s.A(primaryName, s.A("glob", "foo")), constructV("foo"))
 	s.QTC(s.A(primaryName, s.A("regex", "foo")), constructV("foo"))

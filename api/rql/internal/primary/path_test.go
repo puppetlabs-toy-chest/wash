@@ -37,8 +37,8 @@ func (s *PathTestSuite) TestEvalEntry() {
 	s.EETTC(p, e)
 }
 
-func (s *PathTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("path", func() rql.ASTNode {
+func (s *PathTestSuite) TestExpression_Atom() {
+	expr := expression.New("path", false, func() rql.ASTNode {
 		return Path(predicate.String())
 	})
 
@@ -62,12 +62,6 @@ func (s *PathTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"path", []interface{}{"glob", "foo"}}})
-	e.Path = "bar"
-	s.EETTC(expr, e)
-	e.Path = "foo"
-	s.EEFTC(expr, e)
 }
 
 func TestPath(t *testing.T) {

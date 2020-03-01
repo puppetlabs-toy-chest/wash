@@ -70,7 +70,7 @@ func (s *NumericTestSuite) TestNumeric_EvalNumeric() {
 }
 
 func (s *NumericTestSuite) TestNumeric_Expression_AtomAndNot() {
-	expr := expression.New("numeric", func() rql.ASTNode {
+	expr := expression.New("numeric", true, func() rql.ASTNode {
 		return Numeric("", s.N("0"))
 	})
 
@@ -113,7 +113,7 @@ func (s *NumericTestSuite) TestNumericValue_EvalValue() {
 }
 
 func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
-	expr := expression.New("numeric", func() rql.ASTNode {
+	expr := expression.New("numeric", true, func() rql.ASTNode {
 		return NumericValue("", s.N("0"))
 	})
 

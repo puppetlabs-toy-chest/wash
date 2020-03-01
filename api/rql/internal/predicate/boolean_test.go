@@ -6,7 +6,6 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate/expression"
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -38,38 +37,18 @@ func (s *BooleanTestSuite) TestEvalValue() {
 	s.EVTTC(b, false)
 }
 
-func (s *BooleanTestSuite) TestEvalEntry() {
-	// Test true
-	b := Boolean(true).(rql.EntryPredicate)
-	s.EETTC(b, rql.Entry{})
-
-	// Test false
-	b = Boolean(false).(rql.EntryPredicate)
-	s.EEFTC(b, rql.Entry{})
-}
-
-func (s *BooleanTestSuite) TestEvalEntrySchema() {
-	// Test true
-	b := Boolean(true).(rql.EntrySchemaPredicate)
-	s.EESTTC(b, &apitypes.EntrySchema{})
-
-	// Test false
-	b = Boolean(false).(rql.EntrySchemaPredicate)
-	s.EESFTC(b, &apitypes.EntrySchema{})
-}
-
 func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("boolean", func() rql.ASTNode {
+	expr := expression.New("boolean", true, func() rql.ASTNode {
 		return Boolean(false)
 	})
 
 	s.MUM(expr, true)
 	s.EVFTC(expr, false, "foo")
 	s.EVTTC(expr, true)
-	s.EETTC(expr, rql.Entry{})
-	s.EESTTC(expr, &rql.EntrySchema{})
 	s.AssertNotImplemented(
 		expr,
+		asttest.EntryPredicateC,
+		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
 		asttest.TimePredicateC,
@@ -79,8 +58,6 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", true})
 	s.EVTTC(expr, false, "foo")
 	s.EVFTC(expr, true)
-	s.EEFTC(expr, rql.Entry{})
-	s.EESFTC(expr, &rql.EntrySchema{})
 }
 
 func TestBoolean(t *testing.T) {

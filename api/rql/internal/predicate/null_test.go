@@ -30,7 +30,7 @@ func (s *NullTestSuite) TestEvalValue() {
 }
 
 func (s *NullTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("null", func() rql.ASTNode {
+	expr := expression.New("null", true, func() rql.ASTNode {
 		return Null()
 	})
 
