@@ -10,7 +10,6 @@ import (
 func Primary() rql.ASTNode {
 	nt := internal.NewNonterminalNode(
 		primary.Action(PE_ActionPredicate()),
-		primary.Boolean(false),
 		primary.Name(PE_StringPredicate()),
 		primary.CName(PE_StringPredicate()),
 		primary.Path(PE_StringPredicate()),
