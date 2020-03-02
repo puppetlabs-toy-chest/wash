@@ -57,20 +57,12 @@ fi
 `
 	// Re-add aliases in case .zprofile or .zshrc overrode them.
 	content += common
-	content += `
-function prompter() {
-  local prompt_path
-  if [ -x "$(command -v realpath)" ]; then
-    prompt_path=$(realpath --relative-base=$W "$(pwd)")
-  else
-    prompt_path=$(basename "$(pwd)")
-  fi
-  PROMPT="%F{cyan}wash ${prompt_path}%F{green} ❯%f "
-}
 
+	// Configure prompt and override `cd`
+	content += preparePrompt("%F{cyan}", "%F{green}", "%f", "PROMPT") + `
 autoload -Uz add-zsh-hook
 add-zsh-hook precmd prompter
-
+` + overrideCd() + `
 if [[ -s ~/.washrc ]]; then source ~/.washrc; fi
 `
 	if err := ioutil.WriteFile(filepath.Join(rundir, ".zshrc"), []byte(content), 0644); err != nil {
