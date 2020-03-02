@@ -1,13 +1,10 @@
 package ast
 
 import (
-	"time"
-
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate/expression"
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/shopspring/decimal"
 )
 
 // PE_Primary returns a node representing a predicate expression (PE)
@@ -28,21 +25,15 @@ func NPE_ActionPredicate() rql.ActionPredicate {
 
 // NPE_StringPredicate returns a node representing NPE StringPredicate
 func NPE_StringPredicate() rql.StringPredicate {
-	return expression.New("StringPredicate", true, func() rql.ASTNode {
-		return predicate.String()
-	}).(rql.StringPredicate)
+	return predicate.NPE_StringPredicate()
 }
 
 // NPE_TimePredicate returns a node representing NPE TimePredicate
 func NPE_TimePredicate() rql.TimePredicate {
-	return expression.New("TimePredicate", true, func() rql.ASTNode {
-		return predicate.Time("", time.Time{})
-	}).(rql.TimePredicate)
+	return predicate.NPE_TimePredicate()
 }
 
 // NPE_UnsignedNumericPredicate returns a node representing NPE UnsignedNumericPredicate
 func NPE_UnsignedNumericPredicate() rql.NumericPredicate {
-	return expression.New("UnsignedNumericPredicate", true, func() rql.ASTNode {
-		return predicate.UnsignedNumeric("", decimal.Decimal{})
-	}).(rql.NumericPredicate)
+	return predicate.NPE_UnsignedNumericPredicate()
 }

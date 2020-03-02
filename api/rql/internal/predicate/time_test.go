@@ -84,32 +84,32 @@ func (s *TimeTestSuite) TestTime_Expression_AtomAndNot() {
 }
 
 func (s *TimeTestSuite) TestTimeValue_Marshal() {
-	s.MTC(TimeValue(LT, s.TM(1000)), s.A("time", s.A("<", s.TM(1000))))
+	s.MTC(TimeValue(Time(LT, s.TM(1000))), s.A("time", s.A("<", s.TM(1000))))
 }
 
 func (s *TimeTestSuite) TestTimeValue_Unmarshal() {
-	t := TimeValue("", s.TM(0))
-	s.UMETC(t, "foo", `formatted.*"time".*<time_predicate>`, true)
-	s.UMETC(t, s.A("time", "foo", "bar"), `formatted.*"time".*<time_predicate>`, false)
-	s.UMETC(t, s.A("time"), `formatted.*"time".*<time_predicate>.*missing.*time.*predicate`, false)
+	t := TimeValue(Time("", s.TM(0)))
+	s.UMETC(t, "foo", `formatted.*"time".*NPE TimePredicate`, true)
+	s.UMETC(t, s.A("time", "foo", "bar"), `formatted.*"time".*NPE TimePredicate`, false)
+	s.UMETC(t, s.A("time"), `formatted.*"time".*NPE TimePredicate.*missing.*NPE TimePredicate`, false)
 	s.UMETC(t, s.A("time", s.A()), "formatted.*<comparison_op>.*<time>", false)
-	s.UMTC(t, s.A("time", s.A("<", s.TM(1000))), TimeValue(LT, s.TM(1000)))
+	s.UMTC(t, s.A("time", s.A("<", s.TM(1000))), TimeValue(Time(LT, s.TM(1000))))
 }
 
 func (s *TimeTestSuite) TestTimeValue_EvalValue() {
-	t := TimeValue(LT, s.TM(1000))
-	s.EVFTC(t, s.TM(2000))
+	t := TimeValue(Time(LT, s.TM(1000)))
+	s.EVFTC(t, s.TM(2000), "foo")
 	s.EVTTC(t, s.TM(500), s.TM(500).Format(time.RFC3339))
 	// TestEvalTime contained the operator-specific test-cases
 }
 
 func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
 	expr := expression.New("time", true, func() rql.ASTNode {
-		return TimeValue("", s.TM(0))
+		return TimeValue(Time("", s.TM(0)))
 	})
 
 	s.MUM(expr, []interface{}{"time", []interface{}{"<", float64(1000)}})
-	s.EVFTC(expr, s.TM(2000), s.TM(1000), "foo")
+	s.EVFTC(expr, s.TM(2000), s.TM(1000))
 	s.EVTTC(expr, s.TM(500))
 	s.AssertNotImplemented(
 		expr,

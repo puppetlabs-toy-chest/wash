@@ -91,34 +91,31 @@ func (p *numeric) EvalNumeric(n decimal.Decimal) bool {
 
 var _ = rql.NumericPredicate(&numeric{})
 
-func NumericValue(op ComparisonOp, n decimal.Decimal) rql.ValuePredicate {
-	return &numericValue{numeric{
-		op: op,
-		n:  n,
-	}}
+func NumericValue(p rql.NumericPredicate) rql.ValuePredicate {
+	return &numericValue{p}
 }
 
 type numericValue struct {
-	numeric
+	rql.NumericPredicate
 }
 
 func (p *numericValue) Marshal() interface{} {
-	return []interface{}{"number", p.numeric.Marshal()}
+	return []interface{}{"number", p.NumericPredicate.Marshal()}
 }
 
 func (p *numericValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("number"))(input) {
-		return errz.MatchErrorf("must be formatted as ['number', <numeric_predicate>]")
+		return errz.MatchErrorf("must be formatted as ['number', NPE NumericPredicate]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as ['number', <numeric_predicate>]")
+		return fmt.Errorf("must be formatted as ['number', NPE NumericPredicate]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("must be formatted as ['number', <numeric_predicate>] (missing the numeric predicate)")
+		return fmt.Errorf("must be formatted as ['number', NPE NumericPredicate] (missing the NPE NumericPredicate)")
 	}
-	if err := p.numeric.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("error unmarshalling the numeric predicate: %w", err)
+	if err := p.NumericPredicate.Unmarshal(array[1]); err != nil {
+		return fmt.Errorf("error unmarshalling the NPE NumericPredicate: %w", err)
 	}
 	return nil
 }

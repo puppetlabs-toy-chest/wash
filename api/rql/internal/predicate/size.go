@@ -19,7 +19,8 @@ func Size(p rql.NumericPredicate) rql.ValuePredicate {
 }
 
 type size struct {
-	p rql.NumericPredicate
+	p           rql.NumericPredicate
+	isArraySize bool
 }
 
 func (p *size) Marshal() interface{} {
@@ -46,8 +47,14 @@ func (p *size) Unmarshal(input interface{}) error {
 func (p *size) EvalValue(v interface{}) bool {
 	switch t := v.(type) {
 	case map[string]interface{}:
+		if p.isArraySize {
+			return false
+		}
 		return p.p.EvalNumeric(decimal.NewFromInt(int64(len(t))))
 	case []interface{}:
+		if !p.isArraySize {
+			return false
+		}
 		return p.p.EvalNumeric(decimal.NewFromInt(int64(len(t))))
 	default:
 		return false
