@@ -378,6 +378,6 @@ wash puppet/pupperware/nodes > find . -k '*report' -meta .noop -true
 ```
 > We use `-k '*report'` to limit what we match to just reports.
 
-These are just a few things we thought might be useful to be able to explore. [Try it out!](https://github.com/puppetlabs/boltwash#installation-and-configuration)
+These are just a few things we thought might be useful to be able to explore. [Try it out!](https://github.com/puppetlabs/puppetwash#installation-and-configuration)
 
 Let us know what other ideas you might have at https://github.com/puppetlabs/puppetwash/issues (or check out https://puppetlabs.github.io/wash/contributing for other ways to get involved).
