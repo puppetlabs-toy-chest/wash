@@ -134,7 +134,7 @@ func (c *computeInstance) Exec(ctx context.Context, cmd string, args []string,
 
 	identity := transport.Identity{
 		Host:         hostname,
-		FallbackUser: user,
+		User:         user,
 		IdentityFile: conf.privateKey,
 		KnownHosts:   conf.knownHosts,
 		HostKeyAlias: hostKeyAlias(c.instance),
