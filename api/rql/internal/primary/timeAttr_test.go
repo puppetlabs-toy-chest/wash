@@ -25,11 +25,11 @@ func (s *TimeAttrTestSuite) TestMarshal() {
 
 func (s *TimeAttrTestSuite) TestUnmarshal() {
 	p := s.constructP(predicate.Time("", s.TM(0)))
-	s.UMETC(p, "foo", fmt.Sprintf(`%v.*formatted.*"%v".*PE TimePredicate`, s.name, s.name), true)
-	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), fmt.Sprintf(`%v.*formatted.*"%v".*PE TimePredicate`, s.name, s.name), true)
-	s.UMETC(p, s.A(s.name, "foo", "bar"), fmt.Sprintf(`%v.*formatted.*"%v".*PE TimePredicate`, s.name, s.name), false)
-	s.UMETC(p, s.A(s.name), fmt.Sprintf(`%v.*formatted.*"%v".*PE TimePredicate.*missing.*PE TimePredicate`, s.name, s.name), false)
-	s.UMETC(p, s.A(s.name, s.A("<", true)), fmt.Sprintf(`%v.*PE TimePredicate.*valid.*time.*type`, s.name), false)
+	s.UMETC(p, "foo", fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
+	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
+	s.UMETC(p, s.A(s.name, "foo", "bar"), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), false)
+	s.UMETC(p, s.A(s.name), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate.*missing.*NPE TimePredicate`, s.name, s.name), false)
+	s.UMETC(p, s.A(s.name, s.A("<", true)), fmt.Sprintf(`%v.*NPE TimePredicate.*valid.*time.*type`, s.name), false)
 	s.UMTC(p, s.A(s.name, s.A("<", int64(1000))), s.constructP(predicate.Time(predicate.LT, s.TM(1000))))
 }
 

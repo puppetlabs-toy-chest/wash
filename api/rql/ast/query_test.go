@@ -90,6 +90,12 @@ func (s *QueryTestSuite) TestCanUnmarshalAllThePrimariesAndTheirExpressions() {
 		e.Attributes.SetSize(uint64(n))
 		return e
 	})
+
+	s.testPrimaryWithPEObject("meta", func(metadata map[string]interface{}) interface{} {
+		e := rql.Entry{}
+		e.Metadata = metadata
+		return e
+	})
 }
 
 func (s *QueryTestSuite) TestCanUnmarshalPEPrimary() {
@@ -139,6 +145,16 @@ func (s *QueryTestSuite) testPrimaryWithNPEString(primaryName string, constructV
 	s.QTC(s.A(primaryName, s.A("NOT", s.A("glob", "foo"))), constructV("bar"))
 	s.QTC(s.A(primaryName, s.A("AND", s.A("glob", "*o*"), s.A("glob", "foo"))), constructV("foo"))
 	s.QTC(s.A(primaryName, s.A("OR", s.A("glob", "foo"), s.A("glob", "bar"))), constructV("bar"))
+}
+
+func (s *QueryTestSuite) testPrimaryWithPEObject(primaryName string, constructV func(map[string]interface{}) interface{}) {
+	// This helper saves some typing
+	objAtom := func(val bool) interface{} {
+		return s.A("object", s.A(s.A("key", "foo"), s.A("boolean", val)))
+	}
+	s.QTC(s.A(primaryName, objAtom(true)), constructV(map[string]interface{}{"foo": true}))
+	s.QTC(s.A(primaryName, s.A("AND", objAtom(true), objAtom(true))), constructV(map[string]interface{}{"foo": true}))
+	s.QTC(s.A(primaryName, s.A("OR", objAtom(false), objAtom(true))), constructV(map[string]interface{}{"foo": true}))
 }
 
 func TestQuery(t *testing.T) {
