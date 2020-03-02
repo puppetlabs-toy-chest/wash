@@ -21,7 +21,9 @@ type Shell interface {
 	//   1. if ~/.washenv exists, load it
 	// Additionally for interactive invocations they should:
 	//   1. if ~/.washrc does not exist, load the shell's default interactive config
-	//   1. reconfigure subcommand aliases (in case they were overridden), configure the prompt
+	//   1. reconfigure subcommand aliases (in case they were overridden)
+	//   1. configure the prompt to show your location within the Wash hierarchy (use preparePrompt)
+	//   1. override cd so `cd` without arguments changes directory to $W (use overrideCd)
 	//   1. if ~/.washrc exists, load it
 	Command(subcommands []string, rundir string) (*exec.Cmd, error)
 }
@@ -41,4 +43,29 @@ func Get() Shell {
 		}
 		return basic{sh: sh}
 	}
+}
+
+// Create the declaration for a `prompter` function that generates the prompt
+//   `%F{cyan}wash ${prompt_path}%F{green} ❯%f `
+// with substitution for shell-specific portions of the function.
+func preparePrompt(cyan, green, reset, assign string) string {
+	return `
+function prompter() {
+	local prompt_path
+	if [ -x "$(command -v realpath)" ]; then
+		prompt_path=$(realpath --relative-base=$W "$(pwd)")
+	else
+		prompt_path=$(basename "$(pwd)")
+	fi
+	` + assign + `="` + cyan + `wash ${prompt_path}` + green + ` ❯` + reset + ` "
+}
+`
+}
+
+// Create the declaration for a `cd` function that returns to the Wash root when no arguments are
+// supplied.
+func overrideCd() string {
+	return `
+function cd { if (( $# == 0 )); then builtin cd $W; else builtin cd $*; fi }
+`
 }

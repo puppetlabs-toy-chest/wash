@@ -175,11 +175,10 @@ func stringifySupportedActions(path string, entry apitypes.Entry) string {
 				fmt.Sprintf("- ls %s", path),
 				fmt.Sprintf("    Type 'docs <child>' to view an ls'ed child's documentation"),
 				fmt.Sprintf("- cd %s", path),
-				fmt.Sprintf("    The 'W' environment variable contains the Wash root. Use 'cd $W' to"),
-				fmt.Sprintf("    return to it."),
+				fmt.Sprintf("    Use 'cd' to return to Wash's starting directory"),
 				fmt.Sprintf("- stree %s", path),
 				fmt.Sprintf("    Gives you a high-level overview of the kinds of things that you will"),
-				fmt.Sprintf("    encounter when you 'cd' and 'ls' through this entry."),
+				fmt.Sprintf("    encounter when you 'cd' and 'ls' through this entry"),
 				fmt.Sprintf("- (anything else that works with directories [e.g. 'tree'])"),
 			}
 		case plugin.ReadAction().Name:

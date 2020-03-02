@@ -47,18 +47,11 @@ func (b bash) Command(subcommands []string, rundir string) (*exec.Cmd, error) {
 `
 	// Re-add aliases in case .bashrc overrode them.
 	content += common
-	content += `
-function prompter() {
-  local prompt_path
-  if [ -x "$(command -v realpath)" ]; then
-    prompt_path=$(realpath --relative-base=$W "$(pwd)")
-  else
-    prompt_path=$(basename "$(pwd)")
-  fi
-  export PS1="\e[0;36mwash ${prompt_path}\e[0;32m ❯\e[m "
-}
-export PROMPT_COMMAND=prompter
 
+	// Configure prompt and override `cd`
+	content += preparePrompt(`\e[0;36m`, `\e[0;32m`, `\e[m`, "export PS1") + `
+export PROMPT_COMMAND=prompter
+` + overrideCd() + `
 [[ -s ~/.washrc ]] && source ~/.washrc
 `
 	if err := ioutil.WriteFile(rcpath, []byte(content), 0644); err != nil {
