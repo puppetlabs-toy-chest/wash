@@ -20,11 +20,11 @@ func (s *PathTestSuite) TestMarshal() {
 
 func (s *PathTestSuite) TestUnmarshal() {
 	n := Path(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `path.*formatted.*"path".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `path.*formatted.*"path".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("path", "foo", "bar"), `path.*formatted.*"path".*PE StringPredicate`, false)
-	s.UMETC(n, s.A("path"), `path.*formatted.*"path".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("path", s.A("glob", "[")), "path.*PE StringPredicate.*glob", false)
+	s.UMETC(n, "foo", `path.*formatted.*"path".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `path.*formatted.*"path".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("path", "foo", "bar"), `path.*formatted.*"path".*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("path"), `path.*formatted.*"path".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("path", s.A("glob", "[")), "path.*NPE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("path", s.A("glob", "foo")), Path(predicate.StringGlob("foo")))
 }
 

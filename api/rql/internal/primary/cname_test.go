@@ -20,11 +20,11 @@ func (s *CNameTestSuite) TestMarshal() {
 
 func (s *CNameTestSuite) TestUnmarshal() {
 	n := CName(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `cname.*formatted.*"cname".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `cname.*formatted.*"cname".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("cname", "foo", "bar"), `cname.*formatted.*"cname".*PE StringPredicate`, false)
-	s.UMETC(n, s.A("cname"), `cname.*formatted.*"cname".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("cname", s.A("glob", "[")), "cname.*PE StringPredicate.*glob", false)
+	s.UMETC(n, "foo", `cname.*formatted.*"cname".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `cname.*formatted.*"cname".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("cname", "foo", "bar"), `cname.*formatted.*"cname".*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("cname"), `cname.*formatted.*"cname".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("cname", s.A("glob", "[")), "cname.*NPE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("cname", s.A("glob", "foo")), CName(predicate.StringGlob("foo")))
 }
 

@@ -15,6 +15,13 @@ func PE_Primary() rql.Primary {
 	}).(rql.Primary)
 }
 
+// PE_Object returns a node representing PE Object
+func PE_Object() rql.ValuePredicate {
+	return expression.New("ObjectPredicate", false, func() rql.ASTNode {
+		return predicate.Object()
+	}).(rql.ValuePredicate)
+}
+
 // NPE_ActionPredicate returns a node representing a negatable predicate
 // expression (NPE) of ActionPredicate
 func NPE_ActionPredicate() rql.ActionPredicate {

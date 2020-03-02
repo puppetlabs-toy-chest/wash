@@ -20,11 +20,11 @@ func (s *KindTestSuite) TestMarshal() {
 
 func (s *KindTestSuite) TestUnmarshal() {
 	n := Kind(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `kind.*formatted.*"kind".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*PE StringPredicate`, false)
-	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*PE StringPredicate.*glob", false)
+	s.UMETC(n, "foo", `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*NPE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
 }
 func (s *KindTestSuite) TestEvalEntrySchema() {
