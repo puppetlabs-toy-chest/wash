@@ -76,31 +76,31 @@ func (p *tm) EvalTime(t time.Time) bool {
 
 var _ = rql.TimePredicate(&tm{})
 
-func TimeValue(op ComparisonOp, t time.Time) rql.ValuePredicate {
-	return &tmValue{tm{op, t}}
+func TimeValue(p rql.TimePredicate) rql.ValuePredicate {
+	return &tmValue{p}
 }
 
 type tmValue struct {
-	tm
+	rql.TimePredicate
 }
 
 func (p *tmValue) Marshal() interface{} {
-	return []interface{}{"time", p.tm.Marshal()}
+	return []interface{}{"time", p.TimePredicate.Marshal()}
 }
 
 func (p *tmValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("time"))(input) {
-		return errz.MatchErrorf("must be formatted as [\"time\", <time_predicate>]")
+		return errz.MatchErrorf("must be formatted as [\"time\", NPE TimePredicate]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>]")
+		return fmt.Errorf("must be formatted as [\"time\", NPE TimePredicate]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>] (missing the time predicate)")
+		return fmt.Errorf("must be formatted as [\"time\", NPE TimePredicate] (missing the NPE TimePredicate)")
 	}
-	if err := p.tm.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("error unmarshalling the time predicate: %w", err)
+	if err := p.TimePredicate.Unmarshal(array[1]); err != nil {
+		return fmt.Errorf("error unmarshalling the NPE TimePredicate: %w", err)
 	}
 	return nil
 }

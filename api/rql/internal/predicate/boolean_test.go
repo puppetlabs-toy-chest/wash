@@ -14,26 +14,29 @@ type BooleanTestSuite struct {
 }
 
 func (s *BooleanTestSuite) TestMarshal() {
-	s.MTC(Boolean(true), true)
-	s.MTC(Boolean(false), false)
+	s.MTC(Boolean(true), s.A("boolean", true))
+	s.MTC(Boolean(false), s.A("boolean", false))
 }
 
 func (s *BooleanTestSuite) TestUnmarshal() {
 	b := Boolean(true)
-	s.UMETC(b, "foo", "foo.*valid.*Boolean.*true.*false", true)
-	s.UMTC(b, true, Boolean(true))
-	s.UMTC(b, false, Boolean(false))
+	s.UMETC(b, "foo", "formatted.*boolean.*value", true)
+	s.UMETC(b, s.A("boolean", "foo", "bar"), "formatted.*boolean.*value", false)
+	s.UMETC(b, s.A("boolean"), "formatted.*boolean.*value.*missing.*value", false)
+	s.UMETC(b, s.A("boolean", "foo"), "foo.*valid.*Boolean.*true.*false", true)
+	s.UMTC(b, s.A("boolean", true), Boolean(true))
+	s.UMTC(b, s.A("boolean", false), Boolean(false))
 }
 
 func (s *BooleanTestSuite) TestEvalValue() {
 	// Test true
 	b := Boolean(true)
-	s.EVFTC(b, false)
+	s.EVFTC(b, false, "foo")
 	s.EVTTC(b, true)
 
 	// Test false
 	b = Boolean(false)
-	s.EVFTC(b, true)
+	s.EVFTC(b, true, "foo")
 	s.EVTTC(b, false)
 }
 
@@ -42,8 +45,8 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 		return Boolean(false)
 	})
 
-	s.MUM(expr, true)
-	s.EVFTC(expr, false, "foo")
+	s.MUM(expr, s.A("boolean", true))
+	s.EVFTC(expr, false)
 	s.EVTTC(expr, true)
 	s.AssertNotImplemented(
 		expr,
@@ -55,8 +58,8 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 		asttest.ActionPredicateC,
 	)
 
-	s.MUM(expr, []interface{}{"NOT", true})
-	s.EVTTC(expr, false, "foo")
+	s.MUM(expr, []interface{}{"NOT", s.A("boolean", true)})
+	s.EVTTC(expr, false)
 	s.EVFTC(expr, true)
 }
 

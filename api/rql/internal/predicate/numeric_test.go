@@ -93,32 +93,32 @@ func (s *NumericTestSuite) TestNumeric_Expression_AtomAndNot() {
 }
 
 func (s *NumericTestSuite) TestNumericValue_Marshal() {
-	s.MTC(NumericValue(LT, s.N("2.3")), s.A("number", s.A("<", "2.3")))
+	s.MTC(NumericValue(Numeric(LT, s.N("2.3"))), s.A("number", s.A("<", "2.3")))
 }
 
 func (s *NumericTestSuite) TestNumericValue_Unmarshal() {
-	n := NumericValue("", s.N("0"))
-	s.UMETC(n, "foo", "formatted.*number.*<numeric_predicate>", true)
-	s.UMETC(n, s.A("number", "foo", "bar"), "formatted.*number.*<numeric_predicate>", false)
-	s.UMETC(n, s.A("number"), "formatted.*number.*<numeric_predicate>.*missing.*numeric.*predicate", false)
-	s.UMETC(n, s.A("number", s.A()), "unmarshalling.*numeric.*predicate.*formatted.*<comparison_op>.*<number>", false)
-	s.UMTC(n, s.A("number", s.A("<", "2.3")), NumericValue(LT, s.N("2.3")))
+	n := NumericValue(Numeric("", s.N("0")))
+	s.UMETC(n, "foo", "formatted.*number.*NPE NumericPredicate", true)
+	s.UMETC(n, s.A("number", "foo", "bar"), "formatted.*number.*NPE NumericPredicate", false)
+	s.UMETC(n, s.A("number"), "formatted.*number.*NPE NumericPredicate.*missing.*NPE NumericPredicate", false)
+	s.UMETC(n, s.A("number", s.A()), "unmarshalling.*NPE NumericPredicate.*formatted.*<comparison_op>.*<number>", false)
+	s.UMTC(n, s.A("number", s.A("<", "2.3")), NumericValue(Numeric(LT, s.N("2.3"))))
 }
 
 func (s *NumericTestSuite) TestNumericValue_EvalValue() {
-	n := NumericValue(LT, s.N("2.0"))
-	s.EVFTC(n, float64(3))
+	n := NumericValue(Numeric(LT, s.N("2.0")))
+	s.EVFTC(n, float64(3), "1")
 	s.EVTTC(n, float64(1))
 	// TestEvalNumeric contained the operator-specific test-cases
 }
 
 func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	expr := expression.New("numeric", true, func() rql.ASTNode {
-		return NumericValue("", s.N("0"))
+		return NumericValue(Numeric("", s.N("0")))
 	})
 
 	s.MUM(expr, []interface{}{"number", []interface{}{"<", "1"}})
-	s.EVFTC(expr, float64(1), "1")
+	s.EVFTC(expr, float64(1))
 	s.EVTTC(expr, float64(0))
 	s.AssertNotImplemented(
 		expr,
@@ -130,7 +130,7 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"number", []interface{}{"<", "1"}}})
-	s.EVTTC(expr, float64(1), "1")
+	s.EVTTC(expr, float64(1))
 	s.EVFTC(expr, float64(0))
 }
 

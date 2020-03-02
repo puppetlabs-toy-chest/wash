@@ -135,26 +135,26 @@ func (s *StringTestSuite) TestStringValue_Marshal() {
 
 func (s *StringTestSuite) TestStringValue_Unmarshal() {
 	g := StringValueGlob("")
-	s.UMETC(g, "foo", `formatted.*"string".*<string_predicate>`, true)
-	s.UMETC(g, s.A("string", "foo", "bar"), `formatted.*"string".*<string_predicate>`, false)
-	s.UMETC(g, s.A("string"), `formatted.*"string".*<string_predicate>.*missing.*string.*predicate`, false)
-	s.UMETC(g, s.A("string", s.A()), `error.*unmarshalling.*string.*predicate.*formatted.*"glob".*<glob>`, false)
+	s.UMETC(g, "foo", `formatted.*"string".*NPE StringPredicate`, true)
+	s.UMETC(g, s.A("string", "foo", "bar"), `formatted.*"string".*NPE StringPredicate`, false)
+	s.UMETC(g, s.A("string"), `formatted.*"string".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(g, s.A("string", s.A()), `error.*unmarshalling.*NPE StringPredicate.*formatted.*"glob".*<glob>`, false)
 	s.UMTC(g, s.A("string", s.A("glob", "foo")), StringValueGlob("foo"))
 }
 
 func (s *StringTestSuite) TestStringValue_EvalValue() {
 	g := StringValueGlob("foo")
-	s.EVFTC(g, "bar")
+	s.EVFTC(g, "bar", 1)
 	s.EVTTC(g, "foo")
 }
 
 func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	expr := expression.New("string", true, func() rql.ASTNode {
-		return StringValue()
+		return StringValue(String())
 	})
 
 	s.MUM(expr, []interface{}{"string", []interface{}{"glob", "foo"}})
-	s.EVFTC(expr, "bar", 1)
+	s.EVFTC(expr, "bar")
 	s.EVTTC(expr, "foo")
 	s.AssertNotImplemented(
 		expr,
@@ -166,7 +166,7 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"string", []interface{}{"glob", "foo"}}})
-	s.EVTTC(expr, "bar", 1)
+	s.EVTTC(expr, "bar")
 	s.EVFTC(expr, "foo")
 }
 
