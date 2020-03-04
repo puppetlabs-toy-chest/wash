@@ -50,12 +50,12 @@ func (d *FS) List(ctx context.Context) ([]plugin.Entry, error) {
 
 type nonZeroError struct {
 	cmdline  []string
-	output   string
+	stderr   string
 	exitcode int
 }
 
 func (e nonZeroError) Error() string {
-	return fmt.Sprintf("Exec exited non-zero [%v] running %v: %v", e.exitcode, strings.Join(e.cmdline, " "), e.output)
+	return fmt.Sprintf("Exec exited non-zero [%v] running %v:\n%v", e.exitcode, strings.Join(e.cmdline, " "), e.stderr)
 }
 
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty bool) (*bytes.Buffer, error) {
@@ -66,15 +66,18 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty b
 		return nil, err
 	}
 
-	var buf bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	var errs []error
 	for chunk := range cmd.OutputCh() {
 		if chunk.Err != nil {
 			errs = append(errs, chunk.Err)
 		} else {
 			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
-			if chunk.StreamID == plugin.Stdout {
-				fmt.Fprint(&buf, chunk.Data)
+			switch chunk.StreamID {
+			case plugin.Stdout:
+				fmt.Fprint(&stdout, chunk.Data)
+			case plugin.Stderr:
+				fmt.Fprint(&stderr, chunk.Data)
 			}
 		}
 	}
@@ -88,9 +91,9 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty b
 		return nil, err
 	} else if exitcode != 0 {
 		// Can happen due to permission denied. Leave handling up to the caller.
-		return &buf, nonZeroError{cmdline: cmdline, output: buf.String(), exitcode: exitcode}
+		return &stdout, nonZeroError{cmdline: cmdline, stderr: strings.TrimSpace(stderr.String()), exitcode: exitcode}
 	}
-	return &buf, nil
+	return &stdout, nil
 }
 
 // VolumeList satisfies the Interface required by List to enumerate files.
@@ -102,11 +105,24 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	// being logged in as a user. `ls` will report different file types based on whether you're using
 	// it interactively, see character device vs named pipe on /dev/stderr as an example.
 	buf, err := exec(ctx, d.executor, cmdline, plugin.IsInteractive())
-	if _, ok := err.(nonZeroError); ok {
-		// May not have access to some files, but list the rest.
-		activity.Record(ctx, "%v running %v, attempting to parse output", err, cmdline)
+	if nzerr, ok := err.(nonZeroError); ok {
+		// Some messages are considered normal, such as when stat fails because a file no longer exists
+		// as part of `find ... -exec stat`. We ignore these errors, but if we see any other errors
+		// we fail VolumeList.
+		var normalError func(string) bool
+		switch d.loginShell() {
+		case plugin.POSIXShell:
+			normalError = NormalErrorPOSIX
+		case plugin.PowerShell:
+			normalError = NormalErrorPowerShell
+		}
+
+		for _, line := range strings.Split(nzerr.stderr, "\n") {
+			if text := strings.TrimSpace(line); text != "" && !normalError(text) {
+				return nil, err
+			}
+		}
 	} else if err != nil {
-		activity.Record(ctx, "Exec error running %v in VolumeList: %v", cmdline, err)
 		return nil, err
 	}
 	activity.Record(ctx, "VolumeList complete")
