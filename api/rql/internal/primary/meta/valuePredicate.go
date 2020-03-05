@@ -51,7 +51,7 @@ Then the leaves are the "number" and "NOT" nodes under the "OR". Their SVS' are
 				[["key", "foo"],
 				["array",
 					["some",
-						["NOT", ["number", ["=", 5]]]]]]
+						["NOT", ["number", [">", 5]]]]]]
 	  And that {"foo": [6]}, {"foo": [[]]}, {"foo": [{}]} are several satisfying values
 	  for the leaf-AST's predicate. In fact, all satisfying values will have the general
 	  form {"foo": [*]} where "*" means that the value inside the array can be anything,
@@ -89,6 +89,10 @@ type ValuePredicateBase struct {
 }
 
 func (p *ValuePredicateBase) EvalValueSchema(rawSchema *plugin.JSONSchema) bool {
+	// We cache the schema predicate to avoid redundant computation. However,
+	// many of the tests that test an EvalValueSchema implementation will unmarshal
+	// the same predicate object (this makes the tests easier to read). Thus,
+	// schema-predicate caching is turned off for those tests.
 	runningTests := flag.Lookup("test.v") != nil
 	if p.schemaPredicate == nil || runningTests {
 		p.schemaPredicate = p.p.SchemaPredicate(NewSatisfyingValueSchema())
