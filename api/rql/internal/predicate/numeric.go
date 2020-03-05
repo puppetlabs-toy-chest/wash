@@ -6,6 +6,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/shopspring/decimal"
 )
 
@@ -92,10 +93,13 @@ func (p *numeric) EvalNumeric(n decimal.Decimal) bool {
 var _ = rql.NumericPredicate(&numeric{})
 
 func NumericValue(p rql.NumericPredicate) rql.ValuePredicate {
-	return &numericValue{p}
+	n := &numericValue{NumericPredicate: p}
+	n.primitiveValueBase = newPrimitiveValue(n)
+	return n
 }
 
 type numericValue struct {
+	primitiveValueBase
 	rql.NumericPredicate
 }
 
@@ -125,4 +129,4 @@ func (p *numericValue) EvalValue(v interface{}) bool {
 	return ok && p.EvalNumeric(decimal.NewFromFloat(n))
 }
 
-var _ = rql.ValuePredicate(&numericValue{})
+var _ = meta.ValuePredicate(&numericValue{})

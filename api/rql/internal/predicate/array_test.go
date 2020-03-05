@@ -69,6 +69,15 @@ func (s *ArrayTestSuite) TestEvalValue_ElementPredicate() {
 	s.EVTTC(p, []interface{}{false, true}, []interface{}{"foo", true})
 }
 
+func (s *ArrayTestSuite) TestEvalValueSchema_ElementPredicate() {
+	p := Array()
+	for _, selector := range []interface{}{"some", "all", float64(0)} {
+		s.MUM(p, s.A("array", s.A(selector, s.A("boolean", true))))
+		s.EVSFTC(p, VS{"type": "number"}, VS{"type": "object"}, VS{"type": "array", "items": VS{"type": "object"}})
+		s.EVSTTC(p, VS{"type": "array"}, VS{"type": "array", "items": VS{"type": "boolean"}})
+	}
+}
+
 func (s *ArrayTestSuite) TestExpression_AtomAndNot_ElementPredicate() {
 	expr := expression.New("array", true, func() rql.ASTNode {
 		return Array()
@@ -78,9 +87,12 @@ func (s *ArrayTestSuite) TestExpression_AtomAndNot_ElementPredicate() {
 		s.MUM(expr, s.A("array", s.A(selector, s.A("boolean", true))))
 		s.EVFTC(expr, []interface{}{false})
 		s.EVTTC(expr, []interface{}{true})
+		s.EVSFTC(expr, VS{"type": "object"})
+		s.EVSTTC(expr, VS{"type": "array"})
 		s.MUM(expr, s.A("NOT", s.A("array", s.A(selector, s.A("boolean", true)))))
 		s.EVTTC(expr, []interface{}{false})
 		s.EVFTC(expr, []interface{}{true})
+		s.EVSTTC(expr, VS{"type": "array"}, VS{"type": "object"})
 	}
 
 	// Assert that the unmarshaled atom doesn't implement the other *Predicate

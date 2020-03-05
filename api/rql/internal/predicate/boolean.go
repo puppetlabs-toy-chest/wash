@@ -6,15 +6,19 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 func Boolean(val bool) rql.ValuePredicate {
-	return &boolean{
+	p := &boolean{
 		val: val,
 	}
+	p.primitiveValueBase = newPrimitiveValue(p)
+	return p
 }
 
 type boolean struct {
+	primitiveValueBase
 	val bool
 }
 
@@ -46,4 +50,4 @@ func (p *boolean) EvalValue(v interface{}) bool {
 	return ok && val == p.val
 }
 
-var _ = rql.ValuePredicate(&boolean{})
+var _ = meta.ValuePredicate(&boolean{})

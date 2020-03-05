@@ -12,7 +12,7 @@ import (
 )
 
 type StringTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *StringTestSuite) TestGlob_Marshal() {
@@ -148,6 +148,12 @@ func (s *StringTestSuite) TestStringValue_EvalValue() {
 	s.EVTTC(g, "foo")
 }
 
+func (s NumericTestSuite) TestStringValue_EvalValueSchema() {
+	g := StringValueGlob("foo")
+	s.EVSFTC(g, s.VS("object", "array")...)
+	s.EVSTTC(g, s.VS("string")...)
+}
+
 func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	expr := expression.New("string", true, func() rql.ASTNode {
 		return StringValue(String())
@@ -156,6 +162,8 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	s.MUM(expr, []interface{}{"string", []interface{}{"glob", "foo"}})
 	s.EVFTC(expr, "bar")
 	s.EVTTC(expr, "foo")
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("string")...)
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,
@@ -168,6 +176,7 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"string", []interface{}{"glob", "foo"}}})
 	s.EVTTC(expr, "bar")
 	s.EVFTC(expr, "foo")
+	s.EVSTTC(expr, s.VS("object", "array", "string")...)
 }
 
 func TestString(t *testing.T) {

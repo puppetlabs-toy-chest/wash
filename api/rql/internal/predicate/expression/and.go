@@ -4,16 +4,19 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/api/rql"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/shopspring/decimal"
 )
 
 func And(p1 rql.ASTNode, p2 rql.ASTNode) rql.ASTNode {
-	return &and{binOp{
+	p := &and{binOp{
 		op: "AND",
 		p1: toAtom(p1),
 		p2: toAtom(p2),
 	}}
+	p.ValuePredicateBase = meta.NewValuePredicate(p)
+	return p
 }
 
 type and struct {
@@ -62,9 +65,17 @@ func (a *and) EvalAction(action plugin.Action) bool {
 	return ap1.EvalAction(action) && ap2.EvalAction(action)
 }
 
+func (a *and) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	sp1 := a.p1.(meta.ValuePredicate).SchemaPredicate(svs)
+	sp2 := a.p2.(meta.ValuePredicate).SchemaPredicate(svs)
+	return func(schema meta.ValueSchema) bool {
+		return sp1(schema) && sp2(schema)
+	}
+}
+
 var _ = rql.EntryPredicate(&and{})
 var _ = rql.EntrySchemaPredicate(&and{})
-var _ = rql.ValuePredicate(&and{})
+var _ = meta.ValuePredicate(&and{})
 var _ = rql.StringPredicate(&and{})
 var _ = rql.NumericPredicate(&and{})
 var _ = rql.TimePredicate(&and{})

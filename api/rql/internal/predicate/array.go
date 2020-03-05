@@ -5,12 +5,15 @@ import (
 
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 func Array() rql.ValuePredicate {
+	e := &arrayElement{p: NPE_ValuePredicate()}
+	e.ValuePredicateBase = meta.NewValuePredicate(e)
 	return &array{collectionBase{
 		ctype:            "array",
-		elementPredicate: &arrayElement{p: NPE_ValuePredicate()},
+		elementPredicate: e,
 	}}
 }
 
@@ -18,11 +21,12 @@ type array struct {
 	collectionBase
 }
 
-var _ = rql.ValuePredicate(&array{})
+var _ = meta.ValuePredicate(&array{})
 
 type arrayElement struct {
+	*meta.ValuePredicateBase
 	selector interface{}
-	p        rql.ValuePredicate
+	p        meta.ValuePredicate
 }
 
 func (p *arrayElement) Marshal() interface{} {
@@ -109,6 +113,10 @@ func (p *arrayElement) EvalValue(v interface{}) bool {
 	}
 }
 
+func (p *arrayElement) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	return p.p.SchemaPredicate(svs.AddArray())
+}
+
 type stringSelector int8
 
 const (
@@ -121,4 +129,4 @@ var stringSelectorToStringMap = map[stringSelector]string{
 	all:  "all",
 }
 
-var _ = rql.ValuePredicate(&arrayElement{})
+var _ = meta.ValuePredicate(&arrayElement{})

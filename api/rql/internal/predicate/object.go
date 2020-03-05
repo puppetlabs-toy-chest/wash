@@ -6,12 +6,15 @@ import (
 
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 func Object() rql.ValuePredicate {
+	e := &objectElement{p: NPE_ValuePredicate()}
+	e.ValuePredicateBase = meta.NewValuePredicate(e)
 	return &object{collectionBase{
 		ctype:            "object",
-		elementPredicate: &objectElement{p: NPE_ValuePredicate()},
+		elementPredicate: e,
 	}}
 }
 
@@ -22,8 +25,9 @@ type object struct {
 var _ = rql.ValuePredicate(&object{})
 
 type objectElement struct {
+	*meta.ValuePredicateBase
 	key string
-	p   rql.ValuePredicate
+	p   meta.ValuePredicate
 }
 
 func (p *objectElement) Marshal() interface{} {
@@ -71,6 +75,10 @@ func (p *objectElement) EvalValue(v interface{}) bool {
 	return found && p.p.EvalValue(obj[k])
 }
 
+func (p *objectElement) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	return p.p.SchemaPredicate(svs.AddObject(p.key))
+}
+
 func (p *objectElement) findMatchingKey(mp map[string]interface{}) (string, bool) {
 	upcasedKey := strings.ToUpper(p.key)
 	for k := range mp {
@@ -81,4 +89,4 @@ func (p *objectElement) findMatchingKey(mp map[string]interface{}) (string, bool
 	return "", false
 }
 
-var _ = rql.ValuePredicate(&objectElement{})
+var _ = meta.ValuePredicate(&objectElement{})

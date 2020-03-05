@@ -10,7 +10,7 @@ import (
 )
 
 type NullTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *NullTestSuite) TestMarshal() {
@@ -29,6 +29,12 @@ func (s *NullTestSuite) TestEvalValue() {
 	s.EVTTC(n, nil)
 }
 
+func (s NullTestSuite) TestEvalValueSchema() {
+	n := Null()
+	s.EVSFTC(n, s.VS("object", "array")...)
+	s.EVSTTC(n, s.VS("null")...)
+}
+
 func (s *NullTestSuite) TestExpression_AtomAndNot() {
 	expr := expression.New("null", true, func() rql.ASTNode {
 		return Null()
@@ -37,6 +43,8 @@ func (s *NullTestSuite) TestExpression_AtomAndNot() {
 	s.MUM(expr, nil)
 	s.EVFTC(expr, "foo", 1, true)
 	s.EVTTC(expr, nil)
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("null")...)
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,
@@ -50,6 +58,7 @@ func (s *NullTestSuite) TestExpression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", nil})
 	s.EVTTC(expr, "foo", 1, true)
 	s.EVFTC(expr, nil)
+	s.EVSTTC(expr, s.VS("null", "object", "array")...)
 }
 
 func TestNull(t *testing.T) {

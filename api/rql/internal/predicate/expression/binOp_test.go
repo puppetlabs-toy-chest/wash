@@ -85,6 +85,29 @@ func (s *BinOpTestSuite) TestEvalValue() {
 	)
 }
 
+func (s *BinOpTestSuite) TestEvalValueSchema() {
+	s.testEvalMethod(
+		s,
+		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
+			s.EVSFTC(n, falseV.(map[string]interface{}))
+		},
+		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
+			s.EVSTTC(n, trueV.(map[string]interface{}))
+		},
+		func(s string) interface{} {
+			return map[string]interface{}{
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties": map[string]interface{}{
+					s: map[string]interface{}{
+						"type": "number",
+					},
+				},
+			}
+		},
+	)
+}
+
 func (s *BinOpTestSuite) TestEvalString() {
 	s.testEvalMethod(
 		s,
