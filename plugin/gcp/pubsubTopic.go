@@ -111,20 +111,16 @@ func (t *pubsubTopic) newPubsubTopicWatcher(ctx context.Context) (*pubsubTopicWa
 }
 
 func (w *pubsubTopicWatcher) Read(p []byte) (int, error) {
-	// If there are outstanding messages, return one.
-	// If not, check if the context is done before returning.
-	if msg, ok := <-w.queue; ok {
+	// Wait for an outstanding message, context completion, or error.
+	select {
+	case <-w.ctx.Done():
+		return 0, io.EOF
+	case msg := <-w.queue:
 		activity.Record(w.ctx, "Reading next message: %v", msg)
 
 		// TODO: don't truncate messages longer than the read buffer.
 		s := fmt.Sprintf("%v | %v", msg.PublishTime.Format(time.StampMilli), string(msg.Data))
 		return copy(p, []byte(s)), nil
-	}
-
-	activity.Record(w.ctx, "All messages read, waiting for completion")
-	select {
-	case <-w.ctx.Done():
-		return 0, io.EOF
 	case err := <-w.err:
 		return 0, err
 	}

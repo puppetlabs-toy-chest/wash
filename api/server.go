@@ -144,8 +144,6 @@ func StartAPI(
 	// Start the server
 	serverStoppedCh := make(chan struct{})
 	go func() {
-		defer close(serverStoppedCh)
-
 		err := httpServer.Serve(server)
 		if err != nil && err != http.ErrServerClosed {
 			log.Warnf("API: %v", err)
@@ -163,8 +161,7 @@ func StartAPI(
 		if err != nil {
 			log.Warnf("API: Shutdown failed: %v", err)
 		}
-
-		<-serverStoppedCh
+		close(serverStoppedCh)
 	}()
 
 	return stopCh, serverStoppedCh, nil
