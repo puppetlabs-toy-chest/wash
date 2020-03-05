@@ -15,7 +15,7 @@ type ObjectTestSuite struct {
 
 func (s *ObjectTestSuite) TestMarshal_ElementPredicate() {
 	inputs := []interface{}{
-		s.A("object", s.A(s.A("key", "0"), s.A("boolean", true))),
+		s.A("object", s.A(s.A("key", "0"), true)),
 	}
 	for _, input := range inputs {
 		p := Object()
@@ -42,7 +42,7 @@ func (s *ObjectTestSuite) TestUnmarshalErrors_ElementPredicate() {
 
 func (s *ObjectTestSuite) TestEvalValue_ElementPredicate() {
 	p := Object()
-	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), s.A("boolean", true))))
+	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), true)))
 	// Test with different keys to ensure that the object predicate finds the first matching key
 	for _, key := range []string{"foo", "FOO", "foO"} {
 		s.EVFTC(p, "foo", true, []interface{}{}, map[string]interface{}{"bar": true}, map[string]interface{}{key: false})
@@ -52,7 +52,7 @@ func (s *ObjectTestSuite) TestEvalValue_ElementPredicate() {
 
 func (s *ObjectTestSuite) TestEvalValueSchema_ElementPredicate() {
 	p := Object()
-	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), s.A("boolean", true))))
+	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), true)))
 	s.EVSFTC(
 		p,
 		VS{"type": "number"},
@@ -71,19 +71,19 @@ func (s *ObjectTestSuite) TestExpression_AtomAndNot_ElementPredicate() {
 		return Object()
 	})
 
-	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true))))
+	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), true)))
 	s.EVFTC(expr, "foo", map[string]interface{}{"foo": false})
 	s.EVTTC(expr, map[string]interface{}{"foo": true})
 	s.EVSFTC(expr, VS{"type": "number"})
 	s.EVSTTC(expr, VS{"type": "object"})
-	s.MUM(expr, s.A("NOT", s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true)))))
+	s.MUM(expr, s.A("NOT", s.A("object", s.A(s.A("key", "foo"), true))))
 	s.EVTTC(expr, "foo", map[string]interface{}{"foo": false})
 	s.EVFTC(expr, map[string]interface{}{"foo": true})
 	s.EVSTTC(expr, VS{"type": "number"}, VS{"type": "object"})
 
 	// Assert that the unmarshaled atom doesn't implement the other *Predicate
 	// interfaces
-	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true))))
+	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), true)))
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,

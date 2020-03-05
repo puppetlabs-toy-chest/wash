@@ -150,7 +150,7 @@ func (s *QueryTestSuite) testPrimaryWithNPEString(primaryName string, constructV
 func (s *QueryTestSuite) testPrimaryWithPEObject(primaryName string, constructV func(map[string]interface{}) interface{}) {
 	// This helper saves some typing
 	objAtom := func(val bool) interface{} {
-		return s.A("object", s.A(s.A("key", "foo"), s.A("boolean", val)))
+		return s.A("object", s.A(s.A("key", "foo"), val))
 	}
 	s.QTC(s.A(primaryName, objAtom(true)), constructV(map[string]interface{}{"foo": true}))
 	s.QTC(s.A(primaryName, s.A("AND", objAtom(true), objAtom(true))), constructV(map[string]interface{}{"foo": true}))

@@ -16,7 +16,7 @@ type MetaTestSuite struct {
 
 func (s *MetaTestSuite) TestMarshal() {
 	p := Meta(predicate.Object())
-	input := s.A("meta", s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true))))
+	input := s.A("meta", s.A("object", s.A(s.A("key", "foo"), true)))
 	s.MUM(p, input)
 	s.MTC(p, input)
 }
@@ -32,7 +32,7 @@ func (s *MetaTestSuite) TestUnmarshalErrors() {
 
 func (s *MetaTestSuite) TestEvalEntry() {
 	p := Meta(predicate.Object())
-	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true)))))
+	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
 	e := rql.Entry{}
 	e.Metadata = map[string]interface{}{"foo": false}
 	s.EEFTC(p, e)
@@ -42,7 +42,7 @@ func (s *MetaTestSuite) TestEvalEntry() {
 
 func (s *MetaTestSuite) TestEvalEntrySchema() {
 	p := Meta(predicate.Object())
-	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true)))))
+	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
 	schema := &rql.EntrySchema{}
 	schema.SetMetadataSchema(s.ToJSONSchemas(map[string]interface{}{
 		"type":                 "object",
@@ -72,7 +72,7 @@ func (s *MetaTestSuite) TestExpression_Atom() {
 		return Meta(predicate.Object())
 	})
 
-	s.MUM(expr, s.A("meta", s.A("object", s.A(s.A("key", "foo"), s.A("boolean", true)))))
+	s.MUM(expr, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
 	e := rql.Entry{}
 	e.Metadata = map[string]interface{}{}
 	s.EEFTC(expr, e)
