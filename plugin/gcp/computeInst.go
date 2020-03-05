@@ -60,7 +60,7 @@ func (c *computeInstance) List(ctx context.Context) ([]plugin.Entry, error) {
 		metadataJSONFile,
 		// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
 		// VMs can have lots of files and SSH is fast.
-		volume.NewFS("fs", c, 3),
+		volume.NewFS(ctx, "fs", c, 3),
 	}, nil
 }
 

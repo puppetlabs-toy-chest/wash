@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/emirpasic/gods/maps/linkedhashmap"
+	"github.com/puppetlabs/wash/datastore"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/transport"
 	"github.com/puppetlabs/wash/volume"
@@ -667,6 +668,10 @@ func (suite *ExternalPluginEntryTestSuite) TestListReadWithMethodResults() {
 }
 
 func (suite *ExternalPluginEntryTestSuite) TestListWithCoreEntry() {
+	// Provide a test cache because listing FS invokes `plugin.List`.
+	ctx := plugin.SetTestCache(datastore.NewMemCache())
+	defer plugin.UnsetTestCache()
+
 	mockScript := &mockPluginScript{path: "plugin_script"}
 	entry := &pluginEntry{
 		EntryBase: plugin.NewEntry("foo"),
@@ -674,13 +679,16 @@ func (suite *ExternalPluginEntryTestSuite) TestListWithCoreEntry() {
 	}
 	entry.SetTestID("/foo")
 
-	ctx := context.Background()
 	stdout := []byte(`
 [
 	{"name": "bar", "methods": ["list"]},
 	{"type_id": "__volume::fs__", "name": "fs1", "state": "{\"maxdepth\": 2}"}
 ]`)
 	mockScript.OnInvokeAndWait(ctx, "list", entry).Return(mockInvocation(stdout), nil).Once()
+
+	mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
+	mockInv.MockExec(nil, nil, 0)
+	mockScript.On("NewInvocation", mock.Anything, "exec", entry, mock.Anything).Return(mockInv).Once()
 
 	entries, err := entry.List(ctx)
 	if suite.NoError(err) {
@@ -808,6 +816,12 @@ func (m *mockedInvocation) Stdout() *bytes.Buffer {
 
 func (m *mockedInvocation) Stderr() *bytes.Buffer {
 	return m.Called().Get(0).(*bytes.Buffer)
+}
+
+func (m *mockedInvocation) MockExec(startErr, waitErr error, exitCode int) {
+	m.On("Start").Return(startErr).Once()
+	m.On("Wait").Return(waitErr).Once()
+	m.On("ExitCode").Return(exitCode).Once()
 }
 
 var _ = invocation(&mockedInvocation{})
@@ -942,9 +956,7 @@ func (suite *ExternalPluginEntryTestSuite) TestExec() {
 		mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
 		args := []interface{}{ctx, "exec", entry, append([]string{`{"tty":false,"elevate":false,"stdin":false}`}, cmd...)}
 		mockScript.On("NewInvocation", args...).Return(mockInv).Once()
-		mockInv.On("Start").Return(startErr).Once()
-		mockInv.On("Wait").Return(waitErr).Once()
-		mockInv.On("ExitCode").Return(exitCode).Once()
+		mockInv.MockExec(startErr, waitErr, exitCode)
 	}
 
 	// Test that if Start errors, then Exec returns its error

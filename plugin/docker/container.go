@@ -91,7 +91,7 @@ func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
 	// VMs can have lots of files and Exec is fast.
-	return []plugin.Entry{clf, cm, vol.NewFS("fs", c, 3)}, nil
+	return []plugin.Entry{clf, cm, vol.NewFS(ctx, "fs", c, 3)}, nil
 }
 
 func (c *container) Delete(ctx context.Context) (bool, error) {

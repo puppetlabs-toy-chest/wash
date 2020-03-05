@@ -96,3 +96,8 @@ func TestParseStatPowershell_Empty(t *testing.T) {
 	assert.Len(t, dmap, 1)
 	assert.Empty(t, dmap[RootPath])
 }
+
+func TestNormalErrorPowerShell(t *testing.T) {
+	assert.False(t, NormalErrorPowerShell(""))
+	assert.False(t, NormalErrorPowerShell("anything"))
+}

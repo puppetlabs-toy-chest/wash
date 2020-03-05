@@ -408,7 +408,7 @@ func (e *pluginEntry) List(ctx context.Context) ([]plugin.Entry, error) {
 	entries := make([]plugin.Entry, len(decodedEntries))
 	for i, decodedExternalPluginEntry := range decodedEntries {
 		if coreEnt, ok := coreEntries[decodedExternalPluginEntry.TypeID]; ok {
-			entry, err := coreEnt.createInstance(e, decodedExternalPluginEntry)
+			entry, err := coreEnt.createInstance(ctx, e, decodedExternalPluginEntry)
 			if err != nil {
 				return nil, err
 			}

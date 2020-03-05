@@ -20,13 +20,18 @@ type FS struct {
 
 // NewFS creates a new FS entry with the given name, using the supplied executor to satisfy volume
 // operations.
-func NewFS(name string, executor plugin.Execable, maxdepth int) *FS {
+func NewFS(ctx context.Context, name string, executor plugin.Execable, maxdepth int) *FS {
 	fs := &FS{
 		EntryBase: plugin.NewEntry(name),
 	}
 	fs.executor = executor
 	fs.maxdepth = maxdepth
 	fs.SetTTLOf(plugin.ListOp, ListTTL)
+
+	if _, err := plugin.List(ctx, fs); err != nil {
+		fs.MarkInaccessible(ctx, err)
+	}
+
 	return fs
 }
 

@@ -223,3 +223,11 @@ func TestNumPathSegments(t *testing.T) {
 	assert.Equal(t, 1, numPathSegments("/foo"))
 	assert.Equal(t, 2, numPathSegments("/foo/bar"))
 }
+
+func TestNormalErrorPOSIX(t *testing.T) {
+	assert.False(t, NormalErrorPOSIX(""))
+	assert.False(t, NormalErrorPOSIX("anything"))
+
+	assert.True(t, NormalErrorPOSIX("find: a mistake"))
+	assert.True(t, NormalErrorPOSIX("stat: something absent"))
+}
