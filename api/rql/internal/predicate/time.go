@@ -7,6 +7,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/munge"
 )
 
@@ -76,31 +77,36 @@ func (p *tm) EvalTime(t time.Time) bool {
 
 var _ = rql.TimePredicate(&tm{})
 
-func TimeValue(op ComparisonOp, t time.Time) rql.ValuePredicate {
-	return &tmValue{tm{op, t}}
+func TimeValue(p rql.TimePredicate) rql.ValuePredicate {
+	tm := &tmValue{
+		TimePredicate: p,
+	}
+	tm.primitiveValueBase = newPrimitiveValue(tm)
+	return tm
 }
 
 type tmValue struct {
-	tm
+	primitiveValueBase
+	rql.TimePredicate
 }
 
 func (p *tmValue) Marshal() interface{} {
-	return []interface{}{"time", p.tm.Marshal()}
+	return []interface{}{"time", p.TimePredicate.Marshal()}
 }
 
 func (p *tmValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("time"))(input) {
-		return errz.MatchErrorf("must be formatted as [\"time\", <time_predicate>]")
+		return errz.MatchErrorf("must be formatted as [\"time\", NPE TimePredicate]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>]")
+		return fmt.Errorf("must be formatted as [\"time\", NPE TimePredicate]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("must be formatted as [\"time\", <time_predicate>] (missing the time predicate)")
+		return fmt.Errorf("must be formatted as [\"time\", NPE TimePredicate] (missing the NPE TimePredicate)")
 	}
-	if err := p.tm.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("error unmarshalling the time predicate: %w", err)
+	if err := p.TimePredicate.Unmarshal(array[1]); err != nil {
+		return fmt.Errorf("error unmarshalling the NPE TimePredicate: %w", err)
 	}
 	return nil
 }
@@ -110,4 +116,4 @@ func (p *tmValue) EvalValue(v interface{}) bool {
 	return err == nil && p.EvalTime(t)
 }
 
-var _ = rql.ValuePredicate(&tmValue{})
+var _ = meta.ValuePredicate(&tmValue{})

@@ -20,11 +20,11 @@ func (s *KindTestSuite) TestMarshal() {
 
 func (s *KindTestSuite) TestUnmarshal() {
 	n := Kind(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `kind.*formatted.*"kind".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*PE StringPredicate`, false)
-	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*PE StringPredicate.*glob", false)
+	s.UMETC(n, "foo", `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*NPE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
 }
 func (s *KindTestSuite) TestEvalEntrySchema() {
@@ -36,8 +36,8 @@ func (s *KindTestSuite) TestEvalEntrySchema() {
 	s.EESTTC(p, schema)
 }
 
-func (s *KindTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("kind", func() rql.ASTNode {
+func (s *KindTestSuite) TestExpression_Atom() {
+	expr := expression.New("kind", false, func() rql.ASTNode {
 		return Kind(predicate.String())
 	})
 
@@ -64,13 +64,6 @@ func (s *KindTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"kind", []interface{}{"glob", "foo"}}})
-
-	schema.SetPath("bar")
-	s.EESTTC(expr, schema)
-	schema.SetPath("foo")
-	s.EESFTC(expr, schema)
 }
 
 func TestKind(t *testing.T) {

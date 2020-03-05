@@ -14,7 +14,9 @@ type base struct {
 	name string
 	// ptype => predicateType
 	ptype string
-	p     rql.ASTNode
+	// notNegatable is least common, so name the variable that
+	notNegatable bool
+	p            rql.ASTNode
 }
 
 func (p *base) Marshal() interface{} {
@@ -22,7 +24,11 @@ func (p *base) Marshal() interface{} {
 }
 
 func (p *base) Unmarshal(input interface{}) error {
-	errMsgPrefix := fmt.Sprintf("%v: must be formatted as [\"%v\", PE %vPredicate]", p.name, p.name, p.ptype)
+	exprType := "NPE"
+	if p.notNegatable {
+		exprType = "PE"
+	}
+	errMsgPrefix := fmt.Sprintf("%v: must be formatted as [\"%v\", %v %vPredicate]", p.name, p.name, exprType, p.ptype)
 	if !matcher.Array(matcher.Value(p.name))(input) {
 		return errz.MatchErrorf(errMsgPrefix)
 	}
@@ -31,11 +37,11 @@ func (p *base) Unmarshal(input interface{}) error {
 		return fmt.Errorf(errMsgPrefix)
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("%v (missing PE %vPredicate)", errMsgPrefix, p.ptype)
+		return fmt.Errorf("%v (missing %v %vPredicate)", errMsgPrefix, exprType, p.ptype)
 	}
 	if err := p.p.Unmarshal(array[1]); err != nil {
 		// TODO: Make this a structured error
-		return fmt.Errorf("%v: error unmarshalling the PE %vPredicate: %w", p.name, p.ptype, err)
+		return fmt.Errorf("%v: error unmarshalling the %v %vPredicate: %w", p.name, exprType, p.ptype, err)
 	}
 	return nil
 }

@@ -3,15 +3,19 @@ package predicate
 import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 func Boolean(val bool) rql.ValuePredicate {
-	return &boolean{
+	p := &boolean{
 		val: val,
 	}
+	p.primitiveValueBase = newPrimitiveValue(p)
+	return p
 }
 
 type boolean struct {
+	primitiveValueBase
 	val bool
 }
 
@@ -33,18 +37,4 @@ func (p *boolean) EvalValue(v interface{}) bool {
 	return ok && val == p.val
 }
 
-func (p *boolean) IsPrimary() bool {
-	return true
-}
-
-func (p *boolean) EvalEntry(_ rql.Entry) bool {
-	return p.val
-}
-
-func (p *boolean) EvalEntrySchema(_ *rql.EntrySchema) bool {
-	return p.val
-}
-
-var _ = rql.ValuePredicate(&boolean{})
-var _ = rql.EntryPredicate(&boolean{})
-var _ = rql.EntrySchemaPredicate(&boolean{})
+var _ = meta.ValuePredicate(&boolean{})

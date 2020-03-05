@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// EvalValue is tested in the respective tests for object/array predicates
+
 type SizeTestSuite struct {
 	asttest.Suite
 }
@@ -28,11 +30,6 @@ func (s *SizeTestSuite) TestUnmarshal() {
 	s.UMTC(p, s.A("size", s.A("<", "10")), Size(UnsignedNumeric(LT, s.N("10"))))
 }
 
-func (s *SizeTestSuite) EvalValue() {
-	p := Size(UnsignedNumeric(GT, s.N("0")))
-	s.EVFTC(p, map[string]interface{}{}, []interface{}{})
-	s.EVTTC(p, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
-}
 func (s *SizeTestSuite) TestEvalEntry() {
 	p := Size(UnsignedNumeric(GT, s.N("0")))
 	e := rql.Entry{}
@@ -42,14 +39,12 @@ func (s *SizeTestSuite) TestEvalEntry() {
 	s.EETTC(p, e)
 }
 
-func (s *SizeTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("size", func() rql.ASTNode {
+func (s *SizeTestSuite) TestExpression_Atom() {
+	expr := expression.New("size", true, func() rql.ASTNode {
 		return Size(UnsignedNumeric("", s.N("0")))
 	})
 
 	s.MUM(expr, []interface{}{"size", []interface{}{">", "0"}})
-	s.EVFTC(expr, map[string]interface{}{}, []interface{}{}, "foo")
-	s.EVTTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
 
 	e := rql.Entry{}
 	e.Attributes.SetSize(uint64(0))
@@ -67,16 +62,6 @@ func (s *SizeTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	// Test Not
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"size", []interface{}{">", "0"}}})
-	s.EVTTC(expr, map[string]interface{}{}, []interface{}{}, "foo")
-	s.EVFTC(expr, map[string]interface{}{"foo": "bar"}, []interface{}{"foo"})
-
-	e.Attributes.SetSize(uint64(0))
-	s.EETTC(expr, e)
-	e.Attributes.SetSize(uint64(1))
-	s.EEFTC(expr, e)
 }
 
 func TestSize(t *testing.T) {

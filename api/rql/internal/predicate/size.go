@@ -6,6 +6,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/shopspring/decimal"
 )
 
@@ -13,13 +14,17 @@ import (
 // of an object/array. As an entry predicate, Size is a
 // predicate on the entry's size attribute.
 func Size(p rql.NumericPredicate) rql.ValuePredicate {
-	return &size{
+	sz := &size{
 		p: p,
 	}
+	sz.ValuePredicateBase = meta.NewValuePredicate(sz)
+	return sz
 }
 
 type size struct {
-	p rql.NumericPredicate
+	*meta.ValuePredicateBase
+	p           rql.NumericPredicate
+	isArraySize bool
 }
 
 func (p *size) Marshal() interface{} {
@@ -46,8 +51,14 @@ func (p *size) Unmarshal(input interface{}) error {
 func (p *size) EvalValue(v interface{}) bool {
 	switch t := v.(type) {
 	case map[string]interface{}:
+		if p.isArraySize {
+			return false
+		}
 		return p.p.EvalNumeric(decimal.NewFromInt(int64(len(t))))
 	case []interface{}:
+		if !p.isArraySize {
+			return false
+		}
 		return p.p.EvalNumeric(decimal.NewFromInt(int64(len(t))))
 	default:
 		return false
@@ -62,5 +73,14 @@ func (p *size) EvalEntry(e rql.Entry) bool {
 	return p.p.EvalNumeric(decimal.NewFromInt(int64(e.Attributes.Size())))
 }
 
-var _ = rql.ValuePredicate(&size{})
+func (p *size) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	if p.isArraySize {
+		svs = svs.EndsWithArray()
+	} else {
+		svs = svs.EndsWithObject()
+	}
+	return meta.MakeSchemaPredicate(svs)
+}
+
+var _ = meta.ValuePredicate(&size{})
 var _ = rql.EntryPredicate(&size{})

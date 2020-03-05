@@ -21,11 +21,11 @@ func (s *ActionTestSuite) TestMarshal() {
 
 func (s *ActionTestSuite) TestUnmarshal() {
 	p := Action(predicate.Action(plugin.Action{}))
-	s.UMETC(p, "foo", `action.*formatted.*"action".*PE ActionPredicate`, true)
-	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), `action.*formatted.*"action".*PE ActionPredicate`, true)
-	s.UMETC(p, s.A("action", "foo", "bar"), `action.*formatted.*"action".*PE ActionPredicate`, false)
-	s.UMETC(p, s.A("action"), `action.*formatted.*"action".*PE ActionPredicate.*missing.*PE ActionPredicate`, false)
-	s.UMETC(p, s.A("action", "foo"), "action.*PE ActionPredicate.*action", false)
+	s.UMETC(p, "foo", `action.*formatted.*"action".*NPE ActionPredicate`, true)
+	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), `action.*formatted.*"action".*NPE ActionPredicate`, true)
+	s.UMETC(p, s.A("action", "foo", "bar"), `action.*formatted.*"action".*NPE ActionPredicate`, false)
+	s.UMETC(p, s.A("action"), `action.*formatted.*"action".*PE ActionPredicate.*missing.*NPE ActionPredicate`, false)
+	s.UMETC(p, s.A("action", "foo"), "action.*NPE ActionPredicate.*action", false)
 	// UMTC doesn't work because s.Equal doesn't work for the Action
 	// type so we do our own assertion here.
 	if s.NoError(p.Unmarshal(s.A("action", "exec"))) {
@@ -51,8 +51,8 @@ func (s *ActionTestSuite) TestEvalEntrySchema() {
 	s.EESTTC(p, schema)
 }
 
-func (s *ActionTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("action", func() rql.ASTNode {
+func (s *ActionTestSuite) TestExpression_Atom() {
+	expr := expression.New("action", false, func() rql.ASTNode {
 		return Action(predicate.Action(plugin.Action{}))
 	})
 
@@ -77,17 +77,6 @@ func (s *ActionTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"action", "exec"}})
-	e.Actions = []string{"list", "read"}
-	s.EETTC(expr, e)
-	e.Actions = []string{"list", "exec", "signal"}
-	s.EEFTC(expr, e)
-
-	schema.SetActions([]string{"list", "read"})
-	s.EESTTC(expr, schema)
-	schema.SetActions([]string{"list", "exec", "signal"})
-	s.EESFTC(expr, schema)
 }
 
 func TestAction(t *testing.T) {

@@ -9,17 +9,17 @@ import (
 // Primary returns an AST node representing PE Primary
 func Primary() rql.ASTNode {
 	nt := internal.NewNonterminalNode(
-		primary.Action(PE_ActionPredicate()),
-		primary.Boolean(false),
-		primary.Name(PE_StringPredicate()),
-		primary.CName(PE_StringPredicate()),
-		primary.Path(PE_StringPredicate()),
-		primary.Kind(PE_StringPredicate()),
-		primary.Atime(PE_TimePredicate()),
-		primary.Crtime(PE_TimePredicate()),
-		primary.Ctime(PE_TimePredicate()),
-		primary.Mtime(PE_TimePredicate()),
-		primary.Size(PE_UnsignedNumericPredicate()),
+		primary.Action(NPE_ActionPredicate()),
+		primary.Name(NPE_StringPredicate()),
+		primary.CName(NPE_StringPredicate()),
+		primary.Path(NPE_StringPredicate()),
+		primary.Kind(NPE_StringPredicate()),
+		primary.Atime(NPE_TimePredicate()),
+		primary.Crtime(NPE_TimePredicate()),
+		primary.Ctime(NPE_TimePredicate()),
+		primary.Mtime(NPE_TimePredicate()),
+		primary.Size(NPE_UnsignedNumericPredicate()),
+		primary.Meta(PE_Object()),
 	)
 	nt.SetMatchErrMsg("expected a primary")
 	return nt

@@ -6,12 +6,11 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate/expression"
-	apitypes "github.com/puppetlabs/wash/api/types"
 	"github.com/stretchr/testify/suite"
 )
 
 type BooleanTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *BooleanTestSuite) TestMarshal() {
@@ -29,47 +28,35 @@ func (s *BooleanTestSuite) TestUnmarshal() {
 func (s *BooleanTestSuite) TestEvalValue() {
 	// Test true
 	b := Boolean(true)
-	s.EVFTC(b, false)
+	s.EVFTC(b, false, "foo")
 	s.EVTTC(b, true)
 
 	// Test false
 	b = Boolean(false)
-	s.EVFTC(b, true)
+	s.EVFTC(b, true, "foo")
 	s.EVTTC(b, false)
 }
 
-func (s *BooleanTestSuite) TestEvalEntry() {
-	// Test true
-	b := Boolean(true).(rql.EntryPredicate)
-	s.EETTC(b, rql.Entry{})
-
-	// Test false
-	b = Boolean(false).(rql.EntryPredicate)
-	s.EEFTC(b, rql.Entry{})
-}
-
-func (s *BooleanTestSuite) TestEvalEntrySchema() {
-	// Test true
-	b := Boolean(true).(rql.EntrySchemaPredicate)
-	s.EESTTC(b, &apitypes.EntrySchema{})
-
-	// Test false
-	b = Boolean(false).(rql.EntrySchemaPredicate)
-	s.EESFTC(b, &apitypes.EntrySchema{})
+func (s BooleanTestSuite) TestEvalValueSchema() {
+	b := Boolean(true)
+	s.EVSFTC(b, s.VS("object", "array")...)
+	s.EVSTTC(b, s.VS("boolean")...)
 }
 
 func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("boolean", func() rql.ASTNode {
+	expr := expression.New("boolean", true, func() rql.ASTNode {
 		return Boolean(false)
 	})
 
 	s.MUM(expr, true)
-	s.EVFTC(expr, false, "foo")
+	s.EVFTC(expr, false)
 	s.EVTTC(expr, true)
-	s.EETTC(expr, rql.Entry{})
-	s.EESTTC(expr, &rql.EntrySchema{})
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("boolean")...)
 	s.AssertNotImplemented(
 		expr,
+		asttest.EntryPredicateC,
+		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
 		asttest.TimePredicateC,
@@ -77,10 +64,9 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	)
 
 	s.MUM(expr, []interface{}{"NOT", true})
-	s.EVTTC(expr, false, "foo")
+	s.EVTTC(expr, false)
 	s.EVFTC(expr, true)
-	s.EEFTC(expr, rql.Entry{})
-	s.EESFTC(expr, &rql.EntrySchema{})
+	s.EVSTTC(expr, s.VS("object", "array", "boolean")...)
 }
 
 func TestBoolean(t *testing.T) {

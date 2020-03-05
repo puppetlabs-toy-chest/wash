@@ -3,13 +3,18 @@ package predicate
 import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 func Null() rql.ValuePredicate {
-	return &null{}
+	n := &null{}
+	n.primitiveValueBase = newPrimitiveValue(n)
+	return n
 }
 
-type null struct{}
+type null struct {
+	primitiveValueBase
+}
 
 func (p *null) Marshal() interface{} {
 	return nil
@@ -26,4 +31,4 @@ func (p *null) EvalValue(v interface{}) bool {
 	return v == nil
 }
 
-var _ = rql.ValuePredicate(&null{})
+var _ = meta.ValuePredicate(&null{})

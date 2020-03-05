@@ -9,6 +9,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql/internal"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 /*
@@ -174,6 +175,7 @@ by parsers
 */
 
 type stringValue struct {
+	primitiveValueBase
 	rql.StringPredicate
 }
 
@@ -183,17 +185,17 @@ func (p *stringValue) Marshal() interface{} {
 
 func (p *stringValue) Unmarshal(input interface{}) error {
 	if !matcher.Array(matcher.Value("string"))(input) {
-		return errz.MatchErrorf("must be formatted as [\"string\", <string_predicate>]")
+		return errz.MatchErrorf("must be formatted as [\"string\", NPE StringPredicate]")
 	}
 	array := input.([]interface{})
 	if len(array) > 2 {
-		return fmt.Errorf("must be formatted as [\"string\", <string_predicate>]")
+		return fmt.Errorf("must be formatted as [\"string\", NPE StringPredicate]")
 	}
 	if len(array) < 2 {
-		return fmt.Errorf("must be formatted as [\"string\", <string_predicate>] (missing the string predicate)")
+		return fmt.Errorf("must be formatted as [\"string\", NPE StringPredicate] (missing the NPE StringPredicate)")
 	}
 	if err := p.StringPredicate.Unmarshal(array[1]); err != nil {
-		return fmt.Errorf("error unmarshalling the string predicate: %w", err)
+		return fmt.Errorf("error unmarshalling the NPE StringPredicate: %w", err)
 	}
 	return nil
 }
@@ -203,28 +205,24 @@ func (p *stringValue) EvalValue(v interface{}) bool {
 	return ok && p.EvalString(str)
 }
 
-func StringValue() rql.ValuePredicate {
-	return &stringValue{
-		String(),
+func StringValue(p rql.StringPredicate) rql.ValuePredicate {
+	s := &stringValue{
+		StringPredicate: p,
 	}
+	s.primitiveValueBase = newPrimitiveValue(s)
+	return s
 }
 
 func StringValueGlob(g string) rql.ValuePredicate {
-	return &stringValue{
-		StringGlob(g),
-	}
+	return StringValue(StringGlob(g))
 }
 
 func StringValueRegex(r *regexp.Regexp) rql.ValuePredicate {
-	return &stringValue{
-		StringRegex(r),
-	}
+	return StringValue(StringRegex(r))
 }
 
 func StringValueEqual(str string) rql.ValuePredicate {
-	return &stringValue{
-		StringEqual(str),
-	}
+	return StringValue(StringEqual(str))
 }
 
-var _ = rql.ValuePredicate(&stringValue{})
+var _ = meta.ValuePredicate(&stringValue{})

@@ -7,18 +7,22 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/shopspring/decimal"
 )
 
 func Not(p rql.ASTNode) rql.ASTNode {
-	return &not{
+	n := &not{
 		p: toAtom(p),
 	}
+	n.ValuePredicateBase = meta.NewValuePredicate(n)
+	return n
 }
 
 type not struct {
 	base
+	*meta.ValuePredicateBase
 	p rql.ASTNode
 }
 
@@ -72,10 +76,14 @@ func (n *not) EvalAction(action plugin.Action) bool {
 	return !n.p.(rql.ActionPredicate).EvalAction(action)
 }
 
+func (n *not) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	return meta.MakeSchemaPredicate(svs.EndsWithAnything())
+}
+
 var _ = expressionNode(&not{})
 var _ = rql.EntryPredicate(&not{})
 var _ = rql.EntrySchemaPredicate(&not{})
-var _ = rql.ValuePredicate(&not{})
+var _ = meta.ValuePredicate(&not{})
 var _ = rql.StringPredicate(&not{})
 var _ = rql.NumericPredicate(&not{})
 var _ = rql.TimePredicate(&not{})

@@ -1,47 +1,46 @@
 package ast
 
 import (
-	"time"
-
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate/expression"
 	"github.com/puppetlabs/wash/plugin"
-	"github.com/shopspring/decimal"
 )
 
 // PE_Primary returns a node representing a predicate expression (PE)
 // of primaries
 func PE_Primary() rql.Primary {
-	return expression.New("Primary", func() rql.ASTNode {
+	return expression.New("Primary", false, func() rql.ASTNode {
 		return Primary()
 	}).(rql.Primary)
 }
 
-// PE_ActionPredicate returns a node representing PE ActionPredicate
-func PE_ActionPredicate() rql.ActionPredicate {
-	return expression.New("ActionPredicate", func() rql.ASTNode {
+// PE_Object returns a node representing PE Object
+func PE_Object() rql.ValuePredicate {
+	return expression.New("ObjectPredicate", false, func() rql.ASTNode {
+		return predicate.Object()
+	}).(rql.ValuePredicate)
+}
+
+// NPE_ActionPredicate returns a node representing a negatable predicate
+// expression (NPE) of ActionPredicate
+func NPE_ActionPredicate() rql.ActionPredicate {
+	return expression.New("ActionPredicate", true, func() rql.ASTNode {
 		return predicate.Action(plugin.Action{})
 	}).(rql.ActionPredicate)
 }
 
-// PE_StringPredicate returns a node representing PE StringPredicate
-func PE_StringPredicate() rql.StringPredicate {
-	return expression.New("StringPredicate", func() rql.ASTNode {
-		return predicate.String()
-	}).(rql.StringPredicate)
+// NPE_StringPredicate returns a node representing NPE StringPredicate
+func NPE_StringPredicate() rql.StringPredicate {
+	return predicate.NPE_StringPredicate()
 }
 
-// PE_TimePredicate returns a node representing PE TimePredicate
-func PE_TimePredicate() rql.TimePredicate {
-	return expression.New("TimePredicate", func() rql.ASTNode {
-		return predicate.Time("", time.Time{})
-	}).(rql.TimePredicate)
+// NPE_TimePredicate returns a node representing NPE TimePredicate
+func NPE_TimePredicate() rql.TimePredicate {
+	return predicate.NPE_TimePredicate()
 }
 
-// PE_UnsignedNumericPredicate returns a node representing PE UnsignedNumericPredicate
-func PE_UnsignedNumericPredicate() rql.NumericPredicate {
-	return expression.New("UnsignedNumericPredicate", func() rql.ASTNode {
-		return predicate.UnsignedNumeric("", decimal.Decimal{})
-	}).(rql.NumericPredicate)
+// NPE_UnsignedNumericPredicate returns a node representing NPE UnsignedNumericPredicate
+func NPE_UnsignedNumericPredicate() rql.NumericPredicate {
+	return predicate.NPE_UnsignedNumericPredicate()
 }

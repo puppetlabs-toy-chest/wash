@@ -20,11 +20,11 @@ func (s *NameTestSuite) TestMarshal() {
 
 func (s *NameTestSuite) TestUnmarshal() {
 	n := Name(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `name.*formatted.*"name".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `name.*formatted.*"name".*PE StringPredicate`, true)
-	s.UMETC(n, s.A("name", "foo", "bar"), `name.*formatted.*"name".*PE StringPredicate`, false)
-	s.UMETC(n, s.A("name"), `name.*formatted.*"name".*PE StringPredicate.*missing.*PE StringPredicate`, false)
-	s.UMETC(n, s.A("name", s.A("glob", "[")), "name.*PE StringPredicate.*glob", false)
+	s.UMETC(n, "foo", `name.*formatted.*"name".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `name.*formatted.*"name".*NPE StringPredicate`, true)
+	s.UMETC(n, s.A("name", "foo", "bar"), `name.*formatted.*"name".*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("name"), `name.*formatted.*"name".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(n, s.A("name", s.A("glob", "[")), "name.*NPE StringPredicate.*glob", false)
 	s.UMTC(n, s.A("name", s.A("glob", "foo")), Name(predicate.StringGlob("foo")))
 }
 
@@ -37,8 +37,8 @@ func (s *NameTestSuite) TestEvalEntry() {
 	s.EETTC(n, e)
 }
 
-func (s *NameTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("name", func() rql.ASTNode {
+func (s *NameTestSuite) TestExpression_Atom() {
+	expr := expression.New("name", false, func() rql.ASTNode {
 		return Name(predicate.String())
 	})
 
@@ -60,12 +60,6 @@ func (s *NameTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
-
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"name", []interface{}{"glob", "foo"}}})
-	e.Name = "bar"
-	s.EETTC(expr, e)
-	e.Name = "foo"
-	s.EEFTC(expr, e)
 }
 
 func TestName(t *testing.T) {

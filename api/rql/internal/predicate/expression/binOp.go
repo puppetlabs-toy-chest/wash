@@ -6,6 +6,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 // Note that each binOp implements its own Eval* methods so that we
@@ -13,6 +14,7 @@ import (
 
 type binOp struct {
 	base
+	*meta.ValuePredicateBase
 	op string
 	p1 rql.ASTNode
 	p2 rql.ASTNode

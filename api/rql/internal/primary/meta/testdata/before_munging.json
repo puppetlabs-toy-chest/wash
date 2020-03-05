@@ -1,0 +1,118 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "required": [
+        "Ap",
+        "Bp",
+        "Cp",
+        "Dp",
+        "Ep"
+    ],
+    "properties": {
+        "Ap": {
+            "type": "integer"
+        },
+        "Bp": {
+            "type": "integer"
+        },
+        "Cp": {
+            "items": {
+                "type": "integer"
+            },
+            "type": "array",
+            "minItems": 1
+        },
+        "Dp": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "$ref": "#/definitions/schema::Dp"
+        },
+        "Ep": {
+            "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "$ref": "#/definitions/__anonStruct__0"
+            },
+            "type": "array"
+        },
+        "Fp": {
+            "minProperties": 2,
+            "patternProperties": {
+                ".*": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "definitions": {
+        "__anonStruct__0": {
+            "required": [
+                "EAp",
+                "EBp"
+            ],
+            "properties": {
+                "EAp": {
+                    "type": "integer"
+                },
+                "EBp": {
+                    "type": "integer"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "__anonStruct__1": {
+            "required": [
+                "EAp",
+                "EBp"
+            ],
+            "properties": {
+                "EAp": {
+                    "type": "integer"
+                },
+                "EBp": {
+                    "type": "integer"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp": {
+            "required": [
+                "DAp",
+                "DBp",
+                "DCp"
+            ],
+            "properties": {
+                "DAp": {
+                    "type": "string"
+                },
+                "DBp": {
+                    "type": "boolean"
+                },
+                "DCp": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "$ref": "#/definitions/schema::Dp::DCp"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        },
+        "schema::Dp::DCp": {
+            "required": [
+                "DCAp",
+                "DCBp"
+            ],
+            "properties": {
+                "DCAp": {
+                    "type": "integer"
+                },
+                "DCBp": {
+                    "type": "integer"
+                }
+            },
+            "additionalProperties": false,
+            "type": "object"
+        }
+    }
+}
