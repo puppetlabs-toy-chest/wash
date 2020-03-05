@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -9,7 +10,7 @@ import (
 )
 
 type coreEntry interface {
-	createInstance(parent *pluginEntry, decodedEntry decodedExternalPluginEntry) (plugin.Entry, error)
+	createInstance(ctx context.Context, parent *pluginEntry, decodedEntry decodedExternalPluginEntry) (plugin.Entry, error)
 	template() plugin.Entry
 }
 
@@ -19,7 +20,7 @@ var coreEntries = map[string]coreEntry{
 
 type volumeFS struct{}
 
-func (volumeFS) createInstance(parent *pluginEntry, e decodedExternalPluginEntry) (plugin.Entry, error) {
+func (volumeFS) createInstance(ctx context.Context, parent *pluginEntry, e decodedExternalPluginEntry) (plugin.Entry, error) {
 	var opts struct{ Maxdepth uint }
 	// Use a default of 3 if unspecified.
 	opts.Maxdepth = 3
@@ -28,7 +29,7 @@ func (volumeFS) createInstance(parent *pluginEntry, e decodedExternalPluginEntry
 		return nil, fmt.Errorf("volume filesystem options invalid: %v", err)
 	}
 
-	return volume.NewFS(e.Name, parent, int(opts.Maxdepth)), nil
+	return volume.NewFS(ctx, e.Name, parent, int(opts.Maxdepth)), nil
 }
 
 func (volumeFS) template() plugin.Entry {

@@ -3,7 +3,6 @@ package volume
 import (
 	"context"
 	"fmt"
-	"io"
 	"sort"
 	"strings"
 	"testing"
@@ -74,7 +73,6 @@ type fsTestSuite struct {
 	cancelFunc                context.CancelFunc
 	loginShell                plugin.Shell
 	statCmd                   func(path string, maxdepth int) []string
-	parseOutput               func(output io.Reader, base string, start string, maxdepth int) (DirMap, error)
 	outputFixture             string
 	outputDepth               int
 	shortFixture, deepFixture string
@@ -83,8 +81,8 @@ type fsTestSuite struct {
 
 func (suite *fsTestSuite) SetupTest() {
 	// Use a different cache each test because we may re-use some but not all of the same structure.
-	plugin.SetTestCache(datastore.NewMemCache())
-	suite.ctx, suite.cancelFunc = context.WithCancel(context.Background())
+	ctx := plugin.SetTestCache(datastore.NewMemCache())
+	suite.ctx, suite.cancelFunc = context.WithCancel(ctx)
 }
 
 func (suite *fsTestSuite) TearDownTest() {
@@ -141,12 +139,10 @@ func (suite *fsTestSuite) TestFSList() {
 	exec := suite.createExec()
 	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
 
-	fs := NewFS("fs", exec, suite.outputDepth)
-	// ID would normally be set when listing FS within the parent instance.
-	fs.SetTestID("/instance/fs")
+	fs := NewFS(suite.ctx, "fs", exec, suite.outputDepth)
 
 	entry := suite.find(fs, "var/log").(plugin.Parent)
-	entries, err := entry.List(context.Background())
+	entries, err := entry.List(suite.ctx)
 	if !suite.NoError(err) {
 		suite.FailNow("Listing entries failed")
 	}
@@ -165,7 +161,7 @@ func (suite *fsTestSuite) TestFSList() {
 		}
 	}
 
-	entries1, err := entries[1].(plugin.Parent).List(context.Background())
+	entries1, err := entries[1].(plugin.Parent).List(suite.ctx)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries1))
 		suite.Equal("a file", plugin.Name(entries1[0]))
@@ -173,7 +169,7 @@ func (suite *fsTestSuite) TestFSList() {
 		suite.True(ok)
 	}
 
-	entries2, err := entries[2].(plugin.Parent).List(context.Background())
+	entries2, err := entries[2].(plugin.Parent).List(suite.ctx)
 	if suite.NoError(err) {
 		suite.Equal(1, len(entries2))
 		suite.Equal("dir", plugin.Name(entries2[0]))
@@ -189,9 +185,7 @@ func (suite *fsTestSuite) TestFSListTwice() {
 	exec.onExec(suite.statCmd("/", depth), suite.createResult(suite.shortFixture))
 	exec.onExec(suite.statCmd("/var/log/path", depth), suite.createResult(suite.deepFixture))
 
-	fs := NewFS("fs", exec, depth)
-	// ID would normally be set when listing FS within the parent instance.
-	fs.SetTestID("/instance/fs")
+	fs := NewFS(suite.ctx, "fs", exec, depth)
 
 	entry := suite.find(fs, "var/log").(plugin.Parent)
 	entries, err := plugin.List(suite.ctx, entry)
@@ -219,9 +213,7 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	exec := suite.createExec()
 	exec.onExec(suite.statCmd("/", depth), mockExecCmd{suite.shortFixture}).Twice()
 
-	fs := NewFS("fs", exec, depth)
-	// ID would normally be set when listing FS within the parent instance.
-	fs.SetTestID("/instance/fs")
+	fs := NewFS(suite.ctx, "fs", exec, depth)
 
 	entry := suite.find(fs, "var/log").(plugin.Parent)
 	entries, err := plugin.List(suite.ctx, entry)
@@ -231,8 +223,8 @@ func (suite *fsTestSuite) TestFSListExpiredCache() {
 	suite.Equal(1, entries.Len())
 	suite.Contains(entries.Map(), "path")
 
-	cleared := plugin.ClearCacheFor("/instance/fs", false)
-	suite.Equal([]string{"List::/instance/fs"}, cleared)
+	cleared := plugin.ClearCacheFor("/fs", false)
+	suite.Equal([]string{"List::/fs"}, cleared)
 	entries, err = plugin.List(suite.ctx, entry)
 	if suite.NoError(err) {
 		suite.Equal(1, entries.Len())
@@ -245,15 +237,13 @@ func (suite *fsTestSuite) TestFSRead() {
 	exec := suite.createExec()
 	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
 
-	fs := NewFS("fs", exec, suite.outputDepth)
-	// ID would normally be set when listing FS within the parent instance.
-	fs.SetTestID("/instance/fs")
+	fs := NewFS(suite.ctx, "fs", exec, suite.outputDepth)
 
 	entry := suite.find(fs, "var/log/path1/a file")
 	suite.Equal("a file", plugin.Name(entry))
 	exec.onExec(suite.readCmdFn("/var/log/path1/a file"), suite.createResult("hello"))
 
-	content, err := entry.(plugin.Readable).Read(context.Background())
+	content, err := entry.(plugin.Readable).Read(suite.ctx)
 	suite.NoError(err)
 	suite.Equal([]byte("hello"), content)
 	exec.AssertExpectations(suite.T())
@@ -261,12 +251,11 @@ func (suite *fsTestSuite) TestFSRead() {
 
 func (suite *fsTestSuite) TestVolumeDelete() {
 	exec := suite.createExec()
-	fs := NewFS("fs", exec, suite.outputDepth)
-	// ID would normally be set when listing FS within the parent instance.
-	fs.SetTestID("/instance/fs")
+	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
+	fs := NewFS(suite.ctx, "fs", exec, suite.outputDepth)
 
 	exec.onExec(suite.deleteCmdFn("/var/log/path1/a file"), suite.createResult("deleted"))
-	deleted, err := fs.VolumeDelete(context.Background(), "/var/log/path1/a file")
+	deleted, err := fs.VolumeDelete(suite.ctx, "/var/log/path1/a file")
 	suite.NoError(err)
 	suite.True(deleted)
 	exec.AssertExpectations(suite.T())
@@ -276,7 +265,6 @@ func TestPOSIXFS(t *testing.T) {
 	suite.Run(t, &fsTestSuite{
 		loginShell:    plugin.POSIXShell,
 		statCmd:       StatCmdPOSIX,
-		parseOutput:   ParseStatPOSIX,
 		outputFixture: posixFixture,
 		outputDepth:   fixtureDepth,
 		shortFixture:  posixFixtureShort,
@@ -290,7 +278,6 @@ func TestPowershellFS(t *testing.T) {
 	suite.Run(t, &fsTestSuite{
 		loginShell:    plugin.PowerShell,
 		statCmd:       StatCmdPowershell,
-		parseOutput:   ParseStatPowershell,
 		outputFixture: powershellFixture,
 		outputDepth:   fixtureDepth,
 		shortFixture:  powershellFixtureShort,
@@ -316,8 +303,7 @@ func (m *mockExecutor) Schema() *plugin.EntrySchema {
 }
 
 func (m *mockExecutor) onExec(cmd []string, result plugin.ExecCommand) *mock.Call {
-	return m.On("Exec", mock.Anything, cmd[0], cmd[1:], plugin.ExecOptions{Elevate: true}).
-		Return(result, nil)
+	return m.On("Exec", mock.Anything, cmd[0], cmd[1:], mock.Anything).Return(result, nil)
 }
 
 // Mock ExecCommand that can be used repeatedly when mocking a repeated call.

@@ -142,7 +142,7 @@ func (e *EntryBase) SetPartialMetadata(obj interface{}) *EntryBase {
 // MarkInaccessible sets the inaccessible attribute and logs a message about why the entry is
 // inaccessible.
 func (e *EntryBase) MarkInaccessible(ctx context.Context, err error) {
-	activity.Record(ctx, "Omitting %v: %v", e.id, err)
+	activity.Warnf(ctx, "Omitting %v: %v", e.id, err)
 	e.isInaccessible = true
 }
 
