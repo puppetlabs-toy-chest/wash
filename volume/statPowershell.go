@@ -118,3 +118,10 @@ func ParseStatPowershell(output io.Reader, base string, start string, maxdepth i
 	}
 	return dirmap, nil
 }
+
+// NormalErrorPowerShell returns whether this line of text is normal error output for StatCmdPowerShell.
+//
+// Currently no error messages are considered ignorable.
+func NormalErrorPowerShell(text string) bool {
+	return false
+}

@@ -95,7 +95,7 @@ func ParseStatPOSIX(output io.Reader, base string, start string, maxdepth int) (
 	for scanner.Scan() {
 		text := strings.TrimSpace(scanner.Text())
 		// Skip error lines in case we're running in a tty.
-		if text != "" && !strings.HasPrefix(text, "stat:") && !strings.HasPrefix(text, "find:") {
+		if text != "" && !NormalErrorPOSIX(text) {
 			attr, fullpath, err := parseStatPOSIX(text)
 			if err != nil {
 				return nil, err
@@ -107,4 +107,15 @@ func ParseStatPOSIX(output io.Reader, base string, start string, maxdepth int) (
 		return nil, err
 	}
 	return dirmap, nil
+}
+
+// NormalErrorPOSIX returns whether this line of text is normal error output for StatCmdPOSIX.
+//
+// Find may return a non-zero exit code, with messages in stdout like
+//   stat: ‘/dev/fd/4’: No such file or directory
+//   find: File system loop detected; ‘/proc/7/cwd’ is part of the same file system loop as ‘/’.
+//   find: ‘/root’: Permission denied
+// These are considered normal and handled by ParseStatPOSIX.
+func NormalErrorPOSIX(text string) bool {
+	return strings.HasPrefix(text, "stat:") || strings.HasPrefix(text, "find:")
 }
