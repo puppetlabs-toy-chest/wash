@@ -29,6 +29,7 @@ type EntrySchemaPredicate interface {
 type ValuePredicate interface {
 	ASTNode
 	EvalValue(interface{}) bool
+	EvalValueSchema(*plugin.JSONSchema) bool
 }
 
 // StringPredicate represents a predicate on a string value

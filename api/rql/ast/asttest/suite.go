@@ -1,6 +1,7 @@
 package asttest
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -66,7 +67,7 @@ func (s *Suite) UMTC(n rql.ASTNode, input interface{}, expected rql.ASTNode) {
 		if nt, ok := n.(internal.NonterminalNode); ok {
 			n = nt.MatchedNode()
 		}
-		s.Equal(expected, n)
+		s.Equal(expected.Marshal(), n.Marshal())
 	}
 }
 
@@ -82,6 +83,36 @@ func (s *Suite) EVFTC(n rql.ASTNode, falseVs ...interface{}) {
 	for _, falseV := range falseVs {
 		s.False(n.(rql.ValuePredicate).EvalValue(falseV))
 	}
+}
+
+// EVSTTC => EvalValueSchemaTrueTestCases
+func (s *Suite) EVSTTC(n rql.ASTNode, trueVs ...map[string]interface{}) {
+	for _, trueV := range s.ToJSONSchemas(trueVs...) {
+		s.True(n.(rql.ValuePredicate).EvalValueSchema(trueV))
+	}
+}
+
+// EVSFTC => EvalValueSchemaFalseTestCases
+func (s *Suite) EVSFTC(n rql.ASTNode, falseVs ...map[string]interface{}) {
+	for _, falseV := range s.ToJSONSchemas(falseVs...) {
+		s.False(n.(rql.ValuePredicate).EvalValueSchema(falseV))
+	}
+}
+
+func (s *Suite) ToJSONSchemas(schemas ...map[string]interface{}) []*plugin.JSONSchema {
+	jsonSchemas := []*plugin.JSONSchema{}
+	for _, schema := range schemas {
+		rawJSON, err := json.Marshal(schema)
+		if err != nil {
+			s.FailNow(fmt.Sprintf("Error encoding schema %v: %v", schema, err))
+		}
+		var jsonSchema *plugin.JSONSchema
+		if err := json.Unmarshal(rawJSON, &jsonSchema); err != nil {
+			s.FailNow(fmt.Sprintf("Error decoding schema %v: %v", schema, err))
+		}
+		jsonSchemas = append(jsonSchemas, jsonSchema)
+	}
+	return jsonSchemas
 }
 
 // ESTTC => EvalStringTrueTestCases
