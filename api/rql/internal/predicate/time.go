@@ -7,6 +7,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/munge"
 )
 
@@ -77,10 +78,15 @@ func (p *tm) EvalTime(t time.Time) bool {
 var _ = rql.TimePredicate(&tm{})
 
 func TimeValue(p rql.TimePredicate) rql.ValuePredicate {
-	return &tmValue{p}
+	tm := &tmValue{
+		TimePredicate: p,
+	}
+	tm.primitiveValueBase = newPrimitiveValue(tm)
+	return tm
 }
 
 type tmValue struct {
+	primitiveValueBase
 	rql.TimePredicate
 }
 
@@ -110,4 +116,4 @@ func (p *tmValue) EvalValue(v interface{}) bool {
 	return err == nil && p.EvalTime(t)
 }
 
-var _ = rql.ValuePredicate(&tmValue{})
+var _ = meta.ValuePredicate(&tmValue{})

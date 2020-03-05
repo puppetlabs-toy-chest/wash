@@ -11,7 +11,7 @@ import (
 )
 
 type TimeTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *TimeTestSuite) TestTime_Marshal() {
@@ -103,6 +103,12 @@ func (s *TimeTestSuite) TestTimeValue_EvalValue() {
 	// TestEvalTime contained the operator-specific test-cases
 }
 
+func (s NumericTestSuite) TestTimeValue_EvalValueSchema() {
+	t := TimeValue(Time(LT, s.TM(1000)))
+	s.EVSFTC(t, s.VS("object", "array")...)
+	s.EVSTTC(t, s.VS("integer", "number", "string")...)
+}
+
 func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
 	expr := expression.New("time", true, func() rql.ASTNode {
 		return TimeValue(Time("", s.TM(0)))
@@ -111,6 +117,8 @@ func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"time", []interface{}{"<", float64(1000)}})
 	s.EVFTC(expr, s.TM(2000), s.TM(1000))
 	s.EVTTC(expr, s.TM(500))
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("integer", "number", "string")...)
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,
@@ -123,6 +131,7 @@ func (s *TimeTestSuite) TestTimeValue_Expression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"time", []interface{}{"<", float64(1000)}}})
 	s.EVTTC(expr, s.TM(2000), s.TM(1000))
 	s.EVFTC(expr, s.TM(500))
+	s.EVSTTC(expr, s.VS("object", "array", "integer", "number", "string")...)
 }
 
 func TestTime(t *testing.T) {

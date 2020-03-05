@@ -10,7 +10,7 @@ import (
 )
 
 type BooleanTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *BooleanTestSuite) TestMarshal() {
@@ -40,6 +40,12 @@ func (s *BooleanTestSuite) TestEvalValue() {
 	s.EVTTC(b, false)
 }
 
+func (s BooleanTestSuite) TestEvalValueSchema() {
+	b := Boolean(true)
+	s.EVSFTC(b, s.VS("object", "array")...)
+	s.EVSTTC(b, s.VS("boolean")...)
+}
+
 func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	expr := expression.New("boolean", true, func() rql.ASTNode {
 		return Boolean(false)
@@ -48,6 +54,8 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	s.MUM(expr, s.A("boolean", true))
 	s.EVFTC(expr, false)
 	s.EVTTC(expr, true)
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("boolean")...)
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,
@@ -61,6 +69,7 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", s.A("boolean", true)})
 	s.EVTTC(expr, false)
 	s.EVFTC(expr, true)
+	s.EVSTTC(expr, s.VS("object", "array", "boolean")...)
 }
 
 func TestBoolean(t *testing.T) {

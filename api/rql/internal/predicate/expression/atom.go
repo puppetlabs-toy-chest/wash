@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/api/rql"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/shopspring/decimal"
 )
@@ -24,10 +25,12 @@ func Atom(p rql.ASTNode) rql.ASTNode {
 	if _, ok := p.(expressionNode); ok {
 		panic("expression.Atom was called with an expression node")
 	}
-	return &atom{
+	a := &atom{
 		base: base{},
 		p:    p,
 	}
+	a.ValuePredicateBase = meta.NewValuePredicate(a)
+	return a
 }
 
 func toAtom(p rql.ASTNode) rql.ASTNode {
@@ -39,6 +42,7 @@ func toAtom(p rql.ASTNode) rql.ASTNode {
 
 type atom struct {
 	base
+	*meta.ValuePredicateBase
 	p rql.ASTNode
 }
 
@@ -98,10 +102,14 @@ func (a *atom) EvalAction(action plugin.Action) bool {
 	return a.p.(rql.ActionPredicate).EvalAction(action)
 }
 
+func (a *atom) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	return a.p.(meta.ValuePredicate).SchemaPredicate(svs)
+}
+
 var _ = expressionNode(&atom{})
 var _ = rql.EntryPredicate(&atom{})
 var _ = rql.EntrySchemaPredicate(&atom{})
-var _ = rql.ValuePredicate(&atom{})
+var _ = meta.ValuePredicate(&atom{})
 var _ = rql.StringPredicate(&atom{})
 var _ = rql.NumericPredicate(&atom{})
 var _ = rql.TimePredicate(&atom{})

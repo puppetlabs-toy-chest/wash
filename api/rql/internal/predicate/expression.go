@@ -6,6 +6,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/internal"
 	"github.com/puppetlabs/wash/api/rql/internal/predicate/expression"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/shopspring/decimal"
 )
 
@@ -38,7 +39,7 @@ func NPE_NumericPredicate() rql.NumericPredicate {
 }
 
 // NPE_ValuePredicate returns a node representing NPE ValuePredicate
-func NPE_ValuePredicate() rql.ValuePredicate {
+func NPE_ValuePredicate() meta.ValuePredicate {
 	return expression.New("ValuePredicate", true, func() rql.ASTNode {
 		return internal.NewNonterminalNode(
 			Object(),
@@ -49,5 +50,5 @@ func NPE_ValuePredicate() rql.ValuePredicate {
 			TimeValue(NPE_TimePredicate()),
 			StringValue(NPE_StringPredicate()),
 		)
-	}).(rql.ValuePredicate)
+	}).(meta.ValuePredicate)
 }

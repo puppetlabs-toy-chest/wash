@@ -10,7 +10,7 @@ import (
 )
 
 type NumericTestSuite struct {
-	asttest.Suite
+	PrimitiveValueTestSuite
 }
 
 func (s *NumericTestSuite) TestNumeric_Marshal() {
@@ -112,6 +112,12 @@ func (s *NumericTestSuite) TestNumericValue_EvalValue() {
 	// TestEvalNumeric contained the operator-specific test-cases
 }
 
+func (s NumericTestSuite) TestNumericValue_EvalValueSchema() {
+	n := NumericValue(Numeric(LT, s.N("2.0")))
+	s.EVSFTC(n, s.VS("object", "array")...)
+	s.EVSTTC(n, s.VS("integer", "number", "string")...)
+}
+
 func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	expr := expression.New("numeric", true, func() rql.ASTNode {
 		return NumericValue(Numeric("", s.N("0")))
@@ -120,6 +126,8 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"number", []interface{}{"<", "1"}})
 	s.EVFTC(expr, float64(1))
 	s.EVTTC(expr, float64(0))
+	s.EVSFTC(expr, s.VS("object", "array")...)
+	s.EVSTTC(expr, s.VS("integer", "number", "string")...)
 	s.AssertNotImplemented(
 		expr,
 		asttest.EntryPredicateC,
@@ -132,6 +140,7 @@ func (s *NumericTestSuite) TestNumericValue_Expression_AtomAndNot() {
 	s.MUM(expr, []interface{}{"NOT", []interface{}{"number", []interface{}{"<", "1"}}})
 	s.EVTTC(expr, float64(1))
 	s.EVFTC(expr, float64(0))
+	s.EVSTTC(expr, s.VS("object", "array", "integer", "number", "string")...)
 }
 
 func TestNumeric(t *testing.T) {

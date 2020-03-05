@@ -7,12 +7,13 @@ import (
 	"github.com/puppetlabs/wash/api/rql/internal"
 	"github.com/puppetlabs/wash/api/rql/internal/errz"
 	"github.com/puppetlabs/wash/api/rql/internal/matcher"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 )
 
 // Common base class for Object/Array predicates
 
 type collectionBase struct {
-	rql.ValuePredicate
+	meta.ValuePredicate
 	// ctype => collectionType
 	ctype            string
 	elementPredicate rql.ValuePredicate
@@ -23,11 +24,10 @@ func (p *collectionBase) Marshal() interface{} {
 }
 
 func (p *collectionBase) Unmarshal(input interface{}) error {
-	isArraySize := p.ctype == "array"
+	sizePredicate := &size{isArraySize: p.ctype == "array", p: NPE_UnsignedNumericPredicate()}
+	sizePredicate.ValuePredicateBase = meta.NewValuePredicate(sizePredicate)
 	nt := internal.NewNonterminalNode(
-		// SizePredicate
-		&size{isArraySize: isArraySize, p: NPE_UnsignedNumericPredicate()},
-		// ElementPredicate
+		sizePredicate,
 		p.elementPredicate,
 	)
 	nt.SetMatchErrMsg(fmt.Sprintf("expected a size predicate or a %v predicate", p.ctype))
@@ -45,6 +45,6 @@ func (p *collectionBase) Unmarshal(input interface{}) error {
 	if err := nt.Unmarshal(array[1]); err != nil {
 		return fmt.Errorf("error unmarshalling the %v predicate: %w", p.ctype, err)
 	}
-	p.ValuePredicate = nt.MatchedNode().(rql.ValuePredicate)
+	p.ValuePredicate = nt.MatchedNode().(meta.ValuePredicate)
 	return nil
 }

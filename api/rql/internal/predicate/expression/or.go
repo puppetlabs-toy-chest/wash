@@ -4,16 +4,19 @@ import (
 	"time"
 
 	"github.com/puppetlabs/wash/api/rql"
+	"github.com/puppetlabs/wash/api/rql/internal/primary/meta"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/shopspring/decimal"
 )
 
 func Or(p1 rql.ASTNode, p2 rql.ASTNode) rql.ASTNode {
-	return &or{binOp{
+	p := &or{binOp{
 		op: "OR",
 		p1: toAtom(p1),
 		p2: toAtom(p2),
 	}}
+	p.ValuePredicateBase = meta.NewValuePredicate(p)
+	return p
 }
 
 type or struct {
@@ -62,10 +65,18 @@ func (o *or) EvalAction(action plugin.Action) bool {
 	return ap1.EvalAction(action) || ap2.EvalAction(action)
 }
 
+func (o *or) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
+	sp1 := o.p1.(meta.ValuePredicate).SchemaPredicate(svs)
+	sp2 := o.p2.(meta.ValuePredicate).SchemaPredicate(svs)
+	return func(schema meta.ValueSchema) bool {
+		return sp1(schema) || sp2(schema)
+	}
+}
+
 var _ = expressionNode(&or{})
 var _ = rql.EntryPredicate(&or{})
 var _ = rql.EntrySchemaPredicate(&or{})
-var _ = rql.ValuePredicate(&or{})
+var _ = meta.ValuePredicate(&or{})
 var _ = rql.StringPredicate(&or{})
 var _ = rql.NumericPredicate(&or{})
 var _ = rql.TimePredicate(&or{})
