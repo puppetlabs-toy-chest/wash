@@ -114,7 +114,7 @@ func (s *CollectionTestSuite) TestElementPredicate_AcceptsValueNPEs() {
 	rtc(s.A("object", s.A("size", s.A(">", "0"))), map[string]interface{}{"0": nil})
 	rtc(s.A("array", s.A("size", s.A(">", "0"))), []interface{}{true})
 	rtc(nil, nil)
-	rtc(s.A("boolean", true), true)
+	rtc(true, true)
 	// Test "number"
 	rtc(s.A("number", s.A(">", float64(500))), float64(1000))
 	rtc(s.A("number", s.A("NOT", s.A(">", float64(500)))), float64(500))
@@ -134,9 +134,9 @@ func (s *CollectionTestSuite) TestElementPredicate_AcceptsValueNPEs() {
 	rtc(s.A("string", s.A("OR", s.A("glob", "foo"), s.A("glob", "bar"))), "bar")
 
 	// Now test that it can unmarshal the operators
-	rtc(s.A("NOT", s.A("boolean", true)), false)
-	rtc(s.A("AND", s.A("boolean", true), s.A("boolean", true)), true)
-	rtc(s.A("OR", s.A("boolean", false), s.A("boolean", true)), true)
+	rtc(s.A("NOT", true), false)
+	rtc(s.A("AND", true, true), true)
+	rtc(s.A("OR", false, true), true)
 }
 
 func (s *CollectionTestSuite) TestElementPredicate_EvalValueSchema_NestedNPEs() {

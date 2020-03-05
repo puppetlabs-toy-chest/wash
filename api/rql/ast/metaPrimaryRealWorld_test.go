@@ -62,7 +62,7 @@ func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
 	// together works
 	s.TTC("lastModifiedTime",
 		s.A("OR",
-			s.A("boolean", true),
+			true,
 			s.A("time",
 				s.A("AND",
 					s.A("=", "2018-10-01T17:37:05Z"),
