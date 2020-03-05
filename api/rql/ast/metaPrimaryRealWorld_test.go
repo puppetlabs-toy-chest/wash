@@ -8,17 +8,16 @@ import (
 
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
+	"github.com/puppetlabs/wash/plugin"
 	"github.com/stretchr/testify/suite"
 )
 
 // This file contains real-world meta primary test cases
-//
-// TODO: Once EvalEntrySchema's implemented, add schema predicate
-// tests
 
 type MetaPrimaryRealWorldTestSuite struct {
 	asttest.Suite
 	e rql.Entry
+	s *rql.EntrySchema
 }
 
 // TTC => TrueTestCase
@@ -26,13 +25,8 @@ func (s *MetaPrimaryRealWorldTestSuite) TTC(key interface{}, predicate interface
 	q := Query()
 	s.MUM(q, s.A("meta", s.A("object", s.A(s.A("key", key), predicate))))
 	s.Suite.EETTC(q, s.e)
-}
-
-// FTC => FalseTestCase
-func (s *MetaPrimaryRealWorldTestSuite) FTC(key interface{}, predicate interface{}) {
-	q := Query()
-	s.MUM(q, s.A("meta", s.A("object", s.A(s.A("key", key), predicate))))
-	s.Suite.EEFTC(q, s.e)
+	// The entry schema predicate should also be true
+	s.Suite.EESTTC(q, s.s)
 }
 
 func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
@@ -46,6 +40,7 @@ func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
 		),
 	)
 
+	// This basically tests that the "amiLaunchIndex" key exists
 	s.TTC("amiLaunchIndex", s.A("OR", nil, s.A("NOT", nil)))
 
 	s.TTC("lastModifiedTime",
@@ -56,6 +51,26 @@ func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
 			),
 		),
 	)
+	// Should return true because "lastModifiedTime" is not a numeric value.
+	// This test is mainly here to test the schema predicate
+	s.TTC("lastModifiedTime",
+		s.A("NOT",
+			s.A("number", s.A("AND", s.A("<=", "0"), s.A(">=", "0"))),
+		),
+	)
+	// This mainly tests the schema predicate, specifically that OR'ing things
+	// together works
+	s.TTC("lastModifiedTime",
+		s.A("OR",
+			s.A("boolean", true),
+			s.A("time",
+				s.A("AND",
+					s.A("=", "2018-10-01T17:37:05Z"),
+					s.A("<", "2018-10-02T17:37:05Z"),
+				),
+			),
+		),
+	)
 
 	s.TTC("blockDeviceMappings",
 		s.A("array",
@@ -63,6 +78,18 @@ func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
 				s.A("object",
 					s.A(s.A("key", "deviceName"),
 						s.A("string", s.A("=", "/dev/sda1"))),
+				),
+			),
+		),
+	)
+	// Should return true because every element in the blockDeviceMappings
+	// array is an object which is NOT an array. This test is mainly here
+	// to test the schema predicate
+	s.TTC("blockDeviceMappings",
+		s.A("array",
+			s.A("some",
+				s.A("NOT",
+					s.A("array", s.A("some", nil)),
 				),
 			),
 		),
@@ -165,6 +192,17 @@ func TestMetaPrimaryRealWorld(t *testing.T) {
 		t.Fatal(fmt.Sprintf("Failed to unmarshal testdata/metadata.json: %v", err))
 	}
 	s.e.Metadata = m
+
+	rawMetaSchema, err := ioutil.ReadFile("testdata/metadataSchema.json")
+	if err != nil {
+		t.Fatal(fmt.Sprintf("Failed to read testdata/metadataSchema.json"))
+	}
+	var metaSchema *plugin.JSONSchema
+	if err := json.Unmarshal(rawMetaSchema, &metaSchema); err != nil {
+		t.Fatal(fmt.Sprintf("Failed to unmarshal testdata/metadata.json: %v", err))
+	}
+	s.s = &rql.EntrySchema{}
+	s.s.SetMetadataSchema(metaSchema)
 
 	suite.Run(t, s)
 }

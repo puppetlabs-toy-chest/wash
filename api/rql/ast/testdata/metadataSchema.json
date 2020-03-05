@@ -1,0 +1,706 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"required": [
+		"AmiLaunchIndex",
+		"Architecture",
+		"BlockDeviceMappings",
+		"CapacityReservationId",
+		"CapacityReservationSpecification",
+		"ClientToken",
+		"CpuOptions",
+		"EbsOptimized",
+		"ElasticGpuAssociations",
+		"ElasticInferenceAcceleratorAssociations",
+		"EnaSupport",
+		"HibernationOptions",
+		"Hypervisor",
+		"IamInstanceProfile",
+		"ImageId",
+		"InstanceId",
+		"InstanceLifecycle",
+		"InstanceType",
+		"KernelId",
+		"KeyName",
+		"LaunchTime",
+		"Licenses",
+		"Monitoring",
+		"NetworkInterfaces",
+		"Placement",
+		"Platform",
+		"PrivateDnsName",
+		"PrivateIpAddress",
+		"ProductCodes",
+		"PublicDnsName",
+		"PublicIpAddress",
+		"RamdiskId",
+		"RootDeviceName",
+		"RootDeviceType",
+		"SecurityGroups",
+		"SourceDestCheck",
+		"SpotInstanceRequestId",
+		"SriovNetSupport",
+		"State",
+		"StateReason",
+		"StateTransitionReason",
+		"SubnetId",
+		"Tags",
+		"VirtualizationType",
+		"VpcId"
+	],
+	"properties": {
+		"AmiLaunchIndex": {
+			"type": "integer"
+		},
+		"Architecture": {
+			"type": "string"
+		},
+		"BlockDeviceMappings": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/InstanceBlockDeviceMapping"
+			},
+			"type": "array"
+		},
+		"CapacityReservationId": {
+			"type": "string"
+		},
+		"CapacityReservationSpecification": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/CapacityReservationSpecificationResponse"
+		},
+		"ClientToken": {
+			"type": "string"
+		},
+		"CpuOptions": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/CpuOptions"
+		},
+		"EbsOptimized": {
+			"type": "boolean"
+		},
+		"ElasticGpuAssociations": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/ElasticGpuAssociation"
+			},
+			"type": "array"
+		},
+		"ElasticInferenceAcceleratorAssociations": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/ElasticInferenceAcceleratorAssociation"
+			},
+			"type": "array"
+		},
+		"EnaSupport": {
+			"type": "boolean"
+		},
+		"HibernationOptions": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/HibernationOptions"
+		},
+		"Hypervisor": {
+			"type": "string"
+		},
+		"IamInstanceProfile": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/IamInstanceProfile"
+		},
+		"ImageId": {
+			"type": "string"
+		},
+		"InstanceId": {
+			"type": "string"
+		},
+		"InstanceLifecycle": {
+			"type": "string"
+		},
+		"InstanceType": {
+			"type": "string"
+		},
+		"KernelId": {
+			"type": "string"
+		},
+		"KeyName": {
+			"type": "string"
+		},
+		"LastModifiedTime": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"LaunchTime": {
+			"type": "string",
+			"format": "date-time"
+		},
+		"Licenses": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/LicenseConfiguration"
+			},
+			"type": "array"
+		},
+		"Monitoring": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/Monitoring"
+		},
+		"NetworkInterfaces": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/InstanceNetworkInterface"
+			},
+			"type": "array"
+		},
+		"Placement": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/Placement"
+		},
+		"Platform": {
+			"type": "string"
+		},
+		"PrivateDnsName": {
+			"type": "string"
+		},
+		"PrivateIpAddress": {
+			"type": "string"
+		},
+		"ProductCodes": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/ProductCode"
+			},
+			"type": "array"
+		},
+		"PublicDnsName": {
+			"type": "string"
+		},
+		"PublicIpAddress": {
+			"type": "string"
+		},
+		"RamdiskId": {
+			"type": "string"
+		},
+		"RootDeviceName": {
+			"type": "string"
+		},
+		"RootDeviceType": {
+			"type": "string"
+		},
+		"SecurityGroups": {
+			"items": {
+				"$ref": "#/definitions/GroupIdentifier"
+			},
+			"type": "array"
+		},
+		"SourceDestCheck": {
+			"type": "boolean"
+		},
+		"SpotInstanceRequestId": {
+			"type": "string"
+		},
+		"SriovNetSupport": {
+			"type": "string"
+		},
+		"State": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/InstanceState"
+		},
+		"StateReason": {
+			"$schema": "http://json-schema.org/draft-04/schema#",
+			"$ref": "#/definitions/StateReason"
+		},
+		"StateTransitionReason": {
+			"type": "string"
+		},
+		"SubnetId": {
+			"type": "string"
+		},
+		"Tags": {
+			"items": {
+				"$schema": "http://json-schema.org/draft-04/schema#",
+				"$ref": "#/definitions/Tag"
+			},
+			"type": "array"
+		},
+		"VirtualizationType": {
+			"type": "string"
+		},
+		"VpcId": {
+			"type": "string"
+		}
+	},
+	"additionalProperties": false,
+	"type": "object",
+	"definitions": {
+		"CapacityReservationSpecificationResponse": {
+			"required": [
+				"CapacityReservationPreference",
+				"CapacityReservationTarget"
+			],
+			"properties": {
+				"CapacityReservationPreference": {
+					"type": "string"
+				},
+				"CapacityReservationTarget": {
+					"$schema": "http://json-schema.org/draft-04/schema#",
+					"$ref": "#/definitions/CapacityReservationTargetResponse"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"CapacityReservationTargetResponse": {
+			"required": [
+				"CapacityReservationId"
+			],
+			"properties": {
+				"CapacityReservationId": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"CpuOptions": {
+			"required": [
+				"CoreCount",
+				"ThreadsPerCore"
+			],
+			"properties": {
+				"CoreCount": {
+					"type": "integer"
+				},
+				"ThreadsPerCore": {
+					"type": "integer"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"EbsInstanceBlockDevice": {
+			"required": [
+				"AttachTime",
+				"DeleteOnTermination",
+				"Status",
+				"VolumeId"
+			],
+			"properties": {
+				"AttachTime": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"DeleteOnTermination": {
+					"type": "boolean"
+				},
+				"Status": {
+					"type": "string"
+				},
+				"VolumeId": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"ElasticGpuAssociation": {
+			"required": [
+				"ElasticGpuAssociationId",
+				"ElasticGpuAssociationState",
+				"ElasticGpuAssociationTime",
+				"ElasticGpuId"
+			],
+			"properties": {
+				"ElasticGpuAssociationId": {
+					"type": "string"
+				},
+				"ElasticGpuAssociationState": {
+					"type": "string"
+				},
+				"ElasticGpuAssociationTime": {
+					"type": "string"
+				},
+				"ElasticGpuId": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"ElasticInferenceAcceleratorAssociation": {
+			"required": [
+				"ElasticInferenceAcceleratorArn",
+				"ElasticInferenceAcceleratorAssociationId",
+				"ElasticInferenceAcceleratorAssociationState",
+				"ElasticInferenceAcceleratorAssociationTime"
+			],
+			"properties": {
+				"ElasticInferenceAcceleratorArn": {
+					"type": "string"
+				},
+				"ElasticInferenceAcceleratorAssociationId": {
+					"type": "string"
+				},
+				"ElasticInferenceAcceleratorAssociationState": {
+					"type": "string"
+				},
+				"ElasticInferenceAcceleratorAssociationTime": {
+					"type": "string",
+					"format": "date-time"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"GroupIdentifier": {
+			"required": [
+				"GroupId",
+				"GroupName"
+			],
+			"properties": {
+				"GroupId": {
+					"type": "string"
+				},
+				"GroupName": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"HibernationOptions": {
+			"required": [
+				"Configured"
+			],
+			"properties": {
+				"Configured": {
+					"type": "boolean"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"IamInstanceProfile": {
+			"required": [
+				"Arn",
+				"Id"
+			],
+			"properties": {
+				"Arn": {
+					"type": "string"
+				},
+				"Id": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceBlockDeviceMapping": {
+			"required": [
+				"DeviceName",
+				"Ebs"
+			],
+			"properties": {
+				"DeviceName": {
+					"type": "string"
+				},
+				"Ebs": {
+					"$schema": "http://json-schema.org/draft-04/schema#",
+					"$ref": "#/definitions/EbsInstanceBlockDevice"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceIpv6Address": {
+			"required": [
+				"Ipv6Address"
+			],
+			"properties": {
+				"Ipv6Address": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceNetworkInterface": {
+			"required": [
+				"Association",
+				"Attachment",
+				"Description",
+				"Groups",
+				"Ipv6Addresses",
+				"MacAddress",
+				"NetworkInterfaceId",
+				"OwnerId",
+				"PrivateDnsName",
+				"PrivateIpAddress",
+				"PrivateIpAddresses",
+				"SourceDestCheck",
+				"Status",
+				"SubnetId",
+				"VpcId"
+			],
+			"properties": {
+				"Association": {
+					"$schema": "http://json-schema.org/draft-04/schema#",
+					"$ref": "#/definitions/InstanceNetworkInterfaceAssociation"
+				},
+				"Attachment": {
+					"$schema": "http://json-schema.org/draft-04/schema#",
+					"$ref": "#/definitions/InstanceNetworkInterfaceAttachment"
+				},
+				"Description": {
+					"type": "string"
+				},
+				"Groups": {
+					"items": {
+						"$schema": "http://json-schema.org/draft-04/schema#",
+						"$ref": "#/definitions/GroupIdentifier"
+					},
+					"type": "array"
+				},
+				"Ipv6Addresses": {
+					"items": {
+						"$schema": "http://json-schema.org/draft-04/schema#",
+						"$ref": "#/definitions/InstanceIpv6Address"
+					},
+					"type": "array"
+				},
+				"MacAddress": {
+					"type": "string"
+				},
+				"NetworkInterfaceId": {
+					"type": "string"
+				},
+				"OwnerId": {
+					"type": "string"
+				},
+				"PrivateDnsName": {
+					"type": "string"
+				},
+				"PrivateIpAddress": {
+					"type": "string"
+				},
+				"PrivateIpAddresses": {
+					"items": {
+						"$schema": "http://json-schema.org/draft-04/schema#",
+						"$ref": "#/definitions/InstancePrivateIpAddress"
+					},
+					"type": "array"
+				},
+				"SourceDestCheck": {
+					"type": "boolean"
+				},
+				"Status": {
+					"type": "string"
+				},
+				"SubnetId": {
+					"type": "string"
+				},
+				"VpcId": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceNetworkInterfaceAssociation": {
+			"required": [
+				"IpOwnerId",
+				"PublicDnsName",
+				"PublicIp"
+			],
+			"properties": {
+				"IpOwnerId": {
+					"type": "string"
+				},
+				"PublicDnsName": {
+					"type": "string"
+				},
+				"PublicIp": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceNetworkInterfaceAttachment": {
+			"required": [
+				"AttachTime",
+				"AttachmentId",
+				"DeleteOnTermination",
+				"DeviceIndex",
+				"Status"
+			],
+			"properties": {
+				"AttachTime": {
+					"type": "string",
+					"format": "date-time"
+				},
+				"AttachmentId": {
+					"type": "string"
+				},
+				"DeleteOnTermination": {
+					"type": "boolean"
+				},
+				"DeviceIndex": {
+					"type": "integer"
+				},
+				"Status": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstancePrivateIpAddress": {
+			"required": [
+				"Association",
+				"Primary",
+				"PrivateDnsName",
+				"PrivateIpAddress"
+			],
+			"properties": {
+				"Association": {
+					"$ref": "#/definitions/InstanceNetworkInterfaceAssociation"
+				},
+				"Primary": {
+					"type": "boolean"
+				},
+				"PrivateDnsName": {
+					"type": "string"
+				},
+				"PrivateIpAddress": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"InstanceState": {
+			"required": [
+				"Code",
+				"Name"
+			],
+			"properties": {
+				"Code": {
+					"type": "integer"
+				},
+				"Name": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"LicenseConfiguration": {
+			"required": [
+				"LicenseConfigurationArn"
+			],
+			"properties": {
+				"LicenseConfigurationArn": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"Monitoring": {
+			"required": [
+				"State"
+			],
+			"properties": {
+				"State": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"Placement": {
+			"required": [
+				"Affinity",
+				"AvailabilityZone",
+				"GroupName",
+				"HostId",
+				"PartitionNumber",
+				"SpreadDomain",
+				"Tenancy"
+			],
+			"properties": {
+				"Affinity": {
+					"type": "string"
+				},
+				"AvailabilityZone": {
+					"type": "string"
+				},
+				"GroupName": {
+					"type": "string"
+				},
+				"HostId": {
+					"type": "string"
+				},
+				"PartitionNumber": {
+					"type": "integer"
+				},
+				"SpreadDomain": {
+					"type": "string"
+				},
+				"Tenancy": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"ProductCode": {
+			"required": [
+				"ProductCodeId",
+				"ProductCodeType"
+			],
+			"properties": {
+				"ProductCodeId": {
+					"type": "string"
+				},
+				"ProductCodeType": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"StateReason": {
+			"required": [
+				"Code",
+				"Message"
+			],
+			"properties": {
+				"Code": {
+					"type": "string"
+				},
+				"Message": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		},
+		"Tag": {
+			"required": [
+				"Key",
+				"Value"
+			],
+			"properties": {
+				"Key": {
+					"type": "string"
+				},
+				"Value": {
+					"type": "string"
+				}
+			},
+			"additionalProperties": false,
+			"type": "object"
+		}
+	}
+}
