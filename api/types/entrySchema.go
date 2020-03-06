@@ -31,6 +31,15 @@ type EntrySchema struct {
 	graph *linkedhashmap.Map
 }
 
+func NewEntrySchema(s *plugin.EntrySchema) *EntrySchema {
+	if s == nil {
+		return nil
+	}
+	return &EntrySchema{
+		EntrySchema: (*s),
+	}
+}
+
 // MarshalJSON marshals the entry's schema to JSON. It takes
 // a value receiver so that the entry schema's still marshalled
 // when it's referenced as an interface{} object. See

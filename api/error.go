@@ -157,6 +157,14 @@ func invalidBoolParam(name, value string) *errorResponse {
 	)}
 }
 
+func invalidIntParam(name, value string) *errorResponse {
+	return &errorResponse{http.StatusBadRequest, newErrorObj(
+		apitypes.InvalidInt,
+		fmt.Sprintf("Invalid int value '%v' given for %v parameter", value, name),
+		apitypes.ErrorFields{"value": value},
+	)}
+}
+
 func invalidPathsResponse() *errorResponse {
 	return &errorResponse{http.StatusBadRequest, newErrorObj(
 		apitypes.InvalidPaths,

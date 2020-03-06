@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	apitypes "github.com/puppetlabs/wash/api/types"
 )
 
 // swagger:route GET /fs/info info entryInfo
@@ -30,7 +32,7 @@ var infoHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *erro
 
 	jsonEncoder := json.NewEncoder(w)
 	// TODO: Include the entry's full metadata?
-	apiEntry := toAPIEntry(entry)
+	apiEntry := apitypes.NewEntry(entry)
 	apiEntry.Path = path
 	if err := jsonEncoder.Encode(&apiEntry); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal %v: %v", path, err))
