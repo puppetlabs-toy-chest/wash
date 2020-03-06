@@ -9,10 +9,10 @@ import (
 
 // PE_Primary returns a node representing a predicate expression (PE)
 // of primaries
-func PE_Primary() rql.Primary {
+func PE_Primary() rql.Query {
 	return expression.New("Primary", false, func() rql.ASTNode {
 		return Primary()
-	}).(rql.Primary)
+	}).(rql.Query)
 }
 
 // PE_Object returns a node representing PE Object

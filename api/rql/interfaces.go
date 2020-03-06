@@ -15,14 +15,19 @@ type Primary interface {
 
 // EntryPredicate represents a predicate on an entry
 type EntryPredicate interface {
-	Primary
 	EvalEntry(Entry) bool
 }
 
 // EntrySchemaPredicate represents a predicate on an entry schema object
 type EntrySchemaPredicate interface {
-	Primary
 	EvalEntrySchema(*EntrySchema) bool
+}
+
+// Query represents an RQL query
+type Query interface {
+	ASTNode
+	EntryPredicate
+	EntrySchemaPredicate
 }
 
 // ValuePredicate represents a predicate on a metadata (JSON) value
