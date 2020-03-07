@@ -22,28 +22,26 @@ func (s *MetaTestSuite) TestMarshal() {
 }
 
 func (s *MetaTestSuite) TestUnmarshalErrors() {
-	n := Meta(predicate.Object())
-	s.UMETC(n, "foo", `meta.*formatted.*"meta".*PE ObjectPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("object", s.A(s.A("key", "foo"), true))), `meta.*formatted.*"meta".*PE ObjectPredicate`, true)
-	s.UMETC(n, s.A("meta", "foo", "bar"), `meta.*formatted.*"meta".*PE ObjectPredicate`, false)
-	s.UMETC(n, s.A("meta"), `meta.*formatted.*"meta".*PE ObjectPredicate.*missing.*PE ObjectPredicate`, false)
-	s.UMETC(n, s.A("meta", s.A("object")), "meta.*PE ObjectPredicate.*element", false)
+	s.UMETC("foo", `meta.*formatted.*"meta".*PE ObjectPredicate`, true)
+	s.UMETC(s.A("foo", s.A("object", s.A(s.A("key", "foo"), true))), `meta.*formatted.*"meta".*PE ObjectPredicate`, true)
+	s.UMETC(s.A("meta", "foo", "bar"), `meta.*formatted.*"meta".*PE ObjectPredicate`, false)
+	s.UMETC(s.A("meta"), `meta.*formatted.*"meta".*PE ObjectPredicate.*missing.*PE ObjectPredicate`, false)
+	s.UMETC(s.A("meta", s.A("object")), "meta.*PE ObjectPredicate.*element", false)
 }
 
 func (s *MetaTestSuite) TestEvalEntry() {
-	p := Meta(predicate.Object())
-	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
+	ast := s.A("meta", s.A("object", s.A(s.A("key", "foo"), true)))
 	e := rql.Entry{}
 	e.Metadata = map[string]interface{}{"foo": false}
-	s.EEFTC(p, e)
+	s.EEFTC(ast, e)
 	e.Metadata["foo"] = true
-	s.EETTC(p, e)
+	s.EETTC(ast, e)
 }
 
 func (s *MetaTestSuite) TestEvalEntrySchema() {
-	p := Meta(predicate.Object())
-	s.MUM(p, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
+	ast := s.A("meta", s.A("object", s.A(s.A("key", "foo"), true)))
 	schema := &rql.EntrySchema{}
+
 	schema.SetMetadataSchema(s.ToJSONSchemas(map[string]interface{}{
 		"type":                 "object",
 		"additionalProperties": false,
@@ -51,9 +49,11 @@ func (s *MetaTestSuite) TestEvalEntrySchema() {
 			"bar": map[string]interface{}{},
 		},
 	})[0])
-	s.EESFTC(p, schema)
+	s.EESFTC(ast, schema)
+
 	schema.SetMetadataSchema(nil)
-	s.EESTTC(p, schema)
+	s.EESTTC(ast, schema)
+
 	schema.SetMetadataSchema(s.ToJSONSchemas(map[string]interface{}{
 		"type":                 "object",
 		"additionalProperties": false,
@@ -63,23 +63,25 @@ func (s *MetaTestSuite) TestEvalEntrySchema() {
 			},
 		},
 	})[0])
-	s.EESTTC(p, schema)
+	s.EESTTC(ast, schema)
 
 }
 
 func (s *MetaTestSuite) TestExpression_Atom() {
-	expr := expression.New("meta", false, func() rql.ASTNode {
-		return Meta(predicate.Object())
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("meta", false, func() rql.ASTNode {
+			return Meta(predicate.Object())
+		})
+	}
 
-	s.MUM(expr, s.A("meta", s.A("object", s.A(s.A("key", "foo"), true))))
+	ast := s.A("meta", s.A("object", s.A(s.A("key", "foo"), true)))
 	e := rql.Entry{}
 	e.Metadata = map[string]interface{}{}
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Metadata = map[string]interface{}{"foo": false}
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Metadata["foo"] = true
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
 	schema.SetMetadataSchema(s.ToJSONSchemas(map[string]interface{}{
@@ -89,7 +91,7 @@ func (s *MetaTestSuite) TestExpression_Atom() {
 			"bar": map[string]interface{}{},
 		},
 	})[0])
-	s.EESFTC(expr, schema)
+	s.EESFTC(ast, schema)
 	schema.SetMetadataSchema(s.ToJSONSchemas(map[string]interface{}{
 		"type":                 "object",
 		"additionalProperties": false,
@@ -99,10 +101,10 @@ func (s *MetaTestSuite) TestExpression_Atom() {
 			},
 		},
 	})[0])
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -112,5 +114,9 @@ func (s *MetaTestSuite) TestExpression_Atom() {
 }
 
 func TestMeta(t *testing.T) {
-	suite.Run(t, new(MetaTestSuite))
+	s := new(MetaTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Meta(predicate.Object())
+	}
+	suite.Run(t, s)
 }

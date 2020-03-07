@@ -18,42 +18,42 @@ func (s *CNameTestSuite) TestMarshal() {
 	s.MTC(CName(predicate.StringGlob("foo")), s.A("cname", s.A("glob", "foo")))
 }
 
-func (s *CNameTestSuite) TestUnmarshal() {
-	n := CName(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `cname.*formatted.*"cname".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `cname.*formatted.*"cname".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("cname", "foo", "bar"), `cname.*formatted.*"cname".*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("cname"), `cname.*formatted.*"cname".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("cname", s.A("glob", "[")), "cname.*NPE StringPredicate.*glob", false)
-	s.UMTC(n, s.A("cname", s.A("glob", "foo")), CName(predicate.StringGlob("foo")))
+func (s *CNameTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `cname.*formatted.*"cname".*NPE StringPredicate`, true)
+	s.UMETC(s.A("foo", s.A("glob", "foo")), `cname.*formatted.*"cname".*NPE StringPredicate`, true)
+	s.UMETC(s.A("cname", "foo", "bar"), `cname.*formatted.*"cname".*NPE StringPredicate`, false)
+	s.UMETC(s.A("cname"), `cname.*formatted.*"cname".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(s.A("cname", s.A("glob", "[")), "cname.*NPE StringPredicate.*glob", false)
 }
 
 func (s *CNameTestSuite) TestEvalEntry() {
-	n := CName(predicate.StringGlob("foo"))
+	ast := s.A("cname", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.CName = "bar"
-	s.EEFTC(n, e)
+	s.EEFTC(ast, e)
 	e.CName = "foo"
-	s.EETTC(n, e)
+	s.EETTC(ast, e)
 }
 
 func (s *CNameTestSuite) TestExpression_Atom() {
-	expr := expression.New("cname", false, func() rql.ASTNode {
-		return CName(predicate.String())
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("cname", false, func() rql.ASTNode {
+			return CName(predicate.String())
+		})
+	}
 
-	s.MUM(expr, []interface{}{"cname", []interface{}{"glob", "foo"}})
+	ast := s.A("cname", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.CName = "bar"
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.CName = "foo"
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -63,5 +63,9 @@ func (s *CNameTestSuite) TestExpression_Atom() {
 }
 
 func TestCName(t *testing.T) {
-	suite.Run(t, new(CNameTestSuite))
+	s := new(CNameTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return CName(predicate.String())
+	}
+	suite.Run(t, s)
 }

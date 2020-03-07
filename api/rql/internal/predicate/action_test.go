@@ -18,35 +18,27 @@ func (s *ActionTestSuite) TestMarshal() {
 	s.MTC(Action(plugin.ExecAction()), "exec")
 }
 
-func (s *ActionTestSuite) TestUnmarshal() {
-	a := Action(plugin.Action{})
-	s.UMETC(a, 1, `1.*valid.*action.*"exec"`, true)
-	s.UMETC(a, "foo", `foo.*valid.*action.*"exec"`, true)
-	// UMTC doesn't work because s.Equal doesn't work for the Action
-	// type. My best guess is because the Action type has a function
-	// as its field, and s.Equal doesn't work with functions. Thus, we
-	// do our own assertion here.
-	if s.NoError(a.Unmarshal("exec")) {
-		s.True(EqualAction(a, "exec"))
-	}
+func (s *ActionTestSuite) TestUnmarshalErrors() {
+	s.UMETC(1, `1.*valid.*action.*"exec"`, true)
+	s.UMETC("foo", `foo.*valid.*action.*"exec"`, true)
 }
 
 func (s *ActionTestSuite) TestEvalAction() {
-	a := Action(plugin.ExecAction())
-	s.EAFTC(a, plugin.ListAction())
-	s.EATTC(a, plugin.ExecAction())
+	s.EAFTC("exec", plugin.ListAction())
+	s.EATTC("exec", plugin.ExecAction())
 }
 
 func (s *ActionTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("action", true, func() rql.ASTNode {
-		return Action(plugin.Action{})
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("action", true, func() rql.ASTNode {
+			return Action(plugin.Action{})
+		})
+	}
 
-	s.MUM(expr, "exec")
-	s.EAFTC(expr, plugin.ListAction())
-	s.EATTC(expr, plugin.ExecAction())
+	s.EAFTC("exec", plugin.ListAction())
+	s.EATTC("exec", plugin.ExecAction())
 	s.AssertNotImplemented(
-		expr,
+		"exec",
 		asttest.EntryPredicateC,
 		asttest.EntrySchemaPredicateC,
 		asttest.ValuePredicateC,
@@ -55,11 +47,14 @@ func (s *ActionTestSuite) TestExpression_AtomAndNot() {
 		asttest.TimePredicateC,
 	)
 
-	s.MUM(expr, []interface{}{"NOT", "exec"})
-	s.EATTC(expr, plugin.ListAction())
-	s.EAFTC(expr, plugin.ExecAction())
+	s.EATTC(s.A("NOT", "exec"), plugin.ListAction())
+	s.EAFTC(s.A("NOT", "exec"), plugin.ExecAction())
 }
 
 func TestAction(t *testing.T) {
-	suite.Run(t, new(ActionTestSuite))
+	s := new(ActionTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Action(plugin.Action{})
+	}
+	suite.Run(t, s)
 }

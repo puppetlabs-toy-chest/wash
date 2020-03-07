@@ -18,65 +18,54 @@ func (s *BooleanTestSuite) TestMarshal() {
 	s.MTC(Boolean(false), false)
 }
 
-func (s *BooleanTestSuite) TestUnmarshal() {
-	b := Boolean(true)
-	s.UMETC(b, "foo", "foo.*valid.*Boolean.*true.*false", true)
-	s.UMTC(b, true, Boolean(true))
-	s.UMTC(b, false, Boolean(false))
+func (s *BooleanTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", "foo.*valid.*Boolean.*true.*false", true)
 }
 
 func (s *BooleanTestSuite) TestEvalValue() {
 	// Test true
-	b := Boolean(true)
-	s.EVFTC(b, false, "foo")
-	s.EVTTC(b, true)
+	s.EVFTC(true, false, "foo")
+	s.EVTTC(true, true)
 
 	// Test false
-	b = Boolean(false)
-	s.EVFTC(b, true, "foo")
-	s.EVTTC(b, false)
+	s.EVFTC(false, true, "foo")
+	s.EVTTC(false, false)
 }
 
 func (s *BooleanTestSuite) TestEvalValueSchema() {
-	b := Boolean(true)
-	s.EVSFTC(b, s.VS("object", "array")...)
-	s.EVSTTC(b, s.VS("boolean")...)
+	s.EVSFTC(true, s.VS("object", "array")...)
+	s.EVSTTC(true, s.VS("boolean")...)
 }
 
 func (s *BooleanTestSuite) TestEvalEntry() {
 	// Test true
-	b := Boolean(true)
-	s.EETTC(b, rql.Entry{})
-
+	s.EETTC(true, rql.Entry{})
 	// Test false
-	b = Boolean(false)
-	s.EEFTC(b, rql.Entry{})
+	s.EEFTC(false, rql.Entry{})
 }
 
 func (s *BooleanTestSuite) TestEvalEntrySchema() {
 	// Test true
-	b := Boolean(true)
-	s.EESTTC(b, &rql.EntrySchema{})
-
+	s.EESTTC(true, &rql.EntrySchema{})
 	// Test false
-	b = Boolean(false)
-	s.EESFTC(b, &rql.EntrySchema{})
+	s.EESFTC(false, &rql.EntrySchema{})
 }
 
 func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("boolean", true, func() rql.ASTNode {
-		return Boolean(false)
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("boolean", true, func() rql.ASTNode {
+			return Boolean(false)
+		})
+	}
 
-	s.MUM(expr, true)
-	s.EVFTC(expr, false)
-	s.EVTTC(expr, true)
-	s.EVSFTC(expr, s.VS("object", "array")...)
-	s.EVSTTC(expr, s.VS("boolean")...)
-	s.EETTC(expr, rql.Entry{})
-	s.EESTTC(expr, &rql.EntrySchema{})
+	s.EVFTC(true, false)
+	s.EVTTC(true, true)
+	s.EVSFTC(true, s.VS("object", "array")...)
+	s.EVSTTC(true, s.VS("boolean")...)
+	s.EETTC(true, rql.Entry{})
+	s.EESTTC(true, &rql.EntrySchema{})
 	s.AssertNotImplemented(
-		expr,
+		true,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
 		asttest.TimePredicateC,
@@ -84,12 +73,15 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	)
 
 	// Only for EvalValue and EvalValueSchema
-	s.MUM(expr, []interface{}{"NOT", true})
-	s.EVTTC(expr, false)
-	s.EVFTC(expr, true)
-	s.EVSTTC(expr, s.VS("object", "array", "boolean")...)
+	s.EVTTC(s.A("NOT", true), false)
+	s.EVFTC(s.A("NOT", true), true)
+	s.EVSTTC(s.A("NOT", true), s.VS("object", "array", "boolean")...)
 }
 
 func TestBoolean(t *testing.T) {
-	suite.Run(t, new(BooleanTestSuite))
+	s := new(BooleanTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Boolean(true)
+	}
+	suite.Run(t, s)
 }

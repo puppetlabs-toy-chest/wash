@@ -19,58 +19,54 @@ func (s *ActionTestSuite) TestMarshal() {
 	s.MTC(Action(predicate.Action(plugin.ExecAction())), s.A("action", "exec"))
 }
 
-func (s *ActionTestSuite) TestUnmarshal() {
-	p := Action(predicate.Action(plugin.Action{}))
-	s.UMETC(p, "foo", `action.*formatted.*"action".*NPE ActionPredicate`, true)
-	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), `action.*formatted.*"action".*NPE ActionPredicate`, true)
-	s.UMETC(p, s.A("action", "foo", "bar"), `action.*formatted.*"action".*NPE ActionPredicate`, false)
-	s.UMETC(p, s.A("action"), `action.*formatted.*"action".*PE ActionPredicate.*missing.*NPE ActionPredicate`, false)
-	s.UMETC(p, s.A("action", "foo"), "action.*NPE ActionPredicate.*action", false)
-	// UMTC doesn't work because s.Equal doesn't work for the Action
-	// type so we do our own assertion here.
-	if s.NoError(p.Unmarshal(s.A("action", "exec"))) {
-		predicate.EqualAction(p.(*action).p, "exec")
-	}
+func (s *ActionTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `action.*formatted.*"action".*NPE ActionPredicate`, true)
+	s.UMETC(s.A("foo", s.A("<", int64(1000))), `action.*formatted.*"action".*NPE ActionPredicate`, true)
+	s.UMETC(s.A("action", "foo", "bar"), `action.*formatted.*"action".*NPE ActionPredicate`, false)
+	s.UMETC(s.A("action"), `action.*formatted.*"action".*PE ActionPredicate.*missing.*NPE ActionPredicate`, false)
+	s.UMETC(s.A("action", "foo"), "action.*NPE ActionPredicate.*action", false)
 }
 
 func (s *ActionTestSuite) TestEvalEntry() {
-	p := Action(predicate.Action(plugin.ExecAction()))
+	ast := s.A("action", "exec")
 	e := rql.Entry{}
 	e.Actions = []string{"list", "read"}
-	s.EEFTC(p, e)
+	s.EEFTC(ast, e)
 	e.Actions = []string{"list", "exec", "signal"}
-	s.EETTC(p, e)
+	s.EETTC(ast, e)
 }
 
 func (s *ActionTestSuite) TestEvalEntrySchema() {
-	p := Action(predicate.Action(plugin.ExecAction()))
+	ast := s.A("action", "exec")
 	schema := &rql.EntrySchema{}
 	schema.SetActions([]string{"list", "read"})
-	s.EESFTC(p, schema)
+	s.EESFTC(ast, schema)
 	schema.SetActions([]string{"list", "exec", "signal"})
-	s.EESTTC(p, schema)
+	s.EESTTC(ast, schema)
 }
 
 func (s *ActionTestSuite) TestExpression_Atom() {
-	expr := expression.New("action", false, func() rql.ASTNode {
-		return Action(predicate.Action(plugin.Action{}))
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("action", false, func() rql.ASTNode {
+			return Action(predicate.Action(plugin.Action{}))
+		})
+	}
 
-	s.MUM(expr, []interface{}{"action", "exec"})
+	ast := s.A("action", "exec")
 	e := rql.Entry{}
 	e.Actions = []string{"list", "read"}
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Actions = []string{"list", "exec", "signal"}
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
 	schema.SetActions([]string{"list", "read"})
-	s.EESFTC(expr, schema)
+	s.EESFTC(ast, schema)
 	schema.SetActions([]string{"list", "exec", "signal"})
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -80,5 +76,9 @@ func (s *ActionTestSuite) TestExpression_Atom() {
 }
 
 func TestAction(t *testing.T) {
-	suite.Run(t, new(ActionTestSuite))
+	s := new(ActionTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Action(predicate.Action(plugin.Action{}))
+	}
+	suite.Run(t, s)
 }
