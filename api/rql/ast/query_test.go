@@ -37,6 +37,8 @@ func (s *QueryTestSuite) TestCanUnmarshalAllThePrimariesAndTheirExpressions() {
 		return e
 	})
 
+	s.QTC(true, rql.Entry{})
+
 	s.testPrimaryWithNPETime("atime", func(t time.Time) interface{} {
 		e := rql.Entry{}
 		e.Attributes.SetAtime(t)

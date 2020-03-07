@@ -37,10 +37,30 @@ func (s *BooleanTestSuite) TestEvalValue() {
 	s.EVTTC(b, false)
 }
 
-func (s BooleanTestSuite) TestEvalValueSchema() {
+func (s *BooleanTestSuite) TestEvalValueSchema() {
 	b := Boolean(true)
 	s.EVSFTC(b, s.VS("object", "array")...)
 	s.EVSTTC(b, s.VS("boolean")...)
+}
+
+func (s *BooleanTestSuite) TestEvalEntry() {
+	// Test true
+	b := Boolean(true)
+	s.EETTC(b, rql.Entry{})
+
+	// Test false
+	b = Boolean(false)
+	s.EEFTC(b, rql.Entry{})
+}
+
+func (s *BooleanTestSuite) TestEvalEntrySchema() {
+	// Test true
+	b := Boolean(true)
+	s.EESTTC(b, &rql.EntrySchema{})
+
+	// Test false
+	b = Boolean(false)
+	s.EESFTC(b, &rql.EntrySchema{})
 }
 
 func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
@@ -53,16 +73,17 @@ func (s *BooleanTestSuite) TestExpression_AtomAndNot() {
 	s.EVTTC(expr, true)
 	s.EVSFTC(expr, s.VS("object", "array")...)
 	s.EVSTTC(expr, s.VS("boolean")...)
+	s.EETTC(expr, rql.Entry{})
+	s.EESTTC(expr, &rql.EntrySchema{})
 	s.AssertNotImplemented(
 		expr,
-		asttest.EntryPredicateC,
-		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
 		asttest.TimePredicateC,
 		asttest.ActionPredicateC,
 	)
 
+	// Only for EvalValue and EvalValueSchema
 	s.MUM(expr, []interface{}{"NOT", true})
 	s.EVTTC(expr, false)
 	s.EVFTC(expr, true)

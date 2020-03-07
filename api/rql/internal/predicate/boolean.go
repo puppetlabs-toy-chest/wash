@@ -37,4 +37,18 @@ func (p *boolean) EvalValue(v interface{}) bool {
 	return ok && val == p.val
 }
 
+func (p *boolean) EvalEntry(rql.Entry) bool {
+	return p.val
+}
+
+func (p *boolean) EvalEntrySchema(*rql.EntrySchema) bool {
+	return p.val
+}
+
+func (p *boolean) IsPrimary() bool {
+	return true
+}
+
 var _ = meta.ValuePredicate(&boolean{})
+var _ = rql.EntryPredicate(&boolean{})
+var _ = rql.EntrySchemaPredicate(&boolean{})

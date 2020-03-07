@@ -5,6 +5,6 @@ import (
 )
 
 // Query returns an AST node representing an RQL query
-func Query() rql.Primary {
+func Query() rql.Query {
 	return PE_Primary()
 }

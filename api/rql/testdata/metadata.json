@@ -1,0 +1,24 @@
+{
+    "A": {
+        "label": "A",
+        "partial_metadata_schema": {
+            "type": "object",
+            "properties": {
+                "foo": {}
+            }
+        },
+        "children": [
+            "B",
+            "C"
+        ]
+    },
+    "B": {
+        "label": "B",
+        "metadata_schema": {
+            "type": "array"
+        }
+    },
+    "C": {
+        "label": "C"
+    }
+}
