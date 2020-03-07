@@ -10,6 +10,7 @@ import (
 	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast"
 	apitypes "github.com/puppetlabs/wash/api/types"
+	"github.com/puppetlabs/wash/plugin"
 )
 
 // swagger:route GET /fs/find find listEntries
@@ -34,6 +35,10 @@ var findHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *erro
 	entry, path, errResp := getEntryFromRequest(r)
 	if errResp != nil {
 		return errResp
+	}
+
+	if !plugin.ListAction().IsSupportedOn(entry) {
+		return unsupportedActionResponse(path, plugin.ListAction())
 	}
 
 	minDepth, hasMinDepth, errResp := getIntParam(r.URL, "mindepth")

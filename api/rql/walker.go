@@ -54,11 +54,15 @@ func (w *walkerImpl) Walk(ctx context.Context, start plugin.Entry) ([]Entry, err
 func (w *walkerImpl) walk(ctx context.Context, e *Entry, depth int) ([]Entry, error) {
 	entries := []Entry{}
 
-	includeEntry, err := w.visit(ctx, e, depth)
-	if err != nil {
-		return nil, err
-	} else if includeEntry {
-		entries = append(entries, *e)
+	isStartEntry := e.Path == ""
+	if !isStartEntry {
+		// Visit the entry
+		includeEntry, err := w.visit(ctx, e, depth)
+		if err != nil {
+			return nil, err
+		} else if includeEntry {
+			entries = append(entries, *e)
+		}
 	}
 
 	childDepth := depth + 1

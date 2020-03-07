@@ -66,7 +66,6 @@ func (s *WalkerTestSuite) TestWalk_HappyCase() {
 	entries := s.mustWalk(context.Background(), tree["."])
 	s.assertEntries(
 		[]string{
-			"",
 			"foo",
 			"foo/bar",
 			"foo/bar/1",
@@ -135,7 +134,6 @@ func (s *WalkerTestSuite) TestWalk_MaxdepthSet() {
 	entries := s.mustWalk(context.Background(), tree["."])
 	s.assertEntries(
 		[]string{
-			"",
 			"foo",
 			"foo/bar",
 			"foo/baz",
@@ -174,7 +172,7 @@ func (s *WalkerTestSuite) TestWalk_VisitErrors() {
 	s.walker.opts.Fullmeta = true
 
 	expectedErr := fmt.Errorf("failed to fetch metadata")
-	tree["."].On("Metadata", mock.Anything).Return(plugin.JSONObject{}, expectedErr)
+	tree["./foo"].On("Metadata", mock.Anything).Return(plugin.JSONObject{}, expectedErr)
 
 	_, err := s.walker.Walk(context.Background(), tree["."])
 	s.Regexp(`full.*metadata.*failed.*metadata`, err)
