@@ -13,12 +13,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// Suite represents a type that tests RQL AST nodes. N represents the AST node
-// constructor that returns an empty AST node object. It can be overridden by
-// each test. DefaultN represents the default node constructor that should be
-// set when the suite class is created.
-//
-// TODO: Add some more comments once a tested version of this is working.
+// Suite represents a type that tests RQL AST nodes. NodeConstructor represents
+// the AST node constructor that returns an empty AST node object. It can be
+// overridden by each test. DefaultNodeConstructor represents the default node
+// constructor that will be set for each test before they run. It should be
+// initialized when the suite class is created.
 type Suite struct {
 	suite.Suite
 	DefaultNodeConstructor func() rql.ASTNode
