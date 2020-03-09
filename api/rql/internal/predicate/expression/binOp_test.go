@@ -11,39 +11,36 @@ import (
 )
 
 // TCRunFunc => TestCaseRunFunction
-type TCRunFunc = func(*BinOpTestSuite, rql.ASTNode, interface{})
+type TCRunFunc = func(*BinOpTestSuite, interface{}, interface{})
 
 type BinOpTestSuite struct {
 	asttest.Suite
 	opName         string
-	newOp          func(rql.ASTNode, rql.ASTNode) rql.ASTNode
 	testEvalMethod func(s *BinOpTestSuite, RFTC TCRunFunc, RTTC TCRunFunc, constructV func(string) interface{})
 }
 
 func (s *BinOpTestSuite) TestMarshal() {
-	p := s.newOp(newMockP("10"), newMockP("11"))
-	s.MTC(p, s.A(s.opName, "10", "11"))
+	p := s.NodeConstructor()
+	s.MTC(p, s.A(s.opName, "", ""))
 }
 
-func (s *BinOpTestSuite) TestUnmarshal() {
-	p := s.newOp(&mockPtype{}, &mockPtype{})
-	s.UMETC(p, "foo", fmt.Sprintf(`formatted.*"%v".*<pe>.*<pe>`, s.opName), true)
-	s.UMETC(p, s.A(s.opName, "10", "11", "12"), fmt.Sprintf(`"%v".*<pe>.*<pe>`, s.opName), false)
-	s.UMETC(p, s.A(s.opName), fmt.Sprintf("%v.*LHS.*RHS.*expression", s.opName), false)
-	s.UMETC(p, s.A(s.opName, "10"), fmt.Sprintf("%v.*LHS.*RHS.*expression", s.opName), false)
-	s.UMETC(p, s.A(s.opName, "syntax", "10"), fmt.Sprintf("%v.*LHS.*syntax", s.opName), false)
-	s.UMETC(p, s.A(s.opName, "10", "syntax"), fmt.Sprintf("%v.*RHS.*syntax", s.opName), false)
-	s.UMTC(p, s.A(s.opName, "10", "11"), s.newOp(newMockP("10"), newMockP("11")))
+func (s *BinOpTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", fmt.Sprintf(`formatted.*"%v".*<pe>.*<pe>`, s.opName), true)
+	s.UMETC(s.A(s.opName, "10", "11", "12"), fmt.Sprintf(`"%v".*<pe>.*<pe>`, s.opName), false)
+	s.UMETC(s.A(s.opName), fmt.Sprintf("%v.*LHS.*RHS.*expression", s.opName), false)
+	s.UMETC(s.A(s.opName, "10"), fmt.Sprintf("%v.*LHS.*RHS.*expression", s.opName), false)
+	s.UMETC(s.A(s.opName, "syntax", "10"), fmt.Sprintf("%v.*LHS.*syntax", s.opName), false)
+	s.UMETC(s.A(s.opName, "10", "syntax"), fmt.Sprintf("%v.*RHS.*syntax", s.opName), false)
 }
 
 func (s *BinOpTestSuite) TestEvalEntry() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.EEFTC(n, falseV.(rql.Entry))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.EEFTC(ast, falseV.(rql.Entry))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.EETTC(n, trueV.(rql.Entry))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.EETTC(ast, trueV.(rql.Entry))
 		},
 		func(s string) interface{} {
 			e := rql.Entry{}
@@ -56,11 +53,11 @@ func (s *BinOpTestSuite) TestEvalEntry() {
 func (s *BinOpTestSuite) TestEvalEntrySchema() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.EESFTC(n, falseV.(*rql.EntrySchema))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.EESFTC(ast, falseV.(*rql.EntrySchema))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.EESTTC(n, trueV.(*rql.EntrySchema))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.EESTTC(ast, trueV.(*rql.EntrySchema))
 		},
 		func(s string) interface{} {
 			es := &rql.EntrySchema{}
@@ -73,11 +70,11 @@ func (s *BinOpTestSuite) TestEvalEntrySchema() {
 func (s *BinOpTestSuite) TestEvalValue() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.EVFTC(n, falseV)
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.EVFTC(ast, falseV)
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.EVTTC(n, trueV)
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.EVTTC(ast, trueV)
 		},
 		func(s string) interface{} {
 			return s
@@ -88,11 +85,11 @@ func (s *BinOpTestSuite) TestEvalValue() {
 func (s *BinOpTestSuite) TestEvalValueSchema() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.EVSFTC(n, falseV.(map[string]interface{}))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.EVSFTC(ast, falseV.(map[string]interface{}))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.EVSTTC(n, trueV.(map[string]interface{}))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.EVSTTC(ast, trueV.(map[string]interface{}))
 		},
 		func(s string) interface{} {
 			return map[string]interface{}{
@@ -111,11 +108,11 @@ func (s *BinOpTestSuite) TestEvalValueSchema() {
 func (s *BinOpTestSuite) TestEvalString() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.ESFTC(n, falseV.(string))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.ESFTC(ast, falseV.(string))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.ESTTC(n, trueV.(string))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.ESTTC(ast, trueV.(string))
 		},
 		func(s string) interface{} {
 			return s
@@ -126,11 +123,11 @@ func (s *BinOpTestSuite) TestEvalString() {
 func (s *BinOpTestSuite) TestEvalNumeric() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.ENFTC(n, falseV.(decimal.Decimal))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.ENFTC(ast, falseV.(decimal.Decimal))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.ENTTC(n, trueV.(decimal.Decimal))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.ENTTC(ast, trueV.(decimal.Decimal))
 		},
 		func(s string) interface{} {
 			d, err := decimal.NewFromString(s)
@@ -145,11 +142,11 @@ func (s *BinOpTestSuite) TestEvalNumeric() {
 func (s *BinOpTestSuite) TestEvalTime() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.ETFTC(n, falseV.(time.Time))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.ETFTC(ast, falseV.(time.Time))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.ETTTC(n, trueV.(time.Time))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.ETTTC(ast, trueV.(time.Time))
 		},
 		func(s string) interface{} {
 			d, err := decimal.NewFromString(s)
@@ -164,11 +161,11 @@ func (s *BinOpTestSuite) TestEvalTime() {
 func (s *BinOpTestSuite) TestEvalAction() {
 	s.testEvalMethod(
 		s,
-		func(s *BinOpTestSuite, n rql.ASTNode, falseV interface{}) {
-			s.EAFTC(n, falseV.(plugin.Action))
+		func(s *BinOpTestSuite, ast interface{}, falseV interface{}) {
+			s.EAFTC(ast, falseV.(plugin.Action))
 		},
-		func(s *BinOpTestSuite, n rql.ASTNode, trueV interface{}) {
-			s.EATTC(n, trueV.(plugin.Action))
+		func(s *BinOpTestSuite, ast interface{}, trueV interface{}) {
+			s.EATTC(ast, trueV.(plugin.Action))
 		},
 		func(s string) interface{} {
 			return plugin.Action{Name: s}

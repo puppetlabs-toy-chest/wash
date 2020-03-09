@@ -26,23 +26,18 @@ type ExpressionTestSuite struct {
 	asttest.Suite
 }
 
-func (s *ExpressionTestSuite) UMTC(input interface{}, expected interface{}) {
-	e := s.mockExpression(true)
-	if s.NoError(e.Unmarshal(input)) {
-		s.Equal(expected, e.Marshal())
-	}
-}
-
 func (s *ExpressionTestSuite) TestUnmarshal_PE_Errors() {
-	e := s.mockExpression(false)
-	s.UMETC(e, 1, "expected.*PE.*mock.*predicate", true)
-	s.UMETC(e, s.A("NOT", "p"), "expected.*PE.*mock.*predicate", true)
-	s.UMETC(e, "syntax", "failed.*unmarshal.*PE.*mock.*predicate.*syntax.*error", false)
+	s.NodeConstructor = func() rql.ASTNode {
+		return s.mockExpression(false)
+	}
+	s.UMETC(1, "expected.*PE.*mock.*predicate", true)
+	s.UMETC(s.A("NOT", "p"), "expected.*PE.*mock.*predicate", true)
+	s.UMETC("syntax", "failed.*unmarshal.*PE.*mock.*predicate.*syntax.*error", false)
 
 	// Here we test that the operators fail to unmarshal "NOT"
 	for _, op := range []string{"AND", "OR"} {
-		s.UMETC(e, s.A(op, s.A("NOT", "p"), "p"), "error.*LHS.*PE", false)
-		s.UMETC(e, s.A(op, "p", s.A("NOT", "p")), "error.*RHS.*PE", false)
+		s.UMETC(s.A(op, s.A("NOT", "p"), "p"), "error.*LHS.*PE", false)
+		s.UMETC(s.A(op, "p", s.A("NOT", "p")), "error.*RHS.*PE", false)
 	}
 }
 
@@ -65,9 +60,11 @@ func (s *ExpressionTestSuite) TestUnmarshal_PE() {
 }
 
 func (s *ExpressionTestSuite) TestUnmarshal_NPE_Errors() {
-	e := s.mockExpression(true)
-	s.UMETC(e, 1, "expected.*NPE.*mock.*predicate", true)
-	s.UMETC(e, "syntax", "failed.*unmarshal.*NPE.*mock.*predicate.*syntax.*error", false)
+	s.NodeConstructor = func() rql.ASTNode {
+		return s.mockExpression(true)
+	}
+	s.UMETC(1, "expected.*NPE.*mock.*predicate", true)
+	s.UMETC("syntax", "failed.*unmarshal.*NPE.*mock.*predicate.*syntax.*error", false)
 }
 
 func (s *ExpressionTestSuite) TestUnmarshal_NPE() {
@@ -186,12 +183,10 @@ func (p *mockPtype) EvalTime(t time.Time) bool {
 }
 
 func (p *mockPtype) EvalAction(action plugin.Action) bool {
-	fmt.Printf("p VALUE == %v\n", p.v)
 	return p.v == action.Name
 }
 
 func (p *mockPtype) SchemaPredicate(svs meta.SatisfyingValueSchema) meta.SchemaPredicate {
-	fmt.Printf("p VALUE == %v\n", p.v)
 	return meta.MakeSchemaPredicate(svs.AddObject(p.v).EndsWithPrimitiveValue())
 }
 

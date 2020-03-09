@@ -3,6 +3,7 @@ package expression
 import (
 	"testing"
 
+	"github.com/puppetlabs/wash/api/rql"
 	"github.com/puppetlabs/wash/api/rql/ast/asttest"
 	"github.com/stretchr/testify/suite"
 )
@@ -18,12 +19,14 @@ func (s *AtomTestSuite) TestMarshal() {
 	s.MTC(Atom(newMockP("10")), "10")
 }
 
-func (s *AtomTestSuite) TestUnmarshal() {
-	p := Atom(&mockPtype{})
-	s.UMETC(p, 1, "string", true)
-	s.UMTC(p, "10", Atom(newMockP("10")))
+func (s *AtomTestSuite) TestUnmarshalErrors() {
+	s.UMETC(1, "string", true)
 }
 
 func TestAtom(t *testing.T) {
-	suite.Run(t, new(AtomTestSuite))
+	s := new(AtomTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Atom(newMockP(""))
+	}
+	suite.Run(t, s)
 }

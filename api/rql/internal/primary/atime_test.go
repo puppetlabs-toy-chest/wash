@@ -8,16 +8,9 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type AtimeTestSuite struct {
-	TimeAttrTestSuite
-}
-
 func TestAtime(t *testing.T) {
-	s := new(AtimeTestSuite)
-	s.name = "atime"
-	s.constructP = Atime
-	s.setAttr = func(e *rql.Entry, t time.Time) {
+	s := newTimeAttrTestSuite("atime", Atime, func(e *rql.Entry, t time.Time) {
 		e.Attributes.SetAtime(t)
-	}
+	})
 	suite.Run(t, s)
 }

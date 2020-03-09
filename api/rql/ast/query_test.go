@@ -15,16 +15,13 @@ type QueryTestSuite struct {
 
 // QTC => QueryTestCase
 func (s *QueryTestSuite) QTC(rawQuery interface{}, trueV interface{}) {
-	q := Query()
-	if s.NoError(q.Unmarshal(rawQuery)) {
-		switch t := trueV.(type) {
-		case rql.Entry:
-			s.True(q.(rql.EntryPredicate).EvalEntry(t))
-		case *rql.EntrySchema:
-			s.True(q.(rql.EntrySchemaPredicate).EvalEntrySchema(t))
-		default:
-			s.FailNow("t is not an Entry/EntrySchema value, it is instead %T", trueV)
-		}
+	switch t := trueV.(type) {
+	case rql.Entry:
+		s.EETTC(rawQuery, t)
+	case *rql.EntrySchema:
+		s.EESTTC(rawQuery, t)
+	default:
+		s.FailNow("t is not an Entry/EntrySchema value, it is instead %T", trueV)
 	}
 }
 
@@ -109,12 +106,11 @@ func (s *QueryTestSuite) TestCanUnmarshalPEPrimary() {
 }
 
 func (s *QueryTestSuite) TestUnmarshalErrors() {
-	q := Query()
-	s.UMETC(q, s.A(), "expected.*PE.*Primary", true)
-	s.UMETC(q, s.A("name", 1), "expected.*NPE.*StringPredicate", false)
-	s.UMETC(q, s.A("NOT", 1), "expected.*PE.*Primary", true)
-	s.UMETC(q, s.A("AND", 1, 2), "expected.*PE.*Primary", false)
-	s.UMETC(q, s.A("OR", 1, 2), "expected.*PE.*Primary", false)
+	s.UMETC(s.A(), "expected.*PE.*Primary", true)
+	s.UMETC(s.A("name", 1), "expected.*NPE.*StringPredicate", false)
+	s.UMETC(s.A("NOT", 1), "expected.*PE.*Primary", true)
+	s.UMETC(s.A("AND", 1, 2), "expected.*PE.*Primary", false)
+	s.UMETC(s.A("OR", 1, 2), "expected.*PE.*Primary", false)
 }
 
 func (s *QueryTestSuite) testPrimaryWithNPEAction(primaryName string, constructV func(string) interface{}) {
@@ -160,5 +156,9 @@ func (s *QueryTestSuite) testPrimaryWithPEObject(primaryName string, constructV 
 }
 
 func TestQuery(t *testing.T) {
-	suite.Run(t, new(QueryTestSuite))
+	s := new(QueryTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Query()
+	}
+	suite.Run(t, s)
 }

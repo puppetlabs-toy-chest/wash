@@ -8,16 +8,9 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type MtimeTestSuite struct {
-	TimeAttrTestSuite
-}
-
 func TestMtime(t *testing.T) {
-	s := new(MtimeTestSuite)
-	s.name = "mtime"
-	s.constructP = Mtime
-	s.setAttr = func(e *rql.Entry, t time.Time) {
+	s := newTimeAttrTestSuite("mtime", Mtime, func(e *rql.Entry, t time.Time) {
 		e.Attributes.SetMtime(t)
-	}
+	})
 	suite.Run(t, s)
 }

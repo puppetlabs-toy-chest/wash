@@ -25,67 +25,70 @@ func (s *ObjectTestSuite) TestMarshal_ElementPredicate() {
 }
 
 func (s *ObjectTestSuite) TestUnmarshalErrors_ElementPredicate() {
+	s.NodeConstructor = func() rql.ASTNode {
+		return Object().(*object).collectionBase.elementPredicate
+	}
+
 	// Start by testing the match errors
-	p := Object().(*object).collectionBase.elementPredicate
-	s.UMETC(p, s.A(), "formatted.*<element_selector>.*PE ValuePredicate", true)
-	s.UMETC(p, s.A(true), "formatted.*<element_selector>.*PE ValuePredicate", true)
-	s.UMETC(p, s.A("foo"), "formatted.*<element_selector>.*PE ValuePredicate", true)
-	s.UMETC(p, s.A(s.A("foo", "bar")), "formatted.*<element_selector>.*PE ValuePredicate", true)
+	s.UMETC(s.A(), "formatted.*<element_selector>.*PE ValuePredicate", true)
+	s.UMETC(s.A(true), "formatted.*<element_selector>.*PE ValuePredicate", true)
+	s.UMETC(s.A("foo"), "formatted.*<element_selector>.*PE ValuePredicate", true)
+	s.UMETC(s.A(s.A("foo", "bar")), "formatted.*<element_selector>.*PE ValuePredicate", true)
 
 	// Now test the syntax errors
-	s.UMETC(p, s.A(s.A("key", "0", "foo"), true), "formatted.*<element_selector>.*PE ValuePredicate", false)
-	s.UMETC(p, s.A(s.A("key"), true), "missing.*key", false)
-	s.UMETC(p, s.A(s.A("key", float64(1)), true), "key.*string", false)
-	s.UMETC(p, s.A(s.A("key", "foo"), true, "bar"), "formatted.*<element_selector>.*PE ValuePredicate", false)
-	s.UMETC(p, s.A(s.A("key", "foo")), "formatted.*<element_selector>.*PE ValuePredicate.*missing.*PE ValuePredicate", false)
+	s.UMETC(s.A(s.A("key", "0", "foo"), true), "formatted.*<element_selector>.*PE ValuePredicate", false)
+	s.UMETC(s.A(s.A("key"), true), "missing.*key", false)
+	s.UMETC(s.A(s.A("key", float64(1)), true), "key.*string", false)
+	s.UMETC(s.A(s.A("key", "foo"), true, "bar"), "formatted.*<element_selector>.*PE ValuePredicate", false)
+	s.UMETC(s.A(s.A("key", "foo")), "formatted.*<element_selector>.*PE ValuePredicate.*missing.*PE ValuePredicate", false)
 }
 
 func (s *ObjectTestSuite) TestEvalValue_ElementPredicate() {
-	p := Object()
-	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), true)))
+	ast := s.A("object", s.A(s.A("key", "fOo"), true))
 	// Test with different keys to ensure that the object predicate finds the first matching key
 	for _, key := range []string{"foo", "FOO", "foO"} {
-		s.EVFTC(p, "foo", true, []interface{}{}, map[string]interface{}{"bar": true}, map[string]interface{}{key: false})
-		s.EVTTC(p, map[string]interface{}{key: true})
+		s.EVFTC(ast, "foo", true, []interface{}{}, map[string]interface{}{"bar": true}, map[string]interface{}{key: false})
+		s.EVTTC(ast, map[string]interface{}{key: true})
 	}
 }
 
 func (s *ObjectTestSuite) TestEvalValueSchema_ElementPredicate() {
-	p := Object()
-	s.MUM(p, s.A("object", s.A(s.A("key", "fOo"), true)))
+	ast := s.A("object", s.A(s.A("key", "fOo"), true))
 	s.EVSFTC(
-		p,
+		ast,
 		VS{"type": "number"},
 		VS{"type": "array"},
 		VS{"type": "object", "properties": VS{"bar": VS{}}, "additionalProperties": false},
 	)
-	s.EVSTTC(p, VS{"type": "object"})
+	s.EVSTTC(ast, VS{"type": "object"})
 	// Test with different keys to ensure that the object predicate finds the first matching key
 	for _, key := range []string{"foo", "FOO", "foO"} {
-		s.EVSTTC(p, VS{"type": "object", "properties": VS{key: VS{}}, "additionalProperties": false})
+		s.EVSTTC(ast, VS{"type": "object", "properties": VS{key: VS{}}, "additionalProperties": false})
 	}
 }
 
 func (s *ObjectTestSuite) TestExpression_AtomAndNot_ElementPredicate() {
-	expr := expression.New("object", true, func() rql.ASTNode {
-		return Object()
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("object", true, func() rql.ASTNode {
+			return Object()
+		})
+	}
 
-	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), true)))
-	s.EVFTC(expr, "foo", map[string]interface{}{"foo": false})
-	s.EVTTC(expr, map[string]interface{}{"foo": true})
-	s.EVSFTC(expr, VS{"type": "number"})
-	s.EVSTTC(expr, VS{"type": "object"})
-	s.MUM(expr, s.A("NOT", s.A("object", s.A(s.A("key", "foo"), true))))
-	s.EVTTC(expr, "foo", map[string]interface{}{"foo": false})
-	s.EVFTC(expr, map[string]interface{}{"foo": true})
-	s.EVSTTC(expr, VS{"type": "number"}, VS{"type": "object"})
+	ast := s.A("object", s.A(s.A("key", "foo"), true))
+	s.EVFTC(ast, "foo", map[string]interface{}{"foo": false})
+	s.EVTTC(ast, map[string]interface{}{"foo": true})
+	s.EVSFTC(ast, VS{"type": "number"})
+	s.EVSTTC(ast, VS{"type": "object"})
+
+	notAST := s.A("NOT", ast)
+	s.EVTTC(notAST, "foo", map[string]interface{}{"foo": false})
+	s.EVFTC(notAST, map[string]interface{}{"foo": true})
+	s.EVSTTC(notAST, VS{"type": "number"}, VS{"type": "object"})
 
 	// Assert that the unmarshaled atom doesn't implement the other *Predicate
 	// interfaces
-	s.MUM(expr, s.A("object", s.A(s.A("key", "foo"), true)))
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.EntryPredicateC,
 		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
@@ -97,5 +100,8 @@ func (s *ObjectTestSuite) TestExpression_AtomAndNot_ElementPredicate() {
 
 func TestObject(t *testing.T) {
 	s := new(ObjectTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Object()
+	}
 	suite.Run(t, s)
 }

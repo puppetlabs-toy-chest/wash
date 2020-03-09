@@ -11,108 +11,136 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type StringTestSuite struct {
-	PrimitiveValueTestSuite
+type StringGlobTestSuite struct {
+	asttest.Suite
 }
 
-func (s *StringTestSuite) TestGlob_Marshal() {
+func (s *StringGlobTestSuite) TestMarshal() {
 	s.MTC(StringGlob("foo"), s.A("glob", "foo"))
 }
 
-func (s *StringTestSuite) TestGlob_Unmarshal() {
-	g := StringGlob("")
-	s.UMETC(g, "foo", `formatted.*"glob".*<glob>`, true)
-	s.UMETC(g, s.A("foo"), `formatted.*"glob".*<glob>`, true)
-	s.UMETC(g, s.A("glob", "foo", "bar"), `formatted.*"glob".*<glob>`, false)
-	s.UMETC(g, s.A("glob"), `formatted.*"glob".*<glob>.*missing.*glob`, false)
-	s.UMETC(g, s.A("glob", 1), "glob.*string", false)
-	s.UMETC(g, s.A("glob", "["), "invalid.*glob.*[.*closing.*]", false)
-	s.UMTC(g, s.A("glob", "foo"), StringGlob("foo"))
+func (s *StringGlobTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `formatted.*"glob".*<glob>`, true)
+	s.UMETC(s.A("foo"), `formatted.*"glob".*<glob>`, true)
+	s.UMETC(s.A("glob", "foo", "bar"), `formatted.*"glob".*<glob>`, false)
+	s.UMETC(s.A("glob"), `formatted.*"glob".*<glob>.*missing.*glob`, false)
+	s.UMETC(s.A("glob", 1), "glob.*string", false)
+	s.UMETC(s.A("glob", "["), "invalid.*glob.*[.*closing.*]", false)
 }
 
-func (s *StringTestSuite) TestGlob_EvalString() {
-	g := StringGlob("foo")
-	s.ESFTC(g, "bar")
-	s.ESTTC(g, "foo")
+func (s *StringGlobTestSuite) TestEvalString() {
+	ast := s.A("glob", "foo")
+	s.ESFTC(ast, "bar")
+	s.ESTTC(ast, "foo")
 }
 
-func (s *StringTestSuite) TestRegex_Marshal() {
+func TestStringGlob(t *testing.T) {
+	s := new(StringGlobTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return StringGlob("")
+	}
+	suite.Run(t, s)
+}
+
+type StringRegexTestSuite struct {
+	asttest.Suite
+}
+
+func (s *StringRegexTestSuite) TestMarshal() {
 	s.MTC(StringRegex(regexp.MustCompile("foo")), s.A("regex", "foo"))
 }
 
-func (s *StringTestSuite) TestRegex_Unmarshal() {
-	r := StringRegex(nil)
-	s.UMETC(r, "foo", `formatted.*"regex".*<regex>`, true)
-	s.UMETC(r, s.A("foo"), `formatted.*"regex".*<regex>`, true)
-	s.UMETC(r, s.A("regex", "foo", "bar"), `formatted.*"regex".*<regex>`, false)
-	s.UMETC(r, s.A("regex"), `formatted.*"regex".*<regex>.*missing.*regex`, false)
-	s.UMETC(r, s.A("regex", 1), "regex.*string", false)
-	s.UMETC(r, s.A("regex", "["), "invalid.*regex.*[.*closing.*]", false)
-	s.UMTC(r, s.A("regex", "foo"), StringRegex(regexp.MustCompile("foo")))
+func (s *StringRegexTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `formatted.*"regex".*<regex>`, true)
+	s.UMETC(s.A("foo"), `formatted.*"regex".*<regex>`, true)
+	s.UMETC(s.A("regex", "foo", "bar"), `formatted.*"regex".*<regex>`, false)
+	s.UMETC(s.A("regex"), `formatted.*"regex".*<regex>.*missing.*regex`, false)
+	s.UMETC(s.A("regex", 1), "regex.*string", false)
+	s.UMETC(s.A("regex", "["), "invalid.*regex.*[.*closing.*]", false)
 }
 
-func (s *StringTestSuite) TestRegex_EvalString() {
-	r := StringRegex(regexp.MustCompile("foo"))
-	s.ESFTC(r, "bar")
-	s.ESTTC(r, "foo")
+func (s *StringRegexTestSuite) TestEvalString() {
+	ast := s.A("regex", "foo")
+	s.ESFTC(ast, "bar")
+	s.ESTTC(ast, "foo")
 }
 
-func (s *StringTestSuite) TestEqual_Marshal() {
+func TestStringRegex(t *testing.T) {
+	s := new(StringRegexTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return StringRegex(nil)
+	}
+	suite.Run(t, s)
+}
+
+type StringEqualTestSuite struct {
+	asttest.Suite
+}
+
+func (s *StringEqualTestSuite) TestMarshal() {
 	s.MTC(StringEqual("foo"), s.A("=", "foo"))
 }
 
-func (s *StringTestSuite) TestEqual_Unmarshal() {
-	e := StringEqual("")
-	s.UMETC(e, "foo", `formatted.*"=".*<str>`, true)
-	s.UMETC(e, s.A("foo"), `formatted.*"=".*<str>`, true)
-	s.UMETC(e, s.A("=", "foo", "bar"), `formatted.*"=".*<str>`, false)
-	s.UMETC(e, s.A("="), `formatted.*"=".*<str>.*missing.*string`, false)
-	s.UMETC(e, s.A("=", 1), "string", false)
-	s.UMTC(e, s.A("=", "foo"), StringEqual("foo"))
+func (s *StringEqualTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `formatted.*"=".*<str>`, true)
+	s.UMETC(s.A("foo"), `formatted.*"=".*<str>`, true)
+	s.UMETC(s.A("=", "foo", "bar"), `formatted.*"=".*<str>`, false)
+	s.UMETC(s.A("="), `formatted.*"=".*<str>.*missing.*string`, false)
+	s.UMETC(s.A("=", 1), "string", false)
 }
 
-func (s *StringTestSuite) TestEqual_EvalString() {
-	e := StringEqual("foo")
-	s.ESFTC(e, "bar")
-	s.ESTTC(e, "foo")
+func (s *StringEqualTestSuite) TestEvalString() {
+	ast := s.A("=", "foo")
+	s.ESFTC(ast, "bar")
+	s.ESTTC(ast, "foo")
 }
 
-func (s *StringTestSuite) TestString_Marshal() {
+func TestStringEqual(t *testing.T) {
+	s := new(StringEqualTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return StringEqual("")
+	}
+	suite.Run(t, s)
+}
+
+type StringTestSuite struct {
+	asttest.Suite
+}
+
+func (s *StringTestSuite) TestMarshal() {
 	p := String().(internal.NonterminalNode)
 	p.SetMatchedNode(StringGlob("foo"))
 	s.MTC(p, StringGlob("foo").Marshal())
 }
 
-func (s *StringTestSuite) TestString_Unmarshal() {
-	p := String()
-	s.UMETC(p, "foo", `formatted.*"glob".*"regex".*"="`, true)
-	s.UMETC(p, s.A("glob", "["), "invalid.*glob", false)
-	s.UMETC(p, s.A("regex", "["), "invalid.*regex", false)
-	s.UMETC(p, s.A("=", true), "string", false)
-
-	s.UMTC(p, s.A("glob", "foo"), StringGlob("foo"))
-	s.UMTC(p, s.A("regex", "foo"), StringRegex(regexp.MustCompile("foo")))
-	s.UMTC(p, s.A("=", "foo"), StringEqual("foo"))
+func (s *StringTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `formatted.*"glob".*"regex".*"="`, true)
+	s.UMETC(s.A("glob", "["), "invalid.*glob", false)
+	s.UMETC(s.A("regex", "["), "invalid.*regex", false)
+	s.UMETC(s.A("=", true), "string", false)
 }
 
-func (s *StringTestSuite) TestString_EvalString() {
-	p := String().(internal.NonterminalNode)
-	p.SetMatchedNode(StringGlob("foo"))
-	s.ESFTC(p, "bar")
-	s.ESTTC(p, "foo")
+func (s *StringTestSuite) TestEvalString() {
+	for _, ptype := range []string{"glob", "regex", "="} {
+		ast := s.A(ptype, "foo")
+		s.ESFTC(ast, "bar")
+		s.ESTTC(ast, "foo")
+	}
 }
 
-func (s *StringTestSuite) TestString_Expression_AtomAndNot() {
-	expr := expression.New("string", true, func() rql.ASTNode {
-		return String()
-	})
+func (s *StringTestSuite) TestExpression_AtomAndNot() {
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("string", true, func() rql.ASTNode {
+			return String()
+		})
+	}
 
 	for _, ptype := range []string{"glob", "regex", "="} {
-		s.MUM(expr, []interface{}{ptype, "foo"})
-		s.ESFTC(expr, "bar")
-		s.ESTTC(expr, "foo")
+		ast := s.A(ptype, "foo")
+		s.ESFTC(ast, "bar")
+		s.ESTTC(ast, "foo")
 		s.AssertNotImplemented(
-			expr,
+			ast,
 			asttest.EntryPredicateC,
 			asttest.EntrySchemaPredicateC,
 			asttest.NumericPredicateC,
@@ -120,52 +148,64 @@ func (s *StringTestSuite) TestString_Expression_AtomAndNot() {
 			asttest.ActionPredicateC,
 		)
 
-		s.MUM(expr, []interface{}{"NOT", []interface{}{ptype, "foo"}})
-		s.ESTTC(expr, "bar")
-		s.ESFTC(expr, "foo")
+		notAST := s.A("NOT", ast)
+		s.ESTTC(notAST, "bar")
+		s.ESFTC(notAST, "foo")
 	}
 }
 
-func (s *StringTestSuite) TestStringValue_Marshal() {
+func TestString(t *testing.T) {
+	s := new(StringTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return String()
+	}
+	suite.Run(t, s)
+}
+
+type StringValueTestSuite struct {
+	PrimitiveValueTestSuite
+}
+
+func (s *StringValueTestSuite) TestMarshal() {
 	// This also tests that the StringValue* methods do the right thing
 	s.MTC(StringValueGlob("foo"), s.A("string", s.A("glob", "foo")))
 	s.MTC(StringValueRegex(regexp.MustCompile("foo")), s.A("string", s.A("regex", "foo")))
 	s.MTC(StringValueEqual("foo"), s.A("string", s.A("=", "foo")))
 }
 
-func (s *StringTestSuite) TestStringValue_Unmarshal() {
-	g := StringValueGlob("")
-	s.UMETC(g, "foo", `formatted.*"string".*NPE StringPredicate`, true)
-	s.UMETC(g, s.A("string", "foo", "bar"), `formatted.*"string".*NPE StringPredicate`, false)
-	s.UMETC(g, s.A("string"), `formatted.*"string".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
-	s.UMETC(g, s.A("string", s.A()), `error.*unmarshalling.*NPE StringPredicate.*formatted.*"glob".*<glob>`, false)
-	s.UMTC(g, s.A("string", s.A("glob", "foo")), StringValueGlob("foo"))
+func (s *StringValueTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", `formatted.*"string".*NPE StringPredicate`, true)
+	s.UMETC(s.A("string", "foo", "bar"), `formatted.*"string".*NPE StringPredicate`, false)
+	s.UMETC(s.A("string"), `formatted.*"string".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(s.A("string", s.A()), `error.*unmarshalling.*NPE StringPredicate.*formatted.*"glob".*<glob>`, false)
 }
 
-func (s *StringTestSuite) TestStringValue_EvalValue() {
-	g := StringValueGlob("foo")
-	s.EVFTC(g, "bar", 1)
-	s.EVTTC(g, "foo")
+func (s *StringValueTestSuite) TestEvalValue() {
+	ast := s.A("string", s.A("glob", "foo"))
+	s.EVFTC(ast, "bar", 1)
+	s.EVTTC(ast, "foo")
 }
 
-func (s NumericTestSuite) TestStringValue_EvalValueSchema() {
-	g := StringValueGlob("foo")
-	s.EVSFTC(g, s.VS("object", "array")...)
-	s.EVSTTC(g, s.VS("string")...)
+func (s *StringValueTestSuite) TestEvalValueSchema() {
+	ast := s.A("string", s.A("glob", "foo"))
+	s.EVSFTC(ast, s.VS("object", "array")...)
+	s.EVSTTC(ast, s.VS("string")...)
 }
 
-func (s *StringTestSuite) TestStringValue_AtomAndNot() {
-	expr := expression.New("string", true, func() rql.ASTNode {
-		return StringValue(String())
-	})
+func (s *StringValueTestSuite) TestExpression_AtomAndNot() {
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("string", true, func() rql.ASTNode {
+			return StringValue(String())
+		})
+	}
 
-	s.MUM(expr, []interface{}{"string", []interface{}{"glob", "foo"}})
-	s.EVFTC(expr, "bar")
-	s.EVTTC(expr, "foo")
-	s.EVSFTC(expr, s.VS("object", "array")...)
-	s.EVSTTC(expr, s.VS("string")...)
+	ast := s.A("string", s.A("glob", "foo"))
+	s.EVFTC(ast, "bar")
+	s.EVTTC(ast, "foo")
+	s.EVSFTC(ast, s.VS("object", "array")...)
+	s.EVSTTC(ast, s.VS("string")...)
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.EntryPredicateC,
 		asttest.EntrySchemaPredicateC,
 		asttest.NumericPredicateC,
@@ -173,12 +213,16 @@ func (s *StringTestSuite) TestStringValue_AtomAndNot() {
 		asttest.ActionPredicateC,
 	)
 
-	s.MUM(expr, []interface{}{"NOT", []interface{}{"string", []interface{}{"glob", "foo"}}})
-	s.EVTTC(expr, "bar")
-	s.EVFTC(expr, "foo")
-	s.EVSTTC(expr, s.VS("object", "array", "string")...)
+	notAST := s.A("NOT", ast)
+	s.EVTTC(notAST, "bar")
+	s.EVFTC(notAST, "foo")
+	s.EVSTTC(notAST, s.VS("object", "array", "string")...)
 }
 
-func TestString(t *testing.T) {
-	suite.Run(t, new(StringTestSuite))
+func TestStringValue(t *testing.T) {
+	s := new(StringValueTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return StringValue(String())
+	}
+	suite.Run(t, s)
 }

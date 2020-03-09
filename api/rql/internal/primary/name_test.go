@@ -19,41 +19,41 @@ func (s *NameTestSuite) TestMarshal() {
 }
 
 func (s *NameTestSuite) TestUnmarshal() {
-	n := Name(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `name.*formatted.*"name".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `name.*formatted.*"name".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("name", "foo", "bar"), `name.*formatted.*"name".*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("name"), `name.*formatted.*"name".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("name", s.A("glob", "[")), "name.*NPE StringPredicate.*glob", false)
-	s.UMTC(n, s.A("name", s.A("glob", "foo")), Name(predicate.StringGlob("foo")))
+	s.UMETC("foo", `name.*formatted.*"name".*NPE StringPredicate`, true)
+	s.UMETC(s.A("foo", s.A("glob", "foo")), `name.*formatted.*"name".*NPE StringPredicate`, true)
+	s.UMETC(s.A("name", "foo", "bar"), `name.*formatted.*"name".*NPE StringPredicate`, false)
+	s.UMETC(s.A("name"), `name.*formatted.*"name".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(s.A("name", s.A("glob", "[")), "name.*NPE StringPredicate.*glob", false)
 }
 
 func (s *NameTestSuite) TestEvalEntry() {
-	n := Name(predicate.StringGlob("foo"))
+	ast := s.A("name", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.Name = "bar"
-	s.EEFTC(n, e)
+	s.EEFTC(ast, e)
 	e.Name = "foo"
-	s.EETTC(n, e)
+	s.EETTC(ast, e)
 }
 
 func (s *NameTestSuite) TestExpression_Atom() {
-	expr := expression.New("name", false, func() rql.ASTNode {
-		return Name(predicate.String())
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("name", false, func() rql.ASTNode {
+			return Name(predicate.String())
+		})
+	}
 
-	s.MUM(expr, []interface{}{"name", []interface{}{"glob", "foo"}})
+	ast := s.A("name", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.Name = "bar"
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Name = "foo"
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -63,5 +63,9 @@ func (s *NameTestSuite) TestExpression_Atom() {
 }
 
 func TestName(t *testing.T) {
-	suite.Run(t, new(NameTestSuite))
+	s := new(NameTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Name(predicate.String())
+	}
+	suite.Run(t, s)
 }

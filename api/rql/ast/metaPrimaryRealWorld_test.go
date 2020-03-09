@@ -22,11 +22,10 @@ type MetaPrimaryRealWorldTestSuite struct {
 
 // TTC => TrueTestCase
 func (s *MetaPrimaryRealWorldTestSuite) TTC(key interface{}, predicate interface{}) {
-	q := Query()
-	s.MUM(q, s.A("meta", s.A("object", s.A(s.A("key", key), predicate))))
-	s.Suite.EETTC(q, s.e)
+	ast := s.A("meta", s.A("object", s.A(s.A("key", key), predicate)))
+	s.Suite.EETTC(ast, s.e)
 	// The entry schema predicate should also be true
-	s.Suite.EESTTC(q, s.s)
+	s.Suite.EESTTC(ast, s.s)
 }
 
 func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
@@ -182,6 +181,9 @@ func (s *MetaPrimaryRealWorldTestSuite) TestMetaPrimary() {
 
 func TestMetaPrimaryRealWorld(t *testing.T) {
 	s := new(MetaPrimaryRealWorldTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Query()
+	}
 
 	rawMeta, err := ioutil.ReadFile("testdata/metadata.json")
 	if err != nil {

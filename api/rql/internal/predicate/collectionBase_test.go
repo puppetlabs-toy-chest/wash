@@ -21,54 +21,53 @@ type CollectionTestSuite struct {
 type VS = map[string]interface{}
 
 func (s *CollectionTestSuite) TestMarshal_SizePredicate() {
-	p := s.P()
-	s.MUM(p, s.A(s.ctype(), s.A("size", s.A("<", "10"))))
-	s.MTC(p, s.A(s.ctype(), s.A("size", s.A("<", "10"))))
+	n := s.NodeConstructor()
+	s.MUM(n, s.A(s.ctype(), s.A("size", s.A("<", "10"))))
+	s.MTC(n, s.A(s.ctype(), s.A("size", s.A("<", "10"))))
 }
 
 func (s *CollectionTestSuite) TestUnmarshalErrors() {
-	p := s.P()
 	fmtErrMsg := fmt.Sprintf("formatted.*%v.*<size_predicate>.*<%v_element_predicate>", s.ctype(), s.ctype())
-	s.UMETC(p, "foo", fmtErrMsg, true)
-	s.UMETC(p, s.A(s.ctype(), s.A("size", s.A("<", "10")), s.A("size", s.A("<", "10"))), fmtErrMsg, false)
-	s.UMETC(p, s.A(s.ctype()), fmt.Sprintf("%v.*missing.*predicate", fmtErrMsg), false)
-	s.UMETC(p, s.A(s.ctype(), s.A()), fmt.Sprintf("error.*unmarshalling.*%v.*expected", s.ctype()), false)
-	s.UMETC(p, s.A(s.ctype(), s.A("size")), fmt.Sprintf("error.*unmarshalling.*%v.*size", s.ctype()), false)
+	s.UMETC("foo", fmtErrMsg, true)
+	s.UMETC(s.A(s.ctype(), s.A("size", s.A("<", "10")), s.A("size", s.A("<", "10"))), fmtErrMsg, false)
+	s.UMETC(s.A(s.ctype()), fmt.Sprintf("%v.*missing.*predicate", fmtErrMsg), false)
+	s.UMETC(s.A(s.ctype(), s.A()), fmt.Sprintf("error.*unmarshalling.*%v.*expected", s.ctype()), false)
+	s.UMETC(s.A(s.ctype(), s.A("size")), fmt.Sprintf("error.*unmarshalling.*%v.*size", s.ctype()), false)
 	var selector interface{}
 	if s.isArray {
 		selector = "some"
 	} else {
 		selector = []interface{}{"key", "0"}
 	}
-	s.UMETC(p, s.A(s.ctype(), s.A(selector)), "formatted.*<element_selector>.*NPE ValuePredicate.*missing.*NPE ValuePredicate", false)
+	s.UMETC(s.A(s.ctype(), s.A(selector)), "formatted.*<element_selector>.*NPE ValuePredicate.*missing.*NPE ValuePredicate", false)
 }
 
 func (s *CollectionTestSuite) TestEvalValue_SizePredicate() {
-	p := s.P()
-	s.MUM(p, s.A(s.ctype(), s.A("size", s.A(">", "0"))))
-	s.EVFTC(p, "foo", true, s.ISPV(), s.SPV(0))
-	s.EVTTC(p, s.SPV(1))
+	ast := s.A(s.ctype(), s.A("size", s.A(">", "0")))
+	s.EVFTC(ast, "foo", true, s.ISPV(), s.SPV(0))
+	s.EVTTC(ast, s.SPV(1))
 }
 
 func (s *CollectionTestSuite) TestEvalValueSchema_SizePredicate() {
-	p := s.P()
-	s.MUM(p, s.A(s.ctype(), s.A("size", s.A(">", "0"))))
-	s.EVSFTC(p, VS{"type": "number"}, s.ISPVS())
-	s.EVSTTC(p, s.SPVS())
+	ast := s.A(s.ctype(), s.A("size", s.A(">", "0")))
+	s.EVSFTC(ast, VS{"type": "number"}, s.ISPVS())
+	s.EVSTTC(ast, s.SPVS())
 }
 
 func (s *CollectionTestSuite) TestExpression_AtomAndNot_SizePredicate() {
-	expr := expression.New(s.ctype(), true, func() rql.ASTNode {
-		return s.P()
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New(s.ctype(), true, func() rql.ASTNode {
+			return s.DefaultNodeConstructor()
+		})
+	}
 
-	s.MUM(expr, s.A(s.ctype(), s.A("size", s.A(">", "0"))))
-	s.EVFTC(expr, s.SPV(0))
-	s.EVTTC(expr, s.SPV(1))
-	s.EVSFTC(expr, VS{"type": "number"})
-	s.EVSTTC(expr, s.SPVS())
+	ast := s.A(s.ctype(), s.A("size", s.A(">", "0")))
+	s.EVFTC(ast, s.SPV(0))
+	s.EVTTC(ast, s.SPV(1))
+	s.EVSFTC(ast, VS{"type": "number"})
+	s.EVSTTC(ast, s.SPVS())
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.EntryPredicateC,
 		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
@@ -77,18 +76,16 @@ func (s *CollectionTestSuite) TestExpression_AtomAndNot_SizePredicate() {
 		asttest.ActionPredicateC,
 	)
 
-	s.MUM(expr, s.A("NOT", s.A(s.ctype(), s.A("size", s.A(">", "0")))))
-	s.EVTTC(expr, s.SPV(0))
-	s.EVFTC(expr, s.SPV(1))
-	s.EVSTTC(expr, VS{"type": "number"}, s.SPVS(), s.ISPVS())
+	notAST := s.A("NOT", ast)
+	s.EVTTC(notAST, s.SPV(0))
+	s.EVFTC(notAST, s.SPV(1))
+	s.EVSTTC(notAST, VS{"type": "number"}, s.SPVS(), s.ISPVS())
 }
 
 func (s *CollectionTestSuite) TestSizePredicate_AcceptsNumericPEs() {
 	// rtc => runTestCase
 	rtc := func(expr interface{}, trueV int) {
-		p := s.P()
-		s.MUM(p, s.A(s.ctype(), s.A("size", expr)))
-		s.EVTTC(p, s.SPV(trueV))
+		s.EVTTC(s.A(s.ctype(), s.A("size", expr)), s.SPV(trueV))
 	}
 
 	rtc(s.A(">", float64(500)), 1000)
@@ -100,9 +97,7 @@ func (s *CollectionTestSuite) TestSizePredicate_AcceptsNumericPEs() {
 func (s *CollectionTestSuite) TestElementPredicate_AcceptsValueNPEs() {
 	// rtc => runTestCase
 	rtc := func(expr interface{}, trueV interface{}) {
-		p := s.P()
-		s.MUM(p, s.A(s.ctype(), s.A(s.selector(), expr)))
-		s.EVTTC(p, s.EPV(trueV))
+		s.EVTTC(s.A(s.ctype(), s.A(s.selector(), expr)), s.EPV(trueV))
 	}
 	// timeV => timeValue
 	timeV := func(unixSeconds int64) string {
@@ -141,10 +136,9 @@ func (s *CollectionTestSuite) TestElementPredicate_AcceptsValueNPEs() {
 
 func (s *CollectionTestSuite) TestElementPredicate_EvalValueSchema_NestedNPEs() {
 	rtc := func(expr interface{}, trueVS VS, falseVS VS) {
-		p := s.P()
-		s.MUM(p, s.A(s.ctype(), s.A(s.selector(), expr)))
-		s.EVSTTC(p, s.mergeVS(trueVS))
-		s.EVSFTC(p, s.mergeVS(falseVS))
+		ast := s.A(s.ctype(), s.A(s.selector(), expr))
+		s.EVSTTC(ast, s.mergeVS(trueVS))
+		s.EVSFTC(ast, s.mergeVS(falseVS))
 	}
 
 	// Test single-level nesting
@@ -227,14 +221,6 @@ func (s *CollectionTestSuite) mergeVS(childVS VS) VS {
 		return VS{"type": "array", "items": childVS}
 	} else {
 		return VS{"type": "object", "properties": VS{"0": childVS}, "additionalProperties": false}
-	}
-}
-
-func (s *CollectionTestSuite) P() rql.ASTNode {
-	if s.isArray {
-		return Array()
-	} else {
-		return Object()
 	}
 }
 

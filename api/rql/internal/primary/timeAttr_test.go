@@ -14,51 +14,66 @@ import (
 // primary unit tests.
 type TimeAttrTestSuite struct {
 	asttest.Suite
-	name       string
-	constructP func(rql.TimePredicate) rql.Primary
-	setAttr    func(*rql.Entry, time.Time)
+	name                string
+	timeNodeConstructor func(p rql.TimePredicate) rql.Primary
+	setAttr             func(*rql.Entry, time.Time)
+}
+
+func newTimeAttrTestSuite(
+	name string,
+	timeNodeConstructor func(p rql.TimePredicate) rql.Primary,
+	setAttr func(*rql.Entry, time.Time),
+) *TimeAttrTestSuite {
+	s := new(TimeAttrTestSuite)
+	s.name = name
+	s.timeNodeConstructor = timeNodeConstructor
+	s.setAttr = setAttr
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return s.timeNodeConstructor(predicate.Time("", s.TM(0)))
+	}
+	return s
 }
 
 func (s *TimeAttrTestSuite) TestMarshal() {
-	s.MTC(s.constructP(predicate.Time(predicate.LT, s.TM(1000))), s.A(s.name, s.A("<", s.TM(1000))))
+	s.MTC(s.timeNodeConstructor(predicate.Time("<", s.TM(1000))), s.A(s.name, s.A("<", s.TM(1000))))
 }
 
 func (s *TimeAttrTestSuite) TestUnmarshal() {
-	p := s.constructP(predicate.Time("", s.TM(0)))
-	s.UMETC(p, "foo", fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
-	s.UMETC(p, s.A("foo", s.A("<", int64(1000))), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
-	s.UMETC(p, s.A(s.name, "foo", "bar"), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), false)
-	s.UMETC(p, s.A(s.name), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate.*missing.*NPE TimePredicate`, s.name, s.name), false)
-	s.UMETC(p, s.A(s.name, s.A("<", true)), fmt.Sprintf(`%v.*NPE TimePredicate.*valid.*time.*type`, s.name), false)
-	s.UMTC(p, s.A(s.name, s.A("<", int64(1000))), s.constructP(predicate.Time(predicate.LT, s.TM(1000))))
+	s.UMETC("foo", fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
+	s.UMETC(s.A("foo", s.A("<", int64(1000))), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), true)
+	s.UMETC(s.A(s.name, "foo", "bar"), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate`, s.name, s.name), false)
+	s.UMETC(s.A(s.name), fmt.Sprintf(`%v.*formatted.*"%v".*NPE TimePredicate.*missing.*NPE TimePredicate`, s.name, s.name), false)
+	s.UMETC(s.A(s.name, s.A("<", true)), fmt.Sprintf(`%v.*NPE TimePredicate.*valid.*time.*type`, s.name), false)
 }
 
 func (s *TimeAttrTestSuite) TestEvalEntry() {
-	p := s.constructP(predicate.Time(predicate.LT, s.TM(1000)))
+	ast := s.A(s.name, s.A("<", s.TM(1000)))
 	e := rql.Entry{}
 	s.setAttr(&e, s.TM(2000))
-	s.EEFTC(p, e)
+	s.EEFTC(ast, e)
 	s.setAttr(&e, s.TM(500))
-	s.EETTC(p, e)
+	s.EETTC(ast, e)
 }
 
 func (s *TimeAttrTestSuite) TestExpression_Atom() {
-	expr := expression.New(s.name, false, func() rql.ASTNode {
-		return s.constructP(predicate.Time("", time.Time{}))
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New(s.name, false, func() rql.ASTNode {
+			return s.DefaultNodeConstructor()
+		})
+	}
 
-	s.MUM(expr, []interface{}{s.name, []interface{}{"<", float64(1000)}})
+	ast := s.A(s.name, s.A("<", 1000))
 	e := rql.Entry{}
 	s.setAttr(&e, s.TM(2000))
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	s.setAttr(&e, s.TM(500))
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,

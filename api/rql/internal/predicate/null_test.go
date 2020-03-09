@@ -17,36 +17,33 @@ func (s *NullTestSuite) TestMarshal() {
 	s.MTC(Null(), nil)
 }
 
-func (s *NullTestSuite) TestUnmarshal() {
-	n := Null()
-	s.UMETC(n, "foo", ".*null", true)
-	s.UMTC(n, nil, Null())
+func (s *NullTestSuite) TestUnmarshalErrors() {
+	s.UMETC("foo", ".*null", true)
 }
 
 func (s *NullTestSuite) TestEvalValue() {
-	n := Null()
-	s.EVFTC(n, "foo", 1, true)
-	s.EVTTC(n, nil)
+	s.EVFTC(nil, "foo", 1, true)
+	s.EVTTC(nil, nil)
 }
 
 func (s NullTestSuite) TestEvalValueSchema() {
-	n := Null()
-	s.EVSFTC(n, s.VS("object", "array")...)
-	s.EVSTTC(n, s.VS("null")...)
+	s.EVSFTC(nil, s.VS("object", "array")...)
+	s.EVSTTC(nil, s.VS("null")...)
 }
 
 func (s *NullTestSuite) TestExpression_AtomAndNot() {
-	expr := expression.New("null", true, func() rql.ASTNode {
-		return Null()
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("null", true, func() rql.ASTNode {
+			return Null()
+		})
+	}
 
-	s.MUM(expr, nil)
-	s.EVFTC(expr, "foo", 1, true)
-	s.EVTTC(expr, nil)
-	s.EVSFTC(expr, s.VS("object", "array")...)
-	s.EVSTTC(expr, s.VS("null")...)
+	s.EVFTC(nil, "foo", 1, true)
+	s.EVTTC(nil, nil)
+	s.EVSFTC(nil, s.VS("object", "array")...)
+	s.EVSTTC(nil, s.VS("null")...)
 	s.AssertNotImplemented(
-		expr,
+		nil,
 		asttest.EntryPredicateC,
 		asttest.EntrySchemaPredicateC,
 		asttest.StringPredicateC,
@@ -55,12 +52,15 @@ func (s *NullTestSuite) TestExpression_AtomAndNot() {
 		asttest.ActionPredicateC,
 	)
 
-	s.MUM(expr, []interface{}{"NOT", nil})
-	s.EVTTC(expr, "foo", 1, true)
-	s.EVFTC(expr, nil)
-	s.EVSTTC(expr, s.VS("null", "object", "array")...)
+	s.EVTTC(s.A("NOT", nil), "foo", 1, true)
+	s.EVFTC(s.A("NOT", nil), nil)
+	s.EVSTTC(s.A("NOT", nil), s.VS("null", "object", "array")...)
 }
 
 func TestNull(t *testing.T) {
-	suite.Run(t, new(NullTestSuite))
+	s := new(NullTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Null()
+	}
+	suite.Run(t, s)
 }

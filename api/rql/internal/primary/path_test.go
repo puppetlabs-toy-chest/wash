@@ -19,43 +19,43 @@ func (s *PathTestSuite) TestMarshal() {
 }
 
 func (s *PathTestSuite) TestUnmarshal() {
-	n := Path(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `path.*formatted.*"path".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `path.*formatted.*"path".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("path", "foo", "bar"), `path.*formatted.*"path".*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("path"), `path.*formatted.*"path".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("path", s.A("glob", "[")), "path.*NPE StringPredicate.*glob", false)
-	s.UMTC(n, s.A("path", s.A("glob", "foo")), Path(predicate.StringGlob("foo")))
+	s.UMETC("foo", `path.*formatted.*"path".*NPE StringPredicate`, true)
+	s.UMETC(s.A("foo", s.A("glob", "foo")), `path.*formatted.*"path".*NPE StringPredicate`, true)
+	s.UMETC(s.A("path", "foo", "bar"), `path.*formatted.*"path".*NPE StringPredicate`, false)
+	s.UMETC(s.A("path"), `path.*formatted.*"path".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(s.A("path", s.A("glob", "[")), "path.*NPE StringPredicate.*glob", false)
 }
 
 func (s *PathTestSuite) TestEvalEntry() {
-	p := Path(predicate.StringGlob("foo"))
+	ast := s.A("path", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.Path = "bar"
-	s.EEFTC(p, e)
+	s.EEFTC(ast, e)
 	e.Path = "foo"
-	s.EETTC(p, e)
+	s.EETTC(ast, e)
 }
 
 func (s *PathTestSuite) TestExpression_Atom() {
-	expr := expression.New("path", false, func() rql.ASTNode {
-		return Path(predicate.String())
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("path", false, func() rql.ASTNode {
+			return Path(predicate.String())
+		})
+	}
 
-	s.MUM(expr, []interface{}{"path", []interface{}{"glob", "foo"}})
+	ast := s.A("path", s.A("glob", "foo"))
 	e := rql.Entry{}
 	e.Path = ""
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Path = "bar"
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Path = "foo"
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -65,5 +65,9 @@ func (s *PathTestSuite) TestExpression_Atom() {
 }
 
 func TestPath(t *testing.T) {
-	suite.Run(t, new(PathTestSuite))
+	s := new(PathTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Path(predicate.String())
+	}
+	suite.Run(t, s)
 }

@@ -19,45 +19,45 @@ func (s *KindTestSuite) TestMarshal() {
 }
 
 func (s *KindTestSuite) TestUnmarshal() {
-	n := Kind(predicate.StringGlob(""))
-	s.UMETC(n, "foo", `kind.*formatted.*"kind".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*NPE StringPredicate`, true)
-	s.UMETC(n, s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("kind"), `kind.*formatted.*"kind".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
-	s.UMETC(n, s.A("kind", s.A("glob", "[")), "kind.*NPE StringPredicate.*glob", false)
-	s.UMTC(n, s.A("kind", s.A("glob", "foo")), Kind(predicate.StringGlob("foo")))
+	s.UMETC("foo", `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(s.A("foo", s.A("glob", "foo")), `kind.*formatted.*"kind".*NPE StringPredicate`, true)
+	s.UMETC(s.A("kind", "foo", "bar"), `kind.*formatted.*"kind".*NPE StringPredicate`, false)
+	s.UMETC(s.A("kind"), `kind.*formatted.*"kind".*NPE StringPredicate.*missing.*NPE StringPredicate`, false)
+	s.UMETC(s.A("kind", s.A("glob", "[")), "kind.*NPE StringPredicate.*glob", false)
 }
 func (s *KindTestSuite) TestEvalEntrySchema() {
-	p := Kind(predicate.StringGlob("foo"))
+	ast := s.A("kind", s.A("glob", "foo"))
 	schema := &rql.EntrySchema{}
 	schema.SetPath("bar")
-	s.EESFTC(p, schema)
+	s.EESFTC(ast, schema)
 	schema.SetPath("foo")
-	s.EESTTC(p, schema)
+	s.EESTTC(ast, schema)
 }
 
 func (s *KindTestSuite) TestExpression_Atom() {
-	expr := expression.New("kind", false, func() rql.ASTNode {
-		return Kind(predicate.String())
-	})
+	s.NodeConstructor = func() rql.ASTNode {
+		return expression.New("kind", false, func() rql.ASTNode {
+			return Kind(predicate.String())
+		})
+	}
 
-	s.MUM(expr, []interface{}{"kind", []interface{}{"glob", "foo"}})
+	ast := s.A("kind", s.A("glob", "foo"))
 	e := rql.Entry{}
-	s.EEFTC(expr, e)
+	s.EEFTC(ast, e)
 	e.Schema = &rql.EntrySchema{}
 	e.Schema.SetPath("bar")
-	s.EETTC(expr, e)
+	s.EETTC(ast, e)
 
 	schema := &rql.EntrySchema{}
 	schema.SetPath("")
-	s.EESFTC(expr, schema)
+	s.EESFTC(ast, schema)
 	schema.SetPath("bar")
-	s.EESFTC(expr, schema)
+	s.EESFTC(ast, schema)
 	schema.SetPath("foo")
-	s.EESTTC(expr, schema)
+	s.EESTTC(ast, schema)
 
 	s.AssertNotImplemented(
-		expr,
+		ast,
 		asttest.ValuePredicateC,
 		asttest.StringPredicateC,
 		asttest.NumericPredicateC,
@@ -67,5 +67,9 @@ func (s *KindTestSuite) TestExpression_Atom() {
 }
 
 func TestKind(t *testing.T) {
-	suite.Run(t, new(KindTestSuite))
+	s := new(KindTestSuite)
+	s.DefaultNodeConstructor = func() rql.ASTNode {
+		return Kind(predicate.String())
+	}
+	suite.Run(t, s)
 }
