@@ -15,6 +15,17 @@ type Entry struct {
 	Metadata   plugin.JSONObject      `json:"metadata"`
 }
 
+func NewEntry(e plugin.Entry) Entry {
+	return Entry{
+		TypeID:     plugin.TypeID(e),
+		Name:       plugin.Name(e),
+		CName:      plugin.CName(e),
+		Actions:    plugin.SupportedActionsOf(e),
+		Attributes: plugin.Attributes(e),
+		Metadata:   plugin.PartialMetadata(e),
+	}
+}
+
 // Supports returns true if e supports the given action, false
 // otherwise.
 func (e *Entry) Supports(action plugin.Action) bool {

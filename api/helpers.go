@@ -15,26 +15,6 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-func toAPIEntry(e plugin.Entry) apitypes.Entry {
-	return apitypes.Entry{
-		TypeID:     plugin.TypeID(e),
-		Name:       plugin.Name(e),
-		CName:      plugin.CName(e),
-		Actions:    plugin.SupportedActionsOf(e),
-		Attributes: plugin.Attributes(e),
-		Metadata:   plugin.PartialMetadata(e),
-	}
-}
-
-func toAPIEntrySchema(s *plugin.EntrySchema) *apitypes.EntrySchema {
-	if s == nil {
-		return nil
-	}
-	return &apitypes.EntrySchema{
-		EntrySchema: (*s),
-	}
-}
-
 func findEntry(ctx context.Context, root plugin.Entry, segments []string) (plugin.Entry, *errorResponse) {
 	path := strings.Join(segments, "/")
 	curEntry, err := plugin.FindEntry(ctx, root, segments)
@@ -151,4 +131,17 @@ func getBoolParam(u *url.URL, key string) (bool, *errorResponse) {
 		return b, nil
 	}
 	return false, nil
+}
+
+// return is (n, found, err)
+func getIntParam(u *url.URL, key string) (int, bool, *errorResponse) {
+	val := u.Query().Get(key)
+	if val != "" {
+		n, err := strconv.ParseInt(val, 10, 32)
+		if err != nil {
+			return 0, false, invalidIntParam(key, val)
+		}
+		return int(n), true, nil
+	}
+	return 0, false, nil
 }

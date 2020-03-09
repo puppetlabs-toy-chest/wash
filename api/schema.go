@@ -43,7 +43,7 @@ var schemaHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *er
 	if err != nil {
 		return unknownErrorResponse(err)
 	}
-	apiEntrySchema := toAPIEntrySchema(schema)
+	apiEntrySchema := apitypes.NewEntrySchema(schema)
 	if err := jsonEncoder.Encode(apiEntrySchema); err != nil {
 		return unknownErrorResponse(fmt.Errorf("Could not marshal schema for %v: %v", path, err))
 	}

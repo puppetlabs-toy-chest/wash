@@ -58,7 +58,7 @@ var listHandler = handler{fn: func(w http.ResponseWriter, r *http.Request) *erro
 
 	result := make([]apitypes.Entry, 0, entries.Len())
 	entries.Range(func(_ string, entry plugin.Entry) bool {
-		apiEntry := toAPIEntry(entry)
+		apiEntry := apitypes.NewEntry(entry)
 		apiEntry.Path = path + "/" + apiEntry.CName
 		result = append(result, apiEntry)
 		return true

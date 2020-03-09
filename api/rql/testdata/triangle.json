@@ -1,0 +1,20 @@
+{
+    "A": {
+        "label": "A",
+        "children": [
+            "B"
+        ]
+    },
+    "B": {
+        "label": "B",
+        "children": [
+            "C"
+        ]
+    },
+    "C": {
+        "label": "C",
+        "children": [
+            "A"
+        ]
+    }
+}

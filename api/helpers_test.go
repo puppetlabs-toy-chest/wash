@@ -134,6 +134,44 @@ func (suite *HelpersTestSuite) TestGetBoolParam() {
 	suite.Error(err)
 }
 
+func (suite *HelpersTestSuite) TestGetIntParam() {
+	var u url.URL
+	// tc => testCase
+	type tc struct {
+		query            string
+		expectedVal      int
+		expectedFound    bool
+		expectedErrRegex string
+	}
+	tcs := []tc{
+		tc{
+			query:         "",
+			expectedFound: false,
+		},
+		tc{
+			query:         "param=10",
+			expectedVal:   10,
+			expectedFound: true,
+		},
+		tc{
+			query:            "param=foo",
+			expectedErrRegex: ".*int.*",
+		},
+	}
+	for _, tc := range tcs {
+		u.RawQuery = tc.query
+		val, found, err := getIntParam(&u, "param")
+		if tc.expectedErrRegex != "" {
+			suite.Regexp(tc.expectedErrRegex, err)
+		} else {
+			suite.Equal(tc.expectedFound, found)
+			if found {
+				suite.Equal(tc.expectedVal, val)
+			}
+		}
+	}
+}
+
 func TestHelpers(t *testing.T) {
 	suite.Run(t, new(HelpersTestSuite))
 }
