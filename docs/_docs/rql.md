@@ -4,6 +4,7 @@ title: Resource Query Language
 
 * [Background](#background)
 * [AST Grammar](#ast-grammar)
+* [Entry schema optimization](#entry-schema-optimization)
 * [Primaries](#primaries)
   * [action](#action)
   * [boolean](#boolean)
@@ -17,6 +18,15 @@ title: Resource Query Language
   * [mtime](#mtime)
   * [size](#size)
   * [meta](#meta)
+    * [Object Predicate](#object-predicate)
+    * [Array Predicate](#array-predicate)
+    * [Null Predicate](#null-predicate)
+    * [Boolean Predicate](#boolean-predicate)
+    * [Numeric Predicate](#numeric-predicate)
+    * [Time Predicate](#time-predicate)
+    * [String Predicate](#string-predicate)
+    * [Schema Predicate](#schema-predicate)
+    * [Subtleties](#subtleties)
 * [Detailed Meta Primary Overview](#detailed-meta-primary-overview)
 
 ## Background
@@ -150,11 +160,89 @@ This returns true for all entries whose `name` matches the glob `*.log` AND whos
 
 This returns all entries whose `kind` matches the glob `*container` AND with `m['state'] == running`, where `m` is the entry's metadata. If the start path is `docker`, then this query would return all running Docker containers.
 
+See the [Primaries](#primaries) section for a list of all primaries and their documentation.
+
+## Entry schema optimization
+
+All RQL primaries are entry predicates. However some primaries can also be _entry schema_ predicates. Entry schema predicates act on an entry's schema; they are useful for optimizing RQL queries.
+
+Entry schema predicates are best illustrated by an example. Consider the following RQL query
+
+```
+["action", "exec"]
+```
+
+Assume the start path is `aws`, i.e. that we're starting at the AWS plugin. Then this query would return all entries in the AWS plugin that supported the `exec` action.
+
+Below is the AWS plugin's `stree` output.
+
+```
+wash . ❯ stree aws
+aws
+└── [profile]
+    └── resources
+        ├── s3
+        │   └── [bucket]
+        │       ├── [prefix]
+        │       │   ├── [prefix]
+        │       │   └── [object]
+        │       └── [object]
+        └── ec2
+            └── instances
+                └── [instance]
+                    ├── [console.out]
+                    ├── metadata.json
+                    └── fs
+                        ├── [dir]
+                        │   ├── [dir]
+                        │   └── [file]
+                        └── [file]
+```
+
+We will refer to this hierarchy when talking about the AWS plugin. EC2 instances are the only execable entries in this hierarchy. 
+
+The RQL will optimize its search to only recurse into entries that are execable or have an execable descendant. For the AWS plugin, this means that the RQL will _not_ recurse into S3 buckets (the node labeled `bucket`) or an EC2 instance's filesystem (the node labeled `fs`) -- those entries do not have any execable descendants. It will, however, recurse into AWS profiles (`profile`) and the resources directory (`resources`) since those entries have execable descendants (EC2 instances [`instance`]).
+
+Here's how the RQL does this "optimization". Given our query, it
+
+1. Notices that the entry schema predicate is _return true if the entry's schema shows that `exec` is a supported action_ (because an entry's supported actions are included in its schema).
+
+1. Grabs `aws`' schema then traverses it and its child schemas, keeping track of all schemas that are satisfying entries or have satisfying descendants (satisfying entries are those who satisfy the given entry schema predicate). For the AWS plugin, the `aws`, `profile`, `resources`, `ec2`, `instances`, and `instance` nodes are the only schemas that are satisfying entries or have satisfying descendants. All other nodes do not.
+
+1. Prune schemas that aren't satisfying entries and that do not have satisfying descendants.
+
+After the final step, the resulting `stree` output would look something like
+
+```
+aws
+└── [profile]
+    └── resources
+        ├── ec2
+            └── instances
+                └── [instance]
+```
+
+These are the entries that the RQL will recurse into.
+
+Combining schema predicates works as you'd expect. So given the following query
+
+```
+["AND", ["action", "exec"], ["action", "stream"]]
+```
+
+The final schema predicate is _return true if the entry supports the `exec` action AND if it supports the `stream` action_. Similarly for the following query
+
+```
+["OR", ["action", "exec"], ["action", "stream"]]
+```
+
+The final schema predicate is _return true if the entry supports the `exec` action OR if it supports the `stream` action_.
+
 ## Primaries
 
 ### action
 
-The `action` primary constructs a predicate on an entry's supported actions.
+The `action` primary constructs a predicate on an entry's and an entry schema's supported actions.
 
 #### Examples
 
@@ -162,7 +250,29 @@ The `action` primary constructs a predicate on an entry's supported actions.
 ["action", "exec"]
 ```
 
-Returns true if the entry supports the `exec` action.
+Returns true if the entry (entry schema) supports the `exec` action.
+
+The grammar lets you specify an NPE of Action predicates so syntax like
+
+```
+["action", ["AND", "exec", "stream"]]
+```
+
+```
+["action", ["OR", "exec", "stream"]]
+```
+
+```
+["action", ["NOT", "exec"]]
+```
+
+work as you'd expect. Specifically,
+
+* The first example returns true if the entry (entry schema) supports the `exec` AND `stream` actions.
+
+* The second example returns true if the entry (entry schema) supports the `exec` OR `stream` actions.
+
+* The third example returns true if the entry (entry schema) does NOT support the `exec` action.
 
 ### boolean
 
@@ -253,9 +363,11 @@ The `size` primary constructs a predicate on the entry's size attribute. Note th
 
 ### meta
 
-The `meta` primary constructs a predicate on the entry's metadata. If the `fullmeta` option is not set, then this will be the entry's _partial_ metadata. Otherwise if `fullmeta` is true, then it will be the entry's _full_ metadata.
+The `meta` primary constructs a predicate on the entry's metadata and metadata schema. If the `fullmeta` option is not set, then this will be the entry's _partial_ metadata and metadata schema. Otherwise if `fullmeta` is true, then it will be the entry's _full_ metadata and metadata schema.
 
 The `meta` primary lets you filter on any property in the entry's metadata. It's similar to `wash find`'s meta primary, so we recommend taking a look at its [tutorial]({{ 'tutorials/02_find/meta-primary' | relative_url }}) if you'd like to see how you'd go about constructing a `meta` primary query.
+
+For a more detailed overview of the `meta` primary, see the [next section](#detailed-meta-primary-overview).
 
 #### Examples
 
@@ -426,6 +538,73 @@ Returns true if the value's a Boolean value that's equal to `false`.
 {% include rql_stringPredicateExamples.md name="string" comparedThing="string value" %}
 
 **Note:** A string predicate will always return false for non-String values like e.g. Boolean values.
+
+### Schema Predicate
+
+The `meta` primary's schema predicate is constructed on the entry's metadata schema. Here's how it works. Note that we'll be referencing nodes in the [AST's grammar](#ast-grammar) during this discussion.
+
+Given a value predicate AST, assume that all negatable value predicate expressions are in reduced form (meaning all `NOT` operators are of the form `["NOT", ValuePredicate]`). Consider a leaf in this tree, where a leaf is either a
+
+* `NOT` node
+* `["object", SizePredicate]` node
+* `["array", SizePredicate]` node
+* `NullPredicate` node
+* `BooleanPredicate` node
+* `["number", NPE NumericPredicate]` node
+* `["string", NPE StringPredicate]` node
+* `["time", NPE TimePredicate]` node
+
+Then the leaf's satisfying value schema (SVS) is the schema of all satisfying values of the predicate generated by the leaf-AST [the AST consisting of all nodes up to this leaf ignoring any intermediate `AND/OR` operators].
+
+As an example, consider the following AST:
+
+```
+["object",
+  [["key", "foo"],
+  ["array",
+    ["some",
+      ["OR",
+        ["number", ["=", 5]],
+        ["NOT", ["number", [">", 5]]]]]]]]
+```
+
+Then the leaves are the `number` and `NOT` nodes under the `OR`. Their SVS' are
+  * `.foo[] null` for the `"number"` node. To see why, notice that this leaf's AST is
+      ```
+      ["object",
+        [["key", "foo"],
+        ["array",
+          ["some",
+            ["number", ["=", 5]]]]]]
+      ```
+    And `{"foo": [5]}` is a satisfying value for the leaf-AST's predicate. In fact, all satisfying values will have the general form `{"foo": [null]}` (primitive types are normalized to `null`). We can write this as `.foo[] null`.
+
+  * `.foo[] *` for the `NOT` node. To see why, notice that the leaf AST is
+      ```
+      ["object",
+        [["key", "foo"],
+        ["array",
+          ["some",
+            ["NOT", ["number", [">", 5]]]]]]]
+      ```
+    And that `{"foo": [6]}`, `{"foo": [[]]}`, `{"foo": [{}]}` are several satisfying values for the leaf-AST's predicate. In fact, all satisfying values will have the general form `{"foo": [*]}` where `*` means that the value inside the array can be anything, e.g. an `object`, `array` or a `primitive` value. We can write this as `.foo[] *`
+
+Now let svs be the leaf's SVS. Then its schema predicate will return true iff the schema supports svs. The AST's final schema predicate will be an `AND/OR` of all the generated leaves' schema predicates as specified in the AST. If the AST doesn't have any `AND/OR` operators, then the schema predicate is just the leaf's schema predicate.
+
+To see all of this in action, consider the following example.
+
+```
+["meta",
+  ["object",
+    [["key", "foo"],
+    ["array",
+      ["some",
+        ["OR",
+          ["number", ["=", 5]],
+          ["object", [["key", bar"], true]]]]]]]]
+```
+
+The SVS' for this predicate are `.foo[] null` AND `.foo[].bar *`. Hence, the generated schema predicate is _return true if the metadata schema supports the SVS' `.foo[] null` AND `.foo[].bar *`_.
 
 ### Subtleties
 
