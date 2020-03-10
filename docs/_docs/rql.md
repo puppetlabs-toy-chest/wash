@@ -24,7 +24,7 @@ title: Resource Query Language
 The resource query language (RQL) lets you query Wash resources. You can submit your queries to the API's `find` endpoint. Here's an example query
 
 ```
-Eniss-MacBook-Pro:wash enisinan$ curl -X POST --unix-socket /tmp/WASH_SOCKET --header "Content-Type: application/json" --data '["kind", ["glob", "*ec2*instance"]]' 'http://localhost:/fs/find?path=/tmp/WASH_MOUNT/aws/wash' 2>/dev/null | jq
+$ curl -X POST --unix-socket /tmp/WASH_SOCKET --header "Content-Type: application/json" --data '["kind", ["glob", "*ec2*instance"]]' 'http://localhost:/fs/find?path=/tmp/WASH_MOUNT/aws/wash' 2>/dev/null | jq
 [
   {
     "type_id": "aws::github.com/puppetlabs/wash/plugin/aws/ec2Instance",
@@ -32,7 +32,7 @@ Eniss-MacBook-Pro:wash enisinan$ curl -X POST --unix-socket /tmp/WASH_SOCKET --h
 ...
 ```
 
-> Note that I started my own Wash server instance with `WASH_SOCKET="/tmp/WASH_SOCKET" ./wash server /tmp/WASH_MOUNT`
+> Note that this example started its own Wash server instance with `WASH_SOCKET="/tmp/WASH_SOCKET" ./wash server /tmp/WASH_MOUNT`. Also, the `2>/dev/null` is there because some versions of curl include progress status on `stderr`.
 
 This query returns all entries under the `aws/wash` entry whose `kind` matches the glob `*ec2*instance`. Informally, this query returns all AWS EC2 instances under the `wash` profile.
 
@@ -56,11 +56,9 @@ Similarly, let `NPE <PredicateType>` denote the following grammar (where `NPE` =
 
 ```
 NPE <PredicateType> :=
-  [UnaryOp,  NPE <PredicateType>]                       |
+  ["NOT", NPE <PredicateType>]                       |
   [BinaryOp, NPE <PredicateType>, NPE <PredicateType>]  |
   <PredicateType>
-
-UnaryOp := ‘NOT’
 ```
 
 Then the RQL AST can be expressed as
@@ -69,31 +67,18 @@ Then the RQL AST can be expressed as
 Query := PE Primary
 
 Primary :=
-  Action  |
-  Boolean |
-  Name    |
-  CName   |
-  Path    |
-  Kind    |
-  Atime   |
-  Crtime  |
-  Ctime   |
-  Mtime   |
-  Size    |
-  Meta
-
-Action  := [“action”, NPE ActionPredicate]
-Boolean := BooleanPredicate
-Name    := [“name”,   NPE StringPredicate]
-CName   := [“cname”,  NPE StringPredicate]
-Path    := [“path”,   NPE StringPredicate]
-Kind    := [“kind”,   NPE StringPredicate]
-Atime   := [“atime”,  NPE TimePredicate]
-Crtime  := [“crtime”, NPE TimePredicate]
-Ctime   := [“ctime”,  NPE TimePredicate]
-Mtime   := [“mtime”,  NPE TimePredicate]
-Size    := SizePredicate
-Meta    := [“meta”,   PE ObjectPredicate]
+  [“action”, NPE ActionPredicate] |
+  BooleanPredicate                |
+  [“name”,   NPE StringPredicate] |
+  [“cname”,  NPE StringPredicate] |
+  [“path”,   NPE StringPredicate] |
+  [“kind”,   NPE StringPredicate] |
+  [“atime”,  NPE TimePredicate]   |
+  [“crtime”, NPE TimePredicate]   |
+  [“ctime”,  NPE TimePredicate]   |
+  [“mtime”,  NPE TimePredicate]   |
+  SizePredicate                   |
+  [“meta”,   PE ObjectPredicate]
 
 ActionPredicate := 
   "list"   |
@@ -137,11 +122,33 @@ StringPredicate :=
 TimePredicate := [ComparisonOp, TimeValue]
 ```
 
-This grammar tells us several things:
+From the grammar, we see that an RQL query is a predicate expression of _primaries_. A _primary_ is a predicate on a Wash entry, typically on one of its fields. Examples of primaries include `name`, `cname`, and `ctime`, which are predicates on the entry's name, cname and `ctime` attribute, respectively. Primaries take predicate expressions. For example, the `name` and `cname` primaries take a predicate expression of string predicates while the `ctime` primary takes a predicate expression of time predicates.
 
-* An RQL query is a predicate expression of primaries. A primary is a predicate on a specific field of an entry. Examples of primaries include `name`, `cname`, and `ctime`. See the [primaries](#primaries) section for all of the available primaries.
+The RQL's grammar lets you build powerful queries. See the examples below.
 
-* Primaries take predicates, specifically predicate expressions.
+```
+["AND",
+  ["name", ["OR", ["glob", "*.sh"], ["glob", "*.json"]]],
+  ["mtime", [">", "2020-01-01T22:15:52Z"]]]
+```
+
+This returns true for all entries whose `name` matches the glob `*.sh` OR the glob `*.json` AND whose `mtime` attribute is greater than `01/01/2020 10:15:52 PM UTC`. A query like this would be useful for finding files inside an AWS S3 bucket, a GCP Storage bucket, a container, or a VM. Specifically, you can use this query to find all `.sh` and `.json` files that were modified after `01/01/2020`.
+
+```
+["AND",
+  ["name", ["glob", "*.log]],
+  ["size", [">", 1024]]]
+```
+
+This returns true for all entries whose `name` matches the glob `*.log` AND whose `size` attribute is greater than 1024 bytes. You could use this to find all `.log` files that are greater than 1 KB (1024 bytes).
+
+```
+["AND",
+  ["kind", ["glob", "*container"]],
+  ["meta", ["object", [["key", "state"], "running"]]]]
+```
+
+This returns all entries whose `kind` matches the glob `*container` AND with `m['state'] == running`, where `m` is the entry's metadata. If the start path is `docker`, then this query would return all running Docker containers.
 
 ## Primaries
 
@@ -248,6 +255,8 @@ The `size` primary constructs a predicate on the entry's size attribute. Note th
 
 The `meta` primary constructs a predicate on the entry's metadata. If the `fullmeta` option is not set, then this will be the entry's _partial_ metadata. Otherwise if `fullmeta` is true, then it will be the entry's _full_ metadata.
 
+The `meta` primary lets you filter on any property in the entry's metadata. It's similar to `wash find`'s meta primary, so we recommend taking a look at its [tutorial]({{ 'tutorials/02_find/meta-primary' | relative_url }}) if you'd like to see how you'd go about constructing a `meta` primary query.
+
 #### Examples
 
 ```
@@ -299,7 +308,7 @@ The following example is more "real-worldly".
               ["time", ["<", "2017-08-07T13:55:25.680464+00:00"]]]]]]]]]]]
 ```
 
-Returns true if `m['tags']` has at least one object o s.t. `o['key'] == termination_date` AND `o['value'] < 8/07/2017 ...` (i.e. `o['value']` has expired). In the real world, this example could be combined with the `kind` primary to filter out all EC2 instances whose `termination_date` tag expired. The full request to `find` would look something like
+Returns true if `m['tags']` has at least one object `o` s.t. `o['key'] == termination_date` AND `o['value'] < 8/07/2017 ...` (i.e. `o['value']` has expired). In the real world, this example could be combined with the `kind` primary to filter out all EC2 instances whose `termination_date` tag expired. The full request to `find` would look something like
 
 ```
 curl -X POST --unix-socket /tmp/WASH_SOCKET --header "Content-Type: application/json" --data @rql_query.json 'http://localhost:/fs/find?path=/tmp/WASH_MOUNT/aws/wash' 2>/dev/null | jq
