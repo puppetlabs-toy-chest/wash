@@ -13,9 +13,24 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 )
 
-// swagger:route GET /fs/find find listEntries
+// swagger:response
+//nolint:deadcode,unused
+type findResponse struct {
+	// in: body
+	Entries []apitypes.Entry
+}
+
+// swagger:parameters findResponse
+//nolint:deadcode,unused
+type findParams struct {
+	params
+	rql.Options
+}
+
+// swagger:route GET /fs/find find findResponse
 //
-// Recursively descends the given path returning it and its children.
+// Recursively descends the given path, returning all children that satisfy
+// the given RQL query.
 //
 //     Consumes:
 //     - application/json

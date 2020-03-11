@@ -112,6 +112,66 @@
         }
       }
     },
+    "/fs/find": {
+      "get": {
+        "description": "Recursively descends the given path, returning all children that satisfy\nthe given RQL query.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "find"
+        ],
+        "operationId": "findResponse",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Mindepth is the minimum depth. Descendants at lesser depths are not included\nin the RQL's returned list of entries.\n\nDepth starts from 0. For example, given paths \"foo\", \"foo/bar\", \"foo/bar/baz\",\nassume \"foo\" is the start path. Then \"foo\" is at depth 0, \"foo/bar\" is at depth 1,\n\"foo/bar/baz\" is at depth 2, etc.",
+            "name": "Mindepth",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "format": "int64",
+            "description": "Maxdepth is the maximum depth. Descendants at greater depths are not included\nin the RQL's returned list of entries. See Mindepth's comments to understand how\ndepth is calculated.",
+            "name": "Maxdepth",
+            "in": "query"
+          },
+          {
+            "type": "boolean",
+            "description": "Fullmeta is short for \"full metadata\". If set, then meta primary queries act on\nthe entry's full metadata, and the returned list of entries will include the entry's\nfull metadata. If unset then the RQL uses the partial metadata instead.\n\nNote that setting Fullmeta could result in O(N) extra requests to fetch the metadata,\nwhere N is the number of visited entries. Using the partial metadata (unsetting Fullmeta)\ndoes not result in any extra request.",
+            "name": "Fullmeta",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/entryList"
+          },
+          "400": {
+            "$ref": "#/responses/errorResp"
+          },
+          "404": {
+            "$ref": "#/responses/errorResp"
+          },
+          "500": {
+            "$ref": "#/responses/errorResp"
+          }
+        }
+      }
+    },
     "/fs/info": {
       "get": {
         "description": "Returns an Entry object describing the given path.",
@@ -152,7 +212,7 @@
     },
     "/fs/list": {
       "get": {
-        "description": "Returns a list of Entry objects describing children of the given path.",
+        "description": "Returns a list of Entry objects describing children of the given path.\nThe \"metadata\" key is set to the partial metadata.",
         "produces": [
           "application/json"
         ],
@@ -457,6 +517,13 @@
           "type": "string",
           "x-go-name": "CName"
         },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Metadata"
+        },
         "name": {
           "type": "string",
           "x-go-name": "Name"
@@ -473,7 +540,7 @@
       "x-go-package": "github.com/puppetlabs/wash/api/types"
     },
     "EntryAttributes": {
-      "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCrtime(crtime).\nSetMtime(mtime).\nSetMeta(meta)\nentry.SetAttributes(attr)",
+      "description": "Each of the setters supports the builder pattern, which enables you\nto do something like\n\nattr := plugin.EntryAttributes{}\nattr.\nSetCrtime(crtime).\nSetMtime(mtime)\nentry.SetAttributes(attr)",
       "type": "object",
       "title": "EntryAttributes represents an entry's attributes. We use a struct\ninstead of a map for efficient memory allocation/deallocation,\nwhich is needed to make Parent#List fast.",
       "x-go-package": "github.com/puppetlabs/wash/plugin"
@@ -504,10 +571,10 @@
           "type": "string",
           "x-go-name": "Label"
         },
-        "meta_attribute_schema": {
+        "metadata_schema": {
           "$ref": "#/definitions/Schema"
         },
-        "metadata_schema": {
+        "partial_metadata_schema": {
           "$ref": "#/definitions/Schema"
         },
         "signals": {
@@ -1015,6 +1082,10 @@
     "Entry": {
       "description": "Entry represents a Wash entry as interpreted by the API.",
       "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        },
         "$ref": "#/definitions/EntryAttributes"
       },
       "headers": {
@@ -1028,6 +1099,7 @@
         "cname": {
           "type": "string"
         },
+        "metadata": {},
         "name": {
           "type": "string"
         },
@@ -1071,10 +1143,10 @@
         "label": {
           "type": "string"
         },
-        "metaAttributeSchemaObj": {},
-        "meta_attribute_schema": {},
         "metadataSchemaObj": {},
         "metadata_schema": {},
+        "partialMetadataSchemaObj": {},
+        "partial_metadata_schema": {},
         "path": {
           "type": "string"
         },
@@ -1171,6 +1243,14 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/ExecPacket"
+        }
+      }
+    },
+    "findResponse": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/Entry"
         }
       }
     },
