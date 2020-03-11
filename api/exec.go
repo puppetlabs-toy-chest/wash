@@ -30,6 +30,7 @@ func sendPacket(ctx context.Context, w *json.Encoder, p *apitypes.ExecPacket) {
 // swagger:parameters executeCommand
 //nolint:deadcode,unused
 type execBody struct {
+	params
 	// in: body
 	Body apitypes.ExecBody
 }
