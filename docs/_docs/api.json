@@ -83,17 +83,17 @@
         "operationId": "executeCommand",
         "parameters": [
           {
+            "type": "string",
+            "description": "uniquely identifies an entry",
+            "name": "Path",
+            "in": "query"
+          },
+          {
             "name": "Body",
             "in": "body",
             "schema": {
               "$ref": "#/definitions/ExecBody"
             }
-          },
-          {
-            "type": "string",
-            "description": "uniquely identifies an entry",
-            "name": "Path",
-            "in": "query"
           }
         ],
         "responses": {
@@ -127,7 +127,8 @@
         "tags": [
           "find"
         ],
-        "operationId": "findResponse",
+        "summary": "Find entries using RQL",
+        "operationId": "findQuery",
         "parameters": [
           {
             "type": "string",
@@ -1243,14 +1244,6 @@
         "type": "array",
         "items": {
           "$ref": "#/definitions/ExecPacket"
-        }
-      }
-    },
-    "findResponse": {
-      "schema": {
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/Entry"
         }
       }
     },
