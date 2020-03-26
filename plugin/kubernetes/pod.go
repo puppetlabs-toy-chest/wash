@@ -54,7 +54,7 @@ func (p *pod) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	entries := make([]plugin.Entry, len(pd.Spec.Containers))
 	for i, c := range pd.Spec.Containers {
-		c, err := newContainer(ctx, p.client, p.config, p.ns, &c, pd)
+		c, err := newContainer(ctx, p.client, p.config, &c, pd)
 		if err != nil {
 			return nil, err
 		}

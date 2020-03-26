@@ -6,11 +6,13 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 type pvcsDir struct {
 	plugin.EntryBase
 	client *k8s.Clientset
+	config *rest.Config
 	ns     string
 }
 
@@ -19,6 +21,7 @@ func newPVCSDir(ns *namespace) *pvcsDir {
 		EntryBase: plugin.NewEntry("persistentvolumeclaims"),
 	}
 	pv.client = ns.client
+	pv.config = ns.config
 	pv.ns = ns.Name()
 	return pv
 }
@@ -43,7 +46,7 @@ func (pv *pvcsDir) List(ctx context.Context) ([]plugin.Entry, error) {
 	}
 	entries := make([]plugin.Entry, len(pvcList.Items))
 	for i, p := range pvcList.Items {
-		entries[i] = newPVC(pvcI, pv.client.CoreV1().Pods(pv.ns), &p)
+		entries[i] = newPVC(pvcI, pv.client, pv.config, pv.ns, &p)
 	}
 	return entries, nil
 }

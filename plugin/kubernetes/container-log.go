@@ -22,7 +22,7 @@ func newContainerLogFile(container *container) *containerLogFile {
 	clf := &containerLogFile{
 		EntryBase: plugin.NewEntry("log"),
 	}
-	clf.namespace = container.ns
+	clf.namespace = container.pod.Namespace
 	clf.podName = container.pod.Name
 	clf.containerName = container.Name()
 	clf.client = container.client

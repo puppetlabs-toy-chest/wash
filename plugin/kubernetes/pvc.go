@@ -3,39 +3,37 @@ package kubernetes
 import (
 	"bytes"
 	"context"
-	"errors"
-	"fmt"
 	"io"
-	"io/ioutil"
-	"strings"
-	"time"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/volume"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
+	k8s "k8s.io/client-go/kubernetes"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 type pvc struct {
 	plugin.EntryBase
-	pvci typedv1.PersistentVolumeClaimInterface
-	podi typedv1.PodInterface
+	pvci      typedv1.PersistentVolumeClaimInterface
+	podi      typedv1.PodInterface
+	client    *k8s.Clientset
+	config    *rest.Config
+	namespace string
 }
 
-const mountpoint = "/mnt"
-
-var errPodTerminated = errors.New("Pod terminated unexpectedly")
-
-func newPVC(pi typedv1.PersistentVolumeClaimInterface, pd typedv1.PodInterface, p *corev1.PersistentVolumeClaim) *pvc {
+func newPVC(pi typedv1.PersistentVolumeClaimInterface, client *k8s.Clientset, config *rest.Config, ns string, p *corev1.PersistentVolumeClaim) *pvc {
 	vol := &pvc{
 		EntryBase: plugin.NewEntry(p.Name),
 	}
 	vol.pvci = pi
-	vol.podi = pd
+	vol.podi = client.CoreV1().Pods(ns)
+	vol.client = client
+	vol.config = config
+	vol.namespace = ns
 
 	vol.SetTTLOf(plugin.ListOp, volume.ListTTL)
 	vol.
@@ -69,129 +67,126 @@ func (v *pvc) Delete(ctx context.Context) (bool, error) {
 	return true, err
 }
 
-// Create a container that mounts a pvc to a default mountpoint and runs a command.
-func (v *pvc) createPod(cmd []string) (string, error) {
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "wash",
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:  "busybox",
-					Image: "busybox",
-					Args:  cmd,
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1m"),
-							corev1.ResourceMemory: resource.MustParse("10Mi"),
-						},
-					},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      v.Name(),
-							MountPath: mountpoint,
-							ReadOnly:  true,
-						},
-					},
-				},
-			},
-			RestartPolicy: corev1.RestartPolicyNever,
-			Volumes: []corev1.Volume{
-				{
-					Name: v.Name(),
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: v.Name(),
-							ReadOnly:  true,
-						},
-					},
-				},
-			},
-		},
-	}
-	created, err := v.podi.Create(pod)
-	if err != nil {
-		return "", err
-	}
-	return created.Name, nil
+type mountInfo struct {
+	pod       *corev1.Pod
+	container *corev1.Container
+	path      string
 }
 
-func (v *pvc) waitForPod(ctx context.Context, pid string) error {
-	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + pid}
-	watcher, err := v.podi.Watch(watchOpts)
+// TODO: return read-write mount if available (fallback to read-only) that mounts the volume
+// root (SubPath is empty). If no mounts exist with empty SubPath, try mounting in a new pod
+// if it's ReadOnly or ReadWriteMany. If that's not possible, error.
+func (v *pvc) getFirstMountingPod() (*corev1.Pod, string, error) {
+	nsPods, err := v.podi.List(metav1.ListOptions{})
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	defer watcher.Stop()
 
-	ch := watcher.ResultChan()
-	for {
-		select {
-		case e, ok := <-ch:
-			if !ok {
-				return fmt.Errorf("Channel error waiting for pod %v: %v", pid, e)
+	for _, pod := range nsPods.Items {
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+
+		for _, vol := range pod.Spec.Volumes {
+			if vol.PersistentVolumeClaim != nil && vol.PersistentVolumeClaim.ClaimName == v.Name() {
+				// Return the name of the volume tied to this claim so we can match it up to the volume
+				// mount in a specific container.
+				return &pod, vol.Name, nil
 			}
-			switch e.Type {
-			case watch.Modified:
-				switch e.Object.(*corev1.Pod).Status.Phase {
-				case corev1.PodSucceeded:
-					return nil
-				case corev1.PodFailed:
-					return errPodTerminated
-				case corev1.PodUnknown:
-					activity.Record(ctx, "Unknown state for pod %v: %v", pid, e.Object)
-				}
-			case watch.Error:
-				return fmt.Errorf("Pod %v errored: %v", pid, e.Object)
-			}
-		case <-time.After(30 * time.Second):
-			return fmt.Errorf("Timed out waiting for pod %v", pid)
 		}
 	}
+	return nil, "", nil
 }
 
-// Runs cmd in a temporary pod. If the exit code is 0, then it returns the cmd's output.
-// Otherwise, it wraps the cmd's output in an error object.
-func (v *pvc) runInTemporaryPod(ctx context.Context, cmd []string) ([]byte, error) {
-	// Create a pod that mounts a pvc and inspects it. Run it and capture the output.
-	pid, err := v.createPod(cmd)
+func (v *pvc) getMountInfo(pod *corev1.Pod, volumeName string) mountInfo {
+	for _, container := range pod.Spec.Containers {
+		for _, mount := range container.VolumeMounts {
+			if mount.Name == volumeName {
+				return mountInfo{
+					pod:       pod,
+					container: &container,
+					path:      mount.MountPath,
+				}
+			}
+		}
+	}
+	panic("volume is mounted, so a container must use it")
+}
+
+// Callback is given a mountpoint where the PVC is mounted. It's also responsible for any cleanup
+// related to accessing the container because sometimes use of that container persists beyond the
+// lifetime of the inContainer function call.
+type containerCb = func(c *containerBase, mountpoint string, cleanup func()) (interface{}, error)
+
+// Execution containerCb in a container that has the current PVC mounted. Creates one if one is
+// not currently running.
+func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, error) {
+	mountingPod, volumeName, err := v.getFirstMountingPod()
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
-	}()
 
-	activity.Record(ctx, "Waiting for pod %v to start", pid)
-	// Start watching for new events related to the pod we created.
-	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
-		return nil, err
+	execContainer := containerBase{client: v.client, config: v.config}
+	var mountpoint string
+	var cleanup func()
+	if mountingPod == nil {
+		mountpoint = "/mnt"
+		tempPod, err := createContainer(v.podi, v.Name(), mountpoint)
+		if err != nil {
+			return nil, err
+		}
+		if err := tempPod.waitOnCreation(ctx); err != nil {
+			return nil, err
+		}
+		execContainer.pod = tempPod.pod
+		cleanup = func() {
+			activity.Record(ctx, "Deleted temporary pod %v: %v", tempPod, tempPod.delete())
+		}
+	} else {
+		mount := v.getMountInfo(mountingPod, volumeName)
+		execContainer.pod = mount.pod
+		execContainer.container = mount.container
+		mountpoint = mount.path
+		cleanup = func() {}
 	}
+	return fn(&execContainer, mountpoint, cleanup)
+}
 
-	activity.Record(ctx, "Gathering log for %v", pid)
-	output, lerr := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-	if lerr != nil {
-		return nil, lerr
-	}
-	defer func() {
-		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
-	}()
+// A constructor for commands that need a path that allows the specific execution context
+// to inject a base path.
+type cmdBuilder func(string) []string
 
-	bytes, readErr := ioutil.ReadAll(output)
-	if readErr != nil {
-		return nil, readErr
-	}
-	if err == errPodTerminated {
-		return nil, errors.New(strings.Trim(string(bytes), "\n"))
-	}
-	return bytes, nil
+func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder) ([]byte, error) {
+	obj, err := v.inContainer(ctx, func(c *containerBase, mountpoint string, cleanup func()) (interface{}, error) {
+		defer cleanup()
+
+		cmd := buildCmd(mountpoint)
+		activity.Record(ctx, "Executing in %v: %v", c, cmd)
+
+		var stdout, stderr bytes.Buffer
+		streamOpts := remotecommand.StreamOptions{Stdout: &stdout, Stderr: &stderr}
+		executor, err := c.newExecutor(ctx, cmd[0], cmd[1:], streamOpts)
+		if err != nil {
+			return []byte{}, err
+		}
+
+		err = executor.Stream()
+		activity.Record(ctx, "stdout: %v", stdout.String())
+		activity.Record(ctx, "stderr: %v", stderr.String())
+		return stdout.Bytes(), err
+	})
+	return obj.([]byte), err
 }
 
 func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
-	// Use a larger maxdepth because volumes have relatively few files and VolumeList is slow.
+	// Use a larger maxdepth because volumes generally have few files.
 	maxdepth := 10
-	output, err := v.runInTemporaryPod(ctx, volume.StatCmdPOSIX(mountpoint+path, maxdepth))
+	var mountpoint string
+	output, err := v.exec(ctx, func(base string) []string {
+		mountpoint = base
+		return volume.StatCmdPOSIX(base+path, maxdepth)
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +194,9 @@ func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error
 }
 
 func (v *pvc) VolumeRead(ctx context.Context, path string) ([]byte, error) {
-	output, err := v.runInTemporaryPod(ctx, []string{"cat", mountpoint + path})
+	output, err := v.exec(ctx, func(base string) []string {
+		return []string{"cat", base + path}
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -207,51 +204,34 @@ func (v *pvc) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 }
 
 func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
-	// Create a container that mounts a pvc and tail the file.
-	pid, err := v.createPod([]string{"tail", "-f", mountpoint + path})
-	activity.Record(ctx, "Streaming from: %v", mountpoint+path)
-	if err != nil {
-		return nil, err
-	}
+	obj, err := v.inContainer(ctx, func(c *containerBase, mountpoint string, cleanup func()) (interface{}, error) {
+		cmd := []string{"tail", "-f", mountpoint + path}
+		activity.Record(ctx, "Streaming from %v: %v", c, cmd)
 
-	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
-	delete := func() {
-		activity.Record(ctx, "Deleted temporary pod %v: %v", pid, v.podi.Delete(pid, &metav1.DeleteOptions{}))
-	}
-
-	activity.Record(ctx, "Waiting for pod %v", pid)
-	// Start watching for new events related to the pod we created.
-	if err = v.waitForPod(ctx, pid); err != nil && err != errPodTerminated {
-		delete()
-		return nil, err
-	}
-	podErr := err
-
-	activity.Record(ctx, "Gathering log for %v", pid)
-	output, err := v.podi.GetLogs(pid, &corev1.PodLogOptions{}).Stream()
-	if err != nil {
-		delete()
-		return nil, err
-	}
-
-	if podErr == errPodTerminated {
-		bits, err := ioutil.ReadAll(output)
-		activity.Record(ctx, "Closed log for %v: %v", pid, output.Close())
-		delete()
+		stdoutR, stdoutW := io.Pipe()
+		streamOpts := remotecommand.StreamOptions{Stdout: stdoutW, Tty: true}
+		executor, err := c.newExecutor(ctx, cmd[0], cmd[1:], streamOpts)
 		if err != nil {
+			stdoutR.Close()
+			stdoutW.Close()
+			cleanup()
 			return nil, err
 		}
-		activity.Record(ctx, "Read: %v", bits)
 
-		return nil, errors.New(string(bits))
-	}
-
-	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
-	return plugin.CleanupReader{ReadCloser: output, Cleanup: delete}, nil
+		cleanupExec := executor.AsyncStream(func(error) {})
+		return plugin.CleanupReader{ReadCloser: stdoutR, Cleanup: func() {
+			// Cleanup execution and cleanup the container on completion.
+			cleanupExec()
+			cleanup()
+		}}, nil
+	})
+	return obj.(io.ReadCloser), err
 }
 
 func (v *pvc) VolumeDelete(ctx context.Context, path string) (bool, error) {
-	_, err := v.runInTemporaryPod(ctx, []string{"rm", "-rf", mountpoint + path})
+	_, err := v.exec(ctx, func(base string) []string {
+		return []string{"rm", "-rf", base + path}
+	})
 	if err != nil {
 		return false, err
 	}
