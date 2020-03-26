@@ -52,10 +52,20 @@ func preparePrompt(cyan, green, reset, assign string) string {
 	return `
 function prompter() {
 	local prompt_path
-	if [ -x "$(command -v realpath)" ]; then
-		prompt_path=$(realpath --relative-base=$W "$(pwd)")
-	else
-		prompt_path=$(basename "$(pwd)")
+
+	if [ -v W ]; then
+		# If the current directory is W, replace with '.'. Else if it's a subdir, show just subpath.
+		if [ "${prompt_path}" = "${W}" ]; then
+			prompt_path=.
+		else
+			prompt_path=${PWD/#$W\//}
+		fi
+	fi
+
+	if [ -v HOME ]; then
+		# If prompt_path is still an absolute path (because it hasn't been changed) and is a subdir
+		# of HOME, replace HOME with '~'.
+		prompt_path=${prompt_path/#$HOME/\~}
 	fi
 	` + assign + `="` + cyan + `wash ${prompt_path}` + green + ` ❯` + reset + ` "
 }
