@@ -55,7 +55,7 @@ function prompter() {
 
 	if [ -v W ]; then
 		# If the current directory is W, replace with '.'. Else if it's a subdir, show just subpath.
-		if [ "${prompt_path}" = "${W}" ]; then
+		if [ "${PWD}" = "${W}" ]; then
 			prompt_path=.
 		else
 			prompt_path=${PWD/#$W\//}
