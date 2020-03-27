@@ -14,6 +14,7 @@ import (
 	"github.com/puppetlabs/wash/plugin"
 	"github.com/puppetlabs/wash/volume"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -80,6 +81,12 @@ func (v *pvc) createPod(cmd []string) (string, error) {
 					Name:  "busybox",
 					Image: "busybox",
 					Args:  cmd,
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1m"),
+							corev1.ResourceMemory: resource.MustParse("10Mi"),
+						},
+					},
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      v.Name(),
