@@ -51,14 +51,14 @@ func Get() Shell {
 func preparePrompt(cyan, green, reset, assign string) string {
 	return `
 function prompter() {
-	local prompt_path
+	local prompt_path=$PWD
 
 	if [ -v W ]; then
 		# If the current directory is W, replace with '.'. Else if it's a subdir, show just subpath.
-		if [ "${PWD}" = "${W}" ]; then
+		if [ "${prompt_path}" = "${W}" ]; then
 			prompt_path=.
 		else
-			prompt_path=${PWD/#$W\//}
+			prompt_path=${prompt_path/#$W\//}
 		fi
 	fi
 
