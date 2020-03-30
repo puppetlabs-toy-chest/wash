@@ -1,14 +1,13 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
+	"github.com/puppetlabs/wash/volume"
 	corev1 "k8s.io/api/core/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -58,34 +57,26 @@ func (c *container) Schema() *plugin.EntrySchema {
 		SetPartialMetadataSchema(corev1.Container{})
 }
 
-func (c *container) Read(ctx context.Context) ([]byte, error) {
-	logOptions := corev1.PodLogOptions{
-		Container: c.Name(),
+func (c *container) ChildSchemas() []*plugin.EntrySchema {
+	return []*plugin.EntrySchema{
+		(&containerLogFile{}).Schema(),
+		(&plugin.MetadataJSONFile{}).Schema(),
+		(&volume.FS{}).Schema(),
 	}
-	req := c.client.CoreV1().Pods(c.ns).GetLogs(c.pod.Name, &logOptions)
-	rdr, err := req.Stream()
+}
+
+func (c *container) List(ctx context.Context) ([]plugin.Entry, error) {
+	// TODO: May be worth creating a helper that makes it easy to create
+	// read-only files. Lots of shared code between these two.
+	cm, err := plugin.NewMetadataJSONFile(ctx, c)
 	if err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	var n int64
-	if n, err = buf.ReadFrom(rdr); err != nil {
-		return nil, fmt.Errorf("unable to read logs: %v", err)
-	}
-	activity.Record(ctx, "Read %v bytes of %v log", n, c.Name())
+	clf := newContainerLogFile(c)
 
-	return buf.Bytes(), nil
-}
-
-func (c *container) Stream(ctx context.Context) (io.ReadCloser, error) {
-	var tailLines int64 = 10
-	logOptions := corev1.PodLogOptions{
-		Container: c.Name(),
-		Follow:    true,
-		TailLines: &tailLines,
-	}
-	req := c.client.CoreV1().Pods(c.ns).GetLogs(c.pod.Name, &logOptions)
-	return req.Stream()
+	// Include a view of the remote filesystem using volume.FS. Use a small maxdepth because
+	// VMs can have lots of files and Exec is fast.
+	return []plugin.Entry{clf, cm, volume.NewFS(ctx, "fs", c, 3)}, nil
 }
 
 func (c *container) Exec(ctx context.Context, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
@@ -103,8 +94,12 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 		execRequest = execRequest.Param("command", arg)
 	}
 
-	if opts.Stdin != nil {
+	if opts.Stdin != nil || opts.Tty {
 		execRequest = execRequest.Param("stdin", "true")
+	}
+
+	if opts.Tty {
+		execRequest = execRequest.Param("tty", "true")
 	}
 
 	executor, err := remotecommand.NewSPDYExecutor(c.config, "POST", execRequest.URL())
@@ -113,6 +108,10 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	}
 
 	execCmd := plugin.NewExecCommand(ctx)
+
+	// Track when Stream finishes because the calling context may cancel even though the operation
+	// has completed and cause us to invoke the "stop func".
+	done := make(chan struct{})
 
 	// If using a Tty, create an input stream that allows us to send Ctrl-C to end execution;
 	// when a Tty is allocated commands expect user input and will respond to control signals.
@@ -129,8 +128,20 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 			// Close the response on context cancellation. Copying will block until there's more to
 			// read from the exec output. For an action with no more output it may never return.
 			// Append Ctrl-C to input to signal end of execution.
-			_, err := w.Write([]byte{0x03})
-			activity.Record(ctx, "Sent ETX on context termination: %v", err)
+			select {
+			case <-done:
+				// Passthrough, output completed so no need to cancel.
+			default:
+				// Only cancel when Stream has not completed. If we cancel but Stream has completed, then
+				// we get an error while trying to copy the Write
+				//   E0330 13:54:35.930448   49254 v2.go:105] EOF
+				// from https://github.com/kubernetes/client-go/blob/v10.0.0/tools/remotecommand/v2.go#L105
+				// where it logs the error. I tried to change the log destination, but
+				// https://github.com/kubernetes/client-go/issues/18 seems to preclude that solution.
+				// Calling `klog.SetOutput` didn't do anything.
+				_, err := w.Write([]byte{0x03})
+				activity.Record(ctx, "Sent ETX on context termination: %v", err)
+			}
 			w.Close()
 		})
 	}
@@ -143,6 +154,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 			Tty:    opts.Tty,
 		}
 		err = executor.Stream(streamOpts)
+		close(done)
 		activity.Record(ctx, "Exec on %v complete: %v", c.Name(), err)
 		if err == nil {
 			execCmd.SetExitCode(0)
