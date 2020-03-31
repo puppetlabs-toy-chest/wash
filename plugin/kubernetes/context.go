@@ -41,10 +41,10 @@ func (c *k8context) ChildSchemas() []*plugin.EntrySchema {
 
 func (c *k8context) List(ctx context.Context) ([]plugin.Entry, error) {
 	nsi := c.client.CoreV1().Namespaces()
-	nsList, err := nsi.List(metav1.ListOptions{})
+	nsList, err := nsi.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		activity.Record(ctx, "Error loading namespaces, using default namespace %v: %v", c.defaultns, err)
-		ns, err := nsi.Get(c.defaultns, metav1.GetOptions{})
+		ns, err := nsi.Get(ctx, c.defaultns, metav1.GetOptions{})
 		if err != nil {
 			activity.Record(ctx, "Error loading default namespace, metadata will not be available: %v", err)
 		}

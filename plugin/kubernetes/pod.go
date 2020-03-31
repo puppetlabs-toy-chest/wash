@@ -47,7 +47,7 @@ func (p *pod) ChildSchemas() []*plugin.EntrySchema {
 }
 
 func (p *pod) List(ctx context.Context) ([]plugin.Entry, error) {
-	pd, err := p.client.CoreV1().Pods(p.ns).Get(p.Name(), metav1.GetOptions{})
+	pd, err := p.client.CoreV1().Pods(p.ns).Get(ctx, p.Name(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +66,6 @@ func (p *pod) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (p *pod) Delete(ctx context.Context) (bool, error) {
-	err := p.client.CoreV1().Pods(p.ns).Delete(p.Name(), &metav1.DeleteOptions{})
+	err := p.client.CoreV1().Pods(p.ns).Delete(ctx, p.Name(), metav1.DeleteOptions{})
 	return true, err
 }

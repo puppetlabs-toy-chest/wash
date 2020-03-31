@@ -51,7 +51,7 @@ func (n *namespace) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (n *namespace) Delete(ctx context.Context) (bool, error) {
-	err := n.client.CoreV1().Namespaces().Delete(n.Name(), &v1.DeleteOptions{})
+	err := n.client.CoreV1().Namespaces().Delete(ctx, n.Name(), v1.DeleteOptions{})
 	return true, err
 }
 

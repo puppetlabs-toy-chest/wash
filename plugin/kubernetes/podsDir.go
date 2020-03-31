@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/puppetlabs/wash/plugin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type podsDir struct {
@@ -39,7 +39,7 @@ func (ps *podsDir) ChildSchemas() []*plugin.EntrySchema {
 func (ps *podsDir) List(ctx context.Context) ([]plugin.Entry, error) {
 	// TODO: identify whether we have permission to get logs for this namespace early, so
 	// we can return quickly for Attributes.
-	podList, err := ps.client.CoreV1().Pods(ps.ns).List(metav1.ListOptions{})
+	podList, err := ps.client.CoreV1().Pods(ps.ns).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
