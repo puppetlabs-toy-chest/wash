@@ -9,7 +9,7 @@ env:
   global:
   - PROJECT_NAME=wash
   - WASH_DISABLE_ANALYTICS=true
-  - GOLANGCI_LINT_VERSION=v1.19.1
+  - GOLANGCI_LINT_VERSION=v1.24.0
   - BATS_VERSION=v1.1.0
 jobs:
   include:
@@ -36,7 +36,7 @@ jobs:
   - name: Lint with golangci-lint
     before_script:
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
-    script: GOGC=20 golangci-lint run -v --concurrency 1 --deadline 3m # https://github.com/golangci/golangci-lint/issues/337#issuecomment-510136513
+    script: GOGC=10 golangci-lint run -v --concurrency 1 --deadline 3m # https://github.com/golangci/golangci-lint/issues/337#issuecomment-510136513
   - stage: deploy
     name: Deploy to GitHub Releases
     if: tag IS present
