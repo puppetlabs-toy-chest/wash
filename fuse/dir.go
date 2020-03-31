@@ -3,6 +3,7 @@ package fuse
 import (
 	"context"
 	"os"
+	"syscall"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -38,7 +39,7 @@ func (d *dir) children(ctx context.Context) (*plugin.EntryMap, error) {
 		return plugin.ListWithAnalytics(ctx, updatedEntry.(plugin.Parent))
 	}
 
-	return nil, fuse.ENOENT
+	return nil, syscall.ENOENT
 }
 
 // Lookup searches a directory for children.
@@ -50,14 +51,14 @@ func (d *dir) Lookup(ctx context.Context, req *fuse.LookupRequest, resp *fuse.Lo
 	entries, err := d.children(ctx)
 	if err != nil {
 		activity.Warnf(ctx, "FUSE: Find %v in %v errored: %v", req.Name, d, err)
-		return nil, fuse.ENOENT
+		return nil, syscall.ENOENT
 	}
 
 	cname := req.Name
 	entry, ok := entries.Load(cname)
 	if !ok {
 		log.Debugf("FUSE: %v not found in %v", req.Name, d)
-		return nil, fuse.ENOENT
+		return nil, syscall.ENOENT
 	}
 
 	if plugin.ListAction().IsSupportedOn(entry) {

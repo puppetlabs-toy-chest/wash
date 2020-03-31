@@ -10,7 +10,7 @@ import (
 	// TODO: Once https://github.com/patrickmn/go-cache/pull/75
 	// is merged, go back to importing the main go-cache repo.
 	cache "github.com/ekinanp/go-cache"
-	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	log "github.com/sirupsen/logrus"
 )
 

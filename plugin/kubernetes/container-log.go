@@ -38,7 +38,7 @@ func (clf *containerLogFile) Read(ctx context.Context) ([]byte, error) {
 		Container: clf.containerName,
 	}
 	req := clf.client.CoreV1().Pods(clf.namespace).GetLogs(clf.podName, &logOptions)
-	rdr, err := req.Stream()
+	rdr, err := req.Stream(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -60,5 +60,5 @@ func (clf *containerLogFile) Stream(ctx context.Context) (io.ReadCloser, error) 
 		TailLines: &tailLines,
 	}
 	req := clf.client.CoreV1().Pods(clf.namespace).GetLogs(clf.podName, &logOptions)
-	return req.Stream()
+	return req.Stream(ctx)
 }

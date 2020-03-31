@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"syscall"
 
 	"bazil.org/fuse"
 	"bazil.org/fuse/fs"
@@ -142,19 +143,19 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	switch {
 	case req.Flags.IsReadOnly() && !readable:
 		activity.Warnf(ctx, "FUSE: Open read-only unsupported on %v", f)
-		return nil, fuse.ENOTSUP
+		return nil, syscall.ENOTSUP
 	case req.Flags.IsWriteOnly() && !writable:
 		activity.Warnf(ctx, "FUSE: Open write-only unsupported on %v", f)
-		return nil, fuse.ENOTSUP
+		return nil, syscall.ENOTSUP
 	case req.Flags.IsReadWrite() && (!readable || !writable):
 		activity.Warnf(ctx, "FUSE: Open read-write unsupported on %v", f)
-		return nil, fuse.ENOTSUP
+		return nil, syscall.ENOTSUP
 	}
 
 	if !f.isFileLikeEntry() && req.Flags.IsReadWrite() {
 		// Error ReadWrite on non-file-like entries because it probably won't work well.
 		activity.Warnf(ctx, "FUSE: Open Read/Write is not supported on non-file-like entry %v", f)
-		return nil, fuse.ENOTSUP
+		return nil, syscall.ENOTSUP
 	}
 
 	if !f.isFileLikeEntry() {
@@ -277,7 +278,7 @@ func (f *file) load(ctx context.Context, start, end int64) ([]byte, error) {
 
 	if !plugin.ReadAction().IsSupportedOn(f.entry) {
 		activity.Warnf(ctx, "FUSE: Non-contiguous writes (at %v) unsupported on %v", start, f)
-		return nil, fuse.ENOTSUP
+		return nil, syscall.ENOTSUP
 	}
 
 	return plugin.Read(ctx, f.entry, end-start, start)
@@ -345,7 +346,7 @@ func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 		if !req.Valid.Handle() {
 			// No guarantee we'll ever write the change. If this is ever necessary, we could update it
 			// to immediately do a plugin.Write.
-			return fuse.ENOTSUP
+			return syscall.ENOTSUP
 		}
 
 		// Ensure handle is in list of writers because we need to operate on a local copy of the data,
@@ -370,7 +371,7 @@ func (f *file) Setattr(ctx context.Context, req *fuse.SetattrRequest, resp *fuse
 	return nil
 }
 
-// Needs to be defined or vim gets an fuse.EIO error on Fsync.
+// Needs to be defined or vim gets an EIO error on Fsync.
 var _ = fs.NodeFsyncer(&file{})
 
 func (f *file) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
@@ -379,5 +380,5 @@ func (f *file) Fsync(ctx context.Context, req *fuse.FsyncRequest) error {
 	// for reading, we could potentially invalidate the Wash cache and re-request data from the
 	// plugin, but in most cases that doesn't seem to be necessary.
 	activity.Record(ctx, "FUSE: Fsync %v: %+v", f, *req)
-	return fuse.ENOSYS
+	return syscall.ENOSYS
 }

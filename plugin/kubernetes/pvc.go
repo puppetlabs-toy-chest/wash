@@ -63,7 +63,7 @@ func (v *pvc) List(ctx context.Context) ([]plugin.Entry, error) {
 }
 
 func (v *pvc) Delete(ctx context.Context) (bool, error) {
-	err := v.pvci.Delete(v.Name(), &metav1.DeleteOptions{})
+	err := v.pvci.Delete(ctx, v.Name(), metav1.DeleteOptions{})
 	return true, err
 }
 
@@ -76,8 +76,8 @@ type mountInfo struct {
 // TODO: return read-write mount if available (fallback to read-only) that mounts the volume
 // root (SubPath is empty). If no mounts exist with empty SubPath, try mounting in a new pod
 // if it's ReadOnly or ReadWriteMany. If that's not possible, error.
-func (v *pvc) getFirstMountingPod() (*corev1.Pod, string, error) {
-	nsPods, err := v.podi.List(metav1.ListOptions{})
+func (v *pvc) getFirstMountingPod(ctx context.Context) (*corev1.Pod, string, error) {
+	nsPods, err := v.podi.List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -121,7 +121,7 @@ type containerCb = func(c *containerBase, mountpoint string, cleanup func()) (in
 // Execution containerCb in a container that has the current PVC mounted. Creates one if one is
 // not currently running.
 func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, error) {
-	mountingPod, volumeName, err := v.getFirstMountingPod()
+	mountingPod, volumeName, err := v.getFirstMountingPod(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, err
 	var cleanup func()
 	if mountingPod == nil {
 		mountpoint = "/mnt"
-		tempPod, err := createContainer(v.podi, v.Name(), mountpoint)
+		tempPod, err := createContainer(ctx, v.podi, v.Name(), mountpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +140,7 @@ func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, err
 		}
 		execContainer.pod = tempPod.pod
 		cleanup = func() {
-			activity.Record(ctx, "Deleted temporary pod %v: %v", tempPod, tempPod.delete())
+			activity.Record(ctx, "Deleted temporary pod %v: %v", tempPod, tempPod.delete(ctx))
 		}
 	} else {
 		mount := v.getMountInfo(mountingPod, volumeName)

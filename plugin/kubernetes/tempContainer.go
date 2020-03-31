@@ -21,7 +21,7 @@ type tempContainer struct {
 }
 
 // Create a container that mounts a pvc to a default mountpoint and waits for 7 days.
-func createContainer(podi typedv1.PodInterface, volumeClaim, mountpoint string) (c tempContainer, err error) {
+func createContainer(ctx context.Context, podi typedv1.PodInterface, volumeClaim, mountpoint string) (c tempContainer, err error) {
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "wash",
@@ -63,7 +63,7 @@ func createContainer(podi typedv1.PodInterface, volumeClaim, mountpoint string) 
 	}
 
 	c.podi = podi
-	c.pod, err = podi.Create(pod)
+	c.pod, err = podi.Create(ctx, pod, metav1.CreateOptions{})
 	return
 }
 
@@ -71,7 +71,7 @@ var errPodTerminated = errors.New("Pod terminated unexpectedly")
 
 func (c *tempContainer) waitOnCreation(ctx context.Context) error {
 	watchOpts := metav1.ListOptions{FieldSelector: "metadata.name=" + c.pod.Name}
-	watcher, err := c.podi.Watch(watchOpts)
+	watcher, err := c.podi.Watch(ctx, watchOpts)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (c *tempContainer) waitOnCreation(ctx context.Context) error {
 	}
 }
 
-func (c *tempContainer) delete() error {
+func (c *tempContainer) delete(ctx context.Context) error {
 	var deleteImmediately int64 = 0
-	return c.podi.Delete(c.pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &deleteImmediately})
+	return c.podi.Delete(ctx, c.pod.Name, metav1.DeleteOptions{GracePeriodSeconds: &deleteImmediately})
 }
