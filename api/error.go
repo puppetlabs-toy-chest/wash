@@ -168,7 +168,7 @@ func invalidIntParam(name, value string) *errorResponse {
 func invalidPathsResponse() *errorResponse {
 	return &errorResponse{http.StatusBadRequest, newErrorObj(
 		apitypes.InvalidPaths,
-		fmt.Sprintf("Request must include one 'path' query parameter"),
+		"Request must include one 'path' query parameter",
 		apitypes.ErrorFields{},
 	)}
 }
