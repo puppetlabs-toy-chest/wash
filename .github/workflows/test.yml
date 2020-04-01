@@ -8,6 +8,7 @@ on:
 
 env:
   WASH_DISABLE_ANALYTICS: true
+  go_version: 1.14
 
 jobs:
   lint:
@@ -22,13 +23,13 @@ jobs:
         args: run -v --deadline 3m
         golangci_lint_version: 1.24.0
   test:
-    name: Test Go 1.13
+    name: Test Go Stable
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.13
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13
+        go-version: ${{ env.go_version }}
       id: go
     - name: Check out code
       uses: actions/checkout@v2
@@ -40,10 +41,10 @@ jobs:
     name: Test CLI with BATS
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.13
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13
+        go-version: ${{ env.go_version }}
       id: go
     - name: Check out code
       uses: actions/checkout@v2
@@ -59,10 +60,10 @@ jobs:
     name: Test Docker plugin with validate
     runs-on: ubuntu-latest
     steps:
-    - name: Set up Go 1.13
+    - name: Set up Go
       uses: actions/setup-go@v1
       with:
-        go-version: 1.13
+        go-version: ${{ env.go_version }}
       id: go
     - name: Check out code
       uses: actions/checkout@v2
