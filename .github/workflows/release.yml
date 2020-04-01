@@ -1,4 +1,4 @@
-name: Update Homebrew tap on release
+name: Release Wash
 
 on: release
 
@@ -6,7 +6,36 @@ jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: Update version and SHA
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Build Wash
+      run: |
+        tag=${GITHUB_REF#refs/tags/}
+        LINKFLAGS="-w -s -X github.com/puppetlabs/wash/cmd/version.BuildVersion=${tag}"
+        CGO_ENABLED= GOOS=darwin GOARCH=amd64 go build -ldflags="$LINKFLAGS"
+        tar czf wash-${tag}-x86_64-apple-darwin.tgz wash
+        cp wash-${tag}-x86_64-apple-darwin.tgz wash-x86_64-apple-darwin.tgz
+        CGO_ENABLED= GOOS=linux GOARCH=amd64 go build -ldflags="$LINKFLAGS"
+        tar czf wash-${tag}-x86_64-unknown-linux.tgz wash
+        cp wash-${tag}-x86_64-unknown-linux.tgz wash-x86_64-unknown-linux.tgz
+    - name: Upload release assets
+      uses: skx/github-action-publish-binaries@release-1.3
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        args: 'wash-*.tgz'
+  update-tap:
+    name: Update Homebrew tap
+    runs-on: ubuntu-latest
+    steps:
+    - name: Update
       if: github.event.action == 'published'
       run: |
         git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet

@@ -19,6 +19,8 @@ type computeDir struct {
 	service computeProjectService
 }
 
+var _ = plugin.Parent(&computeDir{})
+
 const computeScope = compute.CloudPlatformScope
 
 func newComputeDir(ctx context.Context, client *http.Client, projID string) (*computeDir, error) {

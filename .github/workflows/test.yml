@@ -1,0 +1,76 @@
+name: Lint and Test
+
+on: 
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  WASH_DISABLE_ANALYTICS: true
+
+jobs:
+  lint:
+    name: Lint with golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Lint
+      uses: actions-contrib/golangci-lint@v1
+      with:
+        args: run -v --deadline 3m
+        golangci_lint_version: 1.24.0
+  test:
+    name: Test Go 1.13
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Test
+      run: go test -race ./...
+  test-cli:
+    name: Test CLI with BATS
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Build Wash
+      run: go build
+    - name: Setup BATS
+      run: sudo npm install -g bats
+    - name: Test
+      run: PATH=.:$PATH bats test
+  test-docker:
+    name: Test Docker plugin with validate
+    runs-on: ubuntu-latest
+    steps:
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13
+      id: go
+    - name: Check out code
+      uses: actions/checkout@v2
+    - name: Get dependencies
+      run: go get -v -t -d ./...
+    - name: Build Wash
+      run: go build
+    - name: Start Docker Compose example
+      run: docker-compose -f examples/swarm/docker-compose.yml up -d
+    - name: Validate Docker plugin
+      run: ./wash validate docker

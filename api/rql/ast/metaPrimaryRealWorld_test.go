@@ -187,7 +187,7 @@ func TestMetaPrimaryRealWorld(t *testing.T) {
 
 	rawMeta, err := ioutil.ReadFile("testdata/metadata.json")
 	if err != nil {
-		t.Fatal(fmt.Sprintf("Failed to read testdata/metadata.json"))
+		t.Fatal(fmt.Sprintf("Failed to read testdata/metadata.json: %v", err))
 	}
 	var m map[string]interface{}
 	if err := json.Unmarshal(rawMeta, &m); err != nil {
@@ -197,7 +197,7 @@ func TestMetaPrimaryRealWorld(t *testing.T) {
 
 	rawMetaSchema, err := ioutil.ReadFile("testdata/metadataSchema.json")
 	if err != nil {
-		t.Fatal(fmt.Sprintf("Failed to read testdata/metadataSchema.json"))
+		t.Fatal(fmt.Sprintf("Failed to read testdata/metadataSchema.json: %v", err))
 	}
 	var metaSchema *plugin.JSONSchema
 	if err := json.Unmarshal(rawMetaSchema, &metaSchema); err != nil {
