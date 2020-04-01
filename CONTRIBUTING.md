@@ -39,7 +39,7 @@ Contributions to this project require sign-off consistent with the [Developers C
 
 ### Guidelines
 
-We try to follow common Go conventions as enforced by the compiler and several static analysis tools used in Travis CI.
+We try to follow common Go conventions as enforced by the compiler and several static analysis tools run in GitHub Actions on pull requests and commits.
 
 #### File naming
 
@@ -52,10 +52,9 @@ For example, the Docker plugin has multiple files implementing components of a c
 
 ### Releases
 
-Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). Assets are automatically built and a [GitHub Action](https://github.com/puppetlabs/wash/blob/master/.github/workflows/release.yml) will open a PR against https://github.com/puppetlabs/homebrew-puppet to update to the new release.
+Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). A [GitHub Action](https://github.com/puppetlabs/wash/blob/master/.github/workflows/release.yml) will build and upload assets and open a PR against https://github.com/puppetlabs/homebrew-puppet to update to the new release.
 
 Release announcements are:
 
-- posted in [Slack #cloudnative](https://puppetcommunity.slack.com/app_redirect?channel=cloudnative) (the release is automatically posted to #wash by the GitHub App); ask a moderator to re-post into #announcements. Example announcement:
-  > Wash x.y.z is now available. This release added ... Detailed release notes are available at https://github.com/puppetlabs/wash/releases/tag/x.y.z.
+- the release is automatically posted to #wash by the GitHub App; ask a moderator to re-post into #announcements.
 - Puppet internal [release announcement process](https://confluence.puppetlabs.com/display/PM/Sending+Product+Release+Announcements) sends to puppet-announce@ and puppet-users@
