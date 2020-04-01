@@ -1,9 +1,12 @@
 name: Release Wash
 
-on: release
+on:
+  release:
+    types: [published]
 
 jobs:
   build-deploy:
+    name: Build and upload release assets
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go
@@ -36,7 +39,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Update
-      if: github.event.action == 'published'
       run: |
         git clone https://${GITHUB_TOKEN}@github.com/puppetlabs/homebrew-puppet
         tag=${GITHUB_REF#refs/tags/}
