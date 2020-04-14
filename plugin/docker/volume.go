@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -75,10 +77,9 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, fun
 	// Use tty to avoid messing with the extra log formatting.
 	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
 	mounts := []mount.Mount{{
-		Type:     mount.TypeVolume,
-		Source:   v.Name(),
-		Target:   mountpoint,
-		ReadOnly: true,
+		Type:   mount.TypeVolume,
+		Source: v.Name(),
+		Target: mountpoint,
 	}}
 	hostcfg := docontainer.HostConfig{Mounts: mounts}
 	netcfg := network.NetworkingConfig{}
@@ -230,6 +231,43 @@ func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, 
 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
 	return plugin.CleanupReader{ReadCloser: output, Cleanup: cleanup}, nil
+}
+
+func (v *volume) VolumeWrite(ctx context.Context, path string, b []byte, mode os.FileMode) error {
+	// Create a container that mounts a volume and waits. Use it to upload a file.
+	cid, cleanup, err := v.createContainer(ctx, []string{"sleep", "60"})
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	// Create a tar of the file contents and upload it. CopyToContainer requires content as a Reader
+	// for a TAR archive.
+	dir, file := filepath.Split(path)
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	mtime := time.Now()
+	hdr := tar.Header{
+		Name: file,
+		Size: int64(len(b)),
+		Mode: int64(mode),
+		// Use PAX format to ensure compatibility with non-ASCII filenames.
+		Format: tar.FormatPAX,
+		// Use of PAX requires we set atime/ctime/mtime. Use now, we just read the file to update it.
+		AccessTime: mtime,
+		ChangeTime: mtime,
+		ModTime:    mtime,
+	}
+
+	if err := tw.WriteHeader(&hdr); err != nil {
+		return err
+	} else if _, err := tw.Write(b); err != nil {
+		return err
+	} else if err := tw.Close(); err != nil {
+		return err
+	}
+
+	return v.client.CopyToContainer(ctx, cid, mountpoint+dir, &buf, types.CopyToContainerOptions{})
 }
 
 func (v *volume) VolumeDelete(ctx context.Context, path string) (bool, error) {

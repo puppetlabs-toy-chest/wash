@@ -9,6 +9,7 @@ package volume
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,9 @@ type Interface interface {
 	VolumeRead(ctx context.Context, path string) ([]byte, error)
 	// Accepts a path and streams updates to the content associated with that path.
 	VolumeStream(ctx context.Context, path string) (io.ReadCloser, error)
+	// Accepts a path and content and writes it to the file associated with that path.
+	// Mode is provided for Write operations that replace the entire file.
+	VolumeWrite(ctx context.Context, path string, b []byte, m os.FileMode) error
 	// Deletes the volume node at the specified path. Mirrors plugin.Deletable#Delete
 	VolumeDelete(ctx context.Context, path string) (bool, error)
 }

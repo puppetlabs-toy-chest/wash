@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/puppetlabs/wash/datastore"
@@ -24,11 +25,15 @@ func (m *mockDirEntry) VolumeList(ctx context.Context, path string) (DirMap, err
 }
 
 func (m *mockDirEntry) VolumeRead(context.Context, string) ([]byte, error) {
-	return nil, nil
+	return nil, syscall.ENOTSUP
 }
 
 func (m *mockDirEntry) VolumeStream(context.Context, string) (io.ReadCloser, error) {
-	return nil, nil
+	return nil, syscall.ENOTSUP
+}
+
+func (m *mockDirEntry) VolumeWrite(context.Context, string, []byte, os.FileMode) error {
+	return syscall.ENOTSUP
 }
 
 func (m *mockDirEntry) VolumeDelete(ctx context.Context, path string) (bool, error) {

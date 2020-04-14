@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/puppetlabs/wash/activity"
@@ -200,6 +201,44 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 		activity.Record(ctx, "Closing write pipe: %v", err)
 	}()
 	return r, nil
+}
+
+// VolumeWrite satisfies the Interface required by Write to write content to a file.
+func (d *FS) VolumeWrite(ctx context.Context, path string, b []byte, _ os.FileMode) error {
+	activity.Record(ctx, "Writing %v bytes to %v on %v", len(b), path, plugin.ID(d.executor))
+	command := d.selectShellCommand([]string{"cp", "/dev/stdin", path}, []string{"$input | Set-Content '" + path + "'"})
+
+	// Don't use Tty when writing file content because it may convert LF to CRLF.
+	// Use Elevate because it's common to login to systems as a non-root user and sudo.
+	opts := plugin.ExecOptions{Elevate: true, Stdin: bytes.NewReader(b)}
+	cmd, err := plugin.Exec(ctx, d.executor, command[0], command[1:], opts)
+	if err != nil {
+		return err
+	}
+
+	var output bytes.Buffer
+	var errs []error
+	for chunk := range cmd.OutputCh() {
+		if chunk.Err != nil {
+			errs = append(errs, chunk.Err)
+		} else {
+			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
+			fmt.Fprint(&output, chunk.Data)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("Exec errors on %v in VolumeWrite: %v", path, errs)
+	}
+
+	exitcode, err := cmd.ExitCode()
+	if err != nil {
+		return fmt.Errorf("Exec error on %v in VolumeWrite: %v", path, err)
+	} else if exitcode != 0 {
+		// Can happen due to permission denied. Leave handling up to the caller.
+		return nonZeroError{cmdline: command, stderr: strings.TrimSpace(output.String()), exitcode: exitcode}
+	}
+	return nil
 }
 
 // VolumeDelete satisfies the Interface required by Delete to delete volume nodes.
