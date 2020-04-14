@@ -176,7 +176,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 	return f, nil
 }
 
-func (f *file) releaseWriter(handle fuse.HandleID) {
+func (f *file) releaseWriter(ctx context.Context, handle fuse.HandleID) {
 	if _, ok := f.writers[handle]; ok {
 		delete(f.writers, handle)
 
@@ -185,7 +185,8 @@ func (f *file) releaseWriter(handle fuse.HandleID) {
 			// invalidate cache on the entry and its parent so we get updated content and size on the
 			// next request. Leave size for entries that don't set it.
 			f.data = nil
-			plugin.ClearCacheFor(plugin.ID(f.entry), true)
+			deleted := plugin.ClearCacheFor(plugin.ID(f.entry), true)
+			activity.Record(ctx, "Clear cache for %v: %+v", f.entry, deleted)
 		}
 	}
 }
@@ -207,7 +208,7 @@ func (f *file) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
 
 	// Release writer and cleanup if all writers are released. Note that this is usually a noop for
 	// non-file-like entries, they will have released the writers immediately after `plugin.Write`.
-	f.releaseWriter(req.Handle)
+	f.releaseWriter(ctx, req.Handle)
 
 	activity.Record(ctx, "FUSE: Release %v: %+v", f, *req)
 	return nil
@@ -330,7 +331,7 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 	// Non-file-like entries start from scratch on each Write operation, and have their cache
 	// invalidated whenever we write to them because we can't accurately model their readable data.
 	if !f.isFileLikeEntry() {
-		f.releaseWriter(req.Handle)
+		f.releaseWriter(ctx, req.Handle)
 	}
 	return nil
 }
