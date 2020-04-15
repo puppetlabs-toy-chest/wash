@@ -243,6 +243,12 @@ func (d *FS) loginShell() plugin.Shell {
 	return plugin.POSIXShell
 }
 
+// VolumeExec executes cmd in the directory at path.
+func (d *FS) VolumeExec(ctx context.Context, path string, cmd string, args []string, opts plugin.ExecOptions) (plugin.ExecCommand, error) {
+	opts.WorkingDir = path
+	return d.executor.Exec(ctx, cmd, args, opts)
+}
+
 const fsDescription = `
 This represents the root directory of a container/VM. It lets you navigate
 and interact with that container/VM's filesystem as if you were logged into

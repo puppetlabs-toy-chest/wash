@@ -141,6 +141,9 @@ type ExecOptions struct {
 
 	// Elevate execution to run as a privileged user if not already running as a privileged user.
 	Elevate bool `json:"elevate"`
+
+	// WorkingDir is the directory in which to execute the command.
+	WorkingDir string
 }
 
 // ExecPacketType identifies the packet type.

@@ -53,7 +53,7 @@ type dirMap struct {
 // ChildSchemas returns a volume's child schema
 func ChildSchemas() []*plugin.EntrySchema {
 	return []*plugin.EntrySchema{
-		(&dir{}).Schema(),
+		(&execableDir{}).Schema(),
 		(&file{}).Schema(),
 	}
 }
@@ -66,6 +66,9 @@ const RootPath = ""
 // Requests are cached against the supplied Interface using the VolumeListCB op.
 func List(ctx context.Context, impl Interface) ([]plugin.Entry, error) {
 	// Start with the implementation as the cache key so we re-use data we get from it for subdirectory queries.
+	if exImpl, ok := impl.(execableInterface); ok {
+		return newExecDir("dummy", plugin.EntryAttributes{}, exImpl, RootPath).List(ctx)
+	}
 	return newDir("dummy", plugin.EntryAttributes{}, impl, RootPath).List(ctx)
 }
 
