@@ -317,6 +317,7 @@ func (suite *MethodWrappersTestSuite) TestSignal_SendsSignalAndUpdatesCache() {
 	e.On("Schema").Return((*EntrySchema)(nil))
 	e.On("Signal", ctx, "start").Return(nil)
 
+	suite.cache.On("Get", "List", "/foo").Return(mockEntryMap("bar", false), nil)
 	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.eb().id)).Return([]string{})
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
@@ -381,6 +382,7 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_Updates
 	e.SetTestID("/foo/bar")
 	e.On("Delete", mock.Anything).Return(false, nil)
 
+	suite.cache.On("Get", "List", "/foo").Return(mockEntryMap("bar", false), nil)
 	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex(e.eb().id)).Return([]string{})
 	suite.cache.On("Delete", opKeyRegex("List", "/foo")).Return([]string{})
 
@@ -397,13 +399,13 @@ func (suite *MethodWrappersTestSuite) TestDelete_EntryDeletionInProgress_NoCache
 	e.SetTestID("/foo/bar")
 	e.On("Delete", mock.Anything).Return(false, nil)
 
-	suite.cache.On("Delete", mock.Anything).Return([]string{})
+	suite.cache.On("Delete", allOpKeysIncludingChildrenRegex("/foo/bar")).Return([]string{})
 	suite.cache.On("Get", "List", "/foo").Return(nil, nil)
+	suite.cache.On("Get", "List", "").Return(nil, nil)
 
 	deleted, err := Delete(context.Background(), e)
 	if suite.NoError(err) {
 		suite.False(deleted)
-		suite.cache.AssertCalled(suite.T(), "Delete", opKeyRegex("List", "/foo"))
 	}
 }
 

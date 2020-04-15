@@ -93,17 +93,53 @@ func allOpKeysIncludingChildrenRegex(path string) *regexp.Regexp {
 //
 // TODO: If path == "/", we could optimize this by calling cache.Flush(). Not important
 // right now, but may be worth considering in the future.
-func ClearCacheFor(path string, clearParentList bool) []string {
+func ClearCacheFor(path string, clearAncestorList bool) []string {
 	rx := allOpKeysIncludingChildrenRegex(path)
 	deleted := cache.Delete(rx)
 
-	if clearParentList {
-		parentID, _ := splitID(path)
-		listOpName := defaultOpCodeToNameMap[ListOp]
-		deleted = append(deleted, cache.Delete(opKeyRegex(listOpName, parentID))...)
+	if clearAncestorList {
+		// If we can find the source ancestor, clear it and everything below it from cache.
+		if sourceAncestorID := getSourceAncestorPathFromCache(path); sourceAncestorID != "" {
+			listOpName := defaultOpCodeToNameMap[ListOp]
+			deleted = append(deleted, cache.Delete(opKeyRegex(listOpName, sourceAncestorID))...)
+		}
 	}
 
 	return deleted
+}
+
+// Get the path for the ancestor that prefetched an entry at path. If none are found in the cache,
+// returns an empty string. This may be overly aggressive in some cases where it finds an ancestor
+// but it's not the immediate source ancestor; this seems like an acceptable compromise to make
+// sure it works with incomplete information.
+func getSourceAncestorPathFromCache(path string) string {
+	// To determine the source, we need to find the first parent where it's child was not prefetched.
+	// This can be challenging because some items may not be in the cache.
+	if e := getCachedEntry(path); e != nil && !IsPrefetched(e) {
+		// Not prefetched, return the parent.
+		parentID, _ := splitID(path)
+		return parentID
+	}
+
+	// Either the child is prefetched or we don't know. Search back along the path for the first
+	// non-prefetched entry and assume that's the ancestor.
+	for path, _ = splitID(path); path != ""; path, _ = splitID(path) {
+		if e := getCachedEntry(path); e != nil && !IsPrefetched(e) {
+			return path
+		}
+	}
+	return ""
+}
+
+func getCachedEntry(path string) Entry {
+	parentID, cname := splitID(path)
+	if entries, _ := cache.Get(defaultOpCodeToNameMap[ListOp], parentID); entries != nil {
+		e, ok := entries.(*EntryMap).Load(cname)
+		if ok {
+			return e
+		} // else we're accessing an entry that no longer exists
+	}
+	return nil
 }
 
 // returns (parentID, cname)
