@@ -136,13 +136,15 @@ func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, err
 		if err != nil {
 			return nil, err
 		}
+		cleanup = func() {
+			// Use a background context to ensure deletion happens even if context was cancelled.
+			activity.Record(ctx, "Deleted temporary pod %v: %v", tempPod, tempPod.delete(context.Background()))
+		}
 		if err := tempPod.waitOnCreation(ctx); err != nil {
+			cleanup()
 			return nil, err
 		}
 		execContainer.pod = tempPod.pod
-		cleanup = func() {
-			activity.Record(ctx, "Deleted temporary pod %v: %v", tempPod, tempPod.delete(ctx))
-		}
 	} else {
 		mount := v.getMountInfo(mountingPod, volumeName)
 		execContainer.pod = mount.pod
@@ -168,7 +170,7 @@ func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder, stdin io.Reader) ([
 		streamOpts := remotecommand.StreamOptions{Stdout: &stdout, Stderr: &stderr, Stdin: stdin}
 		executor, err := c.newExecutor(ctx, cmd[0], cmd[1:], streamOpts)
 		if err != nil {
-			return []byte{}, err
+			return nil, err
 		}
 
 		err = executor.Stream()
@@ -176,7 +178,10 @@ func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder, stdin io.Reader) ([
 		activity.Record(ctx, "stderr: %v", stderr.String())
 		return stdout.Bytes(), err
 	})
-	return obj.([]byte), err
+	if err != nil {
+		return nil, err
+	}
+	return obj.([]byte), nil
 }
 
 func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error) {
@@ -226,7 +231,10 @@ func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, err
 			cleanup()
 		}}, nil
 	})
-	return obj.(io.ReadCloser), err
+	if err != nil {
+		return nil, err
+	}
+	return obj.(io.ReadCloser), nil
 }
 
 func (v *pvc) VolumeWrite(ctx context.Context, path string, b []byte, _ os.FileMode) error {
