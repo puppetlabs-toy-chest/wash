@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -70,14 +72,14 @@ func (v *volume) Delete(ctx context.Context) (bool, error) {
 }
 
 // Create a container that mounts a volume to a default mountpoint and runs a command.
-func (v *volume) createContainer(ctx context.Context, cmd []string) (string, error) {
+// Returns the ID for a running container and a deletion function for cleanup.
+func (v *volume) createContainer(ctx context.Context, cmd []string) (string, func(), error) {
 	// Use tty to avoid messing with the extra log formatting.
 	cfg := docontainer.Config{Image: "busybox", Cmd: cmd, Tty: true}
 	mounts := []mount.Mount{{
-		Type:     mount.TypeVolume,
-		Source:   v.Name(),
-		Target:   mountpoint,
-		ReadOnly: true,
+		Type:   mount.TypeVolume,
+		Source: v.Name(),
+		Target: mountpoint,
 	}}
 	hostcfg := docontainer.HostConfig{Mounts: mounts}
 	netcfg := network.NetworkingConfig{}
@@ -85,48 +87,62 @@ func (v *volume) createContainer(ctx context.Context, cmd []string) (string, err
 	if err != nil {
 		// Pull busybox if create failed because it wasn't found.
 		// Taken from https://github.com/docker/cli/blob/v19.03.4/cli/command/container/create.go#L218-L241.
-		if client.IsErrNotFound(err) {
-			var pullRdr io.ReadCloser
-			if pullRdr, err = v.client.ImagePull(ctx, "busybox:latest", types.ImagePullOptions{}); err != nil {
-				return "", err
-			}
-			defer pullRdr.Close()
+		if !client.IsErrNotFound(err) {
+			return "", nil, err
+		}
 
-			writer := activity.Writer{Context: ctx, Prefix: "Pulling busybox"}
-			if _, err := io.Copy(writer, pullRdr); err != nil {
-				return "", err
-			}
+		var pullRdr io.ReadCloser
+		if pullRdr, err = v.client.ImagePull(ctx, "busybox:latest", types.ImagePullOptions{}); err != nil {
+			return "", nil, err
+		}
+		defer pullRdr.Close()
 
-			if created, err = v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, ""); err != nil {
-				return "", err
-			}
-		} else {
-			return "", err
+		writer := activity.Writer{Context: ctx, Prefix: "Pulling busybox"}
+		if _, err := io.Copy(writer, pullRdr); err != nil {
+			return "", nil, err
+		}
+
+		if created, err = v.client.ContainerCreate(ctx, &cfg, &hostcfg, &netcfg, ""); err != nil {
+			return "", nil, err
 		}
 	}
 	for _, warn := range created.Warnings {
 		activity.Record(ctx, "Warning creating %v: %v", created.ID, warn)
 	}
-	return created.ID, nil
+
+	cid := created.ID
+	remove := func(ctx context.Context) {
+		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
+		activity.Record(ctx, "Deleted container %v: %v", cid, err)
+	}
+
+	activity.Record(ctx, "Starting container %v", cid)
+	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
+		activity.Record(ctx, "Error starting container %v: %v", cid, err)
+		// Run in the background so we still cleanup containers if the context was cancelled.
+		remove(context.Background())
+		return "", nil, err
+	}
+
+	cleanup := func() {
+		// Use a background context to ensure we stop even if the context was cancelled.
+		ctx := context.Background()
+		err := v.client.ContainerKill(ctx, cid, "SIGKILL")
+		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
+		remove(ctx)
+	}
+	return cid, cleanup, nil
 }
 
 // Runs cmd in a temporary container. If the exit code is 0, then it returns the cmd's output.
 // Otherwise, it wraps the cmd's output in an error object.
 func (v *volume) runInTemporaryContainer(ctx context.Context, cmd []string) ([]byte, error) {
 	// Create a container that mounts a volume and deletes its file. Run rm -rf on it.
-	cid, err := v.createContainer(ctx, cmd)
+	cid, cleanup, err := v.createContainer(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := v.client.ContainerRemove(ctx, cid, types.ContainerRemoveOptions{})
-		activity.Record(ctx, "Deleted container %v: %v", cid, err)
-	}()
-
-	activity.Record(ctx, "Starting container %v", cid)
-	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		return nil, err
-	}
+	defer cleanup()
 
 	activity.Record(ctx, "Waiting for container %v", cid)
 	waitC, errC := v.client.ContainerWait(ctx, cid, docontainer.WaitConditionNotRunning)
@@ -175,23 +191,11 @@ func (v *volume) VolumeList(ctx context.Context, path string) (volpkg.DirMap, er
 
 func (v *volume) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 	// Create a container that mounts a volume and waits. Use it to download a file.
-	cid, err := v.createContainer(ctx, []string{"sleep", "60"})
+	cid, cleanup, err := v.createContainer(ctx, []string{"sleep", "60"})
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := v.client.ContainerRemove(context.Background(), cid, types.ContainerRemoveOptions{})
-		activity.Record(ctx, "Deleted temporary container %v: %v", cid, err)
-	}()
-
-	activity.Record(ctx, "Starting container %v", cid)
-	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		return nil, err
-	}
-	defer func() {
-		err := v.client.ContainerKill(context.Background(), cid, "SIGKILL")
-		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
-	}()
+	defer cleanup()
 
 	// Download file, then kill container.
 	rdr, _, err := v.client.CopyFromContainer(ctx, cid, mountpoint+path)
@@ -202,56 +206,68 @@ func (v *volume) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 		activity.Record(ctx, "Closed file %v on %v: %v", mountpoint+path, cid, rdr.Close())
 	}()
 
+	// Read one file from the archive.
 	tarReader := tar.NewReader(rdr)
-	// Only expect one file.
-	if _, err := tarReader.Next(); err != nil {
+	if _, err = tarReader.Next(); err != nil {
 		return nil, err
 	}
-	bits, err := ioutil.ReadAll(tarReader)
-	if err != nil {
-		return nil, err
-	}
-	return bits, nil
+	return ioutil.ReadAll(tarReader)
 }
 
 func (v *volume) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
 	// Create a container that mounts a volume and tails a file. Run it and capture the output.
-	cid, err := v.createContainer(ctx, []string{"tail", "-f", mountpoint + path})
+	cid, cleanup, err := v.createContainer(ctx, []string{"tail", "-f", mountpoint + path})
 	if err != nil {
 		return nil, err
-	}
-
-	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
-	delete := func(ct context.Context) {
-		err := v.client.ContainerRemove(ct, cid, types.ContainerRemoveOptions{})
-		activity.Record(ctx, "Deleted container %v: %v", cid, err)
-	}
-
-	activity.Record(ctx, "Starting container %v", cid)
-	if err := v.client.ContainerStart(ctx, cid, types.ContainerStartOptions{}); err != nil {
-		activity.Record(ctx, "Error starting container %v: %v", cid, err)
-		delete(context.Background())
-		return nil, err
-	}
-
-	// Manually use this in case of errors. On success, the returned Closer will need to call instead.
-	killAndDelete := func() {
-		ct := context.Background()
-		err := v.client.ContainerKill(ct, cid, "SIGKILL")
-		activity.Record(ctx, "Stopped temporary container %v: %v", cid, err)
-		delete(ct)
 	}
 
 	opts := types.ContainerLogsOptions{ShowStdout: true, Follow: true, Tail: "10"}
 	activity.Record(ctx, "Streaming log for %v", cid)
 	output, err := v.client.ContainerLogs(ctx, cid, opts)
 	if err != nil {
-		killAndDelete()
+		cleanup()
 		return nil, err
 	}
 
 	// Wrap the log output in a ReadCloser that stops and kills the container on Close.
-	return plugin.CleanupReader{ReadCloser: output, Cleanup: killAndDelete}, nil
+	return plugin.CleanupReader{ReadCloser: output, Cleanup: cleanup}, nil
+}
+
+func (v *volume) VolumeWrite(ctx context.Context, path string, b []byte, mode os.FileMode) error {
+	// Create a container that mounts a volume and waits. Use it to upload a file.
+	cid, cleanup, err := v.createContainer(ctx, []string{"sleep", "60"})
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	// Create a tar of the file contents and upload it. CopyToContainer requires content as a Reader
+	// for a TAR archive.
+	dir, file := filepath.Split(path)
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	mtime := time.Now()
+	hdr := tar.Header{
+		Name: file,
+		Size: int64(len(b)),
+		Mode: int64(mode),
+		// Use PAX format to ensure compatibility with non-ASCII filenames.
+		Format: tar.FormatPAX,
+		// Use of PAX requires we set atime/ctime/mtime. Use now, we just read the file to update it.
+		AccessTime: mtime,
+		ChangeTime: mtime,
+		ModTime:    mtime,
+	}
+
+	if err := tw.WriteHeader(&hdr); err != nil {
+		return err
+	} else if _, err := tw.Write(b); err != nil {
+		return err
+	} else if err := tw.Close(); err != nil {
+		return err
+	}
+
+	return v.client.CopyToContainer(ctx, cid, mountpoint+dir, &buf, types.CopyToContainerOptions{})
 }
 
 func (v *volume) VolumeDelete(ctx context.Context, path string) (bool, error) {

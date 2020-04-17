@@ -3,6 +3,7 @@ package volume
 import (
 	"context"
 	"io"
+	"os"
 	"time"
 
 	"github.com/puppetlabs/wash/plugin"
@@ -40,6 +41,15 @@ func (v *file) Read(ctx context.Context) ([]byte, error) {
 
 func (v *file) Stream(ctx context.Context) (io.ReadCloser, error) {
 	return v.impl.VolumeStream(ctx, v.path)
+}
+
+func (v *file) Write(ctx context.Context, b []byte) error {
+	// Pass mode for Write operations that replace the file.
+	mode := os.FileMode(0640)
+	if v.Attributes().HasMode() {
+		mode = v.Attributes().Mode()
+	}
+	return v.impl.VolumeWrite(ctx, v.path, b, mode)
 }
 
 func (v *file) Delete(ctx context.Context) (bool, error) {

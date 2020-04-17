@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
 
 	"github.com/puppetlabs/wash/activity"
 	"github.com/puppetlabs/wash/plugin"
@@ -156,7 +157,7 @@ func (v *pvc) inContainer(ctx context.Context, fn containerCb) (interface{}, err
 // to inject a base path.
 type cmdBuilder func(string) []string
 
-func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder) ([]byte, error) {
+func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder, stdin io.Reader) ([]byte, error) {
 	obj, err := v.inContainer(ctx, func(c *containerBase, mountpoint string, cleanup func()) (interface{}, error) {
 		defer cleanup()
 
@@ -164,7 +165,7 @@ func (v *pvc) exec(ctx context.Context, buildCmd cmdBuilder) ([]byte, error) {
 		activity.Record(ctx, "Executing in %v: %v", c, cmd)
 
 		var stdout, stderr bytes.Buffer
-		streamOpts := remotecommand.StreamOptions{Stdout: &stdout, Stderr: &stderr}
+		streamOpts := remotecommand.StreamOptions{Stdout: &stdout, Stderr: &stderr, Stdin: stdin}
 		executor, err := c.newExecutor(ctx, cmd[0], cmd[1:], streamOpts)
 		if err != nil {
 			return []byte{}, err
@@ -185,7 +186,7 @@ func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error
 	output, err := v.exec(ctx, func(base string) []string {
 		mountpoint = base
 		return volume.StatCmdPOSIX(base+path, maxdepth)
-	})
+	}, nil)
 
 	if err != nil {
 		return nil, err
@@ -196,7 +197,7 @@ func (v *pvc) VolumeList(ctx context.Context, path string) (volume.DirMap, error
 func (v *pvc) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 	output, err := v.exec(ctx, func(base string) []string {
 		return []string{"cat", base + path}
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -228,10 +229,17 @@ func (v *pvc) VolumeStream(ctx context.Context, path string) (io.ReadCloser, err
 	return obj.(io.ReadCloser), err
 }
 
+func (v *pvc) VolumeWrite(ctx context.Context, path string, b []byte, _ os.FileMode) error {
+	_, err := v.exec(ctx, func(base string) []string {
+		return []string{"cp", "/dev/stdin", base + path}
+	}, bytes.NewReader(b))
+	return err
+}
+
 func (v *pvc) VolumeDelete(ctx context.Context, path string) (bool, error) {
 	_, err := v.exec(ctx, func(base string) []string {
 		return []string{"rm", "-rf", base + path}
-	})
+	}, nil)
 	if err != nil {
 		return false, err
 	}
@@ -240,8 +248,8 @@ func (v *pvc) VolumeDelete(ctx context.Context, path string) (bool, error) {
 
 const pvcDescription = `
 This is a Kubernetes persistent volume claim. We create a temporary Kubernetes
-pod whenever Wash invokes a currently uncached List/Read/Stream action on it or
-one of its children. For List, we run 'find -exec stat' on the pod and parse its
-output. For Read, we run 'cat' and return its output. For Stream, we run 'tail -f'
-and stream its output.
+pod whenever Wash invokes a currently uncached List/Read/Stream/Write action on
+it or one of its children. For List, we run 'find -exec stat' on the pod and
+parse its output. For Read, we run 'cat' and return its output. For Stream, we
+run 'tail -f' and stream its output.
 `

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -35,6 +36,14 @@ func (m *mockFileEntry) VolumeStream(context.Context, string) (io.ReadCloser, er
 		return nil, m.err
 	}
 	return ioutil.NopCloser(strings.NewReader(m.content)), nil
+}
+
+func (m *mockFileEntry) VolumeWrite(_ context.Context, _ string, b []byte, _ os.FileMode) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.content = string(b)
+	return nil
 }
 
 func (m *mockFileEntry) VolumeDelete(context.Context, string) (bool, error) {
@@ -70,6 +79,11 @@ func TestVolumeFile(t *testing.T) {
 			assert.Equal(t, "hello", string(buf))
 		}
 	}
+
+	text := "some text"
+	err = vf.Write(context.Background(), []byte(text))
+	assert.NoError(t, err)
+	assert.Equal(t, text, impl.content)
 }
 
 func TestVolumeFileErr(t *testing.T) {
@@ -82,5 +96,8 @@ func TestVolumeFileErr(t *testing.T) {
 
 	rdr, err := plugin.Stream(context.Background(), vf)
 	assert.Nil(t, rdr)
+	assert.Equal(t, errors.New("fail"), err)
+
+	err = vf.Write(context.Background(), []byte{'a'})
 	assert.Equal(t, errors.New("fail"), err)
 }

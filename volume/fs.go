@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/puppetlabs/wash/activity"
@@ -64,6 +65,7 @@ func (e nonZeroError) Error() string {
 }
 
 func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty bool) (*bytes.Buffer, error) {
+	activity.Record(ctx, "Running %v on %v", cmdline, executor)
 	// Use Elevate because it's common to login to systems as a non-root user and sudo.
 	opts := plugin.ExecOptions{Elevate: true, Tty: tty}
 	cmd, err := plugin.Exec(ctx, executor, cmdline[0], cmdline[1:], opts)
@@ -104,7 +106,6 @@ func exec(ctx context.Context, executor plugin.Execable, cmdline []string, tty b
 // VolumeList satisfies the Interface required by List to enumerate files.
 func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	cmdline := d.selectShellCommand(StatCmdPOSIX(path, d.maxdepth), StatCmdPowershell(path, d.maxdepth))
-	activity.Record(ctx, "Running %v on %v", cmdline, plugin.ID(d.executor))
 
 	// Use Tty if running Wash interactively so we get a reflection of the system consistent with
 	// being logged in as a user. `ls` will report different file types based on whether you're using
@@ -130,7 +131,6 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	activity.Record(ctx, "VolumeList complete")
 
 	// Always returns results normalized to the base.
 	switch d.loginShell() {
@@ -145,7 +145,6 @@ func (d *FS) VolumeList(ctx context.Context, path string) (DirMap, error) {
 
 // VolumeRead satisfies the Interface required by List to read file contents.
 func (d *FS) VolumeRead(ctx context.Context, path string) ([]byte, error) {
-	activity.Record(ctx, "Reading %v on %v", path, plugin.ID(d.executor))
 	command := d.selectShellCommand([]string{"cat", path}, []string{"Get-Content '" + path + "'"})
 
 	// Don't use Tty when outputting file content because it may convert LF to CRLF.
@@ -159,11 +158,11 @@ func (d *FS) VolumeRead(ctx context.Context, path string) ([]byte, error) {
 
 // VolumeStream satisfies the Interface required by List to stream file contents.
 func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, error) {
-	activity.Record(ctx, "Streaming %v on %v", path, plugin.ID(d.executor))
 	command := d.selectShellCommand(
 		[]string{"tail", "-f", path},
 		[]string{"Get-Content -Wait -Tail 10 '" + path + "'"},
 	)
+	activity.Record(ctx, "Running %v on %v", command, d.executor)
 
 	execOpts := plugin.ExecOptions{Elevate: true, Tty: true}
 	cmd, err := plugin.Exec(ctx, d.executor, command[0], command[1:], execOpts)
@@ -202,9 +201,46 @@ func (d *FS) VolumeStream(ctx context.Context, path string) (io.ReadCloser, erro
 	return r, nil
 }
 
+// VolumeWrite satisfies the Interface required by Write to write content to a file.
+func (d *FS) VolumeWrite(ctx context.Context, path string, b []byte, _ os.FileMode) error {
+	command := d.selectShellCommand([]string{"cp", "/dev/stdin", path}, []string{"$input | Set-Content '" + path + "'"})
+	activity.Record(ctx, "Running %v on %v", command, d.executor)
+
+	// Don't use Tty when writing file content because it may convert LF to CRLF.
+	// Use Elevate because it's common to login to systems as a non-root user and sudo.
+	opts := plugin.ExecOptions{Elevate: true, Stdin: bytes.NewReader(b)}
+	cmd, err := plugin.Exec(ctx, d.executor, command[0], command[1:], opts)
+	if err != nil {
+		return err
+	}
+
+	var output bytes.Buffer
+	var errs []error
+	for chunk := range cmd.OutputCh() {
+		if chunk.Err != nil {
+			errs = append(errs, chunk.Err)
+		} else {
+			activity.Record(ctx, "%v: %v", chunk.StreamID, chunk.Data)
+			fmt.Fprint(&output, chunk.Data)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("Exec errors on %v in VolumeWrite: %v", path, errs)
+	}
+
+	exitcode, err := cmd.ExitCode()
+	if err != nil {
+		return fmt.Errorf("Exec error on %v in VolumeWrite: %v", path, err)
+	} else if exitcode != 0 {
+		// Can happen due to permission denied. Leave handling up to the caller.
+		return nonZeroError{cmdline: command, stderr: strings.TrimSpace(output.String()), exitcode: exitcode}
+	}
+	return nil
+}
+
 // VolumeDelete satisfies the Interface required by Delete to delete volume nodes.
 func (d *FS) VolumeDelete(ctx context.Context, path string) (bool, error) {
-	activity.Record(ctx, "Deleting %v on %v", path, plugin.ID(d.executor))
 	command := d.selectShellCommand(
 		[]string{"rm", "-rf", path},
 		[]string{"Remove-Item -Recurse -Force '" + path + "'"},

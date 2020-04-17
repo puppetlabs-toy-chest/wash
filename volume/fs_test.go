@@ -1,6 +1,7 @@
 package volume
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -69,14 +70,14 @@ const (
 
 type fsTestSuite struct {
 	suite.Suite
-	ctx                       context.Context
-	cancelFunc                context.CancelFunc
-	loginShell                plugin.Shell
-	statCmd                   func(path string, maxdepth int) []string
-	outputFixture             string
-	outputDepth               int
-	shortFixture, deepFixture string
-	readCmdFn, deleteCmdFn    func(path string) (command []string)
+	ctx                                context.Context
+	cancelFunc                         context.CancelFunc
+	loginShell                         plugin.Shell
+	statCmd                            func(path string, maxdepth int) []string
+	outputFixture                      string
+	outputDepth                        int
+	shortFixture, deepFixture          string
+	readCmdFn, writeCmdFn, deleteCmdFn func(path string) (command []string)
 }
 
 func (suite *fsTestSuite) SetupTest() {
@@ -249,6 +250,25 @@ func (suite *fsTestSuite) TestFSRead() {
 	exec.AssertExpectations(suite.T())
 }
 
+func (suite *fsTestSuite) TestFSWrite() {
+	exec := suite.createExec()
+	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
+
+	fs := NewFS(suite.ctx, "fs", exec, suite.outputDepth)
+
+	entry := suite.find(fs, "var/log/path1/a file")
+	suite.Equal("a file", plugin.Name(entry))
+
+	data := []byte("data")
+	cmd := suite.writeCmdFn("/var/log/path1/a file")
+	opts := plugin.ExecOptions{Elevate: true, Stdin: bytes.NewReader(data)}
+	exec.On("Exec", mock.Anything, cmd[0], cmd[1:], opts).Return(suite.createResult(""), nil)
+
+	err := entry.(plugin.Writable).Write(suite.ctx, data)
+	suite.NoError(err)
+	exec.AssertExpectations(suite.T())
+}
+
 func (suite *fsTestSuite) TestVolumeDelete() {
 	exec := suite.createExec()
 	exec.onExec(suite.statCmd("/", suite.outputDepth), suite.createResult(suite.outputFixture))
@@ -270,6 +290,7 @@ func TestPOSIXFS(t *testing.T) {
 		shortFixture:  posixFixtureShort,
 		deepFixture:   posixFixtureDeep,
 		readCmdFn:     func(path string) []string { return []string{"cat", path} },
+		writeCmdFn:    func(path string) []string { return []string{"cp", "/dev/stdin", path} },
 		deleteCmdFn:   func(path string) []string { return []string{"rm", "-rf", path} },
 	})
 }
@@ -283,6 +304,7 @@ func TestPowershellFS(t *testing.T) {
 		shortFixture:  powershellFixtureShort,
 		deepFixture:   powershellFixtureDeep,
 		readCmdFn:     func(path string) []string { return []string{"Get-Content '" + path + "'"} },
+		writeCmdFn:    func(path string) []string { return []string{"$input | Set-Content '" + path + "'"} },
 		deleteCmdFn:   func(path string) []string { return []string{"Remove-Item -Recurse -Force '" + path + "'"} },
 	})
 }
