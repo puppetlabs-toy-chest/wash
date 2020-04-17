@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 
 	gssh "github.com/gliderlabs/ssh"
@@ -22,7 +23,9 @@ import (
 
 type SSHTestSuite struct {
 	suite.Suite
-	s             gssh.Server
+	s gssh.Server
+	// Use a mux to avoid identifying a "data race" betweene Handler and SetupTest
+	mux           sync.Mutex
 	m             mock.Mock
 	knownHosts    string
 	badKnownHosts string
@@ -41,16 +44,22 @@ const (
 
 // Must be mocked for successful connections.
 func (suite *SSHTestSuite) Handler(s gssh.Session) {
+	suite.mux.Lock()
 	suite.m.Called(s)
+	suite.mux.Unlock()
 }
 
 // Must be mocked if Identity.Password is set.
 func (suite *SSHTestSuite) PasswordHandler(ctx gssh.Context, password string) bool {
+	suite.mux.Lock()
+	defer suite.mux.Unlock()
 	return suite.m.Called(ctx, password).Bool(0)
 }
 
 // Must be mocked.
 func (suite *SSHTestSuite) PublicKeyHandler(ctx gssh.Context, key gssh.PublicKey) bool {
+	suite.mux.Lock()
+	defer suite.mux.Unlock()
 	return suite.m.Called(ctx, key).Bool(0)
 }
 
@@ -125,7 +134,9 @@ func (suite *SSHTestSuite) SetupSuite() {
 
 func (suite *SSHTestSuite) SetupTest() {
 	// Reset mocks before every test
+	suite.mux.Lock()
 	suite.m = mock.Mock{}
+	suite.mux.Unlock()
 }
 
 func (suite *SSHTestSuite) TearDownTest() {
