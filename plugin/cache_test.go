@@ -146,15 +146,58 @@ func (suite *CacheTestSuite) TestClearCache() {
 	suite.Equal([]string{path}, deleted)
 }
 
+// Creates an EntryMap with a mock entry for "child"
+func mockEntryMap(child string, prefetched bool) *EntryMap {
+	entry := newCacheTestsMockEntry(child)
+	if prefetched {
+		entry.Prefetched()
+	}
+	entries := newEntryMap()
+	entries.mp[child] = entry
+	return entries
+}
+
 func (suite *CacheTestSuite) TestClearCache_WithParent() {
 	path := "/a/b"
 	rxEntry := allOpKeysIncludingChildrenRegex(path)
 	rxParent := opKeyRegex(defaultOpCodeToNameMap[ListOp], "/a")
 
+	suite.cache.On("Get", "List", "/a").Return(mockEntryMap("b", false), nil)
+	suite.cache.On("Get", "List", "").Return(mockEntryMap("a", false), nil)
 	suite.cache.On("Delete", rxEntry).Return([]string{"List:/a/b", "Read:/a/b"})
 	suite.cache.On("Delete", rxParent).Return([]string{"List:/a"})
 	deleted := ClearCacheFor(path, true)
 	suite.Equal([]string{"List:/a/b", "Read:/a/b", "List:/a"}, deleted)
+}
+
+func (suite *CacheTestSuite) TestClearCache_Prefetched() {
+	path := "/a/b"
+	rxEntry := allOpKeysIncludingChildrenRegex(path)
+	rxParent := opKeyRegex(defaultOpCodeToNameMap[ListOp], "/a")
+
+	suite.cache.On("Get", "List", "/a").Return(mockEntryMap("b", true), nil)
+	suite.cache.On("Get", "List", "").Return(mockEntryMap("a", false), nil)
+	suite.cache.On("Delete", rxEntry).Return([]string{"List:/a/b", "Read:/a/b"})
+	suite.cache.On("Delete", rxParent).Return([]string{"List:/a"})
+	deleted := ClearCacheFor(path, true)
+	suite.Equal([]string{"List:/a/b", "Read:/a/b", "List:/a"}, deleted)
+}
+
+func (suite *CacheTestSuite) TestClearCache_SourceAncestor() {
+	path := "/a/b/c"
+	rxEntry := allOpKeysIncludingChildrenRegex(path)
+	rxParent := opKeyRegex(defaultOpCodeToNameMap[ListOp], "/a")
+	entriesB := mockEntryMap("b", true)
+	entriesA := mockEntryMap("a", false)
+
+	// Omit a cache entry for 'b' so we need to search further.
+	suite.cache.On("Get", "List", "/a/b").Return(nil, nil)
+	suite.cache.On("Get", "List", "/a").Return(entriesB, nil)
+	suite.cache.On("Get", "List", "").Return(entriesA, nil)
+	suite.cache.On("Delete", rxEntry).Return([]string{"List:" + path, "Read:" + path})
+	suite.cache.On("Delete", rxParent).Return([]string{"List:/a"})
+	deleted := ClearCacheFor(path, true)
+	suite.Equal([]string{"List:" + path, "Read:" + path, "List:/a"}, deleted)
 }
 
 type cacheTestsMockEntry struct {
@@ -520,6 +563,20 @@ func (suite *CacheTestSuite) TestCachedMetadata() {
 	suite.testCachedDefaultOp(MetadataOp, "Metadata", mockJSONObject, mockJSONObject, func(ctx context.Context, e Entry) (interface{}, error) {
 		return cachedMetadata(ctx, e)
 	})
+}
+
+func (suite *CacheTestSuite) TestSplitID() {
+	parentID, cname := splitID("/a/b")
+	suite.Equal("/a", parentID)
+	suite.Equal("b", cname)
+
+	parentID, cname = splitID("/a")
+	suite.Equal("", parentID)
+	suite.Equal("a", cname)
+
+	parentID, cname = splitID("")
+	suite.Equal("", parentID)
+	suite.Equal("", cname)
 }
 
 func TestCache(t *testing.T) {
