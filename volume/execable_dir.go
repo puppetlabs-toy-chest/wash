@@ -57,3 +57,7 @@ func (v *execableDir) List(ctx context.Context) ([]plugin.Entry, error) {
 
 	return v.generateChildren(&dirMap{mp: dirmap}), nil
 }
+
+func (v *execableDir) Schema() *plugin.EntrySchema {
+	return plugin.NewEntrySchema(v, "execDir").SetDescription(dirDescription)
+}
