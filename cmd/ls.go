@@ -80,9 +80,11 @@ func formatItem(item lsItem, longFormat bool) [][]string {
 	return rows
 }
 
+// Pads a row to ensure the same number of columns.
+// Note that the name is put at the beginning so directories are listed on the left.
 func pad(str string, longFormat bool) []string {
 	if longFormat {
-		return []string{str, "", ""}
+		return []string{str, "", "", ""}
 	}
 	return []string{str}
 }
