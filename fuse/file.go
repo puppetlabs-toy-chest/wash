@@ -168,6 +168,7 @@ func (f *file) Open(ctx context.Context, req *fuse.OpenRequest, resp *fuse.OpenR
 		// Get the entry's readable size if we expect to do any reads or keep a local representation.
 		size, err := plugin.Size(ctx, f.entry)
 		if err != nil {
+			activity.Warnf(ctx, "FUSE: Size errored %v, %v", f, err)
 			return nil, err
 		}
 		f.readSize = size
@@ -202,6 +203,7 @@ func (f *file) Release(ctx context.Context, req *fuse.ReleaseRequest) error {
 			LockOwner: uint64(req.LockOwner),
 		})
 		if err != nil {
+			activity.Warnf(ctx, "FUSE: Release errored %v, %v", f, err)
 			return err
 		}
 	}
@@ -225,6 +227,7 @@ func (f *file) Read(ctx context.Context, req *fuse.ReadRequest, resp *fuse.ReadR
 	} else {
 		data, err := plugin.ReadWithAnalytics(ctx, f.entry, int64(req.Size), req.Offset)
 		if err != nil && err != io.EOF {
+			activity.Warnf(ctx, "FUSE: Read errored %v, %v", f, err)
 			// If we don't ignore EOF, then cat will display an input/output error message
 			// for entries with unknown content size.
 			return err
@@ -250,6 +253,7 @@ func (f *file) Write(ctx context.Context, req *fuse.WriteRequest, resp *fuse.Wri
 		if start := int64(len(f.data)); req.Offset > start {
 			data, err := f.load(ctx, start, req.Offset)
 			if err != nil {
+				activity.Warnf(ctx, "FUSE: Write errored %v, %v", f, err)
 				return err
 			}
 			f.data = append(f.data, data...)
@@ -310,6 +314,7 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 			// Missing some data, load the remainder before writing.
 			data, err := f.load(ctx, dataLen, int64(f.readSize))
 			if err != nil && err != io.EOF {
+				activity.Warnf(ctx, "FUSE: Error loading %v, %v", f, err)
 				return err
 			}
 			f.data = append(f.data, data...)
@@ -324,7 +329,7 @@ func (f *file) Flush(ctx context.Context, req *fuse.FlushRequest) error {
 	}
 
 	if err := plugin.WriteWithAnalytics(ctx, f.entry.(plugin.Writable), f.data); err != nil {
-		activity.Warnf(ctx, "FUSE: Error writing %v: %v", f, err)
+		activity.Warnf(ctx, "FUSE: Error writing %v, %v", f, err)
 		return err
 	}
 
