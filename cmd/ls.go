@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -60,14 +61,17 @@ func formatItem(item lsItem, longFormat bool) [][]string {
 		if !longFormat {
 			row = []string{cname(entry)}
 		} else {
-			var mtimeStr string
+			mtimeStr, sizeStr := "<mtime unknown>", "<size unknown>"
 			if entry.Attributes.HasMtime() {
 				mtimeStr = formatTime(entry.Attributes.Mtime())
-			} else {
-				mtimeStr = "<mtime unknown>"
 			}
+			if entry.Attributes.HasSize() {
+				sizeStr = strconv.FormatUint(entry.Attributes.Size(), 10)
+			}
+
+			sort.Strings(entry.Actions)
 			verbs := strings.Join(entry.Actions, ", ")
-			row = []string{cname(entry), mtimeStr, verbs}
+			row = []string{verbs, sizeStr, mtimeStr, cname(entry)}
 		}
 
 		rows = append(rows, row)
