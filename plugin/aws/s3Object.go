@@ -73,10 +73,16 @@ func (o *s3Object) Metadata(ctx context.Context) (plugin.JSONObject, error) {
 }
 
 func (o *s3Object) Read(ctx context.Context, size int64, offset int64) ([]byte, error) {
+	// Because bytes request is inclusive, short-circuit requests for 0 bytes.
+	if size <= 0 || offset < 0 {
+		return []byte{}, nil
+	}
+
+	// Bytes range is inclusive, so for N bytes get byte range 0-(N-1).
 	request := &s3Client.GetObjectInput{
 		Bucket: awsSDK.String(o.bucket),
 		Key:    awsSDK.String(o.key),
-		Range:  awsSDK.String("bytes=" + strconv.FormatInt(offset, 10) + "-" + strconv.FormatInt(offset+size, 10)),
+		Range:  awsSDK.String("bytes=" + strconv.FormatInt(offset, 10) + "-" + strconv.FormatInt(offset+size-1, 10)),
 	}
 
 	resp, err := o.client.GetObjectWithContext(ctx, request)
