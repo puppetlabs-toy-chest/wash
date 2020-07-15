@@ -18,8 +18,8 @@ There are tons of ways to get involved with Wash, whether or not you're a progra
 
 - Are you an old skool command-line gearhead with, like, *opinions* about how things should work on a command line? We'd love your help on improving the shell experience for Wash. How can our unixy Wash commands behave better? Are there new commands we should build? What colors and formatting should we use for `wash ls`? If we implemented `wash fortune`, what quotes should be in there?!
 
-- Have some ideas on how to spice up the website? Please let us know, or feel free to put up a PR! Our website uses Jekyll; its source is in our [Github repo](https://github.com/puppetlabs/wash/tree/master/docs).
+- Have some ideas on how to spice up the website? Please let us know, or feel free to put up a PR! Our website uses Jekyll; its source is in our [Github repo](https://github.com/puppetlabs/wash/tree/main/docs).
 
-- Want to help us [build out or extend the shipped plugins](https://github.com/puppetlabs/wash/blob/master/CORE_PLUGIN_DEVELOPMENT.md)? Feel free to put up a PR!
+- Want to help us [build out or extend the shipped plugins](https://github.com/puppetlabs/wash/blob/main/CORE_PLUGIN_DEVELOPMENT.md)? Feel free to put up a PR!
 
-Come check us out on [Github](https://github.com/puppetlabs/wash), and in particular check out the [contribution guidelines](https://github.com/puppetlabs/wash/blob/master/contributing.md) and the [code of conduct](https://github.com/puppetlabs/wash/blob/master/code_of_conduct.md).
+Come check us out on [Github](https://github.com/puppetlabs/wash), and in particular check out the [contribution guidelines](https://github.com/puppetlabs/wash/blob/main/contributing.md) and the [code of conduct](https://github.com/puppetlabs/wash/blob/main/code_of_conduct.md).

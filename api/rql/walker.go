@@ -40,7 +40,7 @@ func (w *walkerImpl) Walk(ctx context.Context, start plugin.Entry) ([]Entry, err
 	}
 	// TODO: Re-introduce something like SchemaRequired() so we can optimize
 	// the traversal if w.q is a schema-predicate. See
-	// https://github.com/puppetlabs/wash/blob/master/cmd/internal/find/walker.go#L47-L52
+	// https://github.com/puppetlabs/wash/blob/main/cmd/internal/find/walker.go#L47-L52
 	entries, err := w.walk(ctx, &startEntry, 0)
 	if err != nil {
 		return nil, err

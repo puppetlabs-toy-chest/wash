@@ -23,13 +23,13 @@ TIP: If there will only ever be one instance of the entry type - such as a named
 
 Create a new directory in [plugin] for the plugin.
 
-Create an object that implements the [Root](https://godoc.org/github.com/puppetlabs/wash/plugin#Root) interface. This would typically be in a `root.go` file. See [docker/root.go](https://github.com/puppetlabs/wash/blob/master/plugin/docker/root.go) for an example.
+Create an object that implements the [Root](https://godoc.org/github.com/puppetlabs/wash/plugin#Root) interface. This would typically be in a `root.go` file. See [docker/root.go](https://github.com/puppetlabs/wash/blob/main/plugin/docker/root.go) for an example.
 
 NOTE: The `Init` method initializes the Root object's `EntryBase` configuration and any credentials.
 
 ### Extending the plugin
 
-Each entry in the plugin's hierarchy should be a new type. This pattern's adopted by the existing core plugins (e.g. [ec2Instance](https://github.com/puppetlabs/wash/blob/master/plugin/aws/ec2Instance.go) in AWS; [container](https://github.com/puppetlabs/wash/blob/master/plugin/docker/container.go) in Docker). It is meant to make your plugin modular and easier to maintain.
+Each entry in the plugin's hierarchy should be a new type. This pattern's adopted by the existing core plugins (e.g. [ec2Instance](https://github.com/puppetlabs/wash/blob/main/plugin/aws/ec2Instance.go) in AWS; [container](https://github.com/puppetlabs/wash/blob/main/plugin/docker/container.go) in Docker). It is meant to make your plugin modular and easier to maintain.
 
 - Entries with children ("directories") should implement the `Parent` interface.
 - Entries with content should implement `Readable`.
