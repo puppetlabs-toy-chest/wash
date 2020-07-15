@@ -52,7 +52,7 @@ For example, the Docker plugin has multiple files implementing components of a c
 
 ### Releases
 
-Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). A [GitHub Action](https://github.com/puppetlabs/wash/blob/master/.github/workflows/release.yml) will build and upload assets and open a PR against https://github.com/puppetlabs/homebrew-puppet to update to the new release.
+Releases are done through the GitHub's [Draft a new release](https://github.com/puppetlabs/wash/releases/new). A [GitHub Action](https://github.com/puppetlabs/wash/blob/main/.github/workflows/release.yml) will build and upload assets and open a PR against https://github.com/puppetlabs/homebrew-puppet to update to the new release.
 
 Release announcements are:
 

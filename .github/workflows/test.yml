@@ -2,9 +2,9 @@ name: Lint and Test
 
 on: 
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 env:
   WASH_DISABLE_ANALYTICS: true

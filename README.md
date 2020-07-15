@@ -10,7 +10,7 @@ For an introduction to Wash, see our main site at https://pup.pt/wash.
 
 ## Community Feedback
 
-We're actively soliciting community feedback and input on our [roadmap](#roadmap)! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on [`#wash`](https://puppetcommunity.slack.com/app_redirect?channel=wash) on [Slack](https://slack.puppet.com/). Please abide by our [code of conduct](https://github.com/puppetlabs/wash/blob/master/CODE_OF_CONDUCT.md) when interacting with the community.
+We're actively soliciting community feedback and input on our [roadmap](#roadmap)! Don't hesitate to file issues for new features, new plugin types, new primitives, new command-line tools, or anything else that crosses your mind. You can also chat with us directly on [`#wash`](https://puppetcommunity.slack.com/app_redirect?channel=wash) on [Slack](https://slack.puppet.com/). Please abide by our [code of conduct](https://github.com/puppetlabs/wash/blob/main/CODE_OF_CONDUCT.md) when interacting with the community.
 
 See the [roadmap](#roadmap) below to see what we've got planned!
 

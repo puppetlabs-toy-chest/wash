@@ -111,8 +111,8 @@ Once we've found some resources, we'd like to see what they're doing. The defaul
 ```fish
 > tail -f /aws/resources/ec2/vm-106.puppet.com /aws/resources/ec2/vm-107.puppet.com:/var/log/nginx/access.log /aws/resources/lambda/michael-lambda-17 /aws/resources/s3/michael-bucket1 /kubernetes/gke_shared-k8s_us-west1-a_shared-k8s-dev/dujour-dev/pods/r0raxmg1fg276o05wmmqancki8w-dujour-84c7b497cc-fd7m4
 ==> /aws/resources/ec2/vm-107.puppet.com:/var/log/syslog <==
-Jan  2 23:53:50 pe-master systemd[1]: Starting User Manager for UID 1000...
-Jan  2 23:53:50 pe-master systemd[1]: Started Session 25386 of user ubuntu.
+Jan  2 23:53:50 pe-server systemd[1]: Starting User Manager for UID 1000...
+Jan  2 23:53:50 pe-server systemd[1]: Started Session 25386 of user ubuntu.
 
 ==> /aws/resources/ec2/vm-107.puppet.com:/var/log/nginx/access.log <==
 10.0.25.192 - - [20/Dec/2018:18:03:58 +0000] "GET /index.html HTTP/1.1" 200 603 "https://vm-107.puppet.com/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0.1 Safari/605.1.15" "-"
