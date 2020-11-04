@@ -110,3 +110,7 @@ func (c *tempContainer) delete(ctx context.Context) error {
 	var deleteImmediately int64 = 0
 	return c.podi.Delete(ctx, c.pod.Name, metav1.DeleteOptions{GracePeriodSeconds: &deleteImmediately})
 }
+
+func (c *tempContainer) String() string {
+	return c.pod.String()
+}
