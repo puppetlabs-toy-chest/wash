@@ -14,8 +14,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-	// Loads the gcp plugin (required to authenticate against GKE clusters).
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// Loads all available auth plugins (required to authenticate against GKE, Azure, OpenStack and OIDC clusters).
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 // Root of the Kubernetes plugin
