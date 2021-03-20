@@ -954,7 +954,7 @@ func (suite *ExternalPluginEntryTestSuite) TestExec() {
 	ctx := context.Background()
 	mockRunAndWait := func(cmd []string, startErr, waitErr error, exitCode int) {
 		mockInv := &mockedInvocation{Command: NewCommand(ctx, "")}
-		args := []interface{}{ctx, "exec", entry, append([]string{`{"tty":false,"elevate":false,"stdin":false}`}, cmd...)}
+		args := []interface{}{ctx, "exec", entry, append([]string{`{"tty":false,"elevate":false,"WorkingDir":"","stdin":false}`}, cmd...)}
 		mockScript.On("NewInvocation", args...).Return(mockInv).Once()
 		mockInv.MockExec(startErr, waitErr, exitCode)
 	}

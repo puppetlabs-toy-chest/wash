@@ -105,7 +105,7 @@ func (c *container) Exec(ctx context.Context, cmd string, args []string, opts pl
 	command := append([]string{cmd}, args...)
 	activity.Record(ctx, "Exec %v on %v", command, c.Name())
 
-	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true, Tty: opts.Tty}
+	cfg := types.ExecConfig{Cmd: command, AttachStdout: true, AttachStderr: true, Tty: opts.Tty, WorkingDir: opts.WorkingDir}
 	if opts.Stdin != nil || opts.Tty {
 		cfg.AttachStdin = true
 	}
